@@ -4,6 +4,7 @@ make test-cuda -j
 
 # build binary
 make ares -j
+
 # run test
 ginkgo -r
 

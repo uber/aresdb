@@ -24,6 +24,12 @@ ALL_C_SRC := $(shell find $(FIND_REGEX_PRE_FLAG) . $(FIND_REGEX_POST_FLAG) -rege
 
 default: ares
 
+vendor/glide.updated: glide.lock glide.yaml
+	glide install
+	touch vendor/glide.updated
+
+deps: vendor/glide.updated $(ALL_GO_SRC)
+
 clang-lint:
 	cppcheck --std=c++11 --language=c++ --inline-suppr --suppress=selfInitialization $(ALL_C_SRC)
 	cpplint.py $(ALL_C_SRC)
@@ -38,7 +44,7 @@ golang-lint:
 lint: golang-lint clang-lint
 
 
-ares:
+ares: deps
 	go build -o $@
 
 travis:
