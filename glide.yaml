@@ -1,0 +1,4 @@
+package: github.com/uber/aresdb
+import:
+- package: github.com/onsi/ginkgo
+- package: github.com/onsi/gomega
