@@ -1,5 +1,16 @@
 .PHONY: test-cuda ares lint travis
 
+UNAME_S := $(shell uname -s)
+
+
+ifeq ($(UNAME_S),Linux)
+  FIND_REGEX_FLAG := "-regextype posix-extended"
+endif
+
+ifeq ($(UNAME_S),Darwin)
+  FIND_REGEX_FLAG := "-E"
+endif
+
 # all .go files that don't exist in hidden directories
 ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-build \
   -e ".*/\..*" \
