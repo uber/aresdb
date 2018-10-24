@@ -3,6 +3,7 @@ sudo: required
 go:
     - "1.19"
 env:
+  global:
     - CUDA_VERSION="10.0"
     - CUDA_PKG_VERSION="130-1"
     - CUDA_PKG=cuda-repo-ubuntu1404_${CUDA_VERSION}.${CUDA_PKG_VERSION}_amd64.deb
