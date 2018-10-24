@@ -1,0 +1,265 @@
+hash: aaeb958666d017bdc026098fe8d133a556b94a69fa2ea6593d12e74cee1a9e0f
+updated: 2018-10-11T13:11:37.06519-07:00
+imports:
+- name: code.uber.internal/engsec/galileo-go.git
+  version: 08648ab495c16086f8d66131e0a5bda28ca78b1c
+  repo: gitolite@code.uber.internal:engsec/galileo-go.git
+  vcs: git
+  subpackages:
+  - internal
+  - internal/atomic
+  - internal/cache
+  - internal/contexthelper
+  - internal/telemetry
+- name: code.uber.internal/engsec/wonka-go.git
+  version: 3fc07794dea2fe90cfb8f51094d37d5e79e5943e
+  repo: gitolite@code.uber.internal:engsec/wonka-go.git
+  vcs: git
+  subpackages:
+  - internal
+  - internal/certhelper
+  - internal/envfx
+  - internal/httprequester
+  - internal/lifecycle
+  - internal/sshhelper
+  - internal/xhttp
+  - wonkacrypter
+- name: code.uber.internal/go-common.git
+  version: e99166046b5ba746bcf4977019d6488ea499578f
+  repo: gitolite@code.uber.internal:go-common.git
+  vcs: git
+  subpackages:
+  - client/uconfig
+  - x/backoff
+  - x/config
+  - x/health
+  - x/jaeger
+  - x/kafka
+  - x/log
+  - x/metrics
+  - x/metrics/sampling
+  - x/net/xhttp
+  - x/tchannel
+  - x/time
+- name: github.com/apache/thrift
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
+  subpackages:
+  - lib/go/thrift
+- name: github.com/cactus/go-statsd-client
+  version: 138b925ccdf617776955904ba7759fce64406cec
+  subpackages:
+  - statsd
+- name: github.com/certifi/gocertifi
+  version: deb3ae2ef2610fde3330947281941c562861188b
+- name: github.com/codahale/hdrhistogram
+  version: 3a0bb77429bd3a61596f5e8a3172445844342120
+- name: github.com/davecgh/go-spew
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
+  subpackages:
+  - spew
+- name: github.com/emirpasic/gods
+  version: b2394dfbb6314eeb616db55d1e01928f287da4b4
+  subpackages:
+  - containers
+  - trees
+  - trees/redblacktree
+  - utils
+- name: github.com/evalphobia/logrus_sentry
+  version: b78b27461c8163c45abf4ab3a8330d2b1ee9456a
+- name: github.com/felixge/httpsnoop
+  version: eadd4fad6aac69ae62379194fe0219f3dbc80fd3
+- name: github.com/getsentry/raven-go
+  version: 563b81fc02b75d664e54da31f787c2cc2186780b
+- name: github.com/golang/mock
+  version: c34cdb4725f4c3844d095133c6e40e448b86589b
+  subpackages:
+  - gomock
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
+- name: github.com/gorilla/handlers
+  version: 90663712d74cb411cbef281bc1e08c19d1a76145
+- name: github.com/gorilla/mux
+  version: e3702bed27f0d39777b0b37b664b6280e8ef8fbf
+- name: github.com/hashicorp/golang-lru
+  version: 0a025b7e63adc15a622f29b0b2c4c3848243bbf6
+  subpackages:
+  - simplelru
+- name: github.com/onsi/ginkgo
+  version: 3774a09d95489ccaa16032e0770d08ea77ba6184
+  subpackages:
+  - config
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/spec_iterator
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - reporters/stenographer/support/go-colorable
+  - reporters/stenographer/support/go-isatty
+  - types
+- name: github.com/onsi/gomega
+  version: b6ea1ea48f981d0f615a154a45eabb9dd466556d
+  subpackages:
+  - format
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
+- name: github.com/opentracing/opentracing-go
+  version: 1949ddbfd147afd4d964a9f00b24eb291e0e7c38
+  subpackages:
+  - ext
+  - log
+  - mocktracer
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
+- name: github.com/satori/go.uuid
+  version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
+- name: github.com/sirupsen/logrus
+  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+- name: github.com/streadway/quantile
+  version: b0c588724d25ae13f5afb3d90efec0edc636432b
+- name: github.com/stretchr/objx
+  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
+- name: github.com/stretchr/testify
+  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
+  subpackages:
+  - assert
+  - mock
+- name: github.com/tsenart/vegeta
+  version: f30b7dae680868cb930eafaf0df7d1801fd359e6
+  subpackages:
+  - lib
+- name: github.com/uber-common/bark
+  version: 02d883c81a4e7b76904d97efb176efdf4be791bd
+  subpackages:
+  - zbark
+- name: github.com/uber-go/tally
+  version: ff17f3c43c065c3c2991f571e740eee43ea3a14a
+  subpackages:
+  - m3
+  - m3/customtransports
+  - m3/thrift
+  - m3/thriftudp
+- name: github.com/uber/jaeger-client-go
+  version: 1a782e2da844727691fef1757c72eb190c2909f0
+  subpackages:
+  - config
+  - internal/baggage
+  - internal/baggage/remote
+  - internal/spanlog
+  - internal/throttler
+  - internal/throttler/remote
+  - log
+  - log/zap
+  - rpcmetrics
+  - thrift
+  - thrift-gen/agent
+  - thrift-gen/baggage
+  - thrift-gen/jaeger
+  - thrift-gen/sampling
+  - thrift-gen/zipkincore
+  - transport
+  - utils
+- name: github.com/uber/jaeger-lib
+  version: ed3a127ec5fef7ae9ea95b01b542c47fbd999ce5
+  subpackages:
+  - metrics
+- name: go.uber.org/atomic
+  version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
+- name: go.uber.org/multierr
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/zap
+  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - zapcore
+- name: golang.org/x/crypto
+  version: 91a49db82a88618983a78a06c1cbd4e00ab749ab
+  subpackages:
+  - curve25519
+  - ed25519
+  - ed25519/internal/edwards25519
+  - internal/chacha20
+  - poly1305
+  - ssh
+  - ssh/agent
+  - ssh/knownhosts
+  - ssh/terminal
+- name: golang.org/x/net
+  version: 4cb1c02c05b0e749b0365f61ae859a8e0cfceed9
+  subpackages:
+  - context
+  - context/ctxhttp
+  - html
+  - html/atom
+  - html/charset
+  - http/httpguts
+  - http2
+  - http2/hpack
+  - idna
+  - netutil
+- name: golang.org/x/sys
+  version: 7138fd3d9dc8335c567ca206f4333fb75eb05d56
+  subpackages:
+  - unix
+  - windows
+- name: golang.org/x/text
+  version: 5cec4b58c438bd98288aeb248bab2c1840713d21
+  subpackages:
+  - encoding
+  - encoding/charmap
+  - encoding/htmlindex
+  - encoding/internal
+  - encoding/internal/identifier
+  - encoding/japanese
+  - encoding/korean
+  - encoding/simplifiedchinese
+  - encoding/traditionalchinese
+  - encoding/unicode
+  - internal/language
+  - internal/language/compact
+  - internal/tag
+  - internal/utf8internal
+  - language
+  - runes
+  - secure/bidirule
+  - transform
+  - unicode/bidi
+  - unicode/norm
+- name: gopkg.in/validator.v2
+  version: 59c90c7046f643cbe0d4e7c8776c42a84ce75910
+- name: gopkg.in/yaml.v2
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
+testImports:
+- name: github.com/hpcloud/tail
+  version: a1dbeea552b7c8df4b542c66073e393de198a800
+  subpackages:
+  - ratelimiter
+  - util
+  - watch
+  - winfile
+- name: gopkg.in/fsnotify/fsnotify.v1
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
+- name: gopkg.in/tomb.v1
+  version: c131134a1947e9afd9cecfe11f4c6dff0732ae58
