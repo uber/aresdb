@@ -2,11 +2,13 @@
 
 # all .go files that don't exist in hidden directories
 ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-build \
+  -e build \
   -e ".*/\..*" \
   -e ".*/_.*" \
   -e ".*/mocks.*")
 
 ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h -o -iname \*.c \) | grep -v -e Godeps -e vendor -e go-build \
+  -e build \
   -e ".*/\..*" \
   -e ".*/_.*" \
   -e ".*/mocks.*")
@@ -21,7 +23,7 @@ deps: vendor/glide.updated $(ALL_GO_SRC)
 
 clang-lint:
 	cppcheck --std=c++11 --language=c++ --inline-suppr --suppress=selfInitialization $(ALL_C_SRC)
-	cpplint.py $(ALL_C_SRC)
+	cpplint $(ALL_C_SRC)
 
 
 golang-lint:
