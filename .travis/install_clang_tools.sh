@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -ex
 # install google test
 output_dir=./build
 rm -rf /tmp/googletest
