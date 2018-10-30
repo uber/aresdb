@@ -1,0 +1,8 @@
+data_type: Int8
+length: 4
+has_counts: true
+values:
+  - 1,1
+  - 2,2
+  - 3,3
+  - 4,4

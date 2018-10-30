@@ -1,0 +1,12 @@
+data_type: Bool
+length: 8
+has_counts: false
+values:
+  - null
+  - null
+  - null
+  - null
+  - null
+  - null
+  - false
+  - true

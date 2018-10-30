@@ -1,0 +1,8 @@
+# has null vector
+data_type: Uint32
+length: 3
+has_counts: false
+values:
+  - 0
+  - null
+  - 2

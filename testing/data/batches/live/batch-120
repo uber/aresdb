@@ -1,0 +1,4 @@
+# batch for timezone table
+columns:
+    - archiving/vp00
+    - archiving/vp13

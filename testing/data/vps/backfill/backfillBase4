@@ -1,0 +1,11 @@
+# primary key
+data_type: Uint32
+length: 5
+has_counts: false
+values:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+

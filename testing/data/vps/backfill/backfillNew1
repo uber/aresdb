@@ -1,0 +1,10 @@
+# sort columns, pk
+data_type: Uint32
+length: 4
+has_counts: true
+values:
+  - 0,2
+  - 1,4
+  - 2,5
+  - 11,6
+
