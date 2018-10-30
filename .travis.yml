@@ -1,0 +1,25 @@
+language: go
+sudo: required
+go:
+    - "1.9"
+env:
+  global:
+    - CUDA_VERSION="10.0"
+    - CUDA_PKG_VERSION="130-1"
+    - CUDA_PKG=cuda-repo-ubuntu1404_${CUDA_VERSION}.${CUDA_PKG_VERSION}_amd64.deb
+    - CUDA_HOME=/usr/local/cuda
+    - PATH=${PATH}:${CUDA_HOME}/bin:${GOPATH}/bin
+    - LD_LIBRARY_PATH=${CUDA_HOME}/lib:$(pwd)/lib
+    - GTEST_ROOT=./build/googletest
+
+install:
+  - .travis/install_cuda.sh
+  - .travis/install_golang_tools.sh
+  - .travis/install_clang_tools.sh
+
+script:
+  - make lint
+  - make travis
+
+after_script:
+  - .travis/cleanup.sh
