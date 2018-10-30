@@ -1,0 +1,14 @@
+data_type: Float32
+length: 8
+has_counts: true
+values:
+  - -0.1,2
+  - 0.0,4
+  - 0.05,5
+  - 0.1,7
+  - null,9
+  - 0.1,10
+  - null,11
+  - 0.1,13
+
+

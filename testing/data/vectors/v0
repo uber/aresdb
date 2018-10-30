@@ -1,0 +1,9 @@
+data_type: Bool
+length: 6
+values:
+  - true
+  - false
+  - null
+  - false
+  - true
+  - null

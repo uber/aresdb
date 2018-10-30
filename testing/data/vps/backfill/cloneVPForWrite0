@@ -1,0 +1,9 @@
+# time column, all values valid.
+data_type: Uint32
+length: 3
+has_counts: false
+values:
+  - 0
+  - 1
+  - 2
+

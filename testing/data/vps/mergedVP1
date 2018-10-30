@@ -1,0 +1,8 @@
+data_type: Bool
+length: 3
+has_counts: true
+values:
+  - null,7
+  - false,10
+  - true,13
+

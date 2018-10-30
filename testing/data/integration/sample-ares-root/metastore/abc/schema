@@ -1,0 +1,32 @@
+{
+  "name": "abc",
+  "columns": [
+    {
+      "name": "c1",
+      "type": "Uint8"
+    },
+    {
+      "name": "c2",
+      "type": "SmallEnum",
+      "highPriorityDays": 10,
+      "mediumPriorityDays": 10
+    }
+  ],
+  "primaryKeyColumns": [
+    0
+  ],
+  "isFactTable": false,
+  "config": {
+    "initPrimaryKeyNumBuckets": 8,
+    "batchSize": 10,
+    "archivingDelayMinutes": 10,
+    "archivingIntervalMinutes": 10,
+    "backfillMaxBufferSize":    4294967296,
+	"backfillIntervalMinutes":  60,
+	"backfillThresholdInBytes": 2097152
+  },
+  "archivingSortColumns": [
+    0,
+    1
+  ]
+}

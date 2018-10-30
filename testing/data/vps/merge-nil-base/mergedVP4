@@ -1,0 +1,11 @@
+data_type: Uint32
+length: 7
+has_counts: true
+values:
+  - 1,1
+  - 2,2
+  - 2,3
+  - 2,4
+  - 1,6
+  - null,7
+  - 2,8

@@ -1,0 +1,18 @@
+data_type: Uint32
+length: 13
+has_counts: false
+values:
+  - 100
+  - 110
+  - 0
+  - 120
+  - 10
+  - 20
+  - 130
+  - 140
+  - 150
+  - 30
+  - 40
+  - 160
+  - 170
+
