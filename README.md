@@ -1,11 +1,11 @@
 AresDB
 ==============
-AresDB is a GPU-based analytics engine with storage and query. The goal is to develop a real time analytics system with fresh data and interactive response time at low cost.
+AresDB is a GPU-based analytics engine with storage and query capabilities. The goal of AresDB is to develop a real-time analytics system with fresh data and interactive response time at a low cost.
 This repo contains the source code of AresDB and debug UI.
 
 Legal Note
 ----------
-AresDB requires CUDA Toolkit. Please ensure you read, acknowledge, and accept the [CUDA End User License Agreement](https://docs.nvidia.com/cuda/eula/index.html).
+AresDB requires the CUDA Toolkit. Please ensure you read, acknowledge, and accept the [CUDA End User License Agreement](https://docs.nvidia.com/cuda/eula/index.html).
 
 Getting started
 ---------------
@@ -21,7 +21,7 @@ AresDB needs [NVIDIA driver](https://www.nvidia.com/Download/index.aspx) version
 
 Environment Variables
 ---------------------
-Make sure following environment variables are correctly set:
+Run the following to make sure the following environment variables are correctly set:
 ```
 export PATH=/path/to/cuda/bin:${PATH}
 export LD_LIBRARY_PATH=/path/to/cuda/lib64:/path/to/aresdb/lib:${LD_LIBRARY_PATH}
@@ -37,7 +37,7 @@ Building and running AresDB requires:
 
 Build
 -----
-Following dependencies need to be installed before build the binary.
+The following dependencies need to be installed before building the binary.
 
 ### glide
 We use [glide](https://glide.sh) to manage Go dependencies. Please make sure `glide` is in your PATH before you attempt to build.
@@ -46,26 +46,26 @@ We use [glide](https://glide.sh) to manage Go dependencies. Please make sure `gl
 
 Local Test
 ----------
-AresDB is written in C++(query engine) and Golang (mem store, disk store, disk store and other query components.) So we break test into 2 parts:
+AresDB is written in C++(query engine) and Golang (mem store, disk store, disk store and other query components.) Because of this, we break testing into two parts:
 ### Test Golang Code
-#### ginkgo
-We use [ginkgo](https://github.com/onsi/ginkgo) as the test framework for running golang unit test and coverage, install it first and run
+#### Ginkgo
+We use [Ginkgo](https://github.com/onsi/ginkgo) as the test framework for running the Golang unit test and coverage. Install Ginkgo first and run
 ```
 make test
 ```
 
 ### Test C++ Code
 #### google-test
-We use [google-test](https://github.com/google/googletest) as the test framework to test c++ code, install it first and set environment variable GTEST_ROOT to the installed location.
+We use [google-test](https://github.com/google/googletest) as the test framework to test C++ code. Install google-test and set the environment variable, GTEST_ROOT, to the installed location.
 
-And then run
+After you have installed properly, run
 ```
 make test-cuda
 ```
 
 Run AresDB Server
 -----------------
-Following command will start a AresDB server locally, you can start query it using curl command or swagger page
+The following command will start an AresDB server locally.You can start to query the server using a curl command or [swagger](https://github.com/uber/aresdb/wiki/Swagger) page.
 ```
 make run
 ```
