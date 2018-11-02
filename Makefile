@@ -80,8 +80,10 @@ test: ares
 travis:
 	.travis/run_unittest.sh
 
-test-cuda:
-	echo "Test cuda successfully!"
+test-cuda :
+	@mkdir -p $(GTEST_OUT_DIR)
+	$(MAKE) $(GTEST_OUT_DIR)/all_unittest
+	$(GTEST_OUT_DIR)/all_unittest --gtest_output=xml:junit.xml
 
 #####################################
 # Cuda library build related targets#
