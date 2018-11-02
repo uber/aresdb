@@ -56,7 +56,7 @@ clang-lint:
 golang-lint:
 	gofmt -w $(ALL_GO_SRC)
 	golint -set_exit_status $(ALL_GO_SRC)
-	go vet $(ALL_GO_SRC)
+	go vet
 
 
 lint: golang-lint clang-lint
