@@ -1,8 +1,23 @@
 hash: d55ac617d74142aedd50f262650fd3a2c6efb2fe0073f6024c4628970075ef4e
-updated: 2018-10-30T13:57:12.731171-07:00
+updated: 2018-11-02T16:32:10.630331-07:00
 imports:
+- name: github.com/cactus/go-statsd-client
+  version: 138b925ccdf617776955904ba7759fce64406cec
+  subpackages:
+  - statsd
+- name: github.com/davecgh/go-spew
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
+  subpackages:
+  - spew
 - name: github.com/emirpasic/gods
   version: b2394dfbb6314eeb616db55d1e01928f287da4b4
+  subpackages:
+  - containers
+  - trees
+  - trees/redblacktree
+  - utils
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/handlers
   version: 90663712d74cb411cbef281bc1e08c19d1a76145
 - name: github.com/gorilla/mux
@@ -41,12 +56,23 @@ imports:
   - matchers/support/goraph/node
   - matchers/support/goraph/util
   - types
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
 - name: github.com/satori/go.uuid
   version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/sirupsen/logrus
   version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+- name: github.com/stretchr/objx
+  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
 - name: github.com/stretchr/testify
   version: f35b8ab0b5a2cef36673838d662e249dd9c94686
+  subpackages:
+  - assert
+  - mock
 - name: github.com/tsenart/vegeta
   version: f30b7dae680868cb930eafaf0df7d1801fd359e6
 - name: github.com/uber-common/bark
@@ -57,6 +83,22 @@ imports:
   version: 1a782e2da844727691fef1757c72eb190c2909f0
   subpackages:
   - config
+- name: golang.org/x/crypto
+  version: 91a49db82a88618983a78a06c1cbd4e00ab749ab
+  subpackages:
+  - ssh/terminal
+- name: golang.org/x/net
+  version: 4cb1c02c05b0e749b0365f61ae859a8e0cfceed9
+  subpackages:
+  - html
+  - html/atom
+  - html/charset
+  - netutil
+- name: golang.org/x/sys
+  version: 7138fd3d9dc8335c567ca206f4333fb75eb05d56
+  subpackages:
+  - unix
+  - windows
 - name: golang.org/x/text
   version: 5cec4b58c438bd98288aeb248bab2c1840713d21
   subpackages:
@@ -87,16 +129,6 @@ testImports:
   - util
   - watch
   - winfile
-- name: golang.org/x/net
-  version: 4cb1c02c05b0e749b0365f61ae859a8e0cfceed9
-  subpackages:
-  - html
-  - html/atom
-  - html/charset
-- name: golang.org/x/sys
-  version: 7138fd3d9dc8335c567ca206f4333fb75eb05d56
-  subpackages:
-  - unix
 - name: gopkg.in/fsnotify/fsnotify.v1
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/tomb.v1
