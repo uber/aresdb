@@ -800,7 +800,6 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 					// Combination of nullable data with not/and/or operators on top makes
 					// short circuiting hard.
 					// To play it safe we match against an invalid value.
-					// For details, see https://code.uberinternal.com/D979217#inline-8041663
 					value = -1
 				}
 				e.RHS = &expr.NumberLiteral{Int: value, ExprType: expr.Unsigned}

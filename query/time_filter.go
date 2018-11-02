@@ -45,10 +45,8 @@ type alignedTime struct {
 // that return day boundary/midnight as either 23:00 (of the previous day) or 01:00.
 //
 // Fix for America/Sao_Paulo daylight saving starts (2016-10-16):
-// https://code.uberinternal.com/T585219
 // The midnight of 2016-10-16 does not exist and time.Date returns 23:00 of the previous day.
 //
-// Fix for https://code.uberinternal.com/T789971
 // Must check whether the 1 hour rewind still gives the same day:
 // For Asia/Beirut, this is not true for 2017-03-26, and true for 2017-03-27 and beyond.
 func adjustMidnight(t time.Time) time.Time {
@@ -59,7 +57,6 @@ func adjustMidnight(t time.Time) time.Time {
 	} else if t.Hour() == 1 {
 		t2 := t.Add(-time.Hour)
 		if t2.Day() == t.Day() {
-			// https://code.uberinternal.com/T789971
 			// Must check whether the 1 hour rewind still gives the same day:
 			// For Asia/Beirut, this is false for 2017-03-26 (transition day), and true for 2017-03-27.
 			return t2
