@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ARES_QUERY_EXPRESSION_VM_H_
-#define ARES_QUERY_EXPRESSION_VM_H_
+#ifndef ARESDB_QUERY_EXPRESSION_VM_H_
+#define ARESDB_QUERY_EXPRESSION_VM_H_
 #include <stddef.h>
 #include <stdint.h>
 
@@ -135,4 +135,4 @@ enum ExprVMCall {
   CALL_MOD_UNSIGNED      = 0x3c,
   CALL_MOD_FLOAT         = 0x3d
 };
-#endif  // ARES_QUERY_EXPRESSION_VM_H_
+#endif  // ARESDB_QUERY_EXPRESSION_VM_H_
