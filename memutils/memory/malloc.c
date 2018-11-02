@@ -83,14 +83,16 @@ CGoCallResHandle AsyncCopyDeviceToHost(void *dst,
 }
 
 // Simulate on host side.
+// cppcheck-suppress *
 CGoCallResHandle GetDeviceCount() {
-  CGoCallResHandle resHandle = {reinterpret_cast<void *>(1), NULL};
+  CGoCallResHandle resHandle = {(void *)1, NULL};
   return resHandle;
 }
 
+// cppcheck-suppress *
 CGoCallResHandle GetDeviceGlobalMemoryInMB(int device) {
   // 24 GB
-  CGoCallResHandle resHandle = {reinterpret_cast<void *>(24392), NULL};
+  CGoCallResHandle resHandle = {(void *)24392, NULL};
   return resHandle;
 }
 
