@@ -20,12 +20,12 @@ import (
 	"os"
 	"sync"
 
-	"github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/testing"
-	"github.com/uber/aresdb/utils/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	"github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/testing"
+	"github.com/uber/aresdb/utils/mocks"
 )
 
 var _ = ginkgo.Describe("disk metastore", func() {

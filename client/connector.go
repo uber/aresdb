@@ -23,11 +23,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber-common/bark"
+	"github.com/uber-go/tally"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber-common/bark"
-	"github.com/uber-go/tally"
 	"strconv"
 	"strings"
 )

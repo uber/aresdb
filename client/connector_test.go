@@ -21,13 +21,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/uber/aresdb/common"
-	memCom "github.com/uber/aresdb/memstore/common"
-	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
+	"github.com/uber/aresdb/common"
+	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 )
 
 var _ = ginkgo.Describe("gforceDB connector", func() {
