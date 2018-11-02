@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Archive Jobs</title>
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" type="text/css" href="../node_modules/jquery-ui-dist/jquery-ui.min.css">
+    <link rel="stylesheet" type="text/css" href="../node_modules/jquery.json-viewer/json-viewer/jquery.json-viewer.css">
+    <link rel="stylesheet" href="../node_modules/select2/dist/css/select2.css"/>
+    <link rel="stylesheet" href="../node_modules/bootstrap-toggle/css/bootstrap-toggle.min.css"/>
+
+    <script src="../node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="../node_modules/jquery-ui-dist/jquery-ui.min.js"></script>
+    <script src="../node_modules/jquery.json-viewer/json-viewer/jquery.json-viewer.js"></script>
+    <script src="../node_modules/bootstrap-toggle/js/bootstrap-toggle.min.js"></script>
+    <script src="../node_modules/select2/dist/js/select2.min.js" type="text/javascript"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/summary.js"></script>
+    <script type='text/javascript'>
+        $(document).ready(function () {
+            initSummaryViewer()
+        });
+    </script>
+</head>
+<body>
+
+
+<h2>Health Check Toggle</h2>
+<div class="checkbox" style="width: 100px; height: 50px">
+    <input type="checkbox" checked data-toggle="toggle" id="health-toggle"/>
+</div>
+
+<h2>Shard Metadata Viewer</h2>
+<table>
+    <tr>
+        <table id="selectors-panel">
+            <td>
+                <label for="table-selector">
+                    Choose Table
+                    <br/>
+                    <select id="table-selector" class="js-example-basic-single js-states form-control">
+                    </select>
+                </label>
+            </td>
+            <td>
+                <label for="shard-selector">
+                    Choose Shard
+                    <br/>
+                    <select id="shard-selector" class="js-example-basic-single js-states form-control">
+                    </select>
+                </label>
+            </td>
+        </table>
+    </tr>
+    <tr>
+        <pre id="shard-json-renderer"></pre>
+    </tr>
+</table>
+</body>
+</html>

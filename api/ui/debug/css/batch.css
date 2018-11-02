@@ -1,0 +1,83 @@
+/*  Copyright (c) 2017-2018 Uber Technologies, Inc. */
+/* */
+/* Licensed under the Apache License, Version 2.0 (the "License"); */
+/* you may not use this file except in compliance with the License. */
+/* You may obtain a copy of the License at */
+/* */
+/*     http://www.apache.org/licenses/LICENSE-2.0 */
+/* */
+/* Unless required by applicable law or agreed to in writing, software */
+/* distributed under the License is distributed on an "AS IS" BASIS, */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/* See the License for the specific language governing permissions and */
+/* limitations under the License. */
+
+table, th, td {
+    border-collapse: collapse;
+    text-align: left;
+    vertical-align: top;
+}
+
+input, select {
+    width: 150px;
+    height: 25px;
+}
+
+.medium-button {
+    color: blue;
+    width: 80px;
+    height: 25px;
+}
+
+.small-input {
+    width: 80px;
+    height: 15px;
+    padding: 3px;
+}
+
+.hover-table tr:hover {
+    background-color: lightblue;
+    cursor: pointer;
+}
+
+.data-table {
+    border: solid 1px;
+}
+
+#batch-table-body {
+    color: blue;
+}
+
+.data-column {
+    border: solid 1px;
+}
+
+.deleted-column {
+    background-color: #ff6060;
+}
+
+.pagination a {
+    color: blue;
+    float: left;
+    padding: 8px 16px;
+    text-decoration: none;
+    transition: background-color .3s;
+}
+
+.pagination a.active {
+    background-color: #4CAF50;
+    color: blue;
+}
+
+.pagination a:hover:not(.active) {
+    background-color: lightblue;
+}
+
+td.short-value-column:hover {
+    background-color: lightblue;
+    cursor: pointer;
+}
+
+.highlight {
+    background: #FFFF00;
+}
