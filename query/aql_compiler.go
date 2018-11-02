@@ -22,12 +22,12 @@ import (
 	"strings"
 	"unsafe"
 
-	"code.uber.internal/data/ares/memstore"
-	memCom "code.uber.internal/data/ares/memstore/common"
-	metaCom "code.uber.internal/data/ares/metastore/common"
-	"code.uber.internal/data/ares/query/common"
-	"code.uber.internal/data/ares/query/expr"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 	"fmt"
 	"strconv"
 )

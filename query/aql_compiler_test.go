@@ -21,13 +21,13 @@ import (
 	"time"
 	"unsafe"
 
-	"code.uber.internal/data/ares/common"
-	"code.uber.internal/data/ares/memstore"
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/memstore/mocks"
-	metaCom "code.uber.internal/data/ares/metastore/common"
-	"code.uber.internal/data/ares/query/expr"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/mocks"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 	"github.com/uber-go/tally"
 )
 

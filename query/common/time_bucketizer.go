@@ -15,7 +15,7 @@
 package common
 
 import (
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/utils"
 	"fmt"
 	"strconv"
 	"strings"

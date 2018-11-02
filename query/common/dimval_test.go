@@ -15,7 +15,7 @@
 package common
 
 import (
-	memCom "code.uber.internal/data/ares/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"

@@ -17,9 +17,9 @@ package query
 import (
 	"sync"
 
-	"code.uber.internal/data/ares/common"
-	"code.uber.internal/data/ares/memutils"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/utils"
 	"github.com/uber-common/bark"
 	"math"
 	"strconv"

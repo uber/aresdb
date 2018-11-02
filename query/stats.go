@@ -15,8 +15,8 @@
 package query
 
 import (
-	"code.uber.internal/data/ares/memutils"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/utils"
 	"encoding/json"
 	"fmt"
 	"github.com/uber-common/bark"

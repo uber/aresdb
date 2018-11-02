@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.uber.internal/data/ares/query/expr"
+	"github.com/uber/aresdb/query/expr"
 )
 
 // Ensure the scanner can scan tokens correctly.
