@@ -15,8 +15,8 @@
 package common
 
 import (
-	"github.com/uber/aresdb/utils"
 	"fmt"
+	"github.com/uber/aresdb/utils"
 	"strconv"
 	"strings"
 	"time"

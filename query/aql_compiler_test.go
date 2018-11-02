@@ -21,6 +21,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
@@ -28,7 +29,6 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber-go/tally"
 )
 
 var _ = ginkgo.Describe("AQL compiler", func() {

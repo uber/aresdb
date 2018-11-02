@@ -15,14 +15,14 @@
 package query
 
 import (
-	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/memstore"
-	"github.com/uber/aresdb/query/expr"
-	"github.com/uber/aresdb/utils"
 	"encoding/json"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
+	"github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/memstore"
+	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 	"time"
 )
 

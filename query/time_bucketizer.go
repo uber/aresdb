@@ -15,10 +15,10 @@
 package query
 
 import (
+	"fmt"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"

@@ -19,13 +19,13 @@ import (
 	"math"
 	"unsafe"
 
+	"encoding/binary"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"encoding/binary"
 	"time"
 )
 

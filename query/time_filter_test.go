@@ -15,10 +15,10 @@
 package query
 
 import (
-	"github.com/uber/aresdb/query/expr"
 	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/query/expr"
 	"time"
 )
 

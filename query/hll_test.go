@@ -15,9 +15,9 @@
 package query
 
 import (
+	"github.com/onsi/ginkgo"
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
-	"github.com/onsi/ginkgo"
 	"unsafe"
 
 	"errors"
