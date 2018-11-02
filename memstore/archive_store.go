@@ -18,9 +18,9 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber-common/bark"
 	"strconv"
 )
 

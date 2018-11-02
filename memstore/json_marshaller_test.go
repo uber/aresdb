@@ -17,10 +17,10 @@ package memstore
 import (
 	"encoding/json"
 
-	"github.com/uber/aresdb/memstore/common"
-	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"time"
 )
 

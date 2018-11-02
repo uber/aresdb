@@ -19,13 +19,13 @@ import (
 
 	"sort"
 
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
 )
 
 var _ = ginkgo.Describe("redo_log_manager", func() {

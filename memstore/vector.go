@@ -21,10 +21,10 @@ import (
 	"math"
 	"unsafe"
 
+	"fmt"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
-	"fmt"
 )
 
 // Vector stores a batch of columnar data (values, nulls, or counts) for a column.

@@ -19,9 +19,9 @@ import (
 	"io"
 	"sync"
 
+	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber-common/bark"
 )
 
 // UpsertHeader is the magic header written into the beginning of each redo log file.

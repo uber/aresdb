@@ -22,11 +22,11 @@ import (
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
 
-	diskMocks "github.com/uber/aresdb/diskstore/mocks"
-	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
 )
 
 var _ = ginkgo.Describe("recovery", func() {

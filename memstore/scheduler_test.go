@@ -15,11 +15,11 @@
 package memstore
 
 import (
-	"github.com/uber/aresdb/metastore/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/metastore/mocks"
 )
 
 type countJob struct {

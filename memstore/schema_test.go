@@ -17,12 +17,12 @@ package memstore
 import (
 	"errors"
 
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/metastore/mocks"
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = ginkgo.Describe("memStoreImpl schema", func() {

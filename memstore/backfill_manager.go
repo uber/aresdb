@@ -17,10 +17,10 @@ package memstore
 import (
 	"sync"
 
+	"encoding/json"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
-	"encoding/json"
 )
 
 // BackfillManager manages the records that need to be put into a backfill queue and merged with

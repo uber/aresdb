@@ -16,9 +16,9 @@ package common
 
 import (
 	"bytes"
-	"github.com/uber/aresdb/utils"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/utils"
 	"math"
 )
 

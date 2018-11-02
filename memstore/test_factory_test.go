@@ -15,11 +15,11 @@
 package memstore
 
 import (
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/memstore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"sync"
 )
 

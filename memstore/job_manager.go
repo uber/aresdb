@@ -15,9 +15,9 @@
 package memstore
 
 import (
+	"fmt"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
-	"fmt"
 	"strings"
 	"sync"
 )

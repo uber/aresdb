@@ -17,6 +17,7 @@ package memstore
 import (
 	"unsafe"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
@@ -24,7 +25,6 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
-	"github.com/stretchr/testify/mock"
 )
 
 func CreateMockDiskStore() *mocks.DiskStore {

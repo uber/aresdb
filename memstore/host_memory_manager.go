@@ -22,9 +22,9 @@ import (
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 
-	"github.com/uber/aresdb/memstore/common"
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/uber-common/bark"
+	"github.com/uber/aresdb/memstore/common"
 )
 
 // preloadJob defines the job struct to preload column when preloading days is changed.

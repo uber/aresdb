@@ -15,9 +15,9 @@
 package memstore
 
 import (
+	"github.com/uber-common/bark"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber-common/bark"
 )
 
 //Snapshot is the process to write the current content of dimension table live store in memory to disk in order to

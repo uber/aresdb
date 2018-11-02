@@ -17,8 +17,8 @@ package memstore
 import (
 	"sync"
 
-	"github.com/uber/aresdb/utils"
 	"encoding/json"
+	"github.com/uber/aresdb/utils"
 	"time"
 )
 
