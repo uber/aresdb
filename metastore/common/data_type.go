@@ -29,4 +29,5 @@ const (
 	UUID      = "UUID"
 	GeoPoint  = "GeoPoint"
 	GeoShape  = "GeoShape"
+	Int64     = "Int64"
 )

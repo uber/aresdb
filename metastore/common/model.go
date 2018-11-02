@@ -139,7 +139,7 @@ func (c Column) IsEnumColumn() bool {
 // IsOverwriteOnlyDataType checks whether a column is overwrite only
 func (c Column) IsOverwriteOnlyDataType() bool {
 	switch c.Type {
-	case Uint8, Int8, Uint16, Int16, Uint32, Int32, Float32:
+	case Uint8, Int8, Uint16, Int16, Uint32, Int32, Float32, Int64:
 		return false
 	default:
 		return true
