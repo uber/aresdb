@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ares Debug Tools</title>
+    <link rel="stylesheet" type="text/css" href="../node_modules/jquery-ui-dist/jquery-ui.min.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+
+    <script src="../node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="../node_modules/jquery-ui-dist/jquery-ui.min.js"></script>
+    <script src="js/index.js"></script>
+    <script type='text/javascript'>
+        $(document).ready(function () {
+            initTabs()
+        });
+    </script>
+</head>
+<body>
+<div id="tabs" class="fit-full-container">
+    <ul>
+        <li><a href="#summary">Summary</a></li>
+        <li><a href="#batch-viewer">Batch Viewer</a></li>
+        <li><a href="#redolog-viewer">Redo Log Viewer</a></li>
+        <li><a href="#archive-viewer">Archive</a></li>
+        <li><a href="#backfill-viewer">Backfill</a></li>
+        <li><a href="#snapshot-viewer">Snapshot </a></li>
+        <li><a href="#purge-viewer">Disk Purge </a></li>
+        <li><a href="#host-memory-viewer">Host Memory Viewer</a></li>
+    </ul>
+    <div id="summary" class="fit-full-container">
+        <iframe src="summary.html" class="fit-full-container"></iframe>
+    </div>
+    <div id="batch-viewer" class="fit-full-container">
+        <iframe src="batch.html" class="fit-full-container"></iframe>
+    </div>
+    <div id="redolog-viewer" class="fit-full-container">
+        <iframe data-src="redologs.html" src="" class="fit-full-container"></iframe>
+    </div>
+    <div id="archive-viewer" class="fit-full-container">
+        <iframe data-src="archive.html" src="" class="fit-full-container"></iframe>
+    </div>
+    <div id="backfill-viewer" class="fit-full-container">
+        <iframe data-src="backfill.html" src="" class="fit-full-container"></iframe>
+    </div>
+    <div id="snapshot-viewer" class="fit-full-container">
+        <iframe data-src="snapshot.html" src="" class="fit-full-container"></iframe>
+    </div>
+    <div id="purge-viewer" class="fit-full-container">
+        <iframe data-src="purge.html" src="" class="fit-full-container"></iframe>
+    </div>
+    <div id="host-memory-viewer" class="fit-full-container">
+        <iframe data-src="memory.html" src="" class="fit-full-container"></iframe>
+    </div>
+</div>
+</body>
+</html>

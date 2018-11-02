@@ -1,0 +1,20 @@
+{
+  "name": "debug",
+  "version": "1.0.0",
+  "description": "Ares Debug UI",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "chart.js": "^2.7.1",
+    "datatables.net-dt": "^1.10.16",
+    "google-palette": "^1.0.0",
+    "jquery": "^3.2.1",
+    "jquery-datetimepicker": "^2.5.14",
+    "jquery-ui-dist": "^1.12.1",
+    "select2": "^4.0.5",
+    "jquery.json-viewer": "^1.1.0",
+    "bootstrap-toggle": "^2.2.2",
+    "swagger-ui-dist": "^3.19.0"
+  }
+}

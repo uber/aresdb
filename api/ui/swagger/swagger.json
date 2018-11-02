@@ -1,0 +1,1257 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "http"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "title": "provide the RESTful APIs to interact with AresDB.",
+    "version": "0.0.1"
+  },
+  "basePath": "/",
+  "paths": {
+    "/data/{table}/{shard}": {
+      "post": {
+        "description": "Post new data batch to a existing table shard",
+        "consumes": [
+          "application/upsert-data"
+        ],
+        "operationId": "postData",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "TableName",
+            "name": "table",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Shard",
+            "name": "shard",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/noContentResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/query/aql": {
+      "post": {
+        "description": "query in AQL",
+        "consumes": [
+          "application/json",
+          "application/hll"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "operationId": "queryAQL",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Device",
+            "name": "device",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Verbose",
+            "name": "verbose",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Debug",
+            "name": "debug",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Profiling",
+            "name": "profiling",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Query",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "DeviceChoosingTimeout",
+            "name": "timeout",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Accept",
+            "name": "accept",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Origin",
+            "name": "origin",
+            "in": "header"
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/AQLRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/aqlResponse"
+          },
+          "400": {
+            "$ref": "#/responses/aqlResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/schema/tables": {
+      "get": {
+        "description": "List all table schemas",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "operationId": "listTables",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/stringArrayResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      },
+      "post": {
+        "description": "add table to table collections",
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "addTable",
+        "parameters": [
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/table"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/noContentResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/schema/tables/{table}": {
+      "get": {
+        "description": "get the table schema for specific table name",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "operationId": "getTable",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "TableName",
+            "name": "table",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/getTableResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      },
+      "put": {
+        "description": "update config of the specified table",
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "updateTableConfig",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "TableName",
+            "name": "table",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/tableConfig"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/noContentResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      },
+      "delete": {
+        "description": "delete table from metaStore",
+        "operationId": "deleteTable",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "TableName",
+            "name": "table",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/noContentResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/schema/tables/{table}/columns": {
+      "post": {
+        "description": "add a single column to existing table",
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "addColumn",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "TableName",
+            "name": "table",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/column"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "addToArchivingSortOrder": {
+                      "type": "boolean",
+                      "x-go-name": "AddToArchivingSortOrder"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/noContentResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/schema/tables/{table}/columns/{column}": {
+      "put": {
+        "description": "update specified column",
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "updateColumn",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "TableName",
+            "name": "table",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ColumnName",
+            "name": "column",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/columnConfig"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/noContentResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      },
+      "delete": {
+        "description": "delete columns from existing table",
+        "operationId": "deleteColumn",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "TableName",
+            "name": "table",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ColumnName",
+            "name": "column",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/noContentResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/schema/tables/{table}/columns/{column}/enum-cases": {
+      "get": {
+        "description": "list existing enumCases for given table and column",
+        "operationId": "listEnumCases",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "TableName",
+            "name": "table",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ColumnName",
+            "name": "column",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/listEnumCasesResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      },
+      "post": {
+        "description": "add an enum case to given column of given table\nreturn the id of the enum",
+        "operationId": "addEnumCase",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "TableName",
+            "name": "table",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ColumnName",
+            "name": "column",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "enumCases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "x-go-name": "EnumCases"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/addEnumCaseResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "APIError": {
+      "type": "object",
+      "title": "APIError ...",
+      "properties": {
+        "cause": {
+          "type": "string",
+          "x-go-name": "Cause"
+        },
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/utils"
+    },
+    "AQLQuery": {
+      "type": "object",
+      "title": "AQLQuery specifies the query on top of tables.",
+      "properties": {
+        "dimensions": {
+          "description": "Dimensions to group by on.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Dimension"
+          },
+          "x-go-name": "Dimensions"
+        },
+        "joins": {
+          "description": "Foreign tables to be joined.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Join"
+          },
+          "x-go-name": "Joins"
+        },
+        "measures": {
+          "description": "Measures/metrics to report.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Measure"
+          },
+          "x-go-name": "Measures"
+        },
+        "now": {
+          "description": "This overrides \"now\" (in seconds)",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Now"
+        },
+        "rowFilters": {
+          "description": "Row level filters to apply for all measures. The filters are ANDed togther.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Filters"
+        },
+        "table": {
+          "description": "Name of the main table.",
+          "type": "string",
+          "x-go-name": "Table"
+        },
+        "timeFilter": {
+          "$ref": "#/definitions/TimeFilter"
+        },
+        "timezone": {
+          "description": "Timezone to use when converting timestamp to calendar time, specified as:\n8:00\nGMT\nAmerica/Los_Angeles\ntimezone(city_id)\nregion_timezone(city_id)\nmega_region_timezone(city_id)\nsub_region_timezone(city_id)\ncountry_timezone(city_id)",
+          "type": "string",
+          "x-go-name": "Timezone"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "AQLQueryContext": {
+      "type": "object",
+      "title": "AQLQueryContext stores all contextual data for handling an AQL query.",
+      "properties": {
+        "ReturnHLLData": {
+          "description": "whether to serialize the query result as HLLData. If ReturnHLLData is true, we will not release dimension\nvector and measure vector until serialization is done.",
+          "type": "boolean"
+        },
+        "debug": {
+          "type": "boolean",
+          "x-go-name": "Debug"
+        },
+        "device": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Device"
+        },
+        "error": {
+          "type": "string",
+          "x-go-name": "Error"
+        },
+        "oopk": {
+          "$ref": "#/definitions/OOPKContext"
+        },
+        "prefilters": {
+          "description": "Index to filters in Query.Filters that are identified as prefilters.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "Prefilters"
+        },
+        "profiling": {
+          "type": "string",
+          "x-go-name": "Profiling"
+        },
+        "query": {
+          "$ref": "#/definitions/AQLQuery"
+        },
+        "scanners": {
+          "description": "Scanner for all tables. [0] for the main table; [1:] for tables in joins.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TableScanner"
+          },
+          "x-go-name": "TableScanners"
+        },
+        "tableIDs": {
+          "description": "Map from table alias to ID (index to TableScanners).",
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "TableIDByAlias"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "AQLRequest": {
+      "type": "object",
+      "title": "AQLRequest contains multiple of AQLQueries.",
+      "properties": {
+        "queries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AQLQuery"
+          },
+          "x-go-name": "Queries"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "AQLResponse": {
+      "type": "object",
+      "title": "AQLResponse contains results for multiple AQLQueries.",
+      "properties": {
+        "context": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AQLQueryContext"
+          },
+          "x-go-name": "QueryContext"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Errors"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AQLTimeSeriesResult"
+          },
+          "x-go-name": "Results"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "AQLTimeSeriesResult": {
+      "description": "Represents a nested AQL time series result with one dimension on each layer:\nthere is always an outermost time dimension. it stores the start time of\nthe bucket/duration (in seconds since Epoch).\nafter the time dimension, there could be zero or more layers of additional\ndimensions (all values are represented as strings). a special \"NULL\" string\nis used to represent NULL values.\nthere is always a single measure, and the measure type is either float64\nor nil (not *float64);",
+      "type": "object",
+      "title": "AQLTimeSeriesResult is ported from Apollo, see time_series_result.go",
+      "additionalProperties": {
+        "type": "object"
+      },
+      "x-go-package": "code.uber.internal/data/ares/query/common"
+    },
+    "Dimension": {
+      "type": "object",
+      "title": "Dimension specifies a row level dimension for grouping by.",
+      "properties": {
+        "numericBucketizer": {
+          "$ref": "#/definitions/NumericBucketizerDef"
+        },
+        "sqlExpression": {
+          "description": "The SQL expression for computing the dimension.\nExpr can be empty when TimeBucketizer is specified, which implies the\ndesignated time column from the main table is used as the expresssion.",
+          "type": "string",
+          "x-go-name": "Expr"
+        },
+        "timeBucketizer": {
+          "description": "Decides how to bucketize a timestamp Dimension before grouping by.\nSee https://github.com/uber/aresdb/wiki/aql#time_bucketizer",
+          "type": "string",
+          "x-go-name": "TimeBucketizer"
+        },
+        "timeUnit": {
+          "type": "string",
+          "x-go-name": "TimeUnit"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "Duration": {
+      "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "time"
+    },
+    "Expr": {
+      "type": "object",
+      "title": "Expr represents an expression that can be evaluated to a value.",
+      "properties": {
+        "String": {
+          "type": "string"
+        },
+        "Type": {
+          "$ref": "#/definitions/Type"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query/expr"
+    },
+    "Join": {
+      "type": "object",
+      "title": "Join specifies a secondary table to be explicitly joined in the query.",
+      "properties": {
+        "alias": {
+          "description": "Alias for the table. Empty means the table name will be used as alias.",
+          "type": "string",
+          "x-go-name": "Alias"
+        },
+        "conditions": {
+          "description": "Condition expressions to be ANDed together for the join.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Conditions"
+        },
+        "table": {
+          "description": "Name of the table to join against.",
+          "type": "string",
+          "x-go-name": "Table"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "Measure": {
+      "type": "object",
+      "title": "Measure specifies a group level aggregation measure.",
+      "properties": {
+        "rowFilters": {
+          "description": "Row level filters to apply for this measure.\nThe filters are ANDed togther.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Filters"
+        },
+        "sqlExpression": {
+          "description": "The SQL expression for computing the measure.",
+          "type": "string",
+          "x-go-name": "Expr"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "NumericBucketizerDef": {
+      "description": "NumericBucketizerDef defines how numbers should be bucketized before being\ngrouped by as a dimension. The returned dimension is a string in the format\nof `lower_bound`, representing `[lower_bound, uper_bound)`.",
+      "type": "object",
+      "properties": {
+        "bucketWidth": {
+          "description": "Generates equal-width buckets. BucketWidth should be positive.\nThe generated buckets are:\n... [-2w, -w), [-w, 0), [0, w), [w, 2w) ...",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "BucketWidth"
+        },
+        "logBase": {
+          "description": "Generates exponential/log buckets. LogBase should be positive.\nThe generated buckets are:\n... [pow(b, -2), pow(b, -1)), [pow(b, -1), 1), [1, pow(b, 1)), [pow(b, 1), pow(b, 2)) ...",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "LogBase"
+        },
+        "manualPartitions": {
+          "description": "Generates a fixed number of buckets using the specified partitions.\nThe numbers should be in sorted order. The generated buckets are:\n[-inf, p0), [p0, p1), [p1, p2), ... [pn-1, inf)",
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "x-go-name": "ManualPartitions"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "OOPKContext": {
+      "description": "OOPKContext defines additional query context for one-operator-per-kernel\nexecution.",
+      "type": "object",
+      "properties": {
+        "aggregate": {
+          "type": "integer",
+          "format": "uint32",
+          "x-go-name": "AggregateType"
+        },
+        "archiveStats": {
+          "$ref": "#/definitions/oopkQueryStats"
+        },
+        "deviceMem": {
+          "description": "For reporting purpose only.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "DeviceMemoryRequirement"
+        },
+        "dimRowBytes": {
+          "description": "Dim row bytes is the sum number of bytes of all dimension values\nplus validity bytes, for memory allocation convenience",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "DimRowBytes"
+        },
+        "dimensionVectorIndex": {
+          "description": "Index of single dimension vector in global dimension vector\nFollowing sorted order based on bytes",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "DimensionVectorIndex"
+        },
+        "dimensions": {
+          "description": "Compiled and annotated ASTs for dimensions and measure.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "x-go-name": "Dimensions"
+        },
+        "durationWaitedForDevice": {
+          "$ref": "#/definitions/Duration"
+        },
+        "foreignTableCommonFilters": {
+          "description": "ForeignTableCommonFilters match filters with foreign table columns involved",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "x-go-name": "ForeignTableCommonFilters"
+        },
+        "liveStats": {
+          "$ref": "#/definitions/oopkQueryStats"
+        },
+        "mainTableCommonFilters": {
+          "description": "Filters that apply to all archive and live batches.\nMainTableCommonFilters match filters with only main table columns involved",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "x-go-name": "MainTableCommonFilters"
+        },
+        "measure": {
+          "$ref": "#/definitions/Expr"
+        },
+        "measureBytes": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MeasureBytes"
+        },
+        "numDims": {
+          "description": "Number of dimensions per 4-byte, 2-byte, and 1-byte",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "NumDimsPerDimWidth"
+        },
+        "prefilters": {
+          "description": "Prefilters that only apply to live batches.\nArchiving cutoff filtering is processed directly by the query engine and not\nincluded here (different shards may have different cutoffs).",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "x-go-name": "Prefilters"
+        },
+        "resultSize": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ResultSize"
+        },
+        "timeFilters": {
+          "description": "Lower bound [0] and upper bound [1] time filter. nil if not applicable.\n[0] should be applied to the first archive batch and all live batches.\n[1] should be applied to the last archive batch and all live batches.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "x-go-name": "TimeFilters"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "TableScanner": {
+      "description": "TableScanner defines how data for a table should be fed to device memory for\nprocessing (scanner in a traditional terminology).",
+      "type": "object",
+      "properties": {
+        "archiveBatchIDEnd": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ArchiveBatchIDEnd"
+        },
+        "archiveBatchIDStart": {
+          "description": "Range of archive batches to process: [Start, end).\nDepending on the archiving progress of each shard, live batches may be\nskipped for processing if the archiving cutoff is after the time of\nArchiveBatchIDEnd.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ArchiveBatchIDStart"
+        },
+        "columnUsage": {
+          "description": "Map from column ID to its usage by the query.",
+          "x-go-name": "ColumnUsages"
+        },
+        "columns": {
+          "description": "IDs of columns to be used in this query, in the following order:\n1. Columns not from ArchivingSortColumns.\n2. Columns from ArchivingSortColumns in reverse order.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "Columns"
+        },
+        "equalityPrefilterValues": {
+          "description": "Values of equality prefilters in order. Each 4 bytes of the uint32 is used\nto store any data type other than UUID (not supported).",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint32"
+          },
+          "x-go-name": "EqualityPrefilterValues"
+        },
+        "rangePrefilterBoundaries": {
+          "description": "Boundary types and values of the final range prefilter.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/boundaryType"
+          },
+          "x-go-name": "RangePrefilterBoundaries"
+        },
+        "rangePrefilterValues": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint32"
+          },
+          "x-go-name": "RangePrefilterValues"
+        },
+        "shards": {
+          "description": "IDS of all table shards to be scanned on this instance.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "Shards"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "TimeFilter": {
+      "type": "object",
+      "title": "TimeFilter is a syntax sugar for specifying time range.",
+      "properties": {
+        "column": {
+          "description": "A table time column in the format of column, or table_alias.column.\nWhen empty, it defaults to the designated time column of the main table.",
+          "type": "string",
+          "x-go-name": "Column"
+        },
+        "from": {
+          "description": "The time specified in from and to are both inclusive.\nSee https://github.com/uber/aresdb/wiki/aql#time_filter",
+          "type": "string",
+          "x-go-name": "From"
+        },
+        "to": {
+          "type": "string",
+          "x-go-name": "To"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "Type": {
+      "description": "Expression types are determined at query compilation time, type castings are\ngenerated when apprioperiate. Notice that word widths are not specified here.",
+      "type": "integer",
+      "format": "int64",
+      "title": "Type defines data types for expression evaluation.",
+      "x-go-package": "code.uber.internal/data/ares/query/expr"
+    },
+    "boundaryType": {
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "column": {
+      "type": "object",
+      "title": "Column defines the schema of a column from MetaStore.",
+      "properties": {
+        "caseInsensitive": {
+          "description": "Whether to compare characters case insensitively for enum columns. It only matters\nfor ingestion client as it's the place to concert enum strings to enum values.",
+          "type": "boolean",
+          "x-go-name": "CaseInsensitive"
+        },
+        "config": {
+          "$ref": "#/definitions/columnConfig"
+        },
+        "defaultValue": {
+          "description": "We store the default value as string here since it's from user input.\nNil means the default value is NULL. Actual default value of column data type\nshould be stored in memstore.",
+          "type": "string",
+          "x-go-name": "DefaultValue"
+        },
+        "deleted": {
+          "description": "Deleted columns are kept as placeholders in Table.Columns.",
+          "type": "boolean",
+          "x-go-name": "Deleted",
+          "readOnly": true
+        },
+        "disableAutoExpand": {
+          "description": "Whether disable enum cases auto expansion.",
+          "type": "boolean",
+          "x-go-name": "DisableAutoExpand"
+        },
+        "name": {
+          "description": "Immutable, columns cannot be renamed.",
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "type": {
+          "description": "Immutable, columns cannot have their types changed.",
+          "type": "string",
+          "x-go-name": "Type"
+        }
+      },
+      "x-go-name": "Column",
+      "x-go-package": "code.uber.internal/data/ares/metastore/common"
+    },
+    "columnConfig": {
+      "description": "ColumnConfig defines the schema of a column config that can be mutated by\nUpdateColumn API call.",
+      "type": "object",
+      "properties": {
+        "preloadingDays": {
+          "description": "ColumnEvictionConfig : For column level in-memory eviction, it’s the best\neffort TTL for in-memory data.\nColumn level eviction has nothing to do with data availability, but based\non how much data we pre-loaded, the major impact will be there for query\nperformance. Here we bring in two priorities configs: Preloading days and\nPriority.\nPreloading days is defined at each column level to indicate how many\nrecent days data we want to preload to host memory. This is best effort\noperation.\nPriority is defined at each column level to indicate the priority of\neach column. When data eviction happens, we will rely on column priority\nto decide which column will be evicted first.\nHigh number implies high priority.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "PreloadingDays"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Priority"
+        }
+      },
+      "x-go-name": "ColumnConfig",
+      "x-go-package": "code.uber.internal/data/ares/metastore/common"
+    },
+    "oopkQueryStats": {
+      "type": "object",
+      "title": "oopkQueryStats stores the overall stats for a query.",
+      "properties": {
+        "batches": {
+          "description": "Total number of batches.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "NumBatches"
+        },
+        "latency": {
+          "description": "Total timing for all query stages **including transfer**.",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "TotalTiming"
+        },
+        "numBatchSkipped": {
+          "description": "For archive batch, we skip process empty batch. For live batch, we will skip it\nif its min or max value does not pass main table filters or time filters.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "NumBatchSkipped"
+        },
+        "records": {
+          "description": "Total number of records processed on GPU.\nA record could represent multiple data record if firstColumn is compressed.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "NumRecords"
+        },
+        "stages": {
+          "description": "mapping from stage name to stage stats.",
+          "x-go-name": "Name2Stage"
+        },
+        "tranBytes": {
+          "description": "Stats for input data transferred via PCIe.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "BytesTransferred"
+        },
+        "tranCalls": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "NumTransferCalls"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares/query"
+    },
+    "table": {
+      "type": "object",
+      "title": "Table defines the schema and configurations of a table from MetaStore.",
+      "properties": {
+        "archivingSortColumns": {
+          "description": "Fact table only.\nIDs of columns to sort based upon.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "ArchivingSortColumns"
+        },
+        "columns": {
+          "description": "Index to Columns also serves as column IDs.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/column"
+          },
+          "x-go-name": "Columns"
+        },
+        "config": {
+          "$ref": "#/definitions/tableConfig"
+        },
+        "isFactTable": {
+          "description": "Whether this is a fact table.",
+          "type": "boolean",
+          "x-go-name": "IsFactTable"
+        },
+        "name": {
+          "description": "Name of the table, immutable.",
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "primaryKeyColumns": {
+          "description": "IDs of primary key columns. This field is immutable.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "PrimaryKeyColumns"
+        }
+      },
+      "x-go-name": "Table",
+      "x-go-package": "code.uber.internal/data/ares/metastore/common"
+    },
+    "tableConfig": {
+      "description": "TableConfig defines the table configurations that can be changed",
+      "type": "object",
+      "properties": {
+        "archivingDelayMinutes": {
+          "description": "Number of minutes after event time before a record can be archived.",
+          "type": "integer",
+          "format": "uint32",
+          "x-go-name": "ArchivingDelayMinutes"
+        },
+        "archivingIntervalMinutes": {
+          "description": "Specifies how often archiving runs.",
+          "type": "integer",
+          "format": "uint32",
+          "x-go-name": "ArchivingIntervalMinutes"
+        },
+        "backfillIntervalMinutes": {
+          "description": "Specifies how often backfill runs.",
+          "type": "integer",
+          "format": "uint32",
+          "x-go-name": "BackfillIntervalMinutes"
+        },
+        "backfillMaxBufferSize": {
+          "description": "Upper limit of current backfill buffer size + backfilling buffer size.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "BackfillMaxBufferSize"
+        },
+        "backfillStoreBatchSize": {
+          "description": "Size of each live batch used by backfill job.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "BackfillStoreBatchSize"
+        },
+        "backfillThresholdInBytes": {
+          "description": "Backfill buffer size in bytes that will trigger a backfill job.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "BackfillThresholdInBytes"
+        },
+        "batchSize": {
+          "description": "Size of each live batch, should be sufficiently large.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "BatchSize"
+        },
+        "initPrimaryKeyNumBuckets": {
+          "description": "Initial setting of number of buckets for primary key\nif equals to 0, default will be used",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "InitialPrimaryKeyNumBuckets"
+        },
+        "maxRedoLogFileSize": {
+          "description": "Specifies the size limit of a single redo log file.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MaxRedoLogFileSize"
+        },
+        "recordRetentionInDays": {
+          "description": "Records with timestamp older than now - RecordRetentionInDays will be skipped\nduring ingestion and backfill. 0 means unlimited days.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "RecordRetentionInDays"
+        },
+        "redoLogRotationInterval": {
+          "description": "Specifies how often to create a new redo log file.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "RedoLogRotationInterval"
+        },
+        "snapshotIntervalMinutes": {
+          "description": "Specifies how often snapshot runs.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "SnapshotIntervalMinutes"
+        },
+        "snapshotThreshold": {
+          "description": "Number of mutations to accumulate before creating a new snapshot.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "SnapshotThreshold"
+        }
+      },
+      "x-go-name": "TableConfig",
+      "x-go-package": "code.uber.internal/data/ares/metastore/common"
+    }
+  },
+  "responses": {
+    "addEnumCaseResponse": {
+      "description": "AddEnumCaseResponse represents AddEnumCase response.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "aqlResponse": {
+      "description": "AQLResponse represents queryAQL response.",
+      "schema": {
+        "$ref": "#/definitions/AQLResponse"
+      }
+    },
+    "errorResponse": {
+      "description": "ErrorResponse represents error response.",
+      "schema": {
+        "$ref": "#/definitions/APIError"
+      }
+    },
+    "getTableResponse": {
+      "description": "GetTableResponse represents GetTable response.",
+      "schema": {
+        "$ref": "#/definitions/table"
+      }
+    },
+    "listEnumCasesResponse": {
+      "description": "ListEnumCasesResponse represents ListEnumCases response.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "noContentResponse": {
+      "description": "NoContentResponse represents Response with no content."
+    },
+    "stringArrayResponse": {
+      "description": "StringArrayResponse represents string array response.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
