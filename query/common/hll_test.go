@@ -15,9 +15,9 @@
 package common
 
 import (
-	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"io/ioutil"
 	"unsafe"
 )

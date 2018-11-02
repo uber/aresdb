@@ -15,12 +15,12 @@
 package query
 
 import (
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"sync"
 	"time"
 )

@@ -15,9 +15,9 @@
 package query
 
 import (
-	"github.com/uber/aresdb/utils"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/utils"
 	"sort"
 	"time"
 	"unsafe"

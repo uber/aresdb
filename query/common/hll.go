@@ -19,8 +19,8 @@ import (
 	"github.com/uber/aresdb/utils"
 	"strings"
 
-	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/pkg/errors"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"io"
 	"math"
 	"sort"

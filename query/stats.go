@@ -15,11 +15,11 @@
 package query
 
 import (
-	"github.com/uber/aresdb/memutils"
-	"github.com/uber/aresdb/utils"
 	"encoding/json"
 	"fmt"
 	"github.com/uber-common/bark"
+	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/utils"
 	"math"
 	"sort"
 	"time"

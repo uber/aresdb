@@ -15,10 +15,10 @@
 package common
 
 import (
-	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/utils"
 	"encoding/hex"
 	"fmt"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"strconv"
 	"time"
 	"unsafe"

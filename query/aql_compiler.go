@@ -22,13 +22,13 @@ import (
 	"strings"
 	"unsafe"
 
+	"fmt"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"fmt"
 	"strconv"
 )
 

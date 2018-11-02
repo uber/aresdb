@@ -17,10 +17,10 @@ package query
 import (
 	"sync"
 
+	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber-common/bark"
 	"math"
 	"strconv"
 	"time"
