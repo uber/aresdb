@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ARESDB_QUERY_EXPRESSION_VM_H_
-#define ARESDB_QUERY_EXPRESSION_VM_H_
+#ifndef QUERY_EXPRESSION_VM_H_
+#define QUERY_EXPRESSION_VM_H_
 #include <stddef.h>
 #include <stdint.h>
 
@@ -37,8 +37,9 @@ enum ExprVMInst {
   // The call type is specified in the payload (masked by 0x0000ffff).
   // At the end of the call, the result is put on top of the stack pair.
   //
-  // TODO: to support an argument with variable-length data (e.g., geofence),
-  // we need to add a third stack for storing offsets to the value stack,
+  // TODO(lucafuji): to support an argument with variable-length data
+  // (e.g., geofence),
+  // We need to add a third stack for storing offsets to the value stack,
   // and introduce new instructions that operate on the offset stack.
   INST_CALL              = 0x01000000,
 
@@ -135,4 +136,4 @@ enum ExprVMCall {
   CALL_MOD_UNSIGNED      = 0x3c,
   CALL_MOD_FLOAT         = 0x3d
 };
-#endif  // ARESDB_QUERY_EXPRESSION_VM_H_
+#endif  // QUERY_EXPRESSION_VM_H_

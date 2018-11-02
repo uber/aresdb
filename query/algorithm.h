@@ -15,12 +15,12 @@
 #ifndef QUERY_ALGORITHM_H_
 #define QUERY_ALGORITHM_H_
 #include <cuda_runtime.h>
-#include <cfloat>
-#include <cstdint>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
 #include <thrust/host_vector.h>
 #include <thrust/system/cuda/execution_policy.h>
+#include <cfloat>
+#include <cstdint>
 #include <algorithm>
 #include <type_traits>
 #include "query/functor.h"
