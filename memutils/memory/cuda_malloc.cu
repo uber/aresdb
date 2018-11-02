@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstdio>
-#include <cstring>
 #include <cuda_runtime.h>
 #include <cuda_profiler_api.h>
+#include <cstdio>
+#include <cstring>
 #include "../memory.h"
 
 const int MAX_ERROR_LEN = 100;

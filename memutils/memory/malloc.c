@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../memory.h"
-
 #include <stdlib.h>
 #include <string.h>
+
+#include "../memory.h"
 
 CGoCallResHandle HostAlloc(size_t bytes) {
   CGoCallResHandle resHandle = {NULL, NULL};
@@ -55,11 +55,8 @@ CGoCallResHandle DeviceFree(void *p, int device) {
 }
 
 // Simulate on host side.
-CGoCallResHandle AsyncCopyHostToDevice(void *dst,
-                                              void *src,
-                                              size_t bytes,
-                                              void *stream,
-                                              int device) {
+CGoCallResHandle AsyncCopyHostToDevice(void *dst, void *src, size_t bytes,
+                                       void *stream, int device) {
   memcpy(dst, src, bytes);
   CGoCallResHandle resHandle = {NULL, NULL};
   return resHandle;
@@ -87,13 +84,13 @@ CGoCallResHandle AsyncCopyDeviceToHost(void *dst,
 
 // Simulate on host side.
 CGoCallResHandle GetDeviceCount() {
-  CGoCallResHandle resHandle = {(void *) 1, NULL};
+  CGoCallResHandle resHandle = {reinterpret_cast<void *>(1), NULL};
   return resHandle;
 }
 
 CGoCallResHandle GetDeviceGlobalMemoryInMB(int device) {
   // 24 GB
-  CGoCallResHandle resHandle = {(void *)24392, NULL};
+  CGoCallResHandle resHandle = {reinterpret_cast<void *>(24392), NULL};
   return resHandle;
 }
 
