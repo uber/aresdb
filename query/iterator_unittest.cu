@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstdint>
 #include <thrust/execution_policy.h>
 #include <thrust/fill.h>
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/sequence.h>
 #include <thrust/sort.h>
+#include <cstdint>
 #include <algorithm>
 #include <cfloat>
 #include <iostream>

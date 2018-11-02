@@ -14,14 +14,15 @@
 
 #ifndef QUERY_TRANSFORM_H_
 #define QUERY_TRANSFORM_H_
-#include <algorithm>
+
 #include <cuda_runtime.h>
-#include <cfloat>
-#include <cstdint>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
 #include <thrust/host_vector.h>
 #include <thrust/system/cuda/execution_policy.h>
+#include <algorithm>
+#include <cfloat>
+#include <cstdint>
 #include <vector>
 #include "query/algorithm.h"
 #include "query/binder.h"
@@ -129,6 +130,7 @@ class OutputVectorBinder {
       default:throw std::invalid_argument("Unsupported output vector type");
     }
   }
+
  private:
   OutputVector output;
   std::vector<InputVector> inputs;

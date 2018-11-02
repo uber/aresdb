@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ARES_CGOUTILS_UTILS_H_
-#define ARES_CGOUTILS_UTILS_H_
+#ifndef CGOUTILS_UTILS_H_
+#define CGOUTILS_UTILS_H_
 
 // CGoCallResHandle wraps the return result of a CGo function call along with
 // the error string if any.
@@ -22,4 +22,4 @@ typedef struct {
   const char *pStrErr;
 } CGoCallResHandle;
 
-#endif  // ARES_CGOUTILS_UTILS_H_
+#endif  // CGOUTILS_UTILS_H_

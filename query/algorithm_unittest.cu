@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <thrust/transform.h>
 #include <cstdint>
 #include <cfloat>
-#include <thrust/transform.h>
 #include <algorithm>
 #include <cmath>
 #include <exception>

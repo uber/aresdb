@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstring>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/transform.h>
+#include <cstring>
 #include <algorithm>
 #include <exception>
 #include "query/algorithm.h"
