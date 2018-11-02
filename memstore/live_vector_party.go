@@ -16,8 +16,8 @@ package memstore
 
 import (
 	"bufio"
-	"code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"io"
 	"reflect"
 )

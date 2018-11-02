@@ -17,13 +17,13 @@ package memstore
 import (
 	"unsafe"
 
-	"code.uber.internal/data/ares/diskstore"
-	"code.uber.internal/data/ares/diskstore/mocks"
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/metastore"
-	metaCom "code.uber.internal/data/ares/metastore/common"
-	"code.uber.internal/data/ares/testing"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/diskstore/mocks"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/testing"
+	"github.com/uber/aresdb/utils"
 	"github.com/stretchr/testify/mock"
 )
 

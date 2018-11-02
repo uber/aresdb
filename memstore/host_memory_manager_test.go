@@ -17,12 +17,12 @@ package memstore
 import (
 	"os"
 
-	diskMocks "code.uber.internal/data/ares/diskstore/mocks"
-	"code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/metastore"
-	metaCom "code.uber.internal/data/ares/metastore/common"
-	metaMocks "code.uber.internal/data/ares/metastore/mocks"
-	"code.uber.internal/data/ares/utils"
+	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	"github.com/uber/aresdb/utils"
 
 	"bytes"
 	"encoding/json"

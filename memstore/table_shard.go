@@ -17,10 +17,10 @@ package memstore
 import (
 	"sync"
 
-	"code.uber.internal/data/ares/diskstore"
-	"code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/metastore"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/utils"
 )
 
 // TableShard stores the data for one table shard in memory.

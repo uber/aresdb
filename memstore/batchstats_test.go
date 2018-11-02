@@ -1,11 +1,11 @@
 package memstore
 
 import (
-	"code.uber.internal/data/ares/memstore/common"
+	"github.com/uber/aresdb/memstore/common"
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/mock"
 
-	metaMocks "code.uber.internal/data/ares/metastore/mocks"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	. "github.com/onsi/gomega"
 	"time"
 )

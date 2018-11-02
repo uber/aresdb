@@ -21,10 +21,10 @@ import (
 
 	"unsafe"
 
-	diskStoreMocks "code.uber.internal/data/ares/diskstore/mocks"
-	memCom "code.uber.internal/data/ares/memstore/common"
-	metaCom "code.uber.internal/data/ares/metastore/common"
-	utilsMocks "code.uber.internal/data/ares/utils/mocks"
+	diskStoreMocks "github.com/uber/aresdb/diskstore/mocks"
+	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	utilsMocks "github.com/uber/aresdb/utils/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"

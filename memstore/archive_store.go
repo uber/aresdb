@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"sync"
 
-	"code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"github.com/uber-common/bark"
 	"strconv"
 )

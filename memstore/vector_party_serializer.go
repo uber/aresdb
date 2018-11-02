@@ -15,9 +15,9 @@
 package memstore
 
 import (
-	"code.uber.internal/data/ares/diskstore"
-	"code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 )
 
 // VectorPartyHeader is the magic header written into the beginning of each vector party file.

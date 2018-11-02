@@ -17,10 +17,10 @@ package memstore
 import (
 	"errors"
 
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/metastore"
-	metaCom "code.uber.internal/data/ares/metastore/common"
-	"code.uber.internal/data/ares/metastore/mocks"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/metastore/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

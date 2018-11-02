@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"time"
 
-	memCom "code.uber.internal/data/ares/memstore/common"
-	metaCom "code.uber.internal/data/ares/metastore/common"
-	metaMocks "code.uber.internal/data/ares/metastore/mocks"
-	"code.uber.internal/data/ares/utils"
+	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	"github.com/uber/aresdb/utils"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -15,8 +15,8 @@
 package memstore
 
 import (
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/utils"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 )
 
 // Purge purges out of retention data for table shard

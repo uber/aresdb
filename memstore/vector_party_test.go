@@ -17,7 +17,7 @@ package memstore
 import (
 	"unsafe"
 
-	"code.uber.internal/data/ares/memstore/common"
+	"github.com/uber/aresdb/memstore/common"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sync"

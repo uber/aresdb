@@ -15,7 +15,7 @@
 package memstore
 
 import (
-	"code.uber.internal/data/ares/metastore/mocks"
+	"github.com/uber/aresdb/metastore/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"

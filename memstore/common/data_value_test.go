@@ -16,7 +16,7 @@ package common
 
 import (
 	"bytes"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/utils"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"unsafe"

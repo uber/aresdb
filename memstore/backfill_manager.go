@@ -17,9 +17,9 @@ package memstore
 import (
 	"sync"
 
-	"code.uber.internal/data/ares/metastore"
-	metaCom "code.uber.internal/data/ares/metastore/common"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/utils"
 	"encoding/json"
 )
 

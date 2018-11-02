@@ -18,7 +18,7 @@ package memutils
 // #include "memory.h"
 import "C"
 import (
-	"code.uber.internal/data/ares/cgoutils"
+	"github.com/uber/aresdb/cgoutils"
 	"reflect"
 	"unsafe"
 )

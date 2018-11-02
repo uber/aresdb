@@ -17,11 +17,11 @@ package memstore
 import (
 	"sort"
 
-	"code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"time"
 
-	memCom "code.uber.internal/data/ares/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 )
 
 // Backfill is the process of merging records with event time older than cutoff with

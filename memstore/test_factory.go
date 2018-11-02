@@ -19,11 +19,11 @@ package memstore
 import (
 	"path/filepath"
 
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/utils"
 
-	diskMocks "code.uber.internal/data/ares/diskstore/mocks"
-	"code.uber.internal/data/ares/memstore/common"
-	metaMocks "code.uber.internal/data/ares/metastore/mocks"
+	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	"github.com/uber/aresdb/memstore/common"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"gopkg.in/yaml.v2"
 	"strings"
 	"sync"

@@ -19,10 +19,10 @@ import (
 
 	"sort"
 
-	"code.uber.internal/data/ares/diskstore/mocks"
-	"code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/testing"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/diskstore/mocks"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/testing"
+	"github.com/uber/aresdb/utils"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
