@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ARES_QUERY_BINDER_H_
-#define ARES_QUERY_BINDER_H_
+#ifndef ARESDB_QUERY_BINDER_H_
+#define ARESDB_QUERY_BINDER_H_
 #include <cuda_runtime.h>
 #include <cfloat>
 #include <cstdint>
@@ -689,4 +689,4 @@ struct IndexZipIteratorMaker : public IndexZipIteratorMakerBase<
 };
 
 }  // namespace ares
-#endif  // ARES_QUERY_BINDER_H_
+#endif  // ARESDB_QUERY_BINDER_H_
