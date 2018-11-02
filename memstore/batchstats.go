@@ -1,8 +1,8 @@
 package memstore
 
 import (
-	"code.uber.internal/data/ares/metastore"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/utils"
 	"time"
 )
 

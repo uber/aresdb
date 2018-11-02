@@ -17,8 +17,8 @@ package memstore
 import (
 	"path/filepath"
 
-	"code.uber.internal/data/ares/diskstore"
-	"code.uber.internal/data/ares/metastore"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/metastore"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

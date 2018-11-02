@@ -16,8 +16,8 @@ package common
 
 import (
 	"bytes"
-	metaCom "code.uber.internal/data/ares/metastore/common"
-	"code.uber.internal/data/ares/utils"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/utils"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"math"

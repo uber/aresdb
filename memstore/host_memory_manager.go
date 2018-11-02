@@ -19,10 +19,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"code.uber.internal/data/ares/metastore"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/utils"
 
-	"code.uber.internal/data/ares/memstore/common"
+	"github.com/uber/aresdb/memstore/common"
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/uber-common/bark"
 )

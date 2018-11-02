@@ -15,7 +15,7 @@
 package common
 
 import (
-	"code.uber.internal/data/ares/diskstore"
+	"github.com/uber/aresdb/diskstore"
 	"io"
 	"unsafe"
 )

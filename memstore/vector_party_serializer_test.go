@@ -18,12 +18,12 @@ import (
 	"io"
 
 	"bytes"
-	"code.uber.internal/data/ares/diskstore/mocks"
-	"code.uber.internal/data/ares/memstore/common"
-	memComMocks "code.uber.internal/data/ares/memstore/common/mocks"
-	metaCom "code.uber.internal/data/ares/metastore/common"
+	"github.com/uber/aresdb/diskstore/mocks"
+	"github.com/uber/aresdb/memstore/common"
+	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+	metaCom "github.com/uber/aresdb/metastore/common"
 
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/utils"
 	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -15,15 +15,15 @@
 package memstore
 
 import (
-	"code.uber.internal/data/ares/memstore/common"
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/metastore"
-	"code.uber.internal/data/ares/metastore/mocks"
-	"code.uber.internal/data/ares/testing"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/metastore/mocks"
+	"github.com/uber/aresdb/testing"
+	"github.com/uber/aresdb/utils"
 
-	diskMocks "code.uber.internal/data/ares/diskstore/mocks"
-	metaMocks "code.uber.internal/data/ares/metastore/mocks"
+	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"

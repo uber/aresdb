@@ -15,7 +15,7 @@
 package memstore
 
 import (
-	"code.uber.internal/data/ares/memstore/common"
+	"github.com/uber/aresdb/memstore/common"
 	"sync"
 )
 

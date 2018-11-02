@@ -17,8 +17,8 @@ package memstore
 import (
 	"io"
 
-	"code.uber.internal/data/ares/diskstore"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/utils"
 )
 
 // RedoLogBrowser is the interface to list redo log files, upsert batches and read upsert batch data.

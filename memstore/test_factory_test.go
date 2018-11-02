@@ -15,9 +15,9 @@
 package memstore
 
 import (
-	diskMocks "code.uber.internal/data/ares/diskstore/mocks"
-	"code.uber.internal/data/ares/memstore/common"
-	metaMocks "code.uber.internal/data/ares/metastore/mocks"
+	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	"github.com/uber/aresdb/memstore/common"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sync"

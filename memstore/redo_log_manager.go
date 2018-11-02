@@ -19,8 +19,8 @@ import (
 	"io"
 	"sync"
 
-	"code.uber.internal/data/ares/diskstore"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/utils"
 	"github.com/uber-common/bark"
 )
 

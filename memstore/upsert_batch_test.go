@@ -18,8 +18,8 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/memutils"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

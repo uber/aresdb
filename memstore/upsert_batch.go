@@ -18,9 +18,9 @@ import (
 	"unsafe"
 
 	"bytes"
-	"code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/memutils"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/utils"
 	"math"
 )
 

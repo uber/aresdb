@@ -17,7 +17,7 @@ package cgoutils
 // #include <stdlib.h>
 import "C"
 import (
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/utils"
 	"unsafe"
 )
 
