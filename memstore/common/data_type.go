@@ -17,6 +17,7 @@ package common
 import (
 	"bytes"
 	"fmt"
+	"github.com/satori/go.uuid"
 	"math"
 	"reflect"
 	"regexp"
