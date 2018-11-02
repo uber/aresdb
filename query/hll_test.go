@@ -15,8 +15,8 @@
 package query
 
 import (
-	memCom "code.uber.internal/data/ares/memstore/common"
-	queryCom "code.uber.internal/data/ares/query/common"
+	memCom "github.com/uber/aresdb/memstore/common"
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/onsi/ginkgo"
 	"unsafe"
 

@@ -15,7 +15,7 @@
 package query
 
 import (
-	"code.uber.internal/data/ares/query/expr"
+	"github.com/uber/aresdb/query/expr"
 	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

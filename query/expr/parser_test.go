@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.uber.internal/data/ares/query/expr"
+	"github.com/uber/aresdb/query/expr"
 )
 
 // Ensure the parser can parse expressions into an AST.

@@ -16,10 +16,10 @@ package common
 
 import (
 	"bytes"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/utils"
 	"strings"
 
-	memCom "code.uber.internal/data/ares/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/pkg/errors"
 	"io"
 	"math"

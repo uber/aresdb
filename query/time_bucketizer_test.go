@@ -15,10 +15,10 @@
 package query
 
 import (
-	"code.uber.internal/data/ares/common"
-	"code.uber.internal/data/ares/memstore"
-	"code.uber.internal/data/ares/query/expr"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/memstore"
+	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 	"encoding/json"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

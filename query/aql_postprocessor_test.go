@@ -15,10 +15,10 @@
 package query
 
 import (
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/memutils"
-	queryCom "code.uber.internal/data/ares/query/common"
-	"code.uber.internal/data/ares/query/expr"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
+	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/expr"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"

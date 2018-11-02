@@ -15,8 +15,8 @@
 package query
 
 import (
-	queryCom "code.uber.internal/data/ares/query/common"
-	"code.uber.internal/data/ares/query/expr"
+	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/expr"
 )
 
 // Ares only supports a subset of AQL; missing features are provided by Apollo.

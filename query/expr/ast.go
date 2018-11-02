@@ -22,7 +22,7 @@ package expr
 
 import (
 	"bytes"
-	memCom "code.uber.internal/data/ares/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"fmt"
 	"strconv"
 	"strings"

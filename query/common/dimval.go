@@ -15,8 +15,8 @@
 package common
 
 import (
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/utils"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"encoding/hex"
 	"fmt"
 	"strconv"

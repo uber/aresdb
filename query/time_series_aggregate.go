@@ -21,12 +21,12 @@ import (
 	"strconv"
 	"unsafe"
 
-	"code.uber.internal/data/ares/cgoutils"
-	"code.uber.internal/data/ares/memstore"
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/memutils"
-	"code.uber.internal/data/ares/query/common"
-	"code.uber.internal/data/ares/query/expr"
+	"github.com/uber/aresdb/cgoutils"
+	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/expr"
 )
 
 // DataTypeToCDataType mapps from memstore data type to c data types

@@ -19,12 +19,12 @@ import (
 	"math"
 	"unsafe"
 
-	"code.uber.internal/data/ares/memstore"
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/memutils"
-	queryCom "code.uber.internal/data/ares/query/common"
-	"code.uber.internal/data/ares/query/expr"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
+	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 	"encoding/binary"
 	"time"
 )

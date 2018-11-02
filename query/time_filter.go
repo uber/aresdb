@@ -15,8 +15,8 @@
 package query
 
 import (
-	"code.uber.internal/data/ares/query/expr"
-	"code.uber.internal/data/ares/utils"
+	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 	"strconv"
 	"strings"
 	"time"

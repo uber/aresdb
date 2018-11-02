@@ -16,10 +16,10 @@ package query
 
 import (
 	"bytes"
-	memCom "code.uber.internal/data/ares/memstore/common"
-	"code.uber.internal/data/ares/memutils"
-	queryCom "code.uber.internal/data/ares/query/common"
-	"code.uber.internal/data/ares/utils"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
+	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/utils"
 	"math"
 	"time"
 	"unsafe"
