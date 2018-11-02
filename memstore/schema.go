@@ -19,11 +19,11 @@ import (
 
 	"encoding/json"
 
+	"github.com/uber-common/bark"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber-common/bark"
 	"unsafe"
 )
 

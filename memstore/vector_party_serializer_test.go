@@ -23,10 +23,10 @@ import (
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 
-	"github.com/uber/aresdb/utils"
 	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/utils"
 )
 
 var _ = ginkgo.Describe("vector party serializer", func() {

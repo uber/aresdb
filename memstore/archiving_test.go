@@ -21,12 +21,12 @@ import (
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	utilsMocks "github.com/uber/aresdb/utils/mocks"
 
-	memCom "github.com/uber/aresdb/memstore/common"
-	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/utils"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/utils"
 )
 
 var _ = ginkgo.Describe("archiving", func() {

@@ -17,11 +17,11 @@ package memstore
 import (
 	"sync"
 
+	"fmt"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
-	"fmt"
 )
 
 // TableShardMemoryUsage contains memory usage for column memory and primary key memory usage

@@ -17,11 +17,11 @@ package memstore
 import (
 	"sync"
 
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = ginkgo.Describe("table Shard", func() {

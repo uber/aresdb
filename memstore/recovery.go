@@ -17,9 +17,9 @@ package memstore
 import (
 	"sync"
 
+	"github.com/uber-common/bark"
 	memcom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber-common/bark"
 	"math"
 	"sort"
 )

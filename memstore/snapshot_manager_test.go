@@ -18,11 +18,11 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/pkg/errors"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/utils"
-	"github.com/pkg/errors"
 	"time"
 )
 

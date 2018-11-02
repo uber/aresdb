@@ -15,9 +15,9 @@
 package memstore
 
 import (
-	"github.com/uber/aresdb/memstore/common"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/memstore/common"
 )
 
 var _ = ginkgo.Describe("live store", func() {

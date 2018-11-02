@@ -15,14 +15,14 @@
 package memstore
 
 import (
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 	diskStoreMocks "github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaStoreMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/utils"
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
 )
 
 var _ = ginkgo.Describe("Purge", func() {

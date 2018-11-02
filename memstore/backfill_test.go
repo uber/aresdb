@@ -15,14 +15,14 @@
 package memstore
 
 import (
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	utilsMocks "github.com/uber/aresdb/utils/mocks"
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
 )
 
 var _ = ginkgo.Describe("backfill", func() {

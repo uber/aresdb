@@ -15,9 +15,9 @@
 package common
 
 import (
-	"github.com/uber/aresdb/utils"
 	"encoding/hex"
 	"fmt"
+	"github.com/uber/aresdb/utils"
 	"strconv"
 	"strings"
 	"unsafe"

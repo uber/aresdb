@@ -18,10 +18,10 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
 )
 
 var _ = ginkgo.Describe("upsert batch", func() {

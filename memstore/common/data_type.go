@@ -16,16 +16,16 @@ package common
 
 import (
 	"bytes"
-	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/utils"
 	"fmt"
-	"github.com/satori/go.uuid"
 	"math"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"unsafe"
+
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/utils"
 )
 
 // DataType is the type of value supported in gforcedb.
@@ -305,7 +305,7 @@ func ConvertToUUID(value interface{}) ([2]uint64, bool) {
 }
 
 // GeoPointFromString convert string to geopoint
-// we support string formatted geo point in Point(lng,lat) format only for compatibility with memsql
+// we support wkt format, eg. Point(lng,lat)
 // Inside gforcedb system we store lat,lng format
 func GeoPointFromString(str string) (point [2]float32, err error) {
 	lngLatStrs := strings.Fields(strings.NewReplacer("p", "", "o", "", "i", "", "n", "", "t", "", "(", "", ")", "", ",", " ").Replace(strings.ToLower(str)))
