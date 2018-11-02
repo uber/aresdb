@@ -14,8 +14,35 @@
 
 package main
 
-import "fmt"
+import (
+	"github.com/uber/aresdb/cmd"
+	"github.com/uber/aresdb/common"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+)
+
+const defaultCfgPath = "config/ares.yaml"
+
+func readConfig() (cfg common.AresServerConfig, err error) {
+	var fileContent []byte
+	fileContent, err = ioutil.ReadFile(defaultCfgPath)
+	if err != nil {
+		return
+	}
+	err = yaml.Unmarshal(fileContent, &cfg)
+	return
+}
 
 func main() {
-	fmt.Println("Hello AresDB!")
+	logFactory := common.NewLoggerFactory()
+	defaultLogger := logFactory.GetDefaultLogger()
+	queryLogger := logFactory.GetLogger("query")
+	defaultMetric := common.NewNoopMetrics()
+
+	cfg, err := readConfig()
+	if err != nil {
+		defaultLogger.WithField("err", err).Fatal("Failed to read default config")
+	}
+
+	cmd.StartService(cfg, defaultLogger, queryLogger, defaultMetric)
 }
