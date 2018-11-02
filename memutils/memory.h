@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef UTILS_MEMORY_H
-#define UTILS_MEMORY_H
+#ifndef MEMUTILS_MEMORY_H_
+#define MEMUTILS_MEMORY_H_
 
 #include <stddef.h>
 #include "../cgoutils/utils.h"
@@ -57,4 +57,4 @@ CGoCallResHandle CudaProfilerStop();
 }
 #endif
 
-#endif
+#endif  // MEMUTILS_MEMORY_H_
