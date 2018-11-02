@@ -7,7 +7,7 @@ ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-bu
   -e ".*/_.*" \
   -e ".*/mocks.*")
 
-ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h -o -iname \*.c \) | grep -v -e Godeps -e vendor -e go-build \
+ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h \) | grep -v -e Godeps -e vendor -e go-build \
   -e build \
   -e ".*/\..*" \
   -e ".*/_.*" \
