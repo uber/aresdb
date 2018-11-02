@@ -26,9 +26,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber-common/bark"
 )
 
 const (
