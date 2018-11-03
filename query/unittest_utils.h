@@ -22,6 +22,8 @@
 #include <thrust/transform.h>
 #include <algorithm>
 #include <cmath>
+#include <functional>
+#include <tuple>
 #include "query/utils.h"
 
 typedef typename thrust::host_vector<unsigned char>::iterator charIter;

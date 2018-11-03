@@ -17,6 +17,7 @@
 #include <cuda_runtime.h>
 #include <cfloat>
 #include <cstdint>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 #include "query/algorithm.h"

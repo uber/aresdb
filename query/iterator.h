@@ -25,6 +25,7 @@
 #include <thrust/iterator/detail/normal_iterator.h>
 #include <cfloat>
 #include <cmath>
+#include <tuple>
 #include "query/time_series_aggregate.h"
 #include "query/utils.h"
 

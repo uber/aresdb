@@ -20,6 +20,7 @@
 #include <thrust/execution_policy.h>
 #include <algorithm>
 #include <iterator>
+#include <tuple>
 #include "gtest/gtest.h"
 #include "query/functor.h"
 #include "query/iterator.h"

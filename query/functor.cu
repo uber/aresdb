@@ -28,6 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "query/functor.h"
+#include <tuple>
 
 extern __constant__  uint16_t DAYS_BEFORE_MONTH_DEVICE[13];
 
