@@ -9,7 +9,7 @@ env:
     - CUDA_PKG=cuda-repo-ubuntu1404_${CUDA_VERSION}.${CUDA_PKG_VERSION}_amd64.deb
     - CUDA_HOME=/usr/local/cuda
     - PATH=${PATH}:${CUDA_HOME}/bin:${GOPATH}/bin
-    - LD_LIBRARY_PATH=${CUDA_HOME}/lib:$(pwd)/lib
+    - LD_LIBRARY_PATH=${CUDA_HOME}/lib:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
     - GTEST_ROOT=./build/googletest
 
 install:
