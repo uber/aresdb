@@ -224,4 +224,5 @@ $(GTEST_OUT_DIR)/%_unittest.o: $(CXX_SRC_DIR)/query/%_unittest.cu
 	$(NVCC) $(CPPFLAGS) $(CXXFLAGS) $(NVCCFLAGS) -c $^ -o $@
 
 $(GTEST_OUT_DIR)/all_unittest : $(patsubst %,$(GTEST_OUT_DIR)/%.o,$(CUDA_TESTS)) $(GTEST_OUT_DIR)/gtest_main.a
+	ls -r
 	$(NVCC) $(CPPFLAGS) $(CXXFLAGS) $(NVCCFLAGS) $^ -o $@  -lpthread -lalgorithm
