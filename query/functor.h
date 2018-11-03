@@ -18,6 +18,7 @@
 #include <cuda_runtime.h>
 #include <thrust/tuple.h>
 #include <iostream>
+#include <tuple>
 #include "query/iterator.h"
 #include "query/time_series_aggregate.h"
 #include "query/utils.h"

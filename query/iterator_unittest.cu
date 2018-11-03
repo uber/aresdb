@@ -22,6 +22,7 @@
 #include <cfloat>
 #include <iostream>
 #include <iterator>
+#include <tuple>
 #include "gtest/gtest.h"
 #include "query/unittest_utils.h"
 #include "query/functor.h"
@@ -369,7 +370,7 @@ TEST(CompressedColumnTest, CheckStartCount) {
 TEST(DimensionOutputIteratorTest, CheckCopy) {
   uint16_t in1[2] = {65531, 1};
   bool in2[2] = {true, true};
-  uint8_t out[6] = {0, 0, 0, 0, 0, 0};
+  uint8_t out[8] = {0, 0, 0, 0, 0, 0, 0, 0};
   thrust::zip_iterator<thrust::tuple<Uint16Iter, BoolIter>> zipped1(
       thrust::make_tuple(std::begin(in1), std::begin(in2)));
   DimensionOutputIterator<uint16_t> dim_iter =
