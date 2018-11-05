@@ -141,7 +141,7 @@ var _ = ginkgo.Describe("hll", func() {
 		*(*uint32)(unsafe.Pointer(&hllData[20+queryCom.DenseDataLength])) = 0X000300FD
 		*(*uint32)(unsafe.Pointer(&hllData[24+queryCom.DenseDataLength])) = 0X000400FC
 
-		loc, _ := time.LoadLocation("America/Los_Angeles")
+		loc, _ := time.LoadLocation("Africa/Algiers")
 		qc := AQLQueryContext{
 			OOPK: OOPKContext{
 				currentBatch: oopkBatchContext{
@@ -168,8 +168,8 @@ var _ = ginkgo.Describe("hll", func() {
 		Ω(len(data)).Should(Equal(104 + queryCom.DenseDataLength + 32))
 		Ω(data[64:94]).Should(Equal([]byte{
 			0, 0, 0, 0,
-			0x71, 0x62, 0, 0,
-			0x72, 0x62, 0, 0, // dim0
+			0, 0, 0, 0,
+			0, 0, 0, 0, // dim0
 			0, 0,
 			2, 0,
 			2, 2, // dim1
@@ -191,17 +191,15 @@ var _ = ginkgo.Describe("hll", func() {
 						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
 					},
 				}},
-			"25201": map[string]interface{}{
+			"0": map[string]interface{}{
 				"c": map[string]interface{}{
 					"2": queryCom.HLL{NonZeroRegisters: 2, DenseData: hllData[12 : 12+queryCom.DenseDataLength]},
 				},
-			},
-			"25202": map[string]interface{}{
 				"d": map[string]interface{}{
 					"514": queryCom.HLL{NonZeroRegisters: 4, SparseData: []queryCom.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
 				},
-			}}))
-	})
+			},
+	}))})
 
 	ginkgo.It("Serialize and then deserialize should work", func() {
 		dataTypes := []memCom.DataType{memCom.Uint32, memCom.Uint8, memCom.Int16}
