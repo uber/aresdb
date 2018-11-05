@@ -131,7 +131,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false}, nil)).Should(Equal("1970-01-01 00:00"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
 			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "second", TimeUnit: "", IsTimezoneTable: false}, nil)).Should(Equal("1"))
-		sfLoc, _ := time.LoadLocation("America/Los_Angeles")
+		sfLoc, _ := time.LoadLocation("Africa/Algiers")
 
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
 			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false, TimeZone: sfLoc}, nil)).Should(Equal("1970-01-01 00:00"))
@@ -142,7 +142,7 @@ var _ = ginkgo.Describe("dimval", func() {
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
 			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false, TimeZone: sfLoc}, nil)).Should(Equal("1970-01-01 00:00"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "second", IsTimezoneTable: false, TimeZone: sfLoc, FromOffset: offsetInSeconds, ToOffset: offsetInSeconds}, nil)).Should(Equal("25201"))
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "second", IsTimezoneTable: false, TimeZone: sfLoc, FromOffset: offsetInSeconds, ToOffset: offsetInSeconds}, nil)).Should(Equal("-3599"))
 	})
 
 	ginkgo.It("ReadDimension from cache should work", func() {
