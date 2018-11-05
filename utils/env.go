@@ -28,18 +28,18 @@ func GetAresEnv() AresEnv {
 	return aresEnv
 }
 
-func IsTest() bool{
+func IsTest() bool {
 	return GetAresEnv() == EnvTest
 }
 
-func IsDev() bool{
+func IsDev() bool {
 	return GetAresEnv() == EnvDev
 }
 
-func IsProd() bool{
+func IsProd() bool {
 	return GetAresEnv() == EnvProd
 }
 
-func IsStaging() bool{
+func IsStaging() bool {
 	return GetAresEnv() == EnvStaging
 }
