@@ -62,7 +62,7 @@ golang-lint:
 lint: deps golang-lint clang-lint
 
 
-ares: deps libs
+ares: libs
 	go build -o $@
 
 run: ares
