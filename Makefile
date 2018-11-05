@@ -75,7 +75,7 @@ clean-cuda-test:
 	-rm -rf gtest/*
 
 test: ares
-	bash -c 'DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
+	bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
 
 travis:
 	ARES_ENV=test .travis/run_unittest.sh
