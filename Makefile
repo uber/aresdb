@@ -78,7 +78,7 @@ test: ares
 	bash -c 'DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
 
 travis:
-	.travis/run_unittest.sh
+	ARES_ENV=test .travis/run_unittest.sh
 
 test-cuda :
 	@mkdir -p $(GTEST_OUT_DIR)
