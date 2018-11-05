@@ -24,11 +24,14 @@ import (
 	"github.com/uber/aresdb/utils"
 	"sync"
 	"time"
+	)
+
+var (
+	defaultInitNumBuckets = getDefaultInitNumBuckets()
 )
 
 const (
-	defaultInitNumBuckets = 1000000
-	bucketSize            = 8
+	bucketSize = 8
 	// log2(numHashes)
 	log2NumHashes = 2
 	// number of hash functions
@@ -119,6 +122,13 @@ type stagingEntry struct {
 	eventTime uint32
 	key       Key
 	value     RecordID
+}
+
+func getDefaultInitNumBuckets() int {
+	if utils.IsTest(){
+		return 1000
+	}
+	return 1000000
 }
 
 // Size returns the current number of items stored in the hash table
