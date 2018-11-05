@@ -24,7 +24,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	"sync"
 	"time"
-	)
+)
 
 var (
 	defaultInitNumBuckets = getDefaultInitNumBuckets()
@@ -125,7 +125,7 @@ type stagingEntry struct {
 }
 
 func getDefaultInitNumBuckets() int {
-	if utils.IsTest(){
+	if utils.IsTest() {
 		return 1000
 	}
 	return 1000000
