@@ -65,7 +65,7 @@ make test-cuda
 
 Run AresDB Server
 -----------------
-The following command will start an AresDB server locally.You can start to query the server using a curl command or [swagger](https://github.com/uber/aresdb/wiki/Swagger) page.
+The following command will start an AresDB server locally. You can start to query the server using a curl command or [swagger](https://github.com/uber/aresdb/wiki/Swagger) page.
 ```
 make run
 ```
