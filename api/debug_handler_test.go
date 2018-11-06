@@ -611,8 +611,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
             "index": 1
           },
           "primaryKey": {
-            "allocatedBytes": 104000,
-            "capacity": 8000,
+            "allocatedBytes": 104000000,
+            "capacity": 8000000,
             "eventTimeCutoff": 0,
             "size": 1
           },

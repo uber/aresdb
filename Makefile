@@ -46,7 +46,7 @@ lib/libmem.so:
 	@make malloc
 endif
 
-libs: lib/libmem.so
+libs: lib/libmem.so lib/libalgorithm.so
 
 clang-lint:
 	cppcheck --std=c++11 --language=c++ --inline-suppr --suppress=selfInitialization $(ALL_C_SRC)
