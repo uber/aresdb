@@ -263,7 +263,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 	})
 
-	ginkgo.It("works on dimensions time remedy", func() {
+	ginkgo.It("time dimension remedy should work", func() {
 		query := &AQLQuery{
 			Dimensions: []Dimension{
 				{
@@ -281,7 +281,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 				To:     "0d",
 			},
 		}
-		tzloc, _ := time.LoadLocation("America/Los_Angeles")
+		tzloc, _ := time.LoadLocation("Africa/Algiers")
 		ctx := &AQLQueryContext{
 			Query:         query,
 			fixedTimezone: time.UTC,
@@ -314,26 +314,26 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 				1,
 			},
 			ResultSize:       2,
-			dimensionVectorH: unsafe.Pointer(&[]uint8{12, 0, 0, 0, 13, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1}[0]),
+			dimensionVectorH: unsafe.Pointer(&[]uint8{12, 100, 0, 0, 13, 100, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1}[0]),
 			measureVectorH:   unsafe.Pointer(&[]float32{3.2, 6.4}[0]),
 		}
 
 		ctx.OOPK = oopkContext
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
-			"12": map[string]interface{}{
+			"25612": map[string]interface{}{
 				"2": float64(float32(3.2)),
 			},
-			"13": map[string]interface{}{
+			"25613": map[string]interface{}{
 				"2": 6.400000095367432,
 			},
 		}))
 
 		ctx1.OOPK = oopkContext
 		Ω(ctx1.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
-			"25212": map[string]interface{}{
+			"22012": map[string]interface{}{
 				"2": float64(float32(3.2)),
 			},
-			"25213": map[string]interface{}{
+			"22013": map[string]interface{}{
 				"2": 6.400000095367432,
 			},
 		}))
