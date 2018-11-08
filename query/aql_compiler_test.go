@@ -2213,6 +2213,161 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.ForeignTableCommonFilters[0].String()).Should(Equal("c.id > 1"))
 		Ω(qc.OOPK.geoIntersection.shapeUUIDs).Should(Equal([]string{"00000192F23D460DBE60400C32EA0667"}))
 
+		// Geo point on the left.
+		query = &AQLQuery{
+			Table: "trips",
+			Measures: []Measure{
+				{Expr: "count()"},
+			},
+			Joins: []Join{
+				{
+					Table: "api_cities",
+					Alias: "c",
+					Conditions: []string{
+						"trips.city_id = c.id",
+					},
+				},
+				{
+					Alias: "g",
+					Table: "geofences_configstore_udr_geofences",
+					Conditions: []string{
+						"geography_intersects(request_point, g.shape)",
+					},
+				},
+			},
+			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
+			Filters: []string{
+				"g.geofence_uuid = 0x00000192F23D460DBE60400C32EA0667",
+				"c.id>1",
+			},
+			TimeFilter: TimeFilter{
+				Column: "request_at",
+				From:   "-1d",
+			},
+		}
+		qc.Query = query
+		qc.readSchema(store)
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+
+		parsedQC = AQLQueryContext{
+			Query: query,
+			TableSchemaByName: map[string]*memstore.TableSchema{
+				"trips":                               tripsSchema,
+				"api_cities":                          apiCitySchema,
+				"geofences_configstore_udr_geofences": geoSchema,
+			},
+			TableIDByAlias: map[string]int{
+				"trips": 0,
+				"c":     1,
+				"g":     2,
+			},
+			TableScanners: []*TableScanner{
+				{Schema: tripsSchema, ColumnUsages: make(map[int]columnUsage)},
+				{Schema: apiCitySchema, ColumnUsages: make(map[int]columnUsage)},
+				{Schema: geoSchema, ColumnUsages: make(map[int]columnUsage)},
+			},
+			fromTime: qc.fromTime,
+			toTime:   qc.toTime,
+		}
+
+		qc = parsedQC
+		qc.resolveTypes()
+		qc.processJoinConditions()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
+		Ω(*qc.OOPK.geoIntersection).Should(
+			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+		qc.processFilters()
+		Ω(qc.Error).Should(BeNil())
+		Ω(len(qc.OOPK.ForeignTableCommonFilters)).Should(Equal(1))
+		Ω(qc.OOPK.ForeignTableCommonFilters[0].String()).Should(Equal("c.id > 1"))
+		Ω(qc.OOPK.geoIntersection.shapeUUIDs).Should(Equal([]string{"00000192F23D460DBE60400C32EA0667"}))
+
+		// Two geo points in the argument of geography_intersects.
+		query = &AQLQuery{
+			Table: "trips",
+			Measures: []Measure{
+				{Expr: "count()"},
+			},
+			Joins: []Join{
+				{
+					Table: "api_cities",
+					Alias: "c",
+					Conditions: []string{
+						"trips.city_id = c.id",
+					},
+				},
+				{
+					Alias: "g",
+					Table: "geofences_configstore_udr_geofences",
+					Conditions: []string{
+						"geography_intersects(request_point, request_point)",
+					},
+				},
+			},
+			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
+			Filters: []string{
+				"g.geofence_uuid = 0x00000192F23D460DBE60400C32EA0667",
+				"c.id>1",
+			},
+			TimeFilter: TimeFilter{
+				Column: "request_at",
+				From:   "-1d",
+			},
+		}
+		qc.Query = query
+		qc.readSchema(store)
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).ShouldNot(BeNil())
+		Ω(qc.Error.Error()).Should(ContainSubstring(
+			"expect exactly one geo shape column and one geo point column for " +
+				"geography_intersects, got geography_intersects"))
+
+		// Two geo shapes in the argument of geography_intersects.
+		query = &AQLQuery{
+			Table: "trips",
+			Measures: []Measure{
+				{Expr: "count()"},
+			},
+			Joins: []Join{
+				{
+					Table: "api_cities",
+					Alias: "c",
+					Conditions: []string{
+						"trips.city_id = c.id",
+					},
+				},
+				{
+					Alias: "g",
+					Table: "geofences_configstore_udr_geofences",
+					Conditions: []string{
+						"geography_intersects(g.shape, g.shape)",
+					},
+				},
+			},
+			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
+			Filters: []string{
+				"g.geofence_uuid = 0x00000192F23D460DBE60400C32EA0667",
+				"c.id>1",
+			},
+			TimeFilter: TimeFilter{
+				Column: "request_at",
+				From:   "-1d",
+			},
+		}
+		qc.Query = query
+		qc.readSchema(store)
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).ShouldNot(BeNil())
+		Ω(qc.Error.Error()).Should(ContainSubstring(
+			"expect exactly one geo shape column and one geo point column for " +
+				"geography_intersects, got geography_intersects"))
+
 		// Match geofence_uuid in predicate.
 		query = &AQLQuery{
 			Table: "trips",

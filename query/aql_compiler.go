@@ -238,14 +238,13 @@ func (qc *AQLQueryContext) processJoinConditions() {
 // There are following constrictions:
 // 1. At most one geo join condition.
 // 2. Geo table must be dimension table.
-// 3. LHS in join condition must be a shape column.
-// 4. RHS in join condition must be a point column.
-// 5. Exactly one geo filter should be specified.
-// 6. Geo filter column must be the primary key of the geo table.
-// 7. Geo UUIDs must be string in query.
-// 8. Geo filter operator must be EQ or IN
-// 9. Geo table's fields are not allowed in measures.
-// 10. Only one geo dimension allowed.
+// 3. The join condition must include exactly one shape column and one point column.
+// 4. Exactly one geo filter should be specified.
+// 5. Geo filter column must be the primary key of the geo table.
+// 6. Geo UUIDs must be string in query.
+// 7. Geo filter operator must be EQ or IN
+// 8. Geo table's fields are not allowed in measures.
+// 9. Only one geo dimension allowed.
 func (qc *AQLQueryContext) matchGeoJoin(joinTableID int, mainTableSchema *memstore.TableSchema,
 	joinSchema *memstore.TableSchema, conditions []expr.Expr) {
 	if len(conditions) != 1 {
@@ -976,20 +975,37 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 					nil, "expect 2 argument for %s, but got %s", e.Name, e.String())
 				break
 			}
-			shapeRef, isVarRef := e.Args[0].(*expr.VarRef)
-			if !isVarRef || shapeRef.DataType != memCom.GeoShape {
+
+			lhsRef, isVarRef := e.Args[0].(*expr.VarRef)
+			if !isVarRef || (lhsRef.DataType != memCom.GeoShape && lhsRef.DataType != memCom.GeoPoint) {
 				qc.Error = utils.StackError(
-					nil, "expect 1st argument to be a valid geo shape column for %s, but got %s of type %s",
-					e.Name, e.Args[0].String(), memCom.DataTypeName[shapeRef.DataType])
+					nil, "expect argument to be a valid geo shape or geo point column for %s, but got %s of type %s",
+					e.Name, e.Args[0].String(), memCom.DataTypeName[lhsRef.DataType])
 				break
 			}
 
-			pointRef, isVarRef := e.Args[1].(*expr.VarRef)
-			if !isVarRef || pointRef.DataType != memCom.GeoPoint {
+			lhsGeoPoint := lhsRef.DataType == memCom.GeoPoint
+
+			rhsRef, isVarRef := e.Args[1].(*expr.VarRef)
+			if !isVarRef || (rhsRef.DataType != memCom.GeoShape && rhsRef.DataType != memCom.GeoPoint) {
 				qc.Error = utils.StackError(
-					nil, "expect 2nd argument to be a valid geo point column for %s, but got %s of type %s",
-					e.Name, e.Args[1].String(), memCom.DataTypeName[pointRef.DataType])
+					nil, "expect argument to be a valid geo shape or geo point column for %s, but got %s of type %s",
+					e.Name, e.Args[1].String(), memCom.DataTypeName[rhsRef.DataType])
 				break
+			}
+
+			rhsGeoPoint := rhsRef.DataType == memCom.GeoPoint
+
+			if lhsGeoPoint == rhsGeoPoint {
+				qc.Error = utils.StackError(
+					nil, "expect exactly one geo shape column and one geo point column for %s, got %s",
+					e.Name, e.String())
+				break
+			}
+
+			// Switch geo point so that lhs is geo shape and rhs is geo point
+			if lhsGeoPoint {
+				e.Args[0], e.Args[1] = e.Args[1], e.Args[0]
 			}
 
 			e.ExprType = expr.Boolean
