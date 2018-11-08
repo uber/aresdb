@@ -219,7 +219,8 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		defer os.Remove(tmpfile.Name())
 
 		sourceBytes = make([]byte, 1<<31)
-		rand.Read(sourceBytes)
+		// generate 1KB random bytes instead of whole 2GB.
+		rand.Read(sourceBytes[1<<30:(1<<30)+1<<10 ])
 		_, err = tmpfile.Write(sourceBytes)
 		Ω(tmpfile.Close()).Should(BeNil())
 		Ω(err).Should(BeNil())
