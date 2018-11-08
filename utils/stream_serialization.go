@@ -41,7 +41,29 @@ func (r StreamDataReader) GetBytesRead() uint32 {
 // Read reads bytes from underlying reader and fill bs with len(bs) bytes data. Raise
 // error if there is no enough bytes left.
 func (r *StreamDataReader) Read(bs []byte) error {
-	readLen, err := r.reader.Read(bs)
+	var err error
+	var bytesRead int
+	bytesToRead := len(bs)
+
+	for ; err == nil && bytesRead < bytesToRead; {
+		var readLen int
+		readLen, err = r.reader.Read(bs)
+		// Implementations of Read are discouraged from returning a
+		// zero byte count with a nil error, except when len(p) == 0.
+		// Callers should treat a return of 0 and nil as indicating that
+		// nothing happened; in particular it does not indicate EOF.
+		if readLen <= 0 {
+			break
+		}
+		bytesRead += readLen
+	}
+
+	// We have to check readLen here since a non-zero number of bytes at the end of the input stream
+	// may return either err == EOF or err == nil.
+	if bytesRead != bytesToRead {
+		return StackError(nil,
+			"Tried to read %d bytes but only %d bytes left", bytesToRead, bytesRead)
+	}
 
 	// We return EOF directly without wrapping so that callers can take special actions against EOF.
 	if err == io.EOF {
@@ -52,14 +74,7 @@ func (r *StreamDataReader) Read(bs []byte) error {
 		return StackError(err, "Failed to Read data from underlying reader")
 	}
 
-	r.bytesRead += uint32(readLen)
-	// We have to check readLen here since a non-zero number of bytes at the end of the input stream
-	// may return either err == EOF or err == nil.
-	if readLen != len(bs) {
-		return StackError(nil,
-			"Tried to read %d bytes but only %d bytes left", len(bs), readLen)
-	}
-
+	r.bytesRead += uint32(bytesToRead)
 	return nil
 }
 
