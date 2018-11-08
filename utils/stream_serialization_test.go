@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 		"io"
+	"crypto/rand"
 )
 
 var _ = ginkgo.Describe("stream serialization", func() {
@@ -218,9 +219,7 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		defer os.Remove(tmpfile.Name())
 
 		sourceBytes = make([]byte, 1<<31)
-		sourceBytes[1<<30] = 1
-		sourceBytes[(1<<30)+1] = 2
-
+		rand.Read(sourceBytes)
 		_, err = tmpfile.Write(sourceBytes)
 		Ω(tmpfile.Close()).Should(BeNil())
 		Ω(err).Should(BeNil())
