@@ -45,10 +45,8 @@ func (r *StreamDataReader) Read(bs []byte) error {
 	var bytesRead int
 	bytesToRead := len(bs)
 	for err == nil && bytesRead < bytesToRead {
-		bs = bs[bytesRead:]
-
 		var readLen int
-		readLen, err = r.reader.Read(bs)
+		readLen, err = r.reader.Read(bs[bytesRead:])
 		// Implementations of Read are discouraged from returning a
 		// zero byte count with a nil error, except when len(p) == 0.
 		// Callers should treat a return of 0 and nil as indicating that
