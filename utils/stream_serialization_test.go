@@ -200,6 +200,22 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		Ω(err).ShouldNot(BeNil())
 	})
 
+	ginkgo.It("works for big bytes slice (>1GB)", func() {
+		sourceBytes := make([]byte, 10)
+		buf := bytes.NewBuffer(sourceBytes)
+		reader := NewStreamDataReader(bytes.NewReader(buf.Bytes()))
+		var err error
+		dstBytes := make([]byte, 1 << 31)
+		err = reader.Read(dstBytes)
+		Ω(err).ShouldNot(BeNil())
+
+		sourceBytes = make([]byte, 1 << 31)
+		buf = bytes.NewBuffer(sourceBytes)
+		reader = NewStreamDataReader(bytes.NewReader(buf.Bytes()))
+		err = reader.Read(dstBytes)
+		Ω(err).Should(BeNil())
+	})
+
 	ginkgo.It("works for insufficient length", func() {
 		bs := make([]byte, 2)
 		buf := bytes.NewBuffer(bs)
