@@ -205,11 +205,11 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		buf := bytes.NewBuffer(sourceBytes)
 		reader := NewStreamDataReader(bytes.NewReader(buf.Bytes()))
 		var err error
-		dstBytes := make([]byte, 1 << 31)
+		dstBytes := make([]byte, 1<<31)
 		err = reader.Read(dstBytes)
 		Ω(err).ShouldNot(BeNil())
 
-		sourceBytes = make([]byte, 1 << 31)
+		sourceBytes = make([]byte, 1<<31)
 		buf = bytes.NewBuffer(sourceBytes)
 		reader = NewStreamDataReader(bytes.NewReader(buf.Bytes()))
 		err = reader.Read(dstBytes)

@@ -45,7 +45,7 @@ func (r *StreamDataReader) Read(bs []byte) error {
 	var bytesRead int
 	bytesToRead := len(bs)
 
-	for ; err == nil && bytesRead < bytesToRead; {
+	for err == nil && bytesRead < bytesToRead {
 		var readLen int
 		readLen, err = r.reader.Read(bs)
 		// Implementations of Read are discouraged from returning a
