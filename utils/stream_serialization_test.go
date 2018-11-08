@@ -19,6 +19,9 @@ import (
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"io/ioutil"
+	"os"
+		"io"
 )
 
 var _ = ginkgo.Describe("stream serialization", func() {
@@ -209,11 +212,25 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		err = reader.Read(dstBytes)
 		Ω(err).ShouldNot(BeNil())
 
-		sourceBytes = make([]byte, 1<<31)
-		buf = bytes.NewBuffer(sourceBytes)
-		reader = NewStreamDataReader(bytes.NewReader(buf.Bytes()))
-		err = reader.Read(dstBytes)
+		tmpfile, err := ioutil.TempFile("",
+			"utils_stream_serialization_test")
 		Ω(err).Should(BeNil())
+		defer os.Remove(tmpfile.Name())
+
+		sourceBytes = make([]byte, 1<<31)
+		sourceBytes[1<<30] = 1
+		sourceBytes[(1<<30)+1] = 2
+
+		_, err = tmpfile.Write(sourceBytes)
+		Ω(tmpfile.Close()).Should(BeNil())
+		Ω(err).Should(BeNil())
+		tmpfileForRead, err := os.Open(tmpfile.Name())
+		Ω(err).Should(BeNil())
+		defer tmpfileForRead.Close()
+		reader = NewStreamDataReader(tmpfileForRead)
+		Ω(reader.Read(dstBytes)).Should(BeNil())
+		Ω(bytes.Equal(dstBytes, sourceBytes)).Should(BeTrue())
+		Ω(reader.Read(dstBytes)).Should(Equal(io.EOF))
 	})
 
 	ginkgo.It("works for insufficient length", func() {

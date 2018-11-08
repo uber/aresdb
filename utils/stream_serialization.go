@@ -17,7 +17,7 @@ package utils
 import (
 	"io"
 	"unsafe"
-)
+	)
 
 // StreamDataReader reads primitive Golang data types from an underlying reader.
 // It always advance the read iterator without rewinding it.
@@ -44,8 +44,9 @@ func (r *StreamDataReader) Read(bs []byte) error {
 	var err error
 	var bytesRead int
 	bytesToRead := len(bs)
-
 	for err == nil && bytesRead < bytesToRead {
+		bs = bs[bytesRead:]
+
 		var readLen int
 		readLen, err = r.reader.Read(bs)
 		// Implementations of Read are discouraged from returning a
