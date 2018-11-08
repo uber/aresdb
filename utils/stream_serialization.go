@@ -58,13 +58,6 @@ func (r *StreamDataReader) Read(bs []byte) error {
 		bytesRead += readLen
 	}
 
-	// We have to check readLen here since a non-zero number of bytes at the end of the input stream
-	// may return either err == EOF or err == nil.
-	if bytesRead != bytesToRead {
-		return StackError(nil,
-			"Tried to read %d bytes but only %d bytes left", bytesToRead, bytesRead)
-	}
-
 	// We return EOF directly without wrapping so that callers can take special actions against EOF.
 	if err == io.EOF {
 		return err
@@ -72,6 +65,13 @@ func (r *StreamDataReader) Read(bs []byte) error {
 
 	if err != nil {
 		return StackError(err, "Failed to Read data from underlying reader")
+	}
+
+	// We have to check readLen here since a non-zero number of bytes at the end of the input stream
+	// may return either err == EOF or err == nil.
+	if bytesRead != bytesToRead {
+		return StackError(nil,
+			"Tried to read %d bytes but only %d bytes left", bytesToRead, bytesRead)
 	}
 
 	r.bytesRead += uint32(bytesToRead)

@@ -408,6 +408,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		Ω(err).Should(BeNil())
 		bs, err := ioutil.ReadAll(resp.Body)
 		Ω(err).Should(BeNil())
+		fmt.Println(string(bs))
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 
 		var respBody ListUpsertBatchesResponse
