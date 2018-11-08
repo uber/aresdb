@@ -199,7 +199,8 @@ var _ = ginkgo.Describe("hll", func() {
 					"514": queryCom.HLL{NonZeroRegisters: 4, SparseData: []queryCom.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
 				},
 			},
-	}))})
+		}))
+	})
 
 	ginkgo.It("Serialize and then deserialize should work", func() {
 		dataTypes := []memCom.DataType{memCom.Uint32, memCom.Uint8, memCom.Int16}
