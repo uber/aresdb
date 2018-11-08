@@ -19,6 +19,10 @@ import (
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"io/ioutil"
+	"os"
+		"io"
+	"crypto/rand"
 )
 
 var _ = ginkgo.Describe("stream serialization", func() {
@@ -198,6 +202,35 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		var err error
 		_, err = reader.ReadFloat32()
 		Ω(err).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("works for big bytes slice (>1GB)", func() {
+		sourceBytes := make([]byte, 10)
+		buf := bytes.NewBuffer(sourceBytes)
+		reader := NewStreamDataReader(bytes.NewReader(buf.Bytes()))
+		var err error
+		dstBytes := make([]byte, 1<<31)
+		err = reader.Read(dstBytes)
+		Ω(err).ShouldNot(BeNil())
+
+		tmpfile, err := ioutil.TempFile("",
+			"utils_stream_serialization_test")
+		Ω(err).Should(BeNil())
+		defer os.Remove(tmpfile.Name())
+
+		sourceBytes = make([]byte, 1<<31)
+		// generate 1KB random bytes instead of whole 2GB.
+		rand.Read(sourceBytes[1<<30:(1<<30)+1<<10 ])
+		_, err = tmpfile.Write(sourceBytes)
+		Ω(tmpfile.Close()).Should(BeNil())
+		Ω(err).Should(BeNil())
+		tmpfileForRead, err := os.Open(tmpfile.Name())
+		Ω(err).Should(BeNil())
+		defer tmpfileForRead.Close()
+		reader = NewStreamDataReader(tmpfileForRead)
+		Ω(reader.Read(dstBytes)).Should(BeNil())
+		Ω(bytes.Equal(dstBytes, sourceBytes)).Should(BeTrue())
+		Ω(reader.Read(dstBytes)).Should(Equal(io.EOF))
 	})
 
 	ginkgo.It("works for insufficient length", func() {

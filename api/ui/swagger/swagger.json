@@ -473,7 +473,7 @@
           "x-go-name": "Message"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/utils"
+      "x-go-package": "github.com/uber/aresdb/utils"
     },
     "AQLQuery": {
       "type": "object",
@@ -531,7 +531,7 @@
           "x-go-name": "Timezone"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "AQLQueryContext": {
       "type": "object",
@@ -591,7 +591,7 @@
           "x-go-name": "TableIDByAlias"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "AQLRequest": {
       "type": "object",
@@ -605,7 +605,7 @@
           "x-go-name": "Queries"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "AQLResponse": {
       "type": "object",
@@ -633,7 +633,7 @@
           "x-go-name": "Results"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "AQLTimeSeriesResult": {
       "description": "Represents a nested AQL time series result with one dimension on each layer:\nthere is always an outermost time dimension. it stores the start time of\nthe bucket/duration (in seconds since Epoch).\nafter the time dimension, there could be zero or more layers of additional\ndimensions (all values are represented as strings). a special \"NULL\" string\nis used to represent NULL values.\nthere is always a single measure, and the measure type is either float64\nor nil (not *float64);",
@@ -642,7 +642,16 @@
       "additionalProperties": {
         "type": "object"
       },
-      "x-go-package": "code.uber.internal/data/ares/query/common"
+      "x-go-package": "github.com/uber/aresdb/query/common"
+    },
+    "DimCountsPerDimWidth": {
+      "description": "DimCountsPerDimWidth defines dimension counts per dimension width\n16-byte 8-byte 4-byte 2-byte 1-byte",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint8"
+      },
+      "x-go-package": "github.com/uber/aresdb/query/common"
     },
     "Dimension": {
       "type": "object",
@@ -666,7 +675,7 @@
           "x-go-name": "TimeUnit"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "Duration": {
       "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
@@ -685,7 +694,7 @@
           "$ref": "#/definitions/Type"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query/expr"
+      "x-go-package": "github.com/uber/aresdb/query/expr"
     },
     "Join": {
       "type": "object",
@@ -710,7 +719,7 @@
           "x-go-name": "Table"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "Measure": {
       "type": "object",
@@ -730,7 +739,7 @@
           "x-go-name": "Expr"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "NumericBucketizerDef": {
       "description": "NumericBucketizerDef defines how numbers should be bucketized before being\ngrouped by as a dimension. The returned dimension is a string in the format\nof `lower_bound`, representing `[lower_bound, uper_bound)`.",
@@ -758,7 +767,7 @@
           "x-go-name": "ManualPartitions"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "OOPKContext": {
       "description": "OOPKContext defines additional query context for one-operator-per-kernel\nexecution.",
@@ -832,13 +841,7 @@
           "x-go-name": "MeasureBytes"
         },
         "numDims": {
-          "description": "Number of dimensions per 4-byte, 2-byte, and 1-byte",
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "x-go-name": "NumDimsPerDimWidth"
+          "$ref": "#/definitions/DimCountsPerDimWidth"
         },
         "prefilters": {
           "description": "Prefilters that only apply to live batches.\nArchiving cutoff filtering is processed directly by the query engine and not\nincluded here (different shards may have different cutoffs).",
@@ -862,7 +865,7 @@
           "x-go-name": "TimeFilters"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "TableScanner": {
       "description": "TableScanner defines how data for a table should be fed to device memory for\nprocessing (scanner in a traditional terminology).",
@@ -927,7 +930,7 @@
           "x-go-name": "Shards"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "TimeFilter": {
       "type": "object",
@@ -948,19 +951,19 @@
           "x-go-name": "To"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "Type": {
       "description": "Expression types are determined at query compilation time, type castings are\ngenerated when apprioperiate. Notice that word widths are not specified here.",
       "type": "integer",
       "format": "int64",
       "title": "Type defines data types for expression evaluation.",
-      "x-go-package": "code.uber.internal/data/ares/query/expr"
+      "x-go-package": "github.com/uber/aresdb/query/expr"
     },
     "boundaryType": {
       "type": "integer",
       "format": "int64",
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "column": {
       "type": "object",
@@ -1002,7 +1005,7 @@
         }
       },
       "x-go-name": "Column",
-      "x-go-package": "code.uber.internal/data/ares/metastore/common"
+      "x-go-package": "github.com/uber/aresdb/metastore/common"
     },
     "columnConfig": {
       "description": "ColumnConfig defines the schema of a column config that can be mutated by\nUpdateColumn API call.",
@@ -1021,7 +1024,7 @@
         }
       },
       "x-go-name": "ColumnConfig",
-      "x-go-package": "code.uber.internal/data/ares/metastore/common"
+      "x-go-package": "github.com/uber/aresdb/metastore/common"
     },
     "oopkQueryStats": {
       "type": "object",
@@ -1067,7 +1070,7 @@
           "x-go-name": "NumTransferCalls"
         }
       },
-      "x-go-package": "code.uber.internal/data/ares/query"
+      "x-go-package": "github.com/uber/aresdb/query"
     },
     "table": {
       "type": "object",
@@ -1111,10 +1114,15 @@
             "format": "int64"
           },
           "x-go-name": "PrimaryKeyColumns"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Version"
         }
       },
       "x-go-name": "Table",
-      "x-go-package": "code.uber.internal/data/ares/metastore/common"
+      "x-go-package": "github.com/uber/aresdb/metastore/common"
     },
     "tableConfig": {
       "description": "TableConfig defines the table configurations that can be changed",
@@ -1200,7 +1208,7 @@
         }
       },
       "x-go-name": "TableConfig",
-      "x-go-package": "code.uber.internal/data/ares/metastore/common"
+      "x-go-package": "github.com/uber/aresdb/metastore/common"
     }
   },
   "responses": {
