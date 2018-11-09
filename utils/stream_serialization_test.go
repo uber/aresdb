@@ -17,12 +17,12 @@ package utils
 import (
 	"bytes"
 
+	"crypto/rand"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"io"
 	"io/ioutil"
 	"os"
-		"io"
-	"crypto/rand"
 )
 
 var _ = ginkgo.Describe("stream serialization", func() {
@@ -220,7 +220,7 @@ var _ = ginkgo.Describe("stream serialization", func() {
 
 		sourceBytes = make([]byte, 1<<31)
 		// generate 1KB random bytes instead of whole 2GB.
-		rand.Read(sourceBytes[1<<30:(1<<30)+1<<10 ])
+		rand.Read(sourceBytes[1<<30 : (1<<30)+1<<10])
 		_, err = tmpfile.Write(sourceBytes)
 		Ω(tmpfile.Close()).Should(BeNil())
 		Ω(err).Should(BeNil())
