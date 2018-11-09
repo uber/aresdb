@@ -117,7 +117,7 @@ func writeBool(buffer []byte, index int, value bool) {
 //	[int32]  version_number
 //	[int32]  num_of_rows
 //	[uint16] num_of_columns
-//  <reserve 14 bytes>
+//	<reserve 14 bytes>
 //	[uint32] arrival_time
 //	[uint32] column_offset_0 ... [uint32] column_offset_x+1
 //	[uint32] column_reserved_field1_0 ... [uint32] column_reserved_field1_x
