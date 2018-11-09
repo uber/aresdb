@@ -176,7 +176,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			IsFactTable: true,
-			ArchivingSortColumns: []int{1},
+			ArchivingSortColumns: []int{0},
 			Version: 0,
 		}
 		newTable := common.Table{
@@ -189,7 +189,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			IsFactTable: true,
-			ArchivingSortColumns: []int{1},
+			ArchivingSortColumns: []int{0},
 			Version: 1,
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
@@ -385,8 +385,12 @@ var _ = ginkgo.Describe("Validator", func() {
 					Name: "col1",
 					Type: "Int32",
 				},
+				{
+					Name: "col2",
+					Type: "Int32",
+				},
 			},
-			PrimaryKeyColumns: []int{},
+			PrimaryKeyColumns: []int{0,1},
 			Version: 1,
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
@@ -448,14 +452,6 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator = NewTableSchameValidator(&newTable, &oldTable)
 		err = validator.Validate()
 		Ω(err.Error()).Should(Equal("sort columns are append only"))
-
-		// sort column must be a valid column
-		oldTable.ArchivingSortColumns = []int{1,2}
-		newTable.ArchivingSortColumns = []int{1,2,3}
-		validator = NewTableSchameValidator(&newTable, &oldTable)
-		err = validator.Validate()
-		Ω(err.Error()).Should(Equal("sort columns must be a valid column"))
-
 	})
 
 	ginkgo.It("ValidateDefaultValue should work", func() {

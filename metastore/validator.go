@@ -33,7 +33,11 @@ func (v tableSchemaValidatorImpl) Validate() (err error) {
 	return v.validateSchemaUpdate(v.newTable, v.oldTable)
 }
 
-
+// checks performed:
+//	table has at least 1 valid column
+//	table has at least 1 valid primary key column
+//	fact table must have sort columns that are valid
+//	each column have valid data type and default value
 func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table) (err error) {
 	existingColumns := make(map[int]bool)
 	for i, column := range table.Columns {
@@ -83,7 +87,16 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table) 
 	return
 }
 
+// checks performed
+//	check that new table is valid table
+//	check new table has larger version number
+//	check no changes on immutable fields (table name, type, pk)
+//	check updates on columns and sort columns are valid
 func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *common.Table) (err error) {
+	if err := v.validateIndividualSchema(newTable); err != nil {
+		return err
+	}
+
 	if newTable.Version <= oldTable.Version {
 		return fmt.Errorf("schema updates must bump version")
 	}
@@ -153,9 +166,6 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 				return fmt.Errorf("sort columns are append only")
 			}
 			continue
-		}
-		if !validColumns[idx] {
-			return fmt.Errorf("sort columns must be a valid column")
 		}
 	}
 
