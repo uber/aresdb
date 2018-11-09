@@ -43,8 +43,4 @@ var (
 	ErrDeleteTimeColumn = errors.New("Time column cannot be deleted")
 	// ErrDeletePrimaryKeyColumn indicates column belongs to primary key cannot be deleted
 	ErrDeletePrimaryKeyColumn = errors.New("Primary key column cannot be deleted")
-	// ErrInvalidTableSchema indicates a table schema is not valid
-	ErrInvalidTableSchema = errors.New("Table schema is not valid")
-	// ErrInvalidSchemaUpdate indicates it's impossible to apply an update to a table schema
-	ErrInvalidSchemaUpdate = errors.New("Table schema is to update not valid")
 )
