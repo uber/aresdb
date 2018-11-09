@@ -17,7 +17,7 @@ package utils
 import (
 	"io"
 	"unsafe"
-	)
+)
 
 // StreamDataReader reads primitive Golang data types from an underlying reader.
 // It always advance the read iterator without rewinding it.

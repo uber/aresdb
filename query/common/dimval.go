@@ -18,10 +18,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"strconv"
 	"time"
 	"unsafe"
-	"github.com/uber/aresdb/utils"
 )
 
 // DimCountsPerDimWidth defines dimension counts per dimension width

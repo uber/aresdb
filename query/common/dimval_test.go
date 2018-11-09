@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			0xFF, 0xFF, 0xFF, 0xFF, // dim2
 			0, 0,
 			2, 0,
-			2, 2,    // dim3
+			2, 2, // dim3
 			0, 2, 3, // dim4
 			0, 1, 1, // dim0
 			0, 1, 1, // dim1
@@ -118,7 +118,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			0xFF, 0xFF, 0xFF, 0xFF, // dim0
 			0, 0,
 			2, 0,
-			2, 2,    // dim1
+			2, 2, // dim1
 			0, 2, 3, // dim2
 			0, 1, 1, // dim0
 			0, 1, 1, // dim1
@@ -153,7 +153,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			0xFF, 0xFF, 0xFF, 0xFF, // dim0
 			0, 0,
 			2, 0,
-			2, 2,    // dim1
+			2, 2, // dim1
 			0, 2, 3, // dim2
 			0, 1, 1, // dim0
 			0, 1, 1, // dim1
@@ -189,7 +189,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			0xFF, 0xFF, 0xFF, 0xFF, // dim0
 			0, 0,
 			2, 0,
-			2, 2,    // dim1
+			2, 2, // dim1
 			0, 2, 3, // dim2
 			0, 1, 1, // dim0
 			0, 1, 1, // dim1
