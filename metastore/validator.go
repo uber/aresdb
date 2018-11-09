@@ -5,6 +5,7 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"reflect"
 	"github.com/uber/aresdb/utils"
+	"fmt"
 )
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
@@ -41,15 +42,15 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table) 
 		}
 	}
 	if len(existingColumns) == 0 {
-		return ErrInvalidTableSchema
+		return fmt.Errorf("all columns are invalid")
 	}
 
 	if len(table.PrimaryKeyColumns) == 0 {
-		return ErrInvalidTableSchema
+		return fmt.Errorf("primary key should have at least 1 column")
 	}
 	for _, idx := range table.PrimaryKeyColumns {
 		if !existingColumns[idx] {
-			return ErrInvalidTableSchema
+			return fmt.Errorf("primariky columns must exist")
 		}
 	}
 
@@ -57,11 +58,11 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table) 
 
 	if table.IsFactTable {
 		if len(table.ArchivingSortColumns) == 0 {
-			return ErrInvalidTableSchema
+			return fmt.Errorf("must specify sort columns for fact tables")
 		}
 		for _, sortColumn := range table.ArchivingSortColumns {
 			if !existingColumns[sortColumn] {
-				return ErrInvalidTableSchema
+				return fmt.Errorf("sort columns must exist")
 			}
 		}
 	}
@@ -69,12 +70,12 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table) 
 	// validate data type
 	for _, column := range table.Columns {
 		if dataType := memCom.DataTypeFromString(column.Type); dataType == memCom.Unknown {
-			return ErrInvalidTableSchema
+			return fmt.Errorf("unknown data type")
 		}
 		if column.DefaultValue != nil {
 			err = ValidateDefaultValue(*column.DefaultValue, column.Type)
 			if err != nil {
-				return ErrInvalidTableSchema
+				return err
 			}
 		}
 	}
@@ -84,21 +85,21 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table) 
 
 func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *common.Table) (err error) {
 	if newTable.Version <= oldTable.Version {
-		return ErrInvalidSchemaUpdate
+		return fmt.Errorf("schema updates must bump version")
 	}
 
 	if newTable.Name != oldTable.Name {
-		return ErrInvalidSchemaUpdate
+		return fmt.Errorf("can not change table name")
 	}
 
 	if newTable.IsFactTable != oldTable.IsFactTable {
-		return ErrInvalidSchemaUpdate
+		return fmt.Errorf("can not change table type")
 	}
 
 	// validate columns
 	if len(newTable.Columns) < len(oldTable.Columns) {
 		// even with column deletion, or recreation, column id are not reused
-		return ErrInvalidSchemaUpdate
+		return fmt.Errorf("insufficient column count")
 	}
 
 	validColumns := make(map[int]bool)
@@ -109,8 +110,7 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 		newCol := newTable.Columns[i]
 		if oldCol.Deleted {
 			if !newCol.Deleted {
-				// reusing column id not allowed
-				return ErrInvalidSchemaUpdate
+				return fmt.Errorf("reusing column id not allowed")
 			}
 			continue
 		}
@@ -124,8 +124,7 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 			oldCol.DefaultValue != newCol.DefaultValue ||
 			oldCol.CaseInsensitive != newCol.CaseInsensitive ||
 			oldCol.DisableAutoExpand != newCol.DisableAutoExpand {
-				// only column config change allowed
-				return ErrInvalidSchemaUpdate
+				return fmt.Errorf("only column config change allowed")
 		}
 		validColumns[i] = true
 	}
@@ -133,8 +132,7 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 	for ; i < len(newTable.Columns); i++ {
 		newCol := newTable.Columns[i]
 		if newCol.Deleted {
-			// doesn't make sense to update with deleted column
-			return ErrInvalidSchemaUpdate
+			return fmt.Errorf("can not add column with deleted flag on")
 		}
 		validColumns[i] = true
 	}
@@ -142,22 +140,22 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 
 	// primary key columns
 	if !reflect.DeepEqual(newTable.PrimaryKeyColumns, oldTable.PrimaryKeyColumns ){
-		return ErrInvalidSchemaUpdate
+		return fmt.Errorf("primary key columns can not be changed")
 	}
 
 	// sort columns
 	if len(newTable.ArchivingSortColumns) < len(oldTable.ArchivingSortColumns) {
-		return ErrInvalidSchemaUpdate
+		return fmt.Errorf("sort columns are append only")
 	}
 	for i, idx := range newTable.ArchivingSortColumns {
 		if i < len(oldTable.ArchivingSortColumns) {
 			if oldTable.ArchivingSortColumns[i] != idx {
-				return ErrInvalidSchemaUpdate
+				return fmt.Errorf("sort columns are append only")
 			}
 			continue
 		}
 		if !validColumns[idx] {
-			return ErrInvalidSchemaUpdate
+			return fmt.Errorf("sort columns must be a valid column")
 		}
 	}
 
