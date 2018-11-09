@@ -340,7 +340,7 @@ func parseOldTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
 			offsets := dimOffsets[dimIndex]
 			valueOffset, nullOffset := offsets[0], offsets[1]
 			valuePtr, nullPtr := memAccess(dimValuesVector, valueOffset), memAccess(dimValuesVector, nullOffset)
-			dimValues[dimIndex] = ReadDimension(valuePtr, nullPtr, i, dataTypes[dimIndex], enumDicts[dimIndex], TimeDimensionMeta{}, nil)
+			dimValues[dimIndex] = ReadDimension(valuePtr, nullPtr, i, dataTypes[dimIndex], enumDicts[dimIndex], nil, nil)
 		}
 
 		count := *(*uint16)(memAccess(countVector, int(2*i)))
@@ -474,7 +474,7 @@ func parseTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
 			offsets := dimOffsets[dimIndex]
 			valueOffset, nullOffset := offsets[0], offsets[1]
 			valuePtr, nullPtr := memAccess(dimValuesVector, valueOffset), memAccess(dimValuesVector, nullOffset)
-			dimValues[dimIndex] = ReadDimension(valuePtr, nullPtr, i, dataTypes[dimIndex], enumDicts[dimIndex], TimeDimensionMeta{}, nil)
+			dimValues[dimIndex] = ReadDimension(valuePtr, nullPtr, i, dataTypes[dimIndex], enumDicts[dimIndex], nil, nil)
 		}
 
 		count := *(*uint16)(memAccess(countVector, int(2*i)))

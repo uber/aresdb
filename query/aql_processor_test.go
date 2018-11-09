@@ -961,8 +961,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(err).Should(BeNil())
 		Ω(bs).Should(MatchJSON(` {
 			"0": 5,
-			"60": 4,
-			"120": 3
+			"60000": 4,
+			"120000": 3
 		  }`))
 
 		bc := qc.OOPK.currentBatch
