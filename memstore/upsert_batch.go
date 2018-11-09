@@ -429,8 +429,8 @@ func readUpsertBatchNew(buffer []byte) (*UpsertBatch, error) {
 	reader := utils.NewBufferReader(buffer)
 
 	numRows, err := reader.ReadInt32(0)
-	if err != nil {
-		return nil, utils.StackError(err, "Failed to read number of rows")
+	if err != nil || numRows < 0 {
+		return nil, utils.StackError(err, "Failed to read number of rows: %d", numRows)
 	}
 	if numRows < 0 {
 		return nil, utils.StackError(err, "Number of rows %d should be >= 0")
@@ -530,8 +530,8 @@ func readUpsertBatchOld(buffer []byte) (*UpsertBatch, error) {
 	reader := utils.NewBufferReader(buffer)
 
 	numRows, err := reader.ReadInt32(0)
-	if err != nil {
-		return nil, utils.StackError(err, "Failed to read number of rows")
+	if err != nil || numRows < 0 {
+		return nil, utils.StackError(err, "Failed to read number of rows %d", numRows)
 	}
 	if numRows < 0 {
 		return nil, utils.StackError(err, "Number of rows %d should be >= 0", numRows)
