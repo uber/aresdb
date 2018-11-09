@@ -39,6 +39,10 @@ const (
 	MaxColumnUpdateMode
 )
 
+const (
+	UpsertBatchVersion uint32 = 0xFEED0001
+)
+
 type columnBuilder struct {
 	columnID       int
 	dataType       DataType

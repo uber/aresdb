@@ -114,10 +114,11 @@ func writeBool(buffer []byte, index int, value bool) {
 //	[uint32] buffer_size
 //
 //	<begin of buffer>
-//	[uint32] num_of_rows
+//  [int32]  version_number
+//	[int32]  num_of_rows
 //	[uint16] num_of_columns
 //	[uint16] <reserved>
-//
+//  [uint32] arrival_time
 //	[uint32] column_offset_0 ... [uint32] column_offset_x+1
 //	[uint32] column_data_type_0 ... [uint32] column_data_type_x
 //	[uint16] column_id_0 ... [uint16] column_id_x
@@ -142,6 +143,9 @@ type UpsertBatch struct {
 
 	// Number of columns.
 	NumColumns int
+
+	// Arrival Time of Upsert Batch
+	ArrivalTime uint32
 
 	// Serialized buffer of the batch, starts from NumRows, does not contain the 4-byte
 	// buffer size.
@@ -413,9 +417,7 @@ func (u *UpsertBatch) ReadData(start int, length int) ([][]interface{}, error) {
 	return rows, nil
 }
 
-// NewUpsertBatch deserializes an upsert batch on the server.
-// buffer does not contain the 4-byte buffer size.
-func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
+func readUpsertBatchNew(buffer []byte) (*UpsertBatch, error) {
 	batch := &UpsertBatch{
 		buffer:      buffer,
 		columnsByID: make(map[int]int),
@@ -423,12 +425,108 @@ func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 
 	// numRows.
 	reader := utils.NewBufferReader(buffer)
-	numRows, err := reader.ReadUint32(0)
+
+	numRows, err := reader.ReadInt32(0)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to read number of rows")
 	}
 	batch.NumRows = int(numRows)
 
+	// numColumns.
+	numColumns, err := reader.ReadUint16(4)
+	if err != nil {
+		return nil, utils.StackError(err, "Failed to read number of columns")
+	}
+	batch.NumColumns = int(numColumns)
+
+	arrivalTime, err := reader.ReadUint32(8)
+	if err != nil {
+		return nil, utils.StackError(err, "Failed to read arrival time")
+	}
+	batch.ArrivalTime = arrivalTime
+
+	// Header too small, error out.
+	if len(buffer) < 12+common.ColumnHeaderSize(batch.NumColumns) {
+		return nil, utils.StackError(nil, "Invalid upsert batch data with incomplete header section")
+	}
+
+	header := common.NewUpsertBatchHeader(buffer[12:], batch.NumColumns)
+
+	columns := make([]*columnReader, batch.NumColumns)
+	for i := range columns {
+		columnType, err := header.ReadColumnType(i)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read type for column %d", i)
+		}
+
+		columnID, err := header.ReadColumnID(i)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read id for column %d", i)
+		}
+		batch.columnsByID[columnID] = i
+
+		columnMode, columnUpdateMode, err := header.ReadColumnFlag(i)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read mode for column %d", i)
+		}
+
+		columns[i] = &columnReader{columnID: columnID, columnMode: columnMode, columnUpdateMode: columnUpdateMode, dataType: columnType,
+			cmpFunc: common.GetCompareFunc(columnType)}
+
+		columnStartOffset, err := header.ReadColumnOffset(i)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read start offset for column %d", i)
+		}
+
+		columnEndOffset, err := header.ReadColumnOffset(i + 1)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read end offset for column %d", i)
+		}
+
+		currentOffset := columnStartOffset
+		isGoType := common.IsGoType(columnType)
+		switch columnMode {
+		case common.AllValuesDefault:
+		case common.HasNullVector:
+			if !isGoType {
+				// Null vector points to the beginning of the column data section.
+				nullVectorLength := utils.AlignOffset(batch.NumRows, 8) / 8
+				columns[i].nullVector = buffer[currentOffset : currentOffset+nullVectorLength]
+				currentOffset += nullVectorLength
+			}
+			fallthrough
+		case common.AllValuesPresent:
+			if isGoType {
+				currentOffset = utils.AlignOffset(currentOffset, 4)
+				offsetVectorLength := (batch.NumRows + 1) * 4
+				columns[i].offsetVector = buffer[currentOffset : currentOffset+offsetVectorLength]
+				currentOffset += offsetVectorLength
+			}
+			// Round up to 8 byte padding.
+			currentOffset = utils.AlignOffset(currentOffset, 8)
+			columns[i].valueVector = buffer[currentOffset:columnEndOffset]
+		}
+	}
+	batch.columns = columns
+
+	return batch, nil
+
+}
+
+func readUpsertBatchOld(buffer []byte) (*UpsertBatch, error) {
+	batch := &UpsertBatch{
+		buffer:      buffer,
+		columnsByID: make(map[int]int),
+	}
+
+	// numRows.
+	reader := utils.NewBufferReader(buffer)
+
+	numRows, err := reader.ReadInt32(0)
+	if err != nil {
+		return nil, utils.StackError(err, "Failed to read number of rows")
+	}
+	batch.NumRows = int(numRows)
 	// numColumns.
 	numColumns, err := reader.ReadUint16(4)
 	if err != nil {
@@ -501,4 +599,22 @@ func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 	batch.columns = columns
 
 	return batch, nil
+}
+
+// NewUpsertBatch deserializes an upsert batch on the server.
+// buffer does not contain the 4-byte buffer size.
+func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
+	// numRows.
+	reader := utils.NewBufferReader(buffer)
+	version, err := reader.ReadUint32(0)
+	if err != nil {
+		return nil, utils.StackError(err, "Failed to read upsert batch version number")
+	}
+
+	if version == common.UpsertBatchVersion {
+		// skip version number bytes for new version
+		return readUpsertBatchNew(buffer[4:])
+	}
+	// old version does not have version number
+	return readUpsertBatchOld(buffer)
 }
