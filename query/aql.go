@@ -148,5 +148,5 @@ type AQLResponse struct {
 }
 
 func (d Dimension) isTimeDimension() bool {
-	return d.TimeBucketizer != ""
+	return d.TimeBucketizer != "" || d.TimeUnit != ""
 }
