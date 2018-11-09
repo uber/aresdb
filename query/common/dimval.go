@@ -18,10 +18,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/utils"
 	"strconv"
 	"time"
 	"unsafe"
+	"github.com/uber/aresdb/utils"
 )
 
 // DimCountsPerDimWidth defines dimension counts per dimension width
@@ -30,8 +30,9 @@ type DimCountsPerDimWidth [5]uint8
 
 // ReadDimension reads a dimension value given the index and corresponding data type of node.
 // tzRemedy is used to remedy the timezone offset
-func ReadDimension(valueStart, nullStart unsafe.Pointer, index int, dataType memCom.DataType, enumReverseDict []string, meta TimeDimensionMeta, cache map[TimeDimensionMeta]map[int64]string) *string {
-	isTimeDimension := meta.TimeBucketizer != ""
+func ReadDimension(valueStart, nullStart unsafe.Pointer,
+	index int, dataType memCom.DataType, enumReverseDict []string, meta *TimeDimensionMeta, cache map[TimeDimensionMeta]map[int64]string) *string {
+	isTimeDimension := meta != nil
 	// check for nulls
 	if *(*uint8)(memAccess(nullStart, index)) == 0 {
 		return nil
@@ -47,12 +48,12 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer, index int, dataType mem
 	switch dataType {
 	case memCom.Float32:
 		// in case time dimension value was converted to float for division
-		if isTimeDimension && meta.TimeUnit == "" {
-			result = formatTimeDimension(int64(*(*float32)(valuePtr)), meta, cache)
+		if isTimeDimension {
+			intValue = int64(*(*float32)(valuePtr))
+		} else {
+			result = strconv.FormatFloat(float64(*(*float32)(valuePtr)), 'g', -1, 32)
 			return &result
 		}
-		result = strconv.FormatFloat(float64(*(*float32)(valuePtr)), 'g', -1, 32)
-		return &result
 	case memCom.Int64, memCom.Int32, memCom.Int16, memCom.Int8, memCom.Bool:
 		switch valueBytes {
 		case 8:
@@ -70,9 +71,6 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer, index int, dataType mem
 		switch valueBytes {
 		case 4:
 			intValue = int64(*(*uint32)(valuePtr))
-			if isTimeDimension && meta.TimeUnit != "" {
-				intValue = utils.AdjustOffset(meta.FromOffset, meta.ToOffset, meta.DSTSwitchTs, intValue)
-			}
 		case 2:
 			intValue = int64(*(*uint16)(valuePtr))
 		case 1:
@@ -99,8 +97,8 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer, index int, dataType mem
 	// translate enum case back to string for unsigned types
 	if intValue >= 0 && intValue < int64(len(enumReverseDict)) {
 		result = enumReverseDict[int(intValue)]
-	} else if isTimeDimension && meta.TimeUnit == "" {
-		result = formatTimeDimension(intValue, meta, cache)
+	} else if isTimeDimension {
+		result = formatTimeDimension(intValue, *meta, cache)
 	} else {
 		result = strconv.FormatInt(intValue, 10)
 	}
@@ -135,7 +133,25 @@ func GetDimensionStartOffsets(numDimsPerDimWidth DimCountsPerDimWidth, dimIndex 
 }
 
 func formatTimeDimension(val int64, meta TimeDimensionMeta, cache map[TimeDimensionMeta]map[int64]string) (result string) {
-	// skip timezone table dims TODO(shz): support timezone table dims
+	// We will not process timeUnit for application/hll because if application/hll holds the raw uint32
+	// value. If we convert it to milliseconds, it will overflow.
+	if meta.TimeUnit != "" {
+		val = utils.AdjustOffset(meta.FromOffset, meta.ToOffset,
+			meta.DSTSwitchTs, val)
+		switch meta.TimeUnit {
+		case "day":
+			val /= SecondsPerDay
+		case "hour":
+			val /= SecondsPerHour
+		case "minute":
+			val /= SecondsPerMinute
+		case "millisecond":
+			val *= 1000
+		}
+		return strconv.FormatInt(val, 10)
+	}
+	// skip timezone table dims
+	// TODO(shz): support timezone table dims
 	if !meta.IsTimezoneTable {
 		if cacheMap, ok := cache[meta]; ok {
 			if result, exists := cacheMap[val]; exists {
