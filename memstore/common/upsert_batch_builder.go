@@ -315,7 +315,7 @@ func (c *columnBuilder) GetMode() ColumnMode {
 // UpsertBatchBuilder is the builder for constructing an UpsertBatch buffer. It allows random value
 // write at (row, col).
 type UpsertBatchBuilder struct {
-	NumRows int
+	NumRows int32
 	columns []*columnBuilder
 }
 
@@ -382,7 +382,7 @@ func (u *UpsertBatchBuilder) ResetRows() {
 
 // SetValue set a value to a given (row, col).
 func (u *UpsertBatchBuilder) SetValue(row int, col int, value interface{}) error {
-	if row >= u.NumRows {
+	if row >= int(u.NumRows) {
 		return utils.StackError(nil, "Row index %d out of range %d", row, u.NumRows)
 	}
 	if col >= len(u.columns) {
@@ -405,7 +405,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	writer := utils.NewBufferWriter(buffer)
 
 	// Write fixed headers.
-	if err := writer.WriteUint32(uint32(u.NumRows), 0); err != nil {
+	if err := writer.WriteInt32(u.NumRows, 0); err != nil {
 		return nil, utils.StackError(err, "Failed to write number of rows")
 	}
 	if err := writer.WriteUint16(uint16(len(u.columns)), 4); err != nil {
