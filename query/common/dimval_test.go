@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			0xFF, 0xFF, 0xFF, 0xFF, // dim2
 			0, 0,
 			2, 0,
-			2, 2, // dim3
+			2, 2,    // dim3
 			0, 2, 3, // dim4
 			0, 1, 1, // dim0
 			0, 1, 1, // dim1
@@ -76,39 +76,39 @@ var _ = ginkgo.Describe("dimval", func() {
 		dimNullVector := unsafe.Pointer(&dimensionData[3*(16+8+4+2+1)])
 
 		Ω(ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 0, memCom.UUID, nil, TimeDimensionMeta{}, nil)).Should(BeNil())
+			memAccess(dimNullVector, 0), 0, memCom.UUID, nil, nil, nil)).Should(BeNil())
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 1, memCom.UUID, nil, TimeDimensionMeta{}, nil)).Should(Equal("01000000-0000-0000-0000-000000000000"))
+			memAccess(dimNullVector, 0), 1, memCom.UUID, nil, nil, nil)).Should(Equal("01000000-0000-0000-0000-000000000000"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 2, memCom.UUID, nil, TimeDimensionMeta{}, nil)).Should(Equal("ffffffff-ffff-ffff-0000-000000000000"))
+			memAccess(dimNullVector, 0), 2, memCom.UUID, nil, nil, nil)).Should(Equal("ffffffff-ffff-ffff-0000-000000000000"))
 
 		Ω(ReadDimension(memAccess(dimValueVector, 0+3*16),
-			memAccess(dimNullVector, 3), 0, memCom.Int64, nil, TimeDimensionMeta{}, nil)).Should(BeNil())
+			memAccess(dimNullVector, 3), 0, memCom.Int64, nil, nil, nil)).Should(BeNil())
 		Ω(*ReadDimension(memAccess(dimValueVector, 0+3*16),
-			memAccess(dimNullVector, 3), 1, memCom.Int64, nil, TimeDimensionMeta{}, nil)).Should(Equal("2"))
+			memAccess(dimNullVector, 3), 1, memCom.Int64, nil, nil, nil)).Should(Equal("2"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0+3*16),
-			memAccess(dimNullVector, 3), 2, memCom.Int64, nil, TimeDimensionMeta{}, nil)).Should(Equal("4294967295"))
+			memAccess(dimNullVector, 3), 2, memCom.Int64, nil, nil, nil)).Should(Equal("4294967295"))
 
 		Ω(ReadDimension(memAccess(dimValueVector, 48+3*8),
-			memAccess(dimNullVector, 6), 0, memCom.Uint32, nil, TimeDimensionMeta{}, nil)).Should(BeNil())
+			memAccess(dimNullVector, 6), 0, memCom.Uint32, nil, nil, nil)).Should(BeNil())
 		Ω(*ReadDimension(memAccess(dimValueVector, 48+3*8),
-			memAccess(dimNullVector, 6), 1, memCom.Uint32, nil, TimeDimensionMeta{}, nil)).Should(Equal("1"))
+			memAccess(dimNullVector, 6), 1, memCom.Uint32, nil, nil, nil)).Should(Equal("1"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 48+3*8),
-			memAccess(dimNullVector, 6), 2, memCom.Uint32, nil, TimeDimensionMeta{}, nil)).Should(Equal("4294967295"))
+			memAccess(dimNullVector, 6), 2, memCom.Uint32, nil, nil, nil)).Should(Equal("4294967295"))
 
 		Ω(ReadDimension(memAccess(dimValueVector, 72+3*4),
-			memAccess(dimNullVector, 9), 0, memCom.Int16, nil, TimeDimensionMeta{}, nil)).Should(BeNil())
+			memAccess(dimNullVector, 9), 0, memCom.Int16, nil, nil, nil)).Should(BeNil())
 		Ω(*ReadDimension(memAccess(dimValueVector, 72+3*4),
-			memAccess(dimNullVector, 9), 1, memCom.Int16, nil, TimeDimensionMeta{}, nil)).Should(Equal("2"))
+			memAccess(dimNullVector, 9), 1, memCom.Int16, nil, nil, nil)).Should(Equal("2"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 72+3*4),
-			memAccess(dimNullVector, 9), 2, memCom.Int16, nil, TimeDimensionMeta{}, nil)).Should(Equal("514"))
+			memAccess(dimNullVector, 9), 2, memCom.Int16, nil, nil, nil)).Should(Equal("514"))
 
 		Ω(ReadDimension(memAccess(dimValueVector, 84+3*2),
-			memAccess(dimNullVector, 12), 0, memCom.Uint8, enumReverseDict, TimeDimensionMeta{}, nil)).Should(BeNil())
+			memAccess(dimNullVector, 12), 0, memCom.Uint8, enumReverseDict, nil, nil)).Should(BeNil())
 		Ω(*ReadDimension(memAccess(dimValueVector, 84+3*2),
-			memAccess(dimNullVector, 12), 1, memCom.Uint8, enumReverseDict, TimeDimensionMeta{}, nil)).Should(Equal("c"))
+			memAccess(dimNullVector, 12), 1, memCom.Uint8, enumReverseDict, nil, nil)).Should(Equal("c"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 84+3*2),
-			memAccess(dimNullVector, 12), 2, memCom.Uint8, enumReverseDict, TimeDimensionMeta{}, nil)).Should(Equal("3"))
+			memAccess(dimNullVector, 12), 2, memCom.Uint8, enumReverseDict, nil, nil)).Should(Equal("3"))
 	})
 
 	ginkgo.It("Timezone offset should work", func() {
@@ -118,7 +118,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			0xFF, 0xFF, 0xFF, 0xFF, // dim0
 			0, 0,
 			2, 0,
-			2, 2, // dim1
+			2, 2,    // dim1
 			0, 2, 3, // dim2
 			0, 1, 1, // dim0
 			0, 1, 1, // dim1
@@ -128,21 +128,58 @@ var _ = ginkgo.Describe("dimval", func() {
 		dimNullVector := unsafe.Pointer(&dimensionData[21])
 
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false}, nil)).Should(Equal("1970-01-01 00:00"))
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, &TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false}, nil)).Should(Equal("1970-01-01 00:00"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "second", TimeUnit: "", IsTimezoneTable: false}, nil)).Should(Equal("1"))
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, &TimeDimensionMeta{TimeBucketizer: "second", TimeUnit: "", IsTimezoneTable: false}, nil)).Should(Equal("1"))
 		sfLoc, _ := time.LoadLocation("Africa/Algiers")
 
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false, TimeZone: sfLoc}, nil)).Should(Equal("1970-01-01 00:00"))
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, &TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false, TimeZone: sfLoc}, nil)).Should(Equal("1970-01-01 00:00"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "second", IsTimezoneTable: false, TimeZone: sfLoc}, nil)).Should(Equal("1"))
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, &TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "second", IsTimezoneTable: false, TimeZone: sfLoc}, nil)).Should(Equal("1"))
 
 		_, offsetInSeconds := time.Now().In(sfLoc).Zone()
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false, TimeZone: sfLoc}, nil)).Should(Equal("1970-01-01 00:00"))
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, &TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false, TimeZone: sfLoc}, nil)).Should(Equal("1970-01-01 00:00"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "second", IsTimezoneTable: false, TimeZone: sfLoc, FromOffset: offsetInSeconds, ToOffset: offsetInSeconds}, nil)).Should(Equal("-3599"))
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
+			&TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "second", IsTimezoneTable: false, TimeZone: sfLoc, FromOffset: offsetInSeconds, ToOffset: offsetInSeconds}, nil)).Should(Equal("-3599"))
+	})
+
+	ginkgo.It("Time unit should work", func() {
+		dimensionData := []byte{
+			0, 0, 0, 0,
+			255, 255, 0, 0,
+			0xFF, 0xFF, 0xFF, 0xFF, // dim0
+			0, 0,
+			2, 0,
+			2, 2,    // dim1
+			0, 2, 3, // dim2
+			0, 1, 1, // dim0
+			0, 1, 1, // dim1
+			0, 1, 1, // dim2
+		}
+		dimValueVector := unsafe.Pointer(&dimensionData[0])
+		dimNullVector := unsafe.Pointer(&dimensionData[21])
+
+		Ω(*ReadDimension(memAccess(dimValueVector, 0),
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
+			nil, nil)).Should(Equal("65535"))
+		Ω(*ReadDimension(memAccess(dimValueVector, 0),
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
+			&TimeDimensionMeta{TimeBucketizer: "day", TimeUnit: "second", IsTimezoneTable: false}, nil)).Should(Equal("65535"))
+		Ω(*ReadDimension(memAccess(dimValueVector, 0),
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
+			&TimeDimensionMeta{TimeBucketizer: "day", TimeUnit: "millisecond", IsTimezoneTable: false}, nil)).Should(Equal("65535000"))
+		Ω(*ReadDimension(memAccess(dimValueVector, 0),
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
+			&TimeDimensionMeta{TimeBucketizer: "day", TimeUnit: "day", IsTimezoneTable: false}, nil)).Should(Equal("0"))
+		Ω(*ReadDimension(memAccess(dimValueVector, 0),
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
+			&TimeDimensionMeta{TimeBucketizer: "day", TimeUnit: "hour", IsTimezoneTable: false}, nil)).Should(Equal("18"))
+		Ω(*ReadDimension(memAccess(dimValueVector, 0),
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
+			&TimeDimensionMeta{TimeBucketizer: "day", TimeUnit: "minute", IsTimezoneTable: false}, nil)).Should(Equal("1092"))
 	})
 
 	ginkgo.It("ReadDimension from cache should work", func() {
@@ -152,7 +189,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			0xFF, 0xFF, 0xFF, 0xFF, // dim0
 			0, 0,
 			2, 0,
-			2, 2, // dim1
+			2, 2,    // dim1
 			0, 2, 3, // dim2
 			0, 1, 1, // dim0
 			0, 1, 1, // dim1
@@ -168,7 +205,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			},
 		}
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
-			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false}, cache)).Should(Equal("foo"))
+			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, &TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false}, cache)).Should(Equal("foo"))
 		Ω(cache[meta][1]).Should(Equal("foo"))
 	})
 })

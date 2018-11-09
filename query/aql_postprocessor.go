@@ -56,17 +56,24 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLTimeSeriesResult {
 			if qc.Query.Dimensions[dimIndex].isTimeDimension() && dimensionValueCache[dimIndex] == nil {
 				dimensionValueCache[dimIndex] = make(map[queryCom.TimeDimensionMeta]map[int64]string)
 			}
-			dimValues[dimIndex] = queryCom.ReadDimension(
-				valuePtr, nullPtr, i, dataTypes[dimIndex], reverseDicts[dimIndex],
-				queryCom.TimeDimensionMeta{
+
+			var timeDimensionMeta *queryCom.TimeDimensionMeta
+
+			if qc.Query.Dimensions[dimIndex].isTimeDimension() {
+				timeDimensionMeta = &queryCom.TimeDimensionMeta{
 					TimeBucketizer:  qc.Query.Dimensions[dimIndex].TimeBucketizer,
 					TimeUnit:        qc.Query.Dimensions[dimIndex].TimeUnit,
 					IsTimezoneTable: qc.timezoneTable.tableColumn != "",
 					TimeZone:        qc.fixedTimezone,
 					DSTSwitchTs:     qc.dstswitch,
 					FromOffset:      fromOffset,
-					ToOffset:        toOffset},
-				dimensionValueCache[dimIndex])
+					ToOffset:        toOffset,
+				}
+			}
+
+			dimValues[dimIndex] = queryCom.ReadDimension(
+				valuePtr, nullPtr, i, dataTypes[dimIndex], reverseDicts[dimIndex],
+				timeDimensionMeta, dimensionValueCache[dimIndex])
 		}
 
 		measureValue := readMeasure(
