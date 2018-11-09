@@ -48,6 +48,7 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 				Type: "Int32",
 			},
 		},
+		PrimaryKeyColumns: []int{0},
 	}
 	var testTableSchema = memstore.TableSchema{
 		EnumDicts: map[string]memstore.EnumDict{
@@ -236,39 +237,5 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 			hostPort, "testTable", "testColumn"), bytes.NewReader(b))
 		resp, _ = http.DefaultClient.Do(req)
 		Ω(resp.StatusCode).Should(Equal(http.StatusInternalServerError))
-	})
-
-	ginkgo.It("validateDefaultValue should work", func() {
-		Ω(validateDefaultValue("trues", metaCom.Bool)).ShouldNot(BeNil())
-		Ω(validateDefaultValue("true", metaCom.Bool)).Should(BeNil())
-
-		Ω(validateDefaultValue("1000", metaCom.Uint8)).ShouldNot(BeNil())
-		Ω(validateDefaultValue("0", metaCom.Uint8)).Should(BeNil())
-
-		Ω(validateDefaultValue("100000", metaCom.Uint16)).ShouldNot(BeNil())
-		Ω(validateDefaultValue("0", metaCom.Uint16)).Should(BeNil())
-
-		Ω(validateDefaultValue("100000000000000", metaCom.Uint32)).ShouldNot(BeNil())
-		Ω(validateDefaultValue("0", metaCom.Uint32)).Should(BeNil())
-
-		Ω(validateDefaultValue("1000", metaCom.Int8)).ShouldNot(BeNil())
-		Ω(validateDefaultValue("0", metaCom.Int8)).Should(BeNil())
-
-		Ω(validateDefaultValue("100000000", metaCom.Int16)).ShouldNot(BeNil())
-		Ω(validateDefaultValue("0", metaCom.Int16)).Should(BeNil())
-
-		Ω(validateDefaultValue("100000000000000", metaCom.Int32)).ShouldNot(BeNil())
-		Ω(validateDefaultValue("0", metaCom.Int32)).Should(BeNil())
-
-		Ω(validateDefaultValue("1.s", metaCom.Float32)).ShouldNot(BeNil())
-		Ω(validateDefaultValue("0.0", metaCom.Float32)).Should(BeNil())
-
-		Ω(validateDefaultValue("00000000000000000000000000000000000000", metaCom.UUID)).ShouldNot(BeNil())
-		Ω(validateDefaultValue("2cdc434e-4752-11e8-842f-0ed5f89f718b", metaCom.UUID)).Should(BeNil())
-
-		Ω(validateDefaultValue("-122.44231998 37.77901703", metaCom.GeoPoint)).Should(BeNil())
-		Ω(validateDefaultValue("-122.44231998,37.77901703", metaCom.GeoPoint)).Should(BeNil())
-		Ω(validateDefaultValue("Point(-122.44231998,37.77901703)", metaCom.GeoPoint)).Should(BeNil())
-		Ω(validateDefaultValue("  Point( -122.44231998 37.77901703  ) ", metaCom.GeoPoint)).Should(BeNil())
 	})
 })
