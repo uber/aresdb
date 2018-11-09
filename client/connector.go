@@ -294,7 +294,7 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 				}
 			}
 			// Set value to the last row.
-			if err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, value); err != nil {
+			if err = upsertBatchBuilder.SetValue(int(upsertBatchBuilder.NumRows)-1, upsertBatchColumnIndex, value); err != nil {
 				upsertBatchBuilder.RemoveRow()
 				c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "error": err.Error(), "table": tableName, "columnID": columnID, "value": value}).Error("Failed to set value")
 				break
@@ -304,7 +304,7 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 	}
 
 	batchBytes, err := upsertBatchBuilder.ToByteArray()
-	return batchBytes, upsertBatchBuilder.NumRows, err
+	return batchBytes, int(upsertBatchBuilder.NumRows), err
 }
 
 // checkPrimaryKeys checks whether primary key is missing
