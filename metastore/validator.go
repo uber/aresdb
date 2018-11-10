@@ -5,7 +5,6 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"reflect"
 	"github.com/uber/aresdb/utils"
-	"fmt"
 )
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
@@ -28,7 +27,7 @@ type tableSchemaValidatorImpl struct {
 
 func (v tableSchemaValidatorImpl) Validate() (err error) {
 	if v.oldTable == nil {
-		return v.validateIndividualSchema(v.newTable)
+		return v.validateIndividualSchema(v.newTable, true)
 	}
 	return v.validateSchemaUpdate(v.newTable, v.oldTable)
 }
@@ -38,35 +37,43 @@ func (v tableSchemaValidatorImpl) Validate() (err error) {
 //	table has at least 1 valid primary key column
 //	fact table must have sort columns that are valid
 //	each column have valid data type and default value
-func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table) (err error) {
-	existingColumns := make(map[int]bool)
-	for i, column := range table.Columns {
+func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, creation bool) (err error) {
+	nonDeletedColumnsCount := 0
+	for _, column := range table.Columns {
 		if !column.Deleted {
-			existingColumns[i] = true
+			nonDeletedColumnsCount++
+		} else {
+			if creation {
+				return ErrNewColumnWithDeletion
+			}
 		}
+
 	}
-	if len(existingColumns) == 0 {
-		return fmt.Errorf("all columns are invalid")
+	if nonDeletedColumnsCount == 0 {
+		return ErrAllColumnsInvalid
 	}
 
 	if len(table.PrimaryKeyColumns) == 0 {
-		return fmt.Errorf("primary key should have at least 1 column")
+		return ErrMissingPrimaryKey
 	}
-	for _, idx := range table.PrimaryKeyColumns {
-		if !existingColumns[idx] {
-			return fmt.Errorf("primariky columns must exist")
+	for _, colId := range table.PrimaryKeyColumns {
+		if colId >= len(table.Columns) {
+			return ErrColumnNonExist
+		}
+		if table.Columns[colId].Deleted {
+			return ErrColumnDeleted
 		}
 	}
 
 	// TODO: checks for config?
 
 	if table.IsFactTable {
-		if len(table.ArchivingSortColumns) == 0 {
-			return fmt.Errorf("must specify sort columns for fact tables")
-		}
-		for _, sortColumn := range table.ArchivingSortColumns {
-			if !existingColumns[sortColumn] {
-				return fmt.Errorf("sort columns must exist")
+		for _, sortColumnId := range table.ArchivingSortColumns {
+			if sortColumnId >= len(table.Columns) {
+				return ErrColumnNonExist
+			}
+			if table.Columns[sortColumnId].Deleted {
+				return ErrColumnDeleted
 			}
 		}
 	}
@@ -74,7 +81,7 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table) 
 	// validate data type
 	for _, column := range table.Columns {
 		if dataType := memCom.DataTypeFromString(column.Type); dataType == memCom.Unknown {
-			return fmt.Errorf("unknown data type")
+			return ErrInvalidDataType
 		}
 		if column.DefaultValue != nil {
 			err = ValidateDefaultValue(*column.DefaultValue, column.Type)
@@ -93,29 +100,28 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table) 
 //	check no changes on immutable fields (table name, type, pk)
 //	check updates on columns and sort columns are valid
 func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *common.Table) (err error) {
-	if err := v.validateIndividualSchema(newTable); err != nil {
+	if err := v.validateIndividualSchema(newTable, false); err != nil {
 		return err
 	}
 
 	if newTable.Version <= oldTable.Version {
-		return fmt.Errorf("schema updates must bump version")
+		return ErrIllegalSchemaVersion
 	}
 
 	if newTable.Name != oldTable.Name {
-		return fmt.Errorf("can not change table name")
+		return ErrSchemaUpdateNotAllowed
 	}
 
 	if newTable.IsFactTable != oldTable.IsFactTable {
-		return fmt.Errorf("can not change table type")
+		return ErrSchemaUpdateNotAllowed
 	}
 
 	// validate columns
 	if len(newTable.Columns) < len(oldTable.Columns) {
 		// even with column deletion, or recreation, column id are not reused
-		return fmt.Errorf("insufficient column count")
+		return ErrInsufficientColumnCount
 	}
 
-	validColumns := make(map[int]bool)
 	var i int
 
 	for i = 0; i < len(oldTable.Columns); i++ {
@@ -123,49 +129,47 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 		newCol := newTable.Columns[i]
 		if oldCol.Deleted {
 			if !newCol.Deleted {
-				return fmt.Errorf("reusing column id not allowed")
+				return ErrReusingColumnIDNotAllowed
 			}
-			continue
 		}
-		if newCol.Deleted {
-			// delete allowed, skip other checks
-			continue
-		}
-
+		// check that no column configs are modified, even for deleted columns
 		if oldCol.Name != newCol.Name ||
 			oldCol.Type != newCol.Type ||
 			oldCol.DefaultValue != newCol.DefaultValue ||
 			oldCol.CaseInsensitive != newCol.CaseInsensitive ||
 			oldCol.DisableAutoExpand != newCol.DisableAutoExpand {
-				return fmt.Errorf("only column config change allowed")
+				return ErrSchemaUpdateNotAllowed
 		}
-		validColumns[i] = true
 	}
 
 	for ; i < len(newTable.Columns); i++ {
 		newCol := newTable.Columns[i]
 		if newCol.Deleted {
-			return fmt.Errorf("can not add column with deleted flag on")
+			return ErrNewColumnWithDeletion
 		}
-		validColumns[i] = true
 	}
 	// end validate columns
 
 	// primary key columns
 	if !reflect.DeepEqual(newTable.PrimaryKeyColumns, oldTable.PrimaryKeyColumns ){
-		return fmt.Errorf("primary key columns can not be changed")
+		return ErrChangePrimaryKeyColumn
 	}
 
 	// sort columns
 	if len(newTable.ArchivingSortColumns) < len(oldTable.ArchivingSortColumns) {
-		return fmt.Errorf("sort columns are append only")
+		return ErrIllegalChangeSortColumn
 	}
-	for i, idx := range newTable.ArchivingSortColumns {
+	for i, sortColumnId := range newTable.ArchivingSortColumns {
 		if i < len(oldTable.ArchivingSortColumns) {
-			if oldTable.ArchivingSortColumns[i] != idx {
-				return fmt.Errorf("sort columns are append only")
+			if oldTable.ArchivingSortColumns[i] != sortColumnId {
+				return ErrIllegalChangeSortColumn
 			}
-			continue
+		}
+		if sortColumnId >= len(newTable.Columns) {
+			return ErrColumnNonExist
+		}
+		if newTable.Columns[sortColumnId].Deleted {
+			return ErrColumnDeleted
 		}
 	}
 

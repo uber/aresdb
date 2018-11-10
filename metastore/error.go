@@ -43,4 +43,28 @@ var (
 	ErrDeleteTimeColumn = errors.New("Time column cannot be deleted")
 	// ErrDeletePrimaryKeyColumn indicates column belongs to primary key cannot be deleted
 	ErrDeletePrimaryKeyColumn = errors.New("Primary key column cannot be deleted")
+	// ErrChangePrimaryKeyColumn indicates primary key columns cannot be changed
+	ErrChangePrimaryKeyColumn = errors.New("Primary key column cannot be changed")
+	// ErrAllColumnsInvalid indicates all columns are invalid
+	ErrAllColumnsInvalid = errors.New("All columns are invalid")
+	// ErrMissingPrimaryKey indicates a schema does not have primary key
+	ErrMissingPrimaryKey = errors.New("Primary key columns not specified")
+	// ErrColumnNonExist indicates a column used does not exist
+	ErrColumnNonExist= errors.New("Column does not exist")
+	// ErrColumnDeleted indicates a column used was deleted
+	ErrColumnDeleted= errors.New("Column already deleted")
+	// ErrInvalidDataType indicates invalid data type
+	ErrInvalidDataType = errors.New("Invalid data type")
+	// ErrIllegalSchemaVersion indicates new schema is not greater than old one
+	ErrIllegalSchemaVersion = errors.New("New schema version not greater than old")
+	// ErrSchemaUpdateNotAllowed indicates changes attemped on immutable fields
+	ErrSchemaUpdateNotAllowed = errors.New("Illegal schame update on immutable field")
+	// ErrInsufficientColumnCount indicates no column in a schame
+	ErrInsufficientColumnCount = errors.New("Insufficient column count")
+	// ErrReusingColumnIDNotAllowed indicates attempt to reuse id of deleted column
+	ErrReusingColumnIDNotAllowed = errors.New("Reusing column id not allowed")
+	// ErrNewColumnWithDeletion indicates adding a new column with deleted flag on
+	ErrNewColumnWithDeletion = errors.New("Can not add column with deleted flag on")
+	// ErrIllegalChangeSortColumn indicates illegal changes on sort columns
+	ErrIllegalChangeSortColumn = errors.New("Illegal changes on sort columns")
 )

@@ -79,7 +79,7 @@ type TableConfig struct {
 	// Specifies the size limit of a single redo log file.
 	MaxRedoLogFileSize int `json:"maxRedoLogFileSize,omitempty"`
 
-	// Fact table specific config
+	// Fact table specific configs
 
 	// Number of minutes after event time before a record can be archived.
 	ArchivingDelayMinutes uint32 `json:"archivingDelayMinutes,omitempty"`
@@ -102,7 +102,7 @@ type TableConfig struct {
 	// during ingestion and backfill. 0 means unlimited days.
 	RecordRetentionInDays int `json:"recordRetentionInDays,omitempty"`
 
-	// Dimension table specific config
+	// Dimension table specific configs
 
 	// Number of mutations to accumulate before creating a new snapshot.
 	SnapshotThreshold int `json:"snapshotThreshold,omitempty"`

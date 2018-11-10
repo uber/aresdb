@@ -35,62 +35,17 @@ var _ = ginkgo.Describe("Validator", func() {
 		}
 		validator := NewTableSchameValidator(&table, nil)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("primary key should have at least 1 column"))
+		Ω(err).Should(Equal(ErrMissingPrimaryKey))
 	})
 
 	ginkgo.It("should return err for too few columns", func() {
 		table := common.Table{
 			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Int32",
-					Deleted: true,
-				},
-			},
+			Columns: []common.Column{},
 		}
 		validator := NewTableSchameValidator(&table, nil)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("all columns are invalid"))
-	})
-	ginkgo.It("should return err for fact tables missing sort columns", func() {
-		table := common.Table{
-			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Int32",
-				},
-			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
-		}
-		validator := NewTableSchameValidator(&table, nil)
-		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("must specify sort columns for fact tables"))
-	})
-
-	ginkgo.It("should return err for fact tables with invalid sort columns", func() {
-		table := common.Table{
-			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Int32",
-				},
-				{
-					Name: "col2",
-					Type: "Int32",
-					Deleted: true,
-				},
-			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
-			ArchivingSortColumns: []int{1},
-		}
-		validator := NewTableSchameValidator(&table, nil)
-		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("sort columns must exist"))
+		Ω(err).Should(Equal(ErrAllColumnsInvalid))
 	})
 
 	ginkgo.It("should be happy with valid updates", func() {
@@ -162,7 +117,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("schema updates must bump version"))
+		Ω(err).Should(Equal(ErrIllegalSchemaVersion))
 	})
 
 	ginkgo.It("should fail for name change", func() {
@@ -194,7 +149,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("can not change table name"))
+		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
 	})
 
 	ginkgo.It("should fail for table type change", func() {
@@ -225,7 +180,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("can not change table type"))
+		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
 	})
 
 	ginkgo.It("should fail for number of columns reduction", func() {
@@ -257,7 +212,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("insufficient column count"))
+		Ω(err).Should(Equal(ErrInsufficientColumnCount))
 	})
 
 	ginkgo.It("should fail for modification on deleted column", func() {
@@ -294,7 +249,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("reusing column id not allowed"))
+		Ω(err).Should(Equal(ErrReusingColumnIDNotAllowed))
 	})
 
 	ginkgo.It("should fail for modification on immutable column fields", func() {
@@ -330,7 +285,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("only column config change allowed"))
+		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
 	})
 
 	ginkgo.It("should fail for adding deleted columns", func() {
@@ -363,7 +318,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("can not add column with deleted flag on"))
+		Ω(err).Should(Equal(ErrNewColumnWithDeletion))
 	})
 
 	ginkgo.It("should fail for changing pk cloumns", func() {
@@ -395,7 +350,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		}
 		validator := NewTableSchameValidator(&newTable, &oldTable)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("primary key columns can not be changed"))
+		Ω(err).Should(Equal(ErrChangePrimaryKeyColumn))
 	})
 
 	ginkgo.It("should fail for changing sort columns", func() {
@@ -444,14 +399,14 @@ var _ = ginkgo.Describe("Validator", func() {
 		// removing sort columns is not allowed
 		validator := NewTableSchameValidator(&newTable, &oldTable)
 		err := validator.Validate()
-		Ω(err.Error()).Should(Equal("sort columns are append only"))
+		Ω(err).Should(Equal(ErrIllegalChangeSortColumn))
 
 		// changing existing sort columns is not allowed
 		oldTable.ArchivingSortColumns = []int{1}
 		newTable.ArchivingSortColumns = []int{2}
 		validator = NewTableSchameValidator(&newTable, &oldTable)
 		err = validator.Validate()
-		Ω(err.Error()).Should(Equal("sort columns are append only"))
+		Ω(err).Should(Equal(ErrIllegalChangeSortColumn))
 	})
 
 	ginkgo.It("ValidateDefaultValue should work", func() {
