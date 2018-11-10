@@ -17,14 +17,27 @@ package common
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/utils"
+	"time"
 )
 
 var _ = ginkgo.Describe("upsert batch", func() {
+
+	ginkgo.AfterEach(func() {
+		utils.ResetClockImplementation()
+	})
+
 	ginkgo.It("works for empty batch", func() {
 		builder := NewUpsertBatchBuilder()
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
 		Ω(buffer).Should(Equal([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
+
+		// write with new version
+		utils.SetCurrentTime(time.Unix(10, 0))
+		bufferNew, err := builder.ToByteArrayNew()
+		Ω(err).Should(BeNil())
+		Ω(bufferNew).Should(Equal([]byte{1, 0, 237, 254, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("works for empty row", func() {

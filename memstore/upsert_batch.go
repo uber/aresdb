@@ -612,8 +612,8 @@ func readUpsertBatchOld(buffer []byte) (*UpsertBatch, error) {
 // NewUpsertBatch deserializes an upsert batch on the server.
 // buffer does not contain the 4-byte buffer size.
 func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
-	// numRows.
 	reader := utils.NewBufferReader(buffer)
+	// read version
 	version, err := reader.ReadUint32(0)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to read upsert batch version number")

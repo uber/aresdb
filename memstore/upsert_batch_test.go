@@ -22,9 +22,16 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/utils"
+	"time"
 )
 
 var _ = ginkgo.Describe("upsert batch", func() {
+
+	ginkgo.AfterEach(func() {
+		utils.ResetClockImplementation()
+	})
+
 	ginkgo.It("works for empty batch", func() {
 		builder := common.NewUpsertBatchBuilder()
 		buffer, err := builder.ToByteArray()
@@ -32,6 +39,22 @@ var _ = ginkgo.Describe("upsert batch", func() {
 
 		batch, err := NewUpsertBatch(buffer)
 		Ω(err).Should(BeNil())
+		_, err = batch.GetColumnID(0)
+		Ω(err).ShouldNot(BeNil())
+		_, _, err = batch.GetValue(0, 0)
+		Ω(err).ShouldNot(BeNil())
+		_, _, err = batch.GetBool(0, 0)
+		Ω(err).ShouldNot(BeNil())
+
+		// read new version
+		now := time.Unix(10, 0)
+		utils.SetCurrentTime(now)
+		buffer, err = builder.ToByteArrayNew()
+		Ω(err).Should(BeNil())
+
+		batch, err = NewUpsertBatch(buffer)
+		Ω(err).Should(BeNil())
+		Ω(batch.ArrivalTime).Should(Equal(uint32(now.Unix())))
 		_, err = batch.GetColumnID(0)
 		Ω(err).ShouldNot(BeNil())
 		_, _, err = batch.GetValue(0, 0)
@@ -53,6 +76,21 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(columnID).Should(Equal(123))
 		_, _, err = batch.GetValue(0, 0)
 		Ω(err).ShouldNot(BeNil())
+
+		// read new version
+		now := time.Unix(10, 0)
+		utils.SetCurrentTime(now)
+		buffer, err = builder.ToByteArrayNew()
+		Ω(err).Should(BeNil())
+
+		batch, err = NewUpsertBatch(buffer)
+		Ω(err).Should(BeNil())
+		Ω(batch.ArrivalTime).Should(Equal(uint32(now.Unix())))
+		columnID, err = batch.GetColumnID(0)
+		Ω(err).Should(BeNil())
+		Ω(columnID).Should(Equal(123))
+		_, _, err = batch.GetValue(0, 0)
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("works for empty column", func() {
@@ -63,6 +101,20 @@ var _ = ginkgo.Describe("upsert batch", func() {
 
 		batch, err := NewUpsertBatch(buffer)
 		Ω(err).Should(BeNil())
+		_, err = batch.GetColumnID(0)
+		Ω(err).ShouldNot(BeNil())
+		_, _, err = batch.GetValue(0, 0)
+		Ω(err).ShouldNot(BeNil())
+
+		// read new version
+		now := time.Unix(10, 0)
+		utils.SetCurrentTime(now)
+		buffer, err = builder.ToByteArrayNew()
+		Ω(err).Should(BeNil())
+
+		batch, err = NewUpsertBatch(buffer)
+		Ω(err).Should(BeNil())
+		Ω(batch.ArrivalTime).Should(Equal(uint32(now.Unix())))
 		_, err = batch.GetColumnID(0)
 		Ω(err).ShouldNot(BeNil())
 		_, _, err = batch.GetValue(0, 0)
