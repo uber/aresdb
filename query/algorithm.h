@@ -61,7 +61,7 @@ int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
 void sort(DimensionColumnVector keys, uint8_t *values, int valueBytes,
           int length, void *cudaStream);
 
-// hyperloglog
+// hyperloglog.
 int hyperloglog(DimensionColumnVector prevDimOut,
                 DimensionColumnVector curDimOut, uint32_t *prevValuesOut,
                 uint32_t *curValuesOut, int prevResultSize, int curBatchSize,
@@ -69,23 +69,10 @@ int hyperloglog(DimensionColumnVector prevDimOut,
                 size_t *hllVectorSizePtr, uint16_t **hllDimRegIDCountPtr,
                 void *cudaStream);
 
-int geo_batch_intersects(GeoShapeBatch geoShapes,
-                  VectorPartySlice points,
-                  uint32_t *indexVector,
-                  int indexVectorLength,
-                  uint32_t startCount,
-                  RecordID **recordIDVectors,
-                  int numForeignTables,
-                  uint32_t *outputPredicate,
-                  bool inOrOut,
-                  cudaStream_t cudaStream);
-
-void geo_batch_intersects_join(GeoShapeBatch geoShapes,
-                               DimensionOutputVector dimOut,
-                               VectorPartySlice points, uint32_t *indexVector,
-                               int indexVectorLength, uint32_t startCount,
-                               uint32_t *outputPredicate,
-                               cudaStream_t cudaStream);
+// write geo shape index to dim output.
+void write_geo_shape_dim(int shapeTotalWords,
+    DimensionOutputVector dimOut, int indexVectorLength,
+    uint32_t *outputPredicate, void * cudaStream);
 
 }  // namespace ares
 

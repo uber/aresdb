@@ -2059,7 +2059,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 1, pointTableID: 1,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil,
+				dimIndex: -1, inOrOut: true}))
 		qc.processFilters()
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.OOPK.geoIntersection.shapeUUIDs).Should(Equal([]string{"00000192F23D460DBE60400C32EA0667"}))
@@ -2206,7 +2207,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil,
+				dimIndex: -1, inOrOut: true}))
 		qc.processFilters()
 		Ω(qc.Error).Should(BeNil())
 		Ω(len(qc.OOPK.ForeignTableCommonFilters)).Should(Equal(1))
@@ -2279,7 +2281,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processFilters()
 		Ω(qc.Error).Should(BeNil())
 		Ω(len(qc.OOPK.ForeignTableCommonFilters)).Should(Equal(1))
@@ -2411,7 +2413,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processFilters()
 		Ω(qc.Error).Should(BeNil())
 		Ω(len(qc.OOPK.ForeignTableCommonFilters)).Should(Equal(1))
@@ -2464,7 +2466,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processFilters()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Only one geo filter is allowed"))
@@ -2512,7 +2514,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processFilters()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Exact one geo filter is needed if geo intersection is used during join"))
@@ -2630,7 +2632,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processFilters()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Geo filter column is not the primary key"))
@@ -2760,7 +2762,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processMeasureAndDimensions()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Geo table column is not allowed to be used in measure"))
@@ -2816,7 +2818,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processMeasureAndDimensions()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Only one geo dimension allowed"))
@@ -2869,7 +2871,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processMeasureAndDimensions()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Only geo uuid is allowed in dimensions"))
@@ -2969,7 +2971,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processMeasureAndDimensions()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Only hex function is supported on UUID type, but got count"))
@@ -3022,7 +3024,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
-				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1}))
+				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processFilters()
 		Ω(qc.Error).Should(BeNil())
 		qc.processMeasureAndDimensions()

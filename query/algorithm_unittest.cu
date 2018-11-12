@@ -1671,8 +1671,13 @@ TEST(GeoBatchIntersectionJoinTest, DimensionWriting) {
 
   InputVector points = {{.VP = inputVP}, VectorPartyInput};
   CGoCallResHandle resHandle =
-      GeoBatchIntersectsJoin(geoShapes, outputDimension, points, indexVector, 5,
-                             0, outputPredicate, 0, 0);
+      GeoBatchIntersects(geoShapes, points, indexVector, 5,
+                         0, nullptr, 0, outputPredicate, true, 0, 0);
+
+  EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 3);
+  EXPECT_EQ(resHandle.pStrErr, nullptr);
+
+  resHandle = WriteGeoShapeDim(1, outputDimension, 5, outputPredicate, 0, 0);
 
   uint32_t expectedOutputPredicate[5] = {2, 3, 4, 0, 0};
   GeoPredicateIterator geoIter(expectedOutputPredicate, 1);

@@ -20,84 +20,55 @@
 #include "query/binder.h"
 
 namespace ares {
-class GeoContext {
- protected:
-  GeoContext(GeoShapeBatch geoShapes,
+class GeoIntersectionContext {
+ public:
+  GeoIntersectionContext(GeoShapeBatch geoShapes,
              int indexVectorLength,
              uint32_t startCount,
+             RecordID **recordIDVectors,
+             int numForeignTables,
              uint32_t *outputPredicate,
+             bool inOrOut,
              void *cudaStream)
       : geoShapes(geoShapes),
-        indexVectorLength(indexVectorLength),
-        startCount(startCount), outputPredicate(outputPredicate),
-        cudaStream(reinterpret_cast<cudaStream_t>(cudaStream)) {}
+          indexVectorLength(indexVectorLength),
+          startCount(startCount),
+          recordIDVectors(recordIDVectors),
+          numForeignTables(numForeignTables),
+          outputPredicate(outputPredicate),
+          inOrOut(inOrOut),
+          cudaStream(reinterpret_cast<cudaStream_t>(cudaStream)) {}
+
+ private:
   GeoShapeBatch geoShapes;
   int indexVectorLength;
   uint32_t startCount;
+  RecordID **recordIDVectors;
+  int numForeignTables;
   uint32_t *outputPredicate;
+  bool inOrOut;
   cudaStream_t cudaStream;
+
+  template<typename IndexZipIterator>
+  int executeRemoveIf(IndexZipIterator indexZipIterator);
+
  public:
   cudaStream_t getStream() const {
     return cudaStream;
   }
-};
 
-class GeoIntersectionContext : public GeoContext {
- public:
-  GeoIntersectionContext(GeoShapeBatch geoShapes,
-                         int indexVectorLength,
-                         uint32_t startCount,
-                         RecordID **recordIDVectors,
-                         int numForeignTables,
-                         uint32_t *outputPredicate,
-                         bool inOrOut,
-                         void *cudaStream) : GeoContext(geoShapes,
-                                                        indexVectorLength,
-                                                        startCount,
-                                                        outputPredicate,
-                                                        cudaStream),
-                                             foreignTableRecordIDVectors(
-                                                 recordIDVectors),
-                                             numForeignTables(numForeignTables),
-                                             inOrOut(inOrOut) {}
   template<typename InputIterator>
   int run(uint32_t *indexVector, InputIterator inputIterator);
-
- private:
-  RecordID **foreignTableRecordIDVectors;
-  int numForeignTables;
-  bool inOrOut;
-
-  template<typename IndexZipIterator>
-  int executeRemoveIf(IndexZipIterator indexZipIterator);
 };
 
-class GeoIntersectionJoinContext : public GeoContext {
+// Specialized for GeoIntersectionContext.
+template <>
+class InputVectorBinder<GeoIntersectionContext, 1> :
+    public InputVectorBinderBase<GeoIntersectionContext, 1, 1> {
+  typedef InputVectorBinderBase<GeoIntersectionContext, 1, 1> super_t;
+
  public:
-  GeoIntersectionJoinContext(GeoShapeBatch geoShapes,
-                             DimensionOutputVector dimOut,
-                             int indexVectorLength,
-                             uint32_t startCount,
-                             uint32_t *outputPredicate,
-                             void *cudaStream) : GeoContext(geoShapes,
-                                                            indexVectorLength,
-                                                            startCount,
-                                                            outputPredicate,
-                                                            cudaStream),
-                                                 dimOut(dimOut) {}
-  template<typename InputIterator>
-  int run(uint32_t *indexVector, InputIterator inputIterator);
-
- private:
-  DimensionOutputVector dimOut;
-};
-
-// Base binder class for GeoIntersectionJoinContext and GeoIntersectionContext.
-template<typename Context>
-class GeoInputVectorBinder : public InputVectorBinderBase<Context, 1, 1> {
-  typedef InputVectorBinderBase<Context, 1, 1> super_t;
- protected:
-  explicit GeoInputVectorBinder(Context context,
+  explicit InputVectorBinder(GeoIntersectionContext context,
                                 std::vector<InputVector> inputVectors,
                                 uint32_t *indexVector, uint32_t *baseCounts,
                                 uint32_t startCount) : super_t(context,
@@ -109,41 +80,6 @@ class GeoInputVectorBinder : public InputVectorBinderBase<Context, 1, 1> {
  public:
   template<typename ...InputIterators>
   int bind(InputIterators... boundInputIterators);
-};
-
-// Specialize InputVectorBinder for GeoIntersectionJoinContext.
-template<>
-class InputVectorBinder<GeoIntersectionJoinContext, 1>
-    : public GeoInputVectorBinder<
-        GeoIntersectionJoinContext> {
-  typedef GeoInputVectorBinder<GeoIntersectionJoinContext> super_t;
- public:
-  explicit InputVectorBinder(GeoIntersectionJoinContext context,
-                             std::vector<InputVector> inputVectors,
-                             uint32_t *indexVector, uint32_t *baseCounts,
-                             uint32_t startCount) : super_t(context,
-                                                            inputVectors,
-                                                            indexVector,
-                                                            baseCounts,
-                                                            startCount) {
-  }
-};
-
-// Specialize InputVectorBinder for GeoIntersectionContext.
-template<>
-class InputVectorBinder<GeoIntersectionContext, 1>
-    : public GeoInputVectorBinder<GeoIntersectionContext> {
-  typedef GeoInputVectorBinder<GeoIntersectionContext> super_t;
- public:
-  explicit InputVectorBinder(GeoIntersectionContext context,
-                             std::vector<InputVector> inputVectors,
-                             uint32_t *indexVector, uint32_t *baseCounts,
-                             uint32_t startCount) : super_t(context,
-                                                            inputVectors,
-                                                            indexVector,
-                                                            baseCounts,
-                                                            startCount) {
-  }
 };
 
 }  // namespace ares
@@ -176,23 +112,18 @@ CGoCallResHandle GeoBatchIntersects(
   return resHandle;
 }
 
-CGoCallResHandle GeoBatchIntersectsJoin(
-    GeoShapeBatch geoShapes, DimensionOutputVector dimOut,
-    InputVector points, uint32_t *indexVector, int indexVectorLength,
-    uint32_t startCount, uint32_t *outputPredicate, void *cudaStream,
-    int device) {
+CGoCallResHandle WriteGeoShapeDim(
+    int shapeTotalWords, DimensionOutputVector dimOut, int indexVectorLength,
+    uint32_t *outputPredicate, void *cudaStream, int device) {
   CGoCallResHandle resHandle = {nullptr, nullptr};
   try {
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
 #endif
-    ares::GeoIntersectionJoinContext
-        ctx(geoShapes, dimOut, indexVectorLength, startCount,
-            outputPredicate, cudaStream);
-    std::vector<InputVector> inputVectors = {points};
-    ares::InputVectorBinder<ares::GeoIntersectionJoinContext, 1>
-        binder(ctx, inputVectors, indexVector, nullptr, startCount);
-    resHandle.res = reinterpret_cast<void *>(binder.bind());
+    ares::write_geo_shape_dim(shapeTotalWords, dimOut,
+                                    indexVectorLength,
+                                    outputPredicate,
+                                    cudaStream);
     CheckCUDAError("GeoIntersectsJoin");
     return resHandle;
   } catch (const std::exception &e) {
@@ -205,14 +136,13 @@ CGoCallResHandle GeoBatchIntersectsJoin(
 
 namespace ares {
 
-template<typename Context>
 template<typename ...InputIterators>
-int GeoInputVectorBinder<Context>::bind(
+int InputVectorBinder<GeoIntersectionContext, 1>::bind(
     InputIterators... boundInputIterators) {
   InputVector input = super_t::inputVectors[0];
   uint32_t *indexVector = super_t::indexVector;
   uint32_t startCount = super_t::startCount;
-  Context context = super_t::context;
+  GeoIntersectionContext context = super_t::context;
 
   if (input.Type == VectorPartyInput) {
     VectorPartySlice points = input.Vector.VP;
@@ -333,60 +263,56 @@ void calculateBatchIntersection(GeoShapeBatch geoShapes,
 template<typename InputIterator>
 int GeoIntersectionContext::run(uint32_t *indexVector,
                                 InputIterator inputIterator) {
-  calculateBatchIntersection(geoShapes,
-                             inputIterator,
-                             indexVector,
-                             indexVectorLength,
-                             startCount,
-                             outputPredicate,
-                             inOrOut,
-                             cudaStream);
+  calculateBatchIntersection(geoShapes, inputIterator,
+                             indexVector, indexVectorLength,
+                             startCount, outputPredicate,
+                             inOrOut, cudaStream);
 
   switch (numForeignTables) {
     case 0: {
       IndexZipIteratorMaker<0> maker;
       return executeRemoveIf(maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+                                        recordIDVectors));
     }
     case 1: {
       IndexZipIteratorMaker<1> maker;
       return executeRemoveIf(maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+                                        recordIDVectors));
     }
     case 2: {
       IndexZipIteratorMaker<2> maker;
       return executeRemoveIf(maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+                                        recordIDVectors));
     }
     case 3: {
       IndexZipIteratorMaker<3> maker;
       return executeRemoveIf(maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+                                        recordIDVectors));
     }
     case 4: {
       IndexZipIteratorMaker<4> maker;
       return executeRemoveIf(maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+                                        recordIDVectors));
     }
     case 5: {
       IndexZipIteratorMaker<5> maker;
       return executeRemoveIf(maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+                                        recordIDVectors));
     }
     case 6: {
       IndexZipIteratorMaker<6> maker;
       return executeRemoveIf(maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+                                        recordIDVectors));
     }
     case 7: {
       IndexZipIteratorMaker<7> maker;
       return executeRemoveIf(maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+                                        recordIDVectors));
     }
     case 8: {
       IndexZipIteratorMaker<8> maker;
       return executeRemoveIf(maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+                                        recordIDVectors));
     }
     default:throw std::invalid_argument("only support up to 8 foreign tables");
   }
@@ -397,15 +323,12 @@ struct is_non_negative {
   bool operator()(const int val) { return val >= 0; }
 };
 
-template<typename InputIterator>
-int GeoIntersectionJoinContext::run(uint32_t *indexVector,
-                                    InputIterator inputIterator) {
-  calculateBatchIntersection(geoShapes, inputIterator, indexVector,
-                             indexVectorLength, startCount, outputPredicate,
-                             true, cudaStream);
+void write_geo_shape_dim(
+    int shapeTotalWords,
+    DimensionOutputVector dimOut, int indexVectorLength,
+    uint32_t *outputPredicate, void* cudaStream) {
   typedef thrust::tuple<int8_t, uint8_t> DimensionOutputIterValue;
-  GeoPredicateIterator geoPredicateIter(outputPredicate,
-                                        geoShapes.TotalWords);
+  GeoPredicateIterator geoPredicateIter(outputPredicate, shapeTotalWords);
 
   auto zippedShapeIndexIter = thrust::make_zip_iterator(thrust::make_tuple(
       geoPredicateIter, thrust::constant_iterator<uint8_t>(1)));
@@ -421,7 +344,6 @@ int GeoIntersectionJoinContext::run(uint32_t *indexVector,
       ares::make_dimension_output_iterator<uint8_t>(dimOut.DimValues,
                                                     dimOut.DimNulls),
       thrust::identity<DimensionOutputIterValue>(), is_non_negative());
-  return 0;
 }
 
 }  // namespace ares

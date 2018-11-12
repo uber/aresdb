@@ -280,6 +280,7 @@ func (qc *AQLQueryContext) matchGeoJoin(joinTableID int, mainTableSchema *memsto
 		pointTableID:  point.TableID,
 		pointColumnID: point.ColumnID,
 		dimIndex:      -1,
+		inOrOut:       true,
 	}
 
 	// Set column usage for geo points.
@@ -1518,7 +1519,6 @@ func (qc *AQLQueryContext) matchGeoFilterHelper(filterExpr expr.Expr, joinTableI
 				}
 				foundGeoFilter = true
 				*shapeUUIDs = append(*shapeUUIDs, normalizedUUID)
-				qc.OOPK.geoIntersection.inOrOut = true
 			}
 		} else {
 			inValidOpFound = true
