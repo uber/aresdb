@@ -37,8 +37,14 @@ func (v tableSchemaValidatorImpl) Validate() (err error) {
 //	table has at least 1 valid primary key column
 //	fact table must have sort columns that are valid
 //	each column have valid data type and default value
+//	sort columns cannot have duplicate columnID
+//	primary key columns cannot have duplicate columnID
+//	column name cannot duplicate
 func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, creation bool) (err error) {
+	var colIdDedup []bool
+
 	nonDeletedColumnsCount := 0
+	colNameDedup := make(map[string]bool)
 	for _, column := range table.Columns {
 		if !column.Deleted {
 			nonDeletedColumnsCount++
@@ -47,39 +53,12 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 				return ErrNewColumnWithDeletion
 			}
 		}
-
-	}
-	if nonDeletedColumnsCount == 0 {
-		return ErrAllColumnsInvalid
-	}
-
-	if len(table.PrimaryKeyColumns) == 0 {
-		return ErrMissingPrimaryKey
-	}
-	for _, colId := range table.PrimaryKeyColumns {
-		if colId >= len(table.Columns) {
-			return ErrColumnNonExist
+		if colNameDedup[column.Name] {
+			return ErrDuplicatedColumnName
 		}
-		if table.Columns[colId].Deleted {
-			return ErrColumnDeleted
-		}
-	}
+		colNameDedup[column.Name] = true
 
-	// TODO: checks for config?
-
-	if table.IsFactTable {
-		for _, sortColumnId := range table.ArchivingSortColumns {
-			if sortColumnId >= len(table.Columns) {
-				return ErrColumnNonExist
-			}
-			if table.Columns[sortColumnId].Deleted {
-				return ErrColumnDeleted
-			}
-		}
-	}
-
-	// validate data type
-	for _, column := range table.Columns {
+		// validate data type
 		if dataType := memCom.DataTypeFromString(column.Type); dataType == memCom.Unknown {
 			return ErrInvalidDataType
 		}
@@ -88,6 +67,45 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 			if err != nil {
 				return err
 			}
+		}
+	}
+	if nonDeletedColumnsCount == 0 {
+		return ErrAllColumnsInvalid
+	}
+
+	if len(table.PrimaryKeyColumns) == 0 {
+		return ErrMissingPrimaryKey
+	}
+
+	colIdDedup = make([]bool, len(table.Columns))
+	for _, colId := range table.PrimaryKeyColumns {
+		if colId >= len(table.Columns) {
+			return ErrColumnNonExist
+		}
+		if table.Columns[colId].Deleted {
+			return ErrColumnDeleted
+		}
+		if colIdDedup[colId] {
+			return ErrDuplicatedColumn
+		}
+		colIdDedup[colId] = true
+	}
+
+	// TODO: checks for config?
+
+	if table.IsFactTable {
+		colIdDedup = make([]bool, len(table.Columns))
+		for _, sortColumnId := range table.ArchivingSortColumns {
+			if sortColumnId >= len(table.Columns) {
+				return ErrColumnNonExist
+			}
+			if table.Columns[sortColumnId].Deleted {
+				return ErrColumnDeleted
+			}
+			if colIdDedup[sortColumnId] {
+				return ErrDuplicatedColumn
+			}
+			colIdDedup[sortColumnId] = true
 		}
 	}
 

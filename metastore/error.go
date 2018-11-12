@@ -67,4 +67,8 @@ var (
 	ErrNewColumnWithDeletion = errors.New("Can not add column with deleted flag on")
 	// ErrIllegalChangeSortColumn indicates illegal changes on sort columns
 	ErrIllegalChangeSortColumn = errors.New("Illegal changes on sort columns")
+	// ErrDuplicatedColumn indicates a column is used more than onces in sort or pk columns
+	ErrDuplicatedColumn = errors.New("Illegal deplicated use of column")
+	// ErrDuplicatedColumnName indicates duplicated column name in same table
+	ErrDuplicatedColumnName = errors.New("Duplicated column name found")
 )

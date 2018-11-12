@@ -38,6 +38,59 @@ var _ = ginkgo.Describe("Validator", func() {
 		Ω(err).Should(Equal(ErrMissingPrimaryKey))
 	})
 
+	ginkgo.It("should return err for dup column name", func() {
+		table := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Int32",
+				},
+				{
+					Name: "col1",
+					Type: "Int32",
+				},
+			},
+		}
+		validator := NewTableSchameValidator(&table, nil)
+		err := validator.Validate()
+		Ω(err).Should(Equal(ErrDuplicatedColumnName))
+	})
+
+	ginkgo.It("should return err for dup column", func() {
+		table := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Int32",
+				},
+			},
+			PrimaryKeyColumns: []int{0,0},
+		}
+		validator := NewTableSchameValidator(&table, nil)
+		err := validator.Validate()
+		Ω(err).Should(Equal(ErrDuplicatedColumn))
+	})
+
+	ginkgo.It("should return err for dup column", func() {
+		table := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Int32",
+				},
+			},
+			PrimaryKeyColumns: []int{0},
+			IsFactTable: true,
+			ArchivingSortColumns: []int{0,0},
+		}
+		validator := NewTableSchameValidator(&table, nil)
+		err := validator.Validate()
+		Ω(err).Should(Equal(ErrDuplicatedColumn))
+	})
+
 	ginkgo.It("should return err for too few columns", func() {
 		table := common.Table{
 			Name: "testTable",
