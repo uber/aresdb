@@ -9,12 +9,14 @@ import (
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
 type TableSchemaValidator interface {
+	SetOldTable(table common.Table)
+	SetNewTable(table common.Table)
 	Validate() error
 }
 
 // NewTableSchameValidator returns a new TableSchemaValidator. Pass nil for oldTable if none exists
 func NewTableSchameValidator(newTable *common.Table, oldTable *common.Table) TableSchemaValidator {
-	return tableSchemaValidatorImpl{
+	return &tableSchemaValidatorImpl{
 		newTable: newTable,
 		oldTable: oldTable,
 	}
@@ -23,6 +25,14 @@ func NewTableSchameValidator(newTable *common.Table, oldTable *common.Table) Tab
 type tableSchemaValidatorImpl struct {
 	newTable *common.Table
 	oldTable *common.Table
+}
+
+func (v *tableSchemaValidatorImpl) SetOldTable(table common.Table) {
+	v.oldTable = &table
+}
+
+func (v *tableSchemaValidatorImpl) SetNewTable(table common.Table) {
+	v.newTable = &table
 }
 
 func (v tableSchemaValidatorImpl) Validate() (err error) {
