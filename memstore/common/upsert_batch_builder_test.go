@@ -37,7 +37,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		utils.SetCurrentTime(time.Unix(10, 0))
 		bufferNew, err := builder.ToByteArrayNew()
 		Ω(err).Should(BeNil())
-		Ω(bufferNew).Should(Equal([]byte{1, 0, 237, 254, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
+		Ω(bufferNew).Should(Equal([]byte{1, 0, 237, 254, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("works for empty row", func() {

@@ -117,9 +117,11 @@ func writeBool(buffer []byte, index int, value bool) {
 //	[int32]  version_number
 //	[int32]  num_of_rows
 //	[uint16] num_of_columns
-//	[uint16] <reserved>
+//  <reserve 14 bytes>
 //	[uint32] arrival_time
 //	[uint32] column_offset_0 ... [uint32] column_offset_x+1
+//	[uint32] column_reserved_field1_0 ... [uint32] column_reserved_field1_x
+//	[uint32] column_reserved_field2_0 ... [uint32] column_reserved_field2_x
 //	[uint32] column_data_type_0 ... [uint32] column_data_type_x
 //	[uint16] column_id_0 ... [uint16] column_id_x
 //	[uint8] column_mode_0 ... [uint8] column_mode_x
@@ -443,18 +445,18 @@ func readUpsertBatchNew(buffer []byte) (*UpsertBatch, error) {
 	}
 	batch.NumColumns = int(numColumns)
 
-	arrivalTime, err := reader.ReadUint32(8)
+	arrivalTime, err := reader.ReadUint32(20)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to read arrival time")
 	}
 	batch.ArrivalTime = arrivalTime
 
 	// Header too small, error out.
-	if len(buffer) < 12+common.ColumnHeaderSize(batch.NumColumns) {
+	if len(buffer) < 24+common.ColumnHeaderSizeNew(batch.NumColumns) {
 		return nil, utils.StackError(nil, "Invalid upsert batch data with incomplete header section")
 	}
 
-	header := common.NewUpsertBatchHeader(buffer[12:], batch.NumColumns)
+	header := common.NewUpsertBatchHeaderNew(buffer[24:], batch.NumColumns)
 
 	columns := make([]*columnReader, batch.NumColumns)
 	for i := range columns {
@@ -517,6 +519,7 @@ func readUpsertBatchNew(buffer []byte) (*UpsertBatch, error) {
 
 }
 
+// TODO: delete after upsert batch new version migration
 func readUpsertBatchOld(buffer []byte) (*UpsertBatch, error) {
 	batch := &UpsertBatch{
 		buffer:      buffer,
