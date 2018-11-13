@@ -64,6 +64,8 @@ type Column struct {
 // TableConfig defines the table configurations that can be changed
 // swagger:model tableConfig
 type TableConfig struct {
+	// Common table configs
+
 	// Initial setting of number of buckets for primary key
 	// if equals to 0, default will be used
 	InitialPrimaryKeyNumBuckets int `json:"initPrimaryKeyNumBuckets,omitempty"`
@@ -71,7 +73,13 @@ type TableConfig struct {
 	// Size of each live batch, should be sufficiently large.
 	BatchSize int `json:"batchSize,omitempty"`
 
-	// Fact table specifics
+	// Specifies how often to create a new redo log file.
+	RedoLogRotationInterval int `json:"redoLogRotationInterval,omitempty"`
+
+	// Specifies the size limit of a single redo log file.
+	MaxRedoLogFileSize int `json:"maxRedoLogFileSize,omitempty"`
+
+	// Fact table specific configs
 
 	// Number of minutes after event time before a record can be archived.
 	ArchivingDelayMinutes uint32 `json:"archivingDelayMinutes,omitempty"`
@@ -94,7 +102,7 @@ type TableConfig struct {
 	// during ingestion and backfill. 0 means unlimited days.
 	RecordRetentionInDays int `json:"recordRetentionInDays,omitempty"`
 
-	// Dimension table specifies
+	// Dimension table specific configs
 
 	// Number of mutations to accumulate before creating a new snapshot.
 	SnapshotThreshold int `json:"snapshotThreshold,omitempty"`
@@ -102,11 +110,7 @@ type TableConfig struct {
 	// Specifies how often snapshot runs.
 	SnapshotIntervalMinutes int `json:"snapshotIntervalMinutes,omitempty"`
 
-	// Specifies how often to create a new redo log file.
-	RedoLogRotationInterval int `json:"redoLogRotationInterval,omitempty"`
 
-	// Specifies the size limit of a single redo log file.
-	MaxRedoLogFileSize int `json:"maxRedoLogFileSize,omitempty"`
 }
 
 // Table defines the schema and configurations of a table from MetaStore.

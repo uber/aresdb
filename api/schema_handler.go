@@ -135,18 +135,9 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, column := range addTableRequest.Body.Columns {
-		if dataType := memCom.DataTypeFromString(column.Type); dataType == memCom.Unknown {
-			RespondWithBadRequest(w, fmt.Errorf("unknown data type: %s", column.Type))
-			return
-		}
-		if column.DefaultValue != nil {
-			err = validateDefaultValue(*column.DefaultValue, column.Type)
-			if err != nil {
-				RespondWithBadRequest(w, err)
-				return
-			}
-		}
+	err = metastore.NewTableSchameValidator(&addTableRequest.Body, nil).Validate()
+	if err != nil {
+		RespondWithBadRequest(w, err)
 	}
 
 	err = handler.metaStore.CreateTable(&addTableRequest.Body)
@@ -235,7 +226,7 @@ func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) 
 
 	// validate default value
 	if addColumnRequest.Body.DefaultValue != nil {
-		err = validateDefaultValue(*addColumnRequest.Body.DefaultValue, addColumnRequest.Body.Type)
+		err = metastore.ValidateDefaultValue(*addColumnRequest.Body.DefaultValue, addColumnRequest.Body.Type)
 		if err != nil {
 			RespondWithBadRequest(w, err)
 			return
@@ -312,18 +303,3 @@ func (handler *SchemaHandler) DeleteColumn(w http.ResponseWriter, r *http.Reques
 	RespondWithJSONObject(w, nil)
 }
 
-// validate default value against data type
-func validateDefaultValue(valueStr, dataTypeStr string) (err error) {
-	dataType := memCom.DataTypeFromString(dataTypeStr)
-	switch dataType {
-	// BigEnum or Small Enum ares string values, no need to validate
-	case memCom.BigEnum, memCom.SmallEnum:
-		return nil
-	default:
-		value, err := memCom.ValueFromString(valueStr, dataType)
-		if err != nil || !value.Valid {
-			return utils.StackError(err, "invalid value %s for type %s", valueStr, dataTypeStr)
-		}
-	}
-	return err
-}
