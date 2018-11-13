@@ -37,14 +37,14 @@ type LiveBatch struct {
 	// Capacity of the batch which is decided at the creation time.
 	Capacity int
 
+	// For convenience to access fields of live store.
+	// Schema locks should be acquired after data locks.
+	liveStore *LiveStore
+
 	// number of records without event time
 	NumRecordsWithoutEventTime int
 	// maximum of arrival time
 	MaxArrivalTime uint32
-
-	// For convenience to access fields of live store.
-	// Schema locks should be acquired after data locks.
-	liveStore *LiveStore
 }
 
 // LiveStore stores live batches of columnar data.
@@ -227,6 +227,7 @@ func (s *LiveStore) appendBatch(batchID int32) *LiveBatch {
 			Columns: make([]common.VectorParty, numColumns),
 		},
 		Capacity:  s.BatchSize,
+		NumRecordsWithoutEventTime: s.BatchSize,
 		liveStore: s,
 	}
 	s.Lock()

@@ -142,6 +142,7 @@ func (s *LiveStore) getBatchIDsToPurge(cutoff uint32) []int32 {
 	s.tableSchema.RLock()
 	allowMissingEventTime := s.tableSchema.Schema.Config.AllowMissingEventTime
 	s.tableSchema.RUnlock()
+
 	for batchID, batch := range s.Batches {
 		if batchID >= s.LastReadRecord.BatchID {
 			continue
