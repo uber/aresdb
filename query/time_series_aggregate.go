@@ -579,8 +579,7 @@ func (bc *oopkBatchContext) makeGeoPointInputVector(pointTableID int, pointColum
 		*foreignTables[pointTableID-1], nil, 0)
 }
 
-func (bc *oopkBatchContext) geoIntersectJoin(geo *geoIntersection,
-	pointColumnIndex int, foreignTables []*foreignTable,
+func (bc *oopkBatchContext) writeGeoShapeDim(geo *geoIntersection,
 	outputPredicate devicePointer, dimValueOffset, dimNullOffset int, stream unsafe.Pointer, device int) {
 	if bc.size <= 0 || geo.shapeLatLongs.isNull() {
 		return
@@ -588,7 +587,6 @@ func (bc *oopkBatchContext) geoIntersectJoin(geo *geoIntersection,
 
 	// geo dimension always take 1 byte and has type uint8
 	// compiler should have checked the number of geo shapes for join is less than 256
-
 	var dimensionOutputVector C.DimensionOutputVector
 	dimensionVector := bc.dimensionVectorD[0].getPointer()
 	// move dimensionVectorD to the start position of current batch
@@ -598,11 +596,9 @@ func (bc *oopkBatchContext) geoIntersectJoin(geo *geoIntersection,
 	dimensionOutputVector.DimNulls = (*C.uint8_t)(memutils.MemAccess(dimensionVector, dimNullOffset+bc.resultSize))
 	dimensionOutputVector.DataType = C.Uint8
 
-	geoShapes := makeGeoShapeBatch(geo.shapeLatLongs, geo.numShapes, geo.totalNumPoints)
-	points := bc.makeGeoPointInputVector(geo.pointTableID, pointColumnIndex, foreignTables)
+	totalWords := (geo.numShapes + 31) / 32
 	doCGoCall(func() C.CGoCallResHandle {
-		return C.GeoBatchIntersectsJoin(geoShapes, dimensionOutputVector, points,
-			(*C.uint32_t)(bc.indexVectorD.getPointer()), (C.int)(bc.size), (C.uint32_t)(bc.startRow),
+		return C.WriteGeoShapeDim((C.int)(totalWords), dimensionOutputVector, (C.int)(bc.size),
 			(*C.uint32_t)(outputPredicate.getPointer()), stream, (C.int)(device))
 	})
 }

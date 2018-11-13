@@ -548,18 +548,15 @@ CGoCallResHandle GeoBatchIntersects(
     int numForeignTables, uint32_t *outputPredicate, bool inOrOut,
     void *cudaStream, int device);
 
-// GeoBatchIntersectJoin is the interface to do geo intersect join,
-// this method does same geo intersect as GeoIntersects, except for
-// instead of doing filtering, it writes joined geo shape index into
-// dimension output vector for final sort and reduce.
+// WriteGeoShapeDim is the interface to write the shape index to the dimension
+// output. This method should be called after GeoBatchIntersects removes all
+// non-intersecting rows.
 // Note:
 //   1. we assume that the geo join will be many-to-one join
 //   2. we only support IN operation for geo intersects join
-CGoCallResHandle GeoBatchIntersectsJoin(
-    GeoShapeBatch geoShapes, DimensionOutputVector dimOut,
-    InputVector points, uint32_t *indexVector, int indexVectorLength,
-    uint32_t startCount, uint32_t *outputPredicate, void *cudaStream,
-    int device);
+CGoCallResHandle WriteGeoShapeDim(
+    int shapeTotalWords, DimensionOutputVector dimOut, int indexVectorLength,
+    uint32_t *outputPredicate, void *cudaStream, int device);
 
 // BoostrapDevice will bootstrap the all gpu devices with approriate actions.
 // For now it will just initialize the constant memory.

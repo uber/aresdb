@@ -1762,6 +1762,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					pointColumnID: 1,
 					shapeUUIDs:    shapeUUIDs,
 					dimIndex:      1,
+					inOrOut:       true,
 				},
 			},
 		}
@@ -1777,8 +1778,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				"0": {
 					"00000192F23D460DBE60400C32EA0667": 1,
 					"00001A3F088047D79343894698F221AB": 1,
-					"0000334BB6B0420986175F20F3FBF90D": 1,
-					"NULL": 2
+					"0000334BB6B0420986175F20F3FBF90D": 1
 				}
 			}`,
 		))
