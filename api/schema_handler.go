@@ -135,7 +135,9 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = metastore.NewTableSchameValidator(&addTableRequest.Body, nil).Validate()
+	validator := metastore.NewTableSchameValidator()
+	validator.SetNewTable(addTableRequest.Body)
+	err = validator.Validate()
 	if err != nil {
 		RespondWithBadRequest(w, err)
 	}

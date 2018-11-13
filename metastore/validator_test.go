@@ -18,7 +18,8 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 		}
-		validator := NewTableSchameValidator(&table, nil)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table)
 		err := validator.Validate()
 		Ω(err).Should(BeNil())
 	})
@@ -33,7 +34,8 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 		}
-		validator := NewTableSchameValidator(&table, nil)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrMissingPrimaryKey))
 	})
@@ -52,7 +54,8 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 		}
-		validator := NewTableSchameValidator(&table, nil)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrDuplicatedColumnName))
 	})
@@ -68,7 +71,8 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0,0},
 		}
-		validator := NewTableSchameValidator(&table, nil)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrDuplicatedColumn))
 	})
@@ -86,7 +90,8 @@ var _ = ginkgo.Describe("Validator", func() {
 			IsFactTable: true,
 			ArchivingSortColumns: []int{0,0},
 		}
-		validator := NewTableSchameValidator(&table, nil)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrDuplicatedColumn))
 	})
@@ -96,7 +101,8 @@ var _ = ginkgo.Describe("Validator", func() {
 			Name: "testTable",
 			Columns: []common.Column{},
 		}
-		validator := NewTableSchameValidator(&table, nil)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrAllColumnsInvalid))
 	})
@@ -132,7 +138,9 @@ var _ = ginkgo.Describe("Validator", func() {
 			ArchivingSortColumns: []int{1},
 			Version: 1,
 		}
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(BeNil())
 	})
@@ -168,7 +176,9 @@ var _ = ginkgo.Describe("Validator", func() {
 			ArchivingSortColumns: []int{1},
 			Version: 0,
 		}
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrIllegalSchemaVersion))
 	})
@@ -200,7 +210,9 @@ var _ = ginkgo.Describe("Validator", func() {
 			ArchivingSortColumns: []int{0},
 			Version: 1,
 		}
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
 	})
@@ -231,7 +243,9 @@ var _ = ginkgo.Describe("Validator", func() {
 			ArchivingSortColumns: []int{1},
 			Version: 1,
 		}
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
 	})
@@ -263,7 +277,9 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{0},
 			Version: 1,
 		}
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrInsufficientColumnCount))
 	})
@@ -300,7 +316,9 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{0},
 			Version: 1,
 		}
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrReusingColumnIDNotAllowed))
 	})
@@ -336,7 +354,9 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{0},
 			Version: 1,
 		}
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
 	})
@@ -369,7 +389,9 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{0},
 			Version: 1,
 		}
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrNewColumnWithDeletion))
 	})
@@ -401,7 +423,9 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{0,1},
 			Version: 1,
 		}
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrChangePrimaryKeyColumn))
 	})
@@ -450,14 +474,17 @@ var _ = ginkgo.Describe("Validator", func() {
 			Version: 1,
 		}
 		// removing sort columns is not allowed
-		validator := NewTableSchameValidator(&newTable, &oldTable)
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err := validator.Validate()
 		Ω(err).Should(Equal(ErrIllegalChangeSortColumn))
 
 		// changing existing sort columns is not allowed
 		oldTable.ArchivingSortColumns = []int{1}
 		newTable.ArchivingSortColumns = []int{2}
-		validator = NewTableSchameValidator(&newTable, &oldTable)
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
 		err = validator.Validate()
 		Ω(err).Should(Equal(ErrIllegalChangeSortColumn))
 	})
