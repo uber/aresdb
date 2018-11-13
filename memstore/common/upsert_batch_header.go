@@ -16,8 +16,16 @@ package common
 
 import "github.com/uber/aresdb/utils"
 
+// ColumnHeaderSizeNew returns the total size of the column headers.
+func ColumnHeaderSizeNew(numCols int) int {
+	// offset (4 bytes), reserved (8 bytes), data_type (4 bytes), column_id (2 bytes), column mode (1 byte)
+	return (numCols+1)*4 + numCols*8 + numCols*4 + numCols*2 + numCols
+}
+
 // ColumnHeaderSize returns the total size of the column headers.
+// TODO: delete after migration of new upsert batch version
 func ColumnHeaderSize(numCols int) int {
+	// offset (4 bytes), data_type (4 bytes), column_id (2 bytes), column mode (1 byte)
 	return (numCols+1)*4 + numCols*4 + numCols*2 + numCols
 }
 
@@ -30,7 +38,28 @@ type UpsertBatchHeader struct {
 	modeVector   []byte
 }
 
+// NewUpsertBatchHeaderNew create upsert batch header from buffer
+func NewUpsertBatchHeaderNew(buffer []byte, numCols int) UpsertBatchHeader {
+	offset := 0
+	// Offset vector is of size numCols + 1.
+	offsetVector := buffer[0 : (numCols+1)*4]
+	offset += len(offsetVector) + numCols*8
+	typeVector := buffer[offset : offset+numCols*4]
+	offset += len(typeVector)
+	idVector := buffer[offset : offset+numCols*2]
+	offset += len(idVector)
+	modeVector := buffer[offset : offset+numCols]
+
+	return UpsertBatchHeader{
+		offsetVector: offsetVector,
+		typeVector:   typeVector,
+		idVector:     idVector,
+		modeVector:   modeVector,
+	}
+}
+
 // NewUpsertBatchHeader create upsert batch header from buffer
+// TODO: delete after migration of new upsert batch version
 func NewUpsertBatchHeader(buffer []byte, numCols int) UpsertBatchHeader {
 	offset := 0
 	// Offset vector is of size numCols + 1.
@@ -53,26 +82,42 @@ func NewUpsertBatchHeader(buffer []byte, numCols int) UpsertBatchHeader {
 // WriteColumnOffset writes the offset of a column. It can take col index from 0 to numCols + 1.
 func (u *UpsertBatchHeader) WriteColumnOffset(value int, col int) error {
 	writer := utils.NewBufferWriter(u.offsetVector)
-	return writer.WriteUint32(uint32(value), col*4)
+	err := writer.WriteUint32(uint32(value), col*4)
+	if err != nil {
+		return utils.StackError(err, "Failed to write start offset for column %d", col)
+	}
+	return nil
 }
 
 // WriteColumnType writes the type of a column.
 func (u *UpsertBatchHeader) WriteColumnType(value DataType, col int) error {
 	writer := utils.NewBufferWriter(u.typeVector)
-	return writer.WriteUint32(uint32(value), col*4)
+	err := writer.WriteUint32(uint32(value), col*4)
+	if err != nil {
+		return utils.StackError(err, "Failed to write type for column %d", col)
+	}
+	return nil
 }
 
 // WriteColumnID writes the id of a column.
 func (u *UpsertBatchHeader) WriteColumnID(value int, col int) error {
 	writer := utils.NewBufferWriter(u.idVector)
-	return writer.WriteUint16(uint16(value), col*2)
+	err := writer.WriteUint16(uint16(value), col*2)
+	if err != nil {
+		return utils.StackError(err, "Failed to write id for column %d", col)
+	}
+	return nil
 }
 
 // WriteColumnFlag writes the mode of a column.
 func (u *UpsertBatchHeader) WriteColumnFlag(columnMode ColumnMode, columnUpdateMode ColumnUpdateMode, col int) error {
 	value := uint8(columnMode&0x07) | uint8((columnUpdateMode&0x07)<<3)
 	writer := utils.NewBufferWriter(u.modeVector)
-	return writer.WriteUint8(value, col)
+	err := writer.WriteUint8(value, col)
+	if err != nil {
+		return utils.StackError(err, "Failed to write mode for column %d", col)
+	}
+	return nil
 }
 
 // ReadColumnOffset takes col index from 0 to numCols + 1 and returns the value stored.

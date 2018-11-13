@@ -39,6 +39,10 @@ const (
 	MaxColumnUpdateMode
 )
 
+const (
+	UpsertBatchVersion uint32 = 0xFEED0001
+)
+
 type columnBuilder struct {
 	columnID       int
 	dataType       DataType
@@ -387,10 +391,77 @@ func (u *UpsertBatchBuilder) SetValue(row int, col int, value interface{}) error
 	return u.columns[col].SetValue(row, value)
 }
 
-// ToByteArray produces a serialized UpsertBatch in byte array.
-func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
+// ToByteArrayNew will be used for new upsert batch version
+// TODO: exposed only for test purpose before migration of new version is done
+func (u UpsertBatchBuilder) ToByteArrayNew() ([]byte, error) {
 	// Create buffer.
 	numCols := len(u.columns)
+	// initialized size to 4 bytes (version number).
+	size := 4
+	// 24 bytes consist of:
+	// [int32] num_of_rows (4 bytes)
+	// [uint16] num_of_columns (2 bytes)
+	// <reserve 14 bytes>
+	// [uint32] arrival_time (4 bytes)
+	headerSize := 24 + ColumnHeaderSizeNew(numCols)
+	size += headerSize
+	for _, column := range u.columns {
+		column.CalculateBufferSize(&size)
+	}
+	size = utils.AlignOffset(size, 8)
+	buffer := make([]byte, size)
+	writer := utils.NewBufferWriter(buffer)
+
+	// Write upsert batch version.
+	if err := writer.WriteUint32(UpsertBatchVersion, 0); err != nil {
+		return nil, utils.StackError(err, "Failed to write version number")
+	}
+	// Write fixed headers.
+	if err := writer.WriteInt32(int32(u.NumRows), 4); err != nil {
+		return nil, utils.StackError(err, "Failed to write number of rows")
+	}
+	if err := writer.WriteUint16(uint16(len(u.columns)), 8); err != nil {
+		return nil, utils.StackError(err, "Failed to write number of columns")
+	}
+	if err := writer.WriteUint32(uint32(utils.Now().Unix()), 24); err != nil  {
+		return nil, utils.StackError(err, "Failed to write arrival time")
+	}
+	writer.SkipBytes(headerSize + 4)
+
+	header := NewUpsertBatchHeaderNew(buffer[28:headerSize], numCols)
+	// Write per column data their headers.
+	for i, column := range u.columns {
+		if err := header.WriteColumnID(column.columnID, i); err != nil {
+			return nil, err
+		}
+		if err := header.WriteColumnFlag(column.GetMode(), column.updateMode, i); err != nil {
+			return nil, err
+		}
+		if err := header.WriteColumnType(column.dataType, i); err != nil {
+			return nil, err
+		}
+		if err := header.WriteColumnOffset(writer.GetOffset(), i); err != nil {
+			return nil, err
+		}
+		if err := column.AppendToBuffer(&writer); err != nil {
+			return nil, utils.StackError(err, "Failed to write data for column %d", i)
+		}
+		if err := header.WriteColumnOffset(writer.GetOffset(), i+1); err != nil {
+			return nil, err
+		}
+	}
+
+	return buffer, nil
+}
+
+// TODO: delete after new upsert batch migration
+func (u UpsertBatchBuilder) toByteArrayOld() ([]byte, error)  {
+	// Create buffer.
+	numCols := len(u.columns)
+	// 8 bytes consist of:
+	// [int32] num_of_rows (4 bytes)
+	// [uint16] num_of_columns (2 bytes)
+	// [uint16] <reserved> (2 bytes)
 	headerSize := 8 + ColumnHeaderSize(numCols)
 	size := headerSize
 	for _, column := range u.columns {
@@ -401,7 +472,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	writer := utils.NewBufferWriter(buffer)
 
 	// Write fixed headers.
-	if err := writer.WriteUint32(uint32(u.NumRows), 0); err != nil {
+	if err := writer.WriteInt32(int32(u.NumRows), 0); err != nil {
 		return nil, utils.StackError(err, "Failed to write number of rows")
 	}
 	if err := writer.WriteUint16(uint16(len(u.columns)), 4); err != nil {
@@ -413,26 +484,31 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	// Write per column data their headers.
 	for i, column := range u.columns {
 		if err := header.WriteColumnID(column.columnID, i); err != nil {
-			return nil, utils.StackError(err, "Failed to write id for column %d", i)
+			return nil, err
 		}
 		if err := header.WriteColumnFlag(column.GetMode(), column.updateMode, i); err != nil {
-			return nil, utils.StackError(err, "Failed to write mode for column %d", i)
+			return nil, err
 		}
 		if err := header.WriteColumnType(column.dataType, i); err != nil {
-			return nil, utils.StackError(err, "Failed to write type for column %d", i)
+			return nil, err
 		}
 		if err := header.WriteColumnOffset(writer.GetOffset(), i); err != nil {
-			return nil, utils.StackError(err, "Failed to write start offset for column %d", i)
+			return nil, err
 		}
 		if err := column.AppendToBuffer(&writer); err != nil {
 			return nil, utils.StackError(err, "Failed to write data for column %d", i)
 		}
 		if err := header.WriteColumnOffset(writer.GetOffset(), i+1); err != nil {
-			return nil, utils.StackError(err, "Failed to write end offset for column %d", i)
+			return nil, err
 		}
 	}
 
 	return buffer, nil
+}
+
+// ToByteArray produces a serialized UpsertBatch in byte array.
+func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
+	return u.toByteArrayOld()
 }
 
 // UpdateWithAdditionFunc will return the addition of old value and new value
