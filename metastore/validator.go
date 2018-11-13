@@ -1,10 +1,10 @@
 package metastore
 
 import (
-	"github.com/uber/aresdb/metastore/common"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"reflect"
+	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
+	"reflect"
 )
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
@@ -163,7 +163,7 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 			oldCol.DefaultValue != newCol.DefaultValue ||
 			oldCol.CaseInsensitive != newCol.CaseInsensitive ||
 			oldCol.DisableAutoExpand != newCol.DisableAutoExpand {
-				return ErrSchemaUpdateNotAllowed
+			return ErrSchemaUpdateNotAllowed
 		}
 	}
 
@@ -176,7 +176,7 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 	// end validate columns
 
 	// primary key columns
-	if !reflect.DeepEqual(newTable.PrimaryKeyColumns, oldTable.PrimaryKeyColumns ){
+	if !reflect.DeepEqual(newTable.PrimaryKeyColumns, oldTable.PrimaryKeyColumns) {
 		return ErrChangePrimaryKeyColumn
 	}
 

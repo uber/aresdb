@@ -96,21 +96,22 @@ var _ = ginkgo.Describe("archiving", func() {
 			LastReadRecord: RecordID{-101, 3},
 			Batches: map[int32]*LiveBatch{
 				-110: {
-					*batch110,
-					5,
-					nil,
+					Batch:     *batch110,
+					Capacity:  5,
+					liveStore: nil,
 				},
 				-101: {
-					*batch101,
-					5,
-					nil,
+					Batch:     *batch101,
+					Capacity:  5,
+					liveStore: nil,
 				},
 				-99: {
-					*batch99,
-					5,
-					nil,
+					Batch:     *batch99,
+					Capacity:  5,
+					liveStore: nil,
 				},
 			},
+			tableSchema:       shard.Schema,
 			PrimaryKey:        NewPrimaryKey(16, true, 0, hostMemoryManager),
 			HostMemoryManager: hostMemoryManager,
 		}

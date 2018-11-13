@@ -72,14 +72,14 @@ var _ = ginkgo.Describe("merge", func() {
 			LastReadRecord: RecordID{-101, 4},
 			Batches: map[int32]*LiveBatch{
 				-110: {
-					*batch0,
-					4,
-					nil,
+					Batch:     *batch0,
+					Capacity:  4,
+					liveStore: nil,
 				},
 				-101: {
-					*batch1,
-					4,
-					nil,
+					Batch:     *batch1,
+					Capacity:  4,
+					liveStore: nil,
 				},
 			},
 		}
@@ -289,9 +289,9 @@ var _ = ginkgo.Describe("merge", func() {
 			LastReadRecord: RecordID{-101, 4},
 			Batches: map[int32]*LiveBatch{
 				-101: {
-					*noSortColumnBatch,
-					4,
-					nil,
+					Batch:     *noSortColumnBatch,
+					Capacity:  4,
+					liveStore: nil,
 				},
 			},
 		}
@@ -593,9 +593,9 @@ var _ = ginkgo.Describe("merge", func() {
 			LastReadRecord: RecordID{-101, 4},
 			Batches: map[int32]*LiveBatch{
 				-101: {
-					*patchData,
-					4,
-					nil,
+					Batch:     *patchData,
+					Capacity:  4,
+					liveStore: nil,
 				},
 			},
 		}
