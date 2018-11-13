@@ -138,13 +138,24 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 func (s *LiveStore) getBatchIDsToPurge(cutoff uint32) []int32 {
 	var batchIDs []int32
 	s.RLock()
+
+	s.tableSchema.RLock()
+	allowMissingEventTime := s.tableSchema.Schema.Config.AllowMissingEventTime
+	s.tableSchema.RUnlock()
 	for batchID, batch := range s.Batches {
 		if batchID >= s.LastReadRecord.BatchID {
 			continue
 		}
 
-		if _, maxValue := batch.Columns[0].(common.LiveVectorParty).GetMinMaxValue(); maxValue < cutoff {
-			batchIDs = append(batchIDs, batchID)
+		timeColumn := batch.Columns[0]
+		if timeColumn != nil {
+			if _, maxValue := timeColumn.(common.LiveVectorParty).GetMinMaxValue(); maxValue < cutoff {
+				if !allowMissingEventTime {
+					batchIDs = append(batchIDs, batchID)
+				} else if batch.MaxArrivalTime < cutoff {
+					batchIDs = append(batchIDs, batchID)
+				}
+			}
 		}
 	}
 	s.RUnlock()
