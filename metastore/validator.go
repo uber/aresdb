@@ -15,11 +15,8 @@ type TableSchemaValidator interface {
 }
 
 // NewTableSchameValidator returns a new TableSchemaValidator. Pass nil for oldTable if none exists
-func NewTableSchameValidator(newTable *common.Table, oldTable *common.Table) TableSchemaValidator {
-	return &tableSchemaValidatorImpl{
-		newTable: newTable,
-		oldTable: oldTable,
-	}
+func NewTableSchameValidator() TableSchemaValidator {
+	return &tableSchemaValidatorImpl{}
 }
 
 type tableSchemaValidatorImpl struct {
