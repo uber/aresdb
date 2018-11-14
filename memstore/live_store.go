@@ -226,9 +226,9 @@ func (s *LiveStore) appendBatch(batchID int32) *LiveBatch {
 		Batch: Batch{
 			Columns: make([]common.VectorParty, numColumns),
 		},
-		Capacity:  s.BatchSize,
+		Capacity:                   s.BatchSize,
 		NumRecordsWithoutEventTime: s.BatchSize,
-		liveStore: s,
+		liveStore:                  s,
 	}
 	s.Lock()
 	s.Batches[batchID] = batch

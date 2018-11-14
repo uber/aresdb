@@ -35,7 +35,7 @@ func CreateMockDiskStore() *mocks.DiskStore {
 
 // createMemStore creates a memStoreImpl instance for testing.
 func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType,
-	primaryKeyColumns []int, batchSize int, isFactTable bool,
+	primaryKeyColumns []int, batchSize int, isFactTable bool, allowMissingEventTime bool,
 	metaStore metastore.MetaStore, diskStore diskstore.DiskStore) *memStoreImpl {
 	// Create schemas.
 	mainSchema := metaCom.Table{
@@ -46,6 +46,7 @@ func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType
 			BatchSize:                batchSize,
 			BackfillMaxBufferSize:    1 << 32,
 			BackfillThresholdInBytes: 1 << 21,
+			AllowMissingEventTime:    allowMissingEventTime,
 		},
 		IsFactTable: isFactTable,
 	}

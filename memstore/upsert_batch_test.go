@@ -126,7 +126,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		builder.AddRow()
 		err := builder.AddColumn(123, common.Uint8)
 		Ω(err).Should(BeNil())
-		buffer, err := builder.ToByteArray()
+		buffer, err := builder.ToByteArrayNew()
 		Ω(err).Should(BeNil())
 
 		batch, err := NewUpsertBatch(buffer)
@@ -148,6 +148,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		builder.AddRow()
 		err := builder.AddColumn(123, common.Uint8)
 		builder.SetValue(0, 0, uint8(135))
+		utils.SetCurrentTime(time.Unix(10, 0))
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
 
@@ -178,6 +179,44 @@ var _ = ginkgo.Describe("upsert batch", func() {
 
 		// Read column id.
 		Ω(batch.NumRows).Should(Equal(0))
+
+		// test new version
+		builder = common.NewUpsertBatchBuilder()
+		builder.AddRow()
+		err = builder.AddColumn(123, common.Uint8)
+		builder.SetValue(0, 0, uint8(135))
+		utils.SetCurrentTime(time.Unix(10, 0))
+		buffer, err = builder.ToByteArrayNew()
+		Ω(err).Should(BeNil())
+
+		batch, err = NewUpsertBatch(buffer)
+		Ω(err).Should(BeNil())
+
+		// Read column id.
+		Ω(batch.NumRows).Should(Equal(1))
+		columnID, err = batch.GetColumnID(0)
+		Ω(err).Should(BeNil())
+		Ω(columnID).Should(Equal(123))
+
+		// Read the only value.
+		value, valid, err = batch.GetValue(0, 0)
+		Ω(err).Should(BeNil())
+		Ω(valid).Should(Equal(true))
+		Ω(*(*uint8)(value)).Should(Equal(uint8(135)))
+
+		// Remove the last row.
+		builder.RemoveRow()
+		builder.RemoveRow()
+
+		buffer, err = builder.ToByteArrayNew()
+		Ω(err).Should(BeNil())
+
+		batch, err = NewUpsertBatch(buffer)
+		Ω(err).Should(BeNil())
+
+		// Read column id.
+		Ω(batch.NumRows).Should(Equal(0))
+		utils.ResetClockImplementation()
 	})
 
 	ginkgo.It("reset row works", func() {

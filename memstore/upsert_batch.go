@@ -428,7 +428,7 @@ func readUpsertBatchNew(buffer []byte) (*UpsertBatch, error) {
 	// numRows.
 	reader := utils.NewBufferReader(buffer)
 
-	numRows, err := reader.ReadInt32(0)
+	numRows, err := reader.ReadInt32(4)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to read number of rows")
 	}
@@ -439,24 +439,25 @@ func readUpsertBatchNew(buffer []byte) (*UpsertBatch, error) {
 	batch.NumRows = int(numRows)
 
 	// numColumns.
-	numColumns, err := reader.ReadUint16(4)
+	numColumns, err := reader.ReadUint16(4 + 4)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to read number of columns")
 	}
 	batch.NumColumns = int(numColumns)
 
-	arrivalTime, err := reader.ReadUint32(20)
+	// 2 byte num columns
+	arrivalTime, err := reader.ReadUint32(4 + 4 + 2 + 14)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to read arrival time")
 	}
 	batch.ArrivalTime = arrivalTime
 
 	// Header too small, error out.
-	if len(buffer) < 24+common.ColumnHeaderSizeNew(batch.NumColumns) {
+	if len(buffer) < 28+common.ColumnHeaderSizeNew(batch.NumColumns) {
 		return nil, utils.StackError(nil, "Invalid upsert batch data with incomplete header section")
 	}
 
-	header := common.NewUpsertBatchHeaderNew(buffer[24:], batch.NumColumns)
+	header := common.NewUpsertBatchHeaderNew(buffer[28:], batch.NumColumns)
 
 	columns := make([]*columnReader, batch.NumColumns)
 	for i := range columns {
@@ -624,7 +625,7 @@ func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 
 	if version == common.UpsertBatchVersion {
 		// skip version number bytes for new version
-		return readUpsertBatchNew(buffer[4:])
+		return readUpsertBatchNew(buffer)
 	}
 	// old version does not have version number
 	return readUpsertBatchOld(buffer)
