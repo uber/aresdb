@@ -14,7 +14,9 @@
 
 package common
 
-import "github.com/uber/aresdb/utils"
+import (
+	"github.com/uber/aresdb/utils"
+)
 
 // ColumnHeaderSizeNew returns the total size of the column headers.
 func ColumnHeaderSizeNew(numCols int) int {

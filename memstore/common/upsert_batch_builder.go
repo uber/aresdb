@@ -397,14 +397,16 @@ func (u UpsertBatchBuilder) ToByteArrayNew() ([]byte, error) {
 	// Create buffer.
 	numCols := len(u.columns)
 	// initialized size to 4 bytes (version number).
-	size := 4
-	// 24 bytes consist of:
+ 	versionHeaderSize := 4
+	// 24 bytes consist of fixed headers:
 	// [int32] num_of_rows (4 bytes)
 	// [uint16] num_of_columns (2 bytes)
 	// <reserve 14 bytes>
 	// [uint32] arrival_time (4 bytes)
-	headerSize := 24 + ColumnHeaderSizeNew(numCols)
-	size += headerSize
+	fixedHeaderSize := 24
+	columnHeaderSize := ColumnHeaderSizeNew(numCols)
+	headerSize := versionHeaderSize + fixedHeaderSize + columnHeaderSize
+	size := headerSize
 	for _, column := range u.columns {
 		column.CalculateBufferSize(&size)
 	}
@@ -413,40 +415,42 @@ func (u UpsertBatchBuilder) ToByteArrayNew() ([]byte, error) {
 	writer := utils.NewBufferWriter(buffer)
 
 	// Write upsert batch version.
-	if err := writer.WriteUint32(UpsertBatchVersion, 0); err != nil {
+	if err := writer.AppendUint32(UpsertBatchVersion); err != nil {
 		return nil, utils.StackError(err, "Failed to write version number")
 	}
 	// Write fixed headers.
-	if err := writer.WriteInt32(int32(u.NumRows), 4); err != nil {
+	if err := writer.AppendInt32(int32(u.NumRows)); err != nil {
 		return nil, utils.StackError(err, "Failed to write number of rows")
 	}
-	if err := writer.WriteUint16(uint16(len(u.columns)), 8); err != nil {
+	if err := writer.AppendUint16(uint16(len(u.columns))); err != nil {
 		return nil, utils.StackError(err, "Failed to write number of columns")
 	}
-	if err := writer.WriteUint32(uint32(utils.Now().Unix()), 24); err != nil  {
+	writer.SkipBytes(14)
+	if err := writer.AppendUint32(uint32(utils.Now().Unix())); err != nil  {
 		return nil, utils.StackError(err, "Failed to write arrival time")
 	}
-	writer.SkipBytes(headerSize + 4)
+	columnHeader := NewUpsertBatchHeaderNew(buffer[writer.GetOffset(): headerSize], numCols)
+	// skip to data offset
+	writer.SkipBytes(columnHeaderSize)
 
-	header := NewUpsertBatchHeaderNew(buffer[28:headerSize], numCols)
 	// Write per column data their headers.
 	for i, column := range u.columns {
-		if err := header.WriteColumnID(column.columnID, i); err != nil {
+		if err := columnHeader.WriteColumnID(column.columnID, i); err != nil {
 			return nil, err
 		}
-		if err := header.WriteColumnFlag(column.GetMode(), column.updateMode, i); err != nil {
+		if err := columnHeader.WriteColumnFlag(column.GetMode(), column.updateMode, i); err != nil {
 			return nil, err
 		}
-		if err := header.WriteColumnType(column.dataType, i); err != nil {
+		if err := columnHeader.WriteColumnType(column.dataType, i); err != nil {
 			return nil, err
 		}
-		if err := header.WriteColumnOffset(writer.GetOffset(), i); err != nil {
+		if err := columnHeader.WriteColumnOffset(writer.GetOffset(), i); err != nil {
 			return nil, err
 		}
 		if err := column.AppendToBuffer(&writer); err != nil {
 			return nil, utils.StackError(err, "Failed to write data for column %d", i)
 		}
-		if err := header.WriteColumnOffset(writer.GetOffset(), i+1); err != nil {
+		if err := columnHeader.WriteColumnOffset(writer.GetOffset(), i+1); err != nil {
 			return nil, err
 		}
 	}

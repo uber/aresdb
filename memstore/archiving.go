@@ -95,24 +95,27 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 
 		if minValue < cutoff {
 			for recordIdx := 0; recordIdx < numRecords; recordIdx++ {
-				time := *(*uint32)(timeColumn.GetDataValue(recordIdx).OtherVal)
-				if time < cutoff {
-					if time >= oldCutoff {
-						// Add the record for archiving
-						day := int32(time / 86400)
-						patch := patchByDay[day]
-						if patch == nil {
-							patch = &archivingPatch{
-								data:        ss,
-								sortColumns: sortColumns,
+				dataValue := timeColumn.GetDataValue(recordIdx)
+				if dataValue.Valid {
+					time := *(*uint32)(dataValue.OtherVal)
+					if time < cutoff {
+						if time >= oldCutoff {
+							// Add the record for archiving
+							day := int32(time / 86400)
+							patch := patchByDay[day]
+							if patch == nil {
+								patch = &archivingPatch{
+									data:        ss,
+									sortColumns: sortColumns,
+								}
+								patchByDay[day] = patch
 							}
-							patchByDay[day] = patch
+							patch.recordIDs = append(patch.recordIDs,
+								RecordID{int32(batchIdx), uint32(recordIdx)})
+							numRecordsArchived++
+						} else {
+							numRecordsIgnored++
 						}
-						patch.recordIDs = append(patch.recordIDs,
-							RecordID{int32(batchIdx), uint32(recordIdx)})
-						numRecordsArchived++
-					} else {
-						numRecordsIgnored++
 					}
 				}
 			}

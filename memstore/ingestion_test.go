@@ -24,7 +24,7 @@ import (
 
 var _ = ginkgo.Describe("ingestion", func() {
 	ginkgo.It("works for empty upsert batch", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{}, []int{}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{}, []int{}, 10, false, false, nil, CreateMockDiskStore())
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
@@ -34,7 +34,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("returns error for unrecognized table", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{}, []int{}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{}, []int{}, 10, false, false, nil, CreateMockDiskStore())
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("def", 0, upsertBatch)
@@ -42,7 +42,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("returns error for missing primary key", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
@@ -52,7 +52,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("works for valid upsert batch without rows", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		buffer, _ := builder.ToByteArray()
@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("returns error for row with missing primary key", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		builder.AddRow()
@@ -79,7 +79,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("works for one row, one column", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		builder.AddRow()
@@ -101,7 +101,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("skip old records", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, true, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, true, false, nil, CreateMockDiskStore())
 		shard, err := memstore.GetTableShard("abc", 0)
 		Ω(err).Should(BeNil())
 		shard.Schema.Schema.Config.RecordRetentionInDays = 10
@@ -127,7 +127,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	ginkgo.It("skip future records", func() {
 		utils.SetCurrentTime(time.Unix(100, 0))
 		defer utils.ResetClockImplementation()
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, true, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, true, false, nil, CreateMockDiskStore())
 		shard, err := memstore.GetTableShard("abc", 0)
 		Ω(err).Should(BeNil())
 
@@ -157,7 +157,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 
 	ginkgo.It("works for inserting duplicated rows", func() {
 		// Make sure batch is going correctly.
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8, common.Bool}, []int{1}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8, common.Bool}, []int{1}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		builder.AddColumn(1, common.Bool)
@@ -199,7 +199,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 
 	ginkgo.It("works for composite primary key types", func() {
 		// Make sure batch is going correctly.
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint16, common.Bool, common.Float32}, []int{1, 0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint16, common.Bool, common.Float32}, []int{1, 0}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint16)
 		builder.AddColumn(1, common.Bool)
@@ -244,7 +244,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 
 	ginkgo.It("batch grows correctly", func() {
 		// Make sure batch is going correctly.
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 2, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 2, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		builder.AddRow()
@@ -287,7 +287,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 
 	ginkgo.It("batch grows correctly with batch size changes", func() {
 		// Make sure batch is going correctly.
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 1, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 1, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		builder.AddRow()
@@ -354,7 +354,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("inserts record if event time is greater than cut off time", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32}, []int{0}, 10, true, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32}, []int{0}, 10, true, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint32)
 		builder.AddRow()
@@ -372,7 +372,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("backfill data if event time is less than cut off time", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32}, []int{0}, 10, true, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32}, []int{0}, 10, true, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint32)
 		builder.AddRow()
@@ -409,7 +409,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("returns error fact table's first column is not uint32", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32}, []int{0}, 10, true, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32}, []int{0}, 10, true, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		buffer, _ := builder.ToByteArray()
@@ -419,7 +419,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("returns error if fact table's value is invalid", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{1}, 10, true, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{1}, 10, true, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint32)
 		builder.AddColumn(1, common.Uint8)
@@ -432,7 +432,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("works for fact table", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{1}, 10, true, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{1}, 10, true, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		// Put event time to the 2nd column.
 		builder.AddColumn(1, common.Uint8)
@@ -470,7 +470,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("works for dimension table", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{1}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{1}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		// Put event time to the 2nd column.
 		builder.AddColumn(1, common.Uint8)
@@ -508,7 +508,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("returns error for unrecognized table", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		buffer, _ := builder.ToByteArray()
@@ -519,7 +519,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("returns error for unrecognized columns", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		builder.AddColumn(1, common.Uint8)
@@ -531,7 +531,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("returns error for mismatched column type", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint16)
 		buffer, _ := builder.ToByteArray()
@@ -542,7 +542,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("ingestion works for overwrite", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8, common.Uint8}, []int{0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8, common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumnWithUpdateMode(0, common.Uint8, common.UpdateOverwriteNotNull)
 		builder.AddColumnWithUpdateMode(1, common.Uint8, common.UpdateOverwriteNotNull)
@@ -641,7 +641,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	})
 
 	ginkgo.It("ingestion works for addition func", func() {
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8, common.Uint8}, []int{0}, 10, false, nil, CreateMockDiskStore())
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8, common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		builder.AddColumnWithUpdateMode(1, common.Uint8, common.UpdateOverwriteNotNull)
@@ -679,5 +679,29 @@ var _ = ginkgo.Describe("ingestion", func() {
 		value, valid = ReadShardValue(shard, 1, []byte{123})
 		Ω(valid).Should(BeTrue())
 		Ω(*(*uint8)(value)).Should(Equal(uint8(3)))
+	})
+
+	ginkgo.It("ingestion works for missing event time", func() {
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{1}, 10, true, true, nil, CreateMockDiskStore())
+		utils.SetCurrentTime(time.Unix(10, 0))
+		builder := common.NewUpsertBatchBuilder()
+		builder.AddColumn(0, common.Uint32)
+		builder.AddColumn(1, common.Uint8)
+		builder.AddRow()
+		builder.SetValue(0, 0, nil)
+		builder.SetValue(0, 1, uint8(1))
+		builder.AddRow()
+		builder.SetValue(1, 0, uint32(10))
+		builder.SetValue(1, 1, uint8(2))
+
+		buffer, _ := builder.ToByteArrayNew()
+		upsertBatch, _ := NewUpsertBatch(buffer)
+		err := memstore.HandleIngestion("abc", 0, upsertBatch)
+		Ω(err).Should(BeNil())
+
+		shard, err := memstore.GetTableShard("abc", 0)
+		Ω(shard.LiveStore.Batches[BaseBatchID].NumRecordsWithoutEventTime).Should(Equal(9))
+		Ω(shard.LiveStore.Batches[BaseBatchID].MaxArrivalTime).Should(Equal(uint32(10)))
+		utils.ResetClockImplementation()
 	})
 })

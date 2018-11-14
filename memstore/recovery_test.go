@@ -63,7 +63,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		metaStore.On("GetBackfillProgressInfo", "abc", 0).Return(int64(0), uint32(0), nil)
 		metaStore.On("GetBackfillProgressInfo", "abc", 1).Return(int64(0), uint32(0), nil)
 
-		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32}, []int{0}, 10, true, metaStore, diskStore)
+		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32}, []int{0}, 10, true, false, metaStore, diskStore)
 		memstore.TableShards["abc"] = nil
 		memstore.InitShards(false)
 		shard := memstore.TableShards["abc"][0]
@@ -107,7 +107,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		metaStore := &metaMocks.MetaStore{}
 
 		m := createMemStore(tableName, 0, []memCom.DataType{memCom.Uint16, memCom.SmallEnum, memCom.UUID, memCom.Uint32},
-			[]int{0}, batchSize, false, metaStore, diskStore)
+			[]int{0}, batchSize, false, false, metaStore, diskStore)
 		m.loadSnapshots()
 	})
 
@@ -117,7 +117,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		diskStore.On("DeleteSnapshot", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		m := createMemStore(tableName, 0, []memCom.DataType{memCom.Uint16, memCom.SmallEnum, memCom.UUID, memCom.Uint32},
-			[]int{0}, batchSize, false, metaStore, diskStore)
+			[]int{0}, batchSize, false, false, metaStore, diskStore)
 		shard, _ := m.GetTableShard(tableName, 0)
 		shard.cleanOldSnapshotAndLogs(0, 0)
 
