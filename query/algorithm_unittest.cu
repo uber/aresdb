@@ -22,11 +22,11 @@
 #include <iostream>
 #include <type_traits>
 #include "gtest/gtest.h"
-#include "query/algorithm.h"
-#include "query/iterator.h"
+#include "query/algorithm.hpp"
+#include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
-#include "query/transform.h"
-#include "query/unittest_utils.h"
+#include "query/transform.hpp"
+#include "query/unittest_utils.hpp"
 
 namespace ares {
 

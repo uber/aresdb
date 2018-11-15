@@ -13,15 +13,15 @@
 // limitations under the License.
 
 
-#ifndef QUERY_FUNCTOR_H_
-#define QUERY_FUNCTOR_H_
+#ifndef QUERY_FUNCTOR_HPP_
+#define QUERY_FUNCTOR_HPP_
 #include <cuda_runtime.h>
 #include <thrust/tuple.h>
 #include <iostream>
 #include <tuple>
-#include "query/iterator.h"
+#include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
-#include "query/utils.h"
+#include "query/utils.hpp"
 
 namespace ares {
 
@@ -997,4 +997,4 @@ struct VoidFunctor {
 };
 
 }  // namespace ares
-#endif  // QUERY_FUNCTOR_H_
+#endif  // QUERY_FUNCTOR_HPP_

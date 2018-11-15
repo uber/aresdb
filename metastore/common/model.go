@@ -109,8 +109,6 @@ type TableConfig struct {
 
 	// Specifies how often snapshot runs.
 	SnapshotIntervalMinutes int `json:"snapshotIntervalMinutes,omitempty"`
-
-
 }
 
 // Table defines the schema and configurations of a table from MetaStore.

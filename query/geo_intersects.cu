@@ -16,8 +16,8 @@
 #include <thrust/transform.h>
 #include <algorithm>
 #include <vector>
-#include "query/algorithm.h"
-#include "query/binder.h"
+#include "query/algorithm.hpp"
+#include "query/binder.hpp"
 
 namespace ares {
 class GeoIntersectionContext {

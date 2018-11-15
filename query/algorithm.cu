@@ -15,8 +15,8 @@
 #include <thrust/transform.h>
 #include <algorithm>
 #include <exception>
-#include "query/algorithm.h"
-#include "query/iterator.h"
+#include "query/algorithm.hpp"
+#include "query/iterator.hpp"
 
 CGoCallResHandle InitIndexVector(uint32_t *indexVector, uint32_t start,
                      int indexVectorLength, void *cudaStream, int device) {

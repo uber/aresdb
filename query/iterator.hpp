@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUERY_ITERATOR_H_
-#define QUERY_ITERATOR_H_
+#ifndef QUERY_ITERATOR_HPP_
+#define QUERY_ITERATOR_HPP_
 
 #include <cuda_runtime.h>
 #include <thrust/detail/internal_functional.h>
@@ -27,7 +27,7 @@
 #include <cmath>
 #include <tuple>
 #include "query/time_series_aggregate.h"
-#include "query/utils.h"
+#include "query/utils.hpp"
 
 namespace ares {
 
@@ -1400,4 +1400,4 @@ struct is_non_const_reference<ares::DimValueProxy> : public true_type {
 };
 }  // namespace detail
 }  // namespace thrust
-#endif  // QUERY_ITERATOR_H_
+#endif  // QUERY_ITERATOR_HPP_

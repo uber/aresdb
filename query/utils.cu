@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "query/utils.h"
+#include "query/utils.hpp"
 #include <cuda_runtime.h>
 #include <iostream>
 #include <exception>

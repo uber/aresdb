@@ -50,9 +50,9 @@ var (
 	// ErrMissingPrimaryKey indicates a schema does not have primary key
 	ErrMissingPrimaryKey = errors.New("Primary key columns not specified")
 	// ErrColumnNonExist indicates a column used does not exist
-	ErrColumnNonExist= errors.New("Column does not exist")
+	ErrColumnNonExist = errors.New("Column does not exist")
 	// ErrColumnDeleted indicates a column used was deleted
-	ErrColumnDeleted= errors.New("Column already deleted")
+	ErrColumnDeleted = errors.New("Column already deleted")
 	// ErrInvalidDataType indicates invalid data type
 	ErrInvalidDataType = errors.New("Invalid data type")
 	// ErrIllegalSchemaVersion indicates new schema is not greater than old one

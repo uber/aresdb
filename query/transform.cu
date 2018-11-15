@@ -16,7 +16,7 @@
 #include <algorithm>
 #include <exception>
 #include <vector>
-#include "query/transform.h"
+#include "query/transform.hpp"
 
 CGoCallResHandle UnaryTransform(InputVector input,
                                 OutputVector output,

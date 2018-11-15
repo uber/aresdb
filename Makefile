@@ -7,7 +7,7 @@ ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-bu
   -e ".*/_.*" \
   -e ".*/mocks.*")
 
-ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h \) | grep -v -e Godeps -e vendor -e go-build \
+ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h -o -iname \*.hpp -o -iname \*.c \) | grep -v -e Godeps -e vendor -e go-build \
   -e build \
   -e ".*/\..*" \
   -e ".*/_.*" \
@@ -50,8 +50,7 @@ libs: lib/libmem.so lib/libalgorithm.so
 
 clang-lint:
 	cppcheck --std=c++11 --language=c++ --inline-suppr --suppress=selfInitialization $(ALL_C_SRC)
-	cpplint $(ALL_C_SRC)
-
+	cpplint --extensions=cu,hpp $(ALL_C_SRC) # do cpplint for cpp source files only
 
 golang-lint:
 	gofmt -w $(ALL_GO_SRC)
@@ -127,34 +126,34 @@ lib: lib/algorithm
 	mkdir -p lib
 
 # header files dependencies.
-query/algorithm.h: lib query/utils.h query/iterator.h query/functor.h query/time_series_aggregate.h
+query/algorithm.hpp: lib query/utils.hpp query/iterator.hpp query/functor.hpp query/binder.hpp query/time_series_aggregate.h
 
-query/transform.h: query/algorithm.h
+query/transform.hpp: query/algorithm.hpp
 
 # cuda source files dependencies.
-query/algorithm.cu: query/algorithm.h
+query/algorithm.cu: query/algorithm.hpp
 
-query/transform.cu: query/transform.h
+query/transform.cu: query/transform.hpp
 
-query/scracth_space_transform.cu: query/transform.h
+query/scracth_space_transform.cu: query/transform.hpp
 
-query/measure_transform.cu: query/transform.h
+query/measure_transform.cu: query/transform.hpp
 
-query/dimension_transform.cu: query/transform.h
+query/dimension_transform.cu: query/transform.hpp
 
-query/hash_lookup.cu: query/transform.h
+query/hash_lookup.cu: query/transform.hpp
 
-query/filter.cu: query/transform.h
+query/filter.cu: query/transform.hpp
 
-query/sort_reduce.cu: query/algorithm.h
+query/sort_reduce.cu: query/algorithm.hpp
 
-query/hll.cu: query/algorithm.h
+query/hll.cu: query/algorithm.hpp
 
-query/geo_intersects.cu: query/algorithm.h
+query/geo_intersects.cu: query/algorithm.hpp
 
-query/utils.cu: query/utils.h
+query/utils.cu: query/utils.hpp
 
-query/functor.cu: query/functor.h
+query/functor.cu: query/functor.hpp
 
 lib/algorithm/%.o: query/%.cu
 	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(MARCROS) -dc -o $@ -c $^
@@ -214,11 +213,11 @@ $(GTEST_OUT_DIR)/gtest.a : $(GTEST_OUT_DIR)/gtest-all.o
 $(GTEST_OUT_DIR)/gtest_main.a : $(GTEST_OUT_DIR)/gtest-all.o $(GTEST_OUT_DIR)/gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
-$(CXX_SRC_DIR)/query/algorithm_unittest.cu : lib/libalgorithm.so $(CXX_SRC_DIR)/query/unittest_utils.h $(GTEST_HEADERS)
+$(CXX_SRC_DIR)/query/algorithm_unittest.cu : lib/libalgorithm.so $(CXX_SRC_DIR)/query/unittest_utils.hpp $(GTEST_HEADERS)
 
-$(CXX_SRC_DIR)/query/iterator_unittest.cu : lib/libalgorithm.so $(CXX_SRC_DIR)/query/iterator.h $(CXX_SRC_DIR)/query/unittest_utils.h $(CXX_SRC_DIR)/query/utils.h $(GTEST_HEADERS)
+$(CXX_SRC_DIR)/query/iterator_unittest.cu : lib/libalgorithm.so $(CXX_SRC_DIR)/query/iterator.hpp $(CXX_SRC_DIR)/query/unittest_utils.hpp $(CXX_SRC_DIR)/query/utils.hpp $(GTEST_HEADERS)
 
-$(CXX_SRC_DIR)/query/functor_unittest.cu : lib/libalgorithm.so $(CXX_SRC_DIR)/query/iterator.h $(CXX_SRC_DIR)/query/unittest_utils.h $(CXX_SRC_DIR)/query/utils.h  $(CXX_SRC_DIR)/query/functor.h $(GTEST_HEADERS)
+$(CXX_SRC_DIR)/query/functor_unittest.cu : lib/libalgorithm.so $(CXX_SRC_DIR)/query/iterator.hpp $(CXX_SRC_DIR)/query/unittest_utils.hpp $(CXX_SRC_DIR)/query/utils.hpp  $(CXX_SRC_DIR)/query/functor.hpp $(GTEST_HEADERS)
 
 $(GTEST_OUT_DIR)/%_unittest.o: $(CXX_SRC_DIR)/query/%_unittest.cu
 	$(NVCC) $(CPPFLAGS) $(CXXFLAGS) $(NVCCFLAGS) -c $^ -o $@

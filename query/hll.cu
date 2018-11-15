@@ -15,7 +15,7 @@
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/transform.h>
 #include <algorithm>
-#include "query/algorithm.h"
+#include "query/algorithm.hpp"
 
 CGoCallResHandle HyperLogLog(DimensionColumnVector prevDimOut,
                              DimensionColumnVector curDimOut,

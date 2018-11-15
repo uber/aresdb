@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUERY_TRANSFORM_H_
-#define QUERY_TRANSFORM_H_
+#ifndef QUERY_TRANSFORM_HPP_
+#define QUERY_TRANSFORM_HPP_
 
 #include <cuda_runtime.h>
 #include <thrust/device_vector.h>
@@ -24,12 +24,12 @@
 #include <cfloat>
 #include <cstdint>
 #include <vector>
-#include "query/algorithm.h"
-#include "query/binder.h"
-#include "query/functor.h"
-#include "query/iterator.h"
+#include "query/algorithm.hpp"
+#include "query/binder.hpp"
+#include "query/functor.hpp"
+#include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
-#include "query/utils.h"
+#include "query/utils.hpp"
 
 void CheckCUDAError(const char *message);
 
@@ -161,4 +161,4 @@ class OutputVectorBinder {
 };
 
 }  // namespace ares
-#endif  // QUERY_TRANSFORM_H_
+#endif  // QUERY_TRANSFORM_HPP_

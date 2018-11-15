@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUERY_BINDER_H_
-#define QUERY_BINDER_H_
+#ifndef QUERY_BINDER_HPP_
+#define QUERY_BINDER_HPP_
 #include <cuda_runtime.h>
 #include <cfloat>
 #include <cstdint>
 #include <tuple>
 #include <type_traits>
 #include <vector>
-#include "query/algorithm.h"
-#include "query/functor.h"
-#include "query/iterator.h"
+#include "query/algorithm.hpp"
+#include "query/functor.hpp"
+#include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
 
 namespace ares {
@@ -690,4 +690,4 @@ struct IndexZipIteratorMaker : public IndexZipIteratorMakerBase<
 };
 
 }  // namespace ares
-#endif  // QUERY_BINDER_H_
+#endif  // QUERY_BINDER_HPP_
