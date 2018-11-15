@@ -32,6 +32,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/uber-common/bark"
+	"github.com/uber/aresdb/clients"
 	"github.com/uber/aresdb/memutils"
 )
 
@@ -151,6 +152,17 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 
 	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, metaStore)
 	go batchStatsReporter.Run()
+
+	if cfg.ClusterName != "" {
+		// cluster mode
+		controllerClientCfg := cfg.Clients.Controller
+		if controllerClientCfg == nil {
+			logger.Fatal("Missing controller client config", err)
+		}
+		controllerClient := clients.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
+		schemaFetchJob := metastore.NewSchemaFetchJob(10, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.ClusterName, "")
+		go schemaFetchJob.Run()
+	}
 
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", *port, cfg.HTTP.MaxConnections)
 	utils.LimitServe(*port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)

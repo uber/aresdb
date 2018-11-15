@@ -149,3 +149,11 @@ func (c Column) IsOverwriteOnlyDataType() bool {
 		return true
 	}
 }
+
+// ShardOwnership defines an instruction on whether the receiving instance
+// should start to own or disown the specified table shard.
+type ShardOwnership struct {
+	TableName string
+	Shard     int
+	ShouldOwn bool
+}

@@ -102,7 +102,7 @@ type diskMetaStore struct {
 	enumDictDone map[string]map[string]<-chan struct{}
 
 	// shardOwnershipWatcher
-	shardOwnershipWatcher chan<- ShardOwnership
+	shardOwnershipWatcher chan<- common.ShardOwnership
 	// shardOwnershipDone is used for block waiting for the consumer to finish
 	// processing each ownership change event.
 	shardOwnershipDone <-chan struct{}
@@ -315,14 +315,14 @@ func (dm *diskMetaStore) WatchEnumDictEvents(table, column string, startCase int
 // WatchTableSchemaEvents register a watcher to table schema change events,
 // should be only called once,
 // returns ErrWatcherAlreadyExist once watcher already exists
-func (dm *diskMetaStore) WatchShardOwnershipEvents() (events <-chan ShardOwnership, done chan<- struct{}, err error) {
+func (dm *diskMetaStore) WatchShardOwnershipEvents() (events <-chan common.ShardOwnership, done chan<- struct{}, err error) {
 	dm.Lock()
 	defer dm.Unlock()
 	if dm.shardOwnershipWatcher != nil {
 		return nil, nil, ErrWatcherAlreadyExist
 	}
 
-	watcherChan, doneChan := make(chan ShardOwnership), make(chan struct{})
+	watcherChan, doneChan := make(chan common.ShardOwnership), make(chan struct{})
 	dm.shardOwnershipWatcher, dm.shardOwnershipDone = watcherChan, doneChan
 	return watcherChan, doneChan, nil
 }
@@ -341,7 +341,7 @@ func (dm *diskMetaStore) CreateTable(table *common.Table) (err error) {
 		if err == nil {
 			dm.pushSchemaChange(table)
 
-			dm.shardOwnershipWatcher <- ShardOwnership{table.Name, 0, true}
+			dm.shardOwnershipWatcher <- common.ShardOwnership{table.Name, 0, true}
 			<-dm.shardOwnershipDone
 		}
 	}()
@@ -406,9 +406,42 @@ func (dm *diskMetaStore) UpdateTableConfig(tableName string, config common.Table
 	return dm.writeSchemaFile(table)
 }
 
-// UpdateTableConfig updates table schema and config // TODO: implement
+// UpdateTable updates table schema and config
+// table passed in should have been validated against existing table schema
 func (dm *diskMetaStore) UpdateTable(table common.Table) (err error) {
-	return nil
+	dm.writeLock.Lock()
+	defer dm.writeLock.Unlock()
+
+	dm.Lock()
+	defer func() {
+		dm.Unlock()
+		if err == nil {
+			dm.pushSchemaChange(&table)
+		}
+	}()
+
+	var existingTable *common.Table
+	existingTable, err = dm.readSchemaFile(table.Name)
+	if err != nil {
+		return
+	}
+
+	if err = dm.writeSchemaFile(&table); err != nil {
+		return err
+	}
+
+	// append enum case for enum column with default value for new columns
+	for i := len(existingTable.Columns); i < len(table.Columns); i++ {
+		column := table.Columns[i]
+		if column.DefaultValue != nil && column.IsEnumColumn() {
+			err = dm.writeEnumFile(table.Name, column.Name, []string{*column.DefaultValue})
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	return
 }
 
 // DeleteTable deletes a table
