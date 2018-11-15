@@ -24,12 +24,12 @@
 #include <cfloat>
 #include <cstdint>
 #include <vector>
-#include "query/algorithm.h"
-#include "query/binder.h"
-#include "query/functor.h"
-#include "query/iterator.h"
+#include "query/algorithm.hpp"
+#include "query/binder.hpp"
+#include "query/functor.hpp"
+#include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
-#include "query/utils.h"
+#include "query/utils.hpp"
 
 void CheckCUDAError(const char *message);
 

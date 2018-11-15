@@ -18,8 +18,8 @@
 #include <exception>
 #include <vector>
 #include <initializer_list>
-#include "query/transform.h"
-#include "query/binder.h"
+#include "query/transform.hpp"
+#include "query/binder.hpp"
 
 namespace ares {
 

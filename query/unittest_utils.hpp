@@ -24,7 +24,7 @@
 #include <cmath>
 #include <functional>
 #include <tuple>
-#include "query/utils.h"
+#include "query/utils.hpp"
 
 typedef typename thrust::host_vector<unsigned char>::iterator charIter;
 typedef typename thrust::host_vector<uint32_t>::iterator UInt32Iter;

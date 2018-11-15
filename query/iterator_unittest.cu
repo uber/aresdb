@@ -24,9 +24,9 @@
 #include <iterator>
 #include <tuple>
 #include "gtest/gtest.h"
-#include "query/unittest_utils.h"
-#include "query/functor.h"
-#include "query/iterator.h"
+#include "query/unittest_utils.hpp"
+#include "query/functor.hpp"
+#include "query/iterator.hpp"
 
 namespace ares {
 // cppcheck-suppress *

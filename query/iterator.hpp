@@ -27,7 +27,7 @@
 #include <cmath>
 #include <tuple>
 #include "query/time_series_aggregate.h"
-#include "query/utils.h"
+#include "query/utils.hpp"
 
 namespace ares {
 

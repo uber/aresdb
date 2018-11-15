@@ -18,8 +18,8 @@
 #include <cstring>
 #include <algorithm>
 #include <exception>
-#include "query/algorithm.h"
-#include "query/iterator.h"
+#include "query/algorithm.hpp"
+#include "query/iterator.hpp"
 
 CGoCallResHandle Sort(DimensionColumnVector keys,
                       uint8_t *values,

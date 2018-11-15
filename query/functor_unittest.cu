@@ -22,9 +22,9 @@
 #include <iterator>
 #include <tuple>
 #include "gtest/gtest.h"
-#include "query/functor.h"
-#include "query/iterator.h"
-#include "query/unittest_utils.h"
+#include "query/functor.hpp"
+#include "query/iterator.hpp"
+#include "query/unittest_utils.hpp"
 
 extern uint16_t DAYS_BEFORE_MONTH_HOST[13];
 

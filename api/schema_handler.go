@@ -304,4 +304,3 @@ func (handler *SchemaHandler) DeleteColumn(w http.ResponseWriter, r *http.Reques
 
 	RespondWithJSONObject(w, nil)
 }
-

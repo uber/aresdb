@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <algorithm>
-#include "query/transform.h"
+#include "query/transform.hpp"
 
 namespace ares {
 

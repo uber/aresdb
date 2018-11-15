@@ -69,7 +69,7 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0,0},
+			PrimaryKeyColumns: []int{0, 0},
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
@@ -86,9 +86,9 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
-			ArchivingSortColumns: []int{0,0},
+			PrimaryKeyColumns:    []int{0},
+			IsFactTable:          true,
+			ArchivingSortColumns: []int{0, 0},
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
@@ -98,7 +98,7 @@ var _ = ginkgo.Describe("Validator", func() {
 
 	ginkgo.It("should return err for too few columns", func() {
 		table := common.Table{
-			Name: "testTable",
+			Name:    "testTable",
 			Columns: []common.Column{},
 		}
 		validator := NewTableSchameValidator()
@@ -116,10 +116,10 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
+			PrimaryKeyColumns:    []int{0},
+			IsFactTable:          true,
 			ArchivingSortColumns: []int{1},
-			Version: 0,
+			Version:              0,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -133,10 +133,10 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
+			PrimaryKeyColumns:    []int{0},
+			IsFactTable:          true,
 			ArchivingSortColumns: []int{1},
-			Version: 1,
+			Version:              1,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -154,10 +154,10 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
+			PrimaryKeyColumns:    []int{0},
+			IsFactTable:          true,
 			ArchivingSortColumns: []int{1},
-			Version: 0,
+			Version:              0,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -171,10 +171,10 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
+			PrimaryKeyColumns:    []int{0},
+			IsFactTable:          true,
 			ArchivingSortColumns: []int{1},
-			Version: 0,
+			Version:              0,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -192,10 +192,10 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
+			PrimaryKeyColumns:    []int{0},
+			IsFactTable:          true,
 			ArchivingSortColumns: []int{0},
-			Version: 0,
+			Version:              0,
 		}
 		newTable := common.Table{
 			Name: "testTable123",
@@ -205,10 +205,10 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
+			PrimaryKeyColumns:    []int{0},
+			IsFactTable:          true,
 			ArchivingSortColumns: []int{0},
-			Version: 1,
+			Version:              1,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -226,10 +226,10 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0},
-			IsFactTable: true,
+			PrimaryKeyColumns:    []int{0},
+			IsFactTable:          true,
 			ArchivingSortColumns: []int{1},
-			Version: 0,
+			Version:              0,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -239,9 +239,9 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0},
+			PrimaryKeyColumns:    []int{0},
 			ArchivingSortColumns: []int{1},
-			Version: 1,
+			Version:              1,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -264,7 +264,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Version: 0,
+			Version:           0,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -275,7 +275,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Version: 1,
+			Version:           1,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -293,13 +293,13 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 				{
-					Name: "col2",
-					Type: "Int32",
+					Name:    "col2",
+					Type:    "Int32",
 					Deleted: true,
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Version: 0,
+			Version:           0,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -314,7 +314,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Version: 1,
+			Version:           1,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -337,7 +337,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Version: 0,
+			Version:           0,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -352,7 +352,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Version: 1,
+			Version:           1,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -371,7 +371,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Version: 0,
+			Version:           0,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -381,13 +381,13 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 				{
-					Name: "col2",
-					Type: "Int32",
+					Name:    "col2",
+					Type:    "Int32",
 					Deleted: true,
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Version: 1,
+			Version:           1,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -406,7 +406,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Version: 0,
+			Version:           0,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -420,8 +420,8 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			PrimaryKeyColumns: []int{0,1},
-			Version: 1,
+			PrimaryKeyColumns: []int{0, 1},
+			Version:           1,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -447,10 +447,10 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			IsFactTable: true,
-			PrimaryKeyColumns: []int{0},
-			ArchivingSortColumns: []int{1,2},
-			Version: 0,
+			IsFactTable:          true,
+			PrimaryKeyColumns:    []int{0},
+			ArchivingSortColumns: []int{1, 2},
+			Version:              0,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -468,10 +468,10 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 			},
-			IsFactTable: true,
-			PrimaryKeyColumns: []int{0},
+			IsFactTable:          true,
+			PrimaryKeyColumns:    []int{0},
 			ArchivingSortColumns: []int{1},
-			Version: 1,
+			Version:              1,
 		}
 		// removing sort columns is not allowed
 		validator := NewTableSchameValidator()

@@ -19,9 +19,9 @@
 #include <thrust/tuple.h>
 #include <iostream>
 #include <tuple>
-#include "query/iterator.h"
+#include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
-#include "query/utils.h"
+#include "query/utils.hpp"
 
 namespace ares {
 

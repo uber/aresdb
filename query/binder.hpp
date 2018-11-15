@@ -20,9 +20,9 @@
 #include <tuple>
 #include <type_traits>
 #include <vector>
-#include "query/algorithm.h"
-#include "query/functor.h"
-#include "query/iterator.h"
+#include "query/algorithm.hpp"
+#include "query/functor.hpp"
+#include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
 
 namespace ares {

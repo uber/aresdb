@@ -23,10 +23,10 @@
 #include <cstdint>
 #include <algorithm>
 #include <type_traits>
-#include "query/functor.h"
-#include "query/iterator.h"
+#include "query/functor.hpp"
+#include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
-#include "query/utils.h"
+#include "query/utils.hpp"
 
 void CheckCUDAError(const char *message);
 
