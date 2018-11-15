@@ -288,4 +288,77 @@ var _ = ginkgo.Describe("archiving", func() {
 		Ω(m.Archive(table, shardID, cutoff+100, jobManager.reportArchiveJobDetail)).Should(BeNil())
 		utils.ResetClockImplementation()
 	})
+
+	ginkgo.It("create patch for table with invalid event time", func() {
+		table := "table2"
+		shardID := 0
+		key := getIdentifier(table, shardID, memCom.ArchivingJobType)
+		liveStore := &LiveStore{}
+		batch120, err := getFactory().ReadLiveBatch("archiving/batch-120")
+		Ω(err).Should(BeNil())
+		liveStore.Batches = map[int32]*LiveBatch{
+			-120: {
+				Batch:     *batch120,
+				Capacity:  6,
+				liveStore: nil,
+			},
+			-110: {
+				Batch:     *batch110,
+				Capacity:  6,
+				liveStore: nil,
+			},
+		}
+		ss := liveStore.snapshot()
+		mockReporter := func(key string, mutator ArchiveJobDetailMutator) {}
+		patchByDay := ss.createArchivingPatches(cutoff, oldCutoff, []int{1, 2},
+			mockReporter, key, table, shardID)
+		Ω(patchByDay[0].sortColumns).Should(Equal(
+			[]int{1, 2},
+		))
+		Ω(patchByDay[0].recordIDs).Should(Equal(
+			[]RecordID{
+				{0, 1},
+				{0, 2},
+				{1, 1},
+				{1, 2},
+				{1, 3},
+				{1, 4},
+			},
+		))
+	})
+
+	ginkgo.It("purge live batch with missing event time", func() {
+		liveStore := &LiveStore{
+			tableSchema: &TableSchema{
+				Schema: metaCom.Table{
+					Config: metaCom.TableConfig{
+						AllowMissingEventTime: true,
+					},
+				},
+			},
+		}
+		batch120, err := getFactory().ReadLiveBatch("archiving/batch-120")
+		Ω(err).Should(BeNil())
+
+		// all event time are old
+		var cutoff uint32 = 150
+		liveStore.Batches = map[int32]*LiveBatch{
+			-120: {
+				Batch:                      *batch120,
+				Capacity:                   6,
+				NumRecordsWithoutEventTime: 2,
+				MaxArrivalTime:             150,
+				liveStore:                  nil,
+			},
+			-110: {
+				Batch:                      *batch110,
+				Capacity:                   6,
+				NumRecordsWithoutEventTime: 0,
+				MaxArrivalTime:             150,
+				liveStore:                  nil,
+			},
+		}
+		batchIDs := liveStore.getBatchIDsToPurge(cutoff)
+		Ω(batchIDs).Should(Equal([]int32{-110}))
+	})
 })

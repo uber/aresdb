@@ -156,7 +156,7 @@ func (s *LiveStore) getBatchIDsToPurge(cutoff uint32) []int32 {
 			if _, maxValue := timeColumn.(common.LiveVectorParty).GetMinMaxValue(); maxValue < cutoff {
 				if !allowMissingEventTime {
 					batchIDs = append(batchIDs, batchID)
-				} else if batch.MaxArrivalTime < cutoff {
+				} else if batch.NumRecordsWithoutEventTime == 0 || batch.MaxArrivalTime < cutoff {
 					batchIDs = append(batchIDs, batchID)
 				}
 			}
