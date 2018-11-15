@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUERY_UNITTEST_UTILS_H_
-#define QUERY_UNITTEST_UTILS_H_
+#ifndef QUERY_UNITTEST_UTILS_HPP_
+#define QUERY_UNITTEST_UTILS_HPP_
 
 #include <thrust/device_vector.h>
 #include <thrust/equal.h>
@@ -273,4 +273,4 @@ inline void release(GeoShape shape) {
 #endif
 }
 
-#endif  // QUERY_UNITTEST_UTILS_H_
+#endif  // QUERY_UNITTEST_UTILS_HPP_

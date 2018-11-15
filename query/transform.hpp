@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUERY_TRANSFORM_H_
-#define QUERY_TRANSFORM_H_
+#ifndef QUERY_TRANSFORM_HPP_
+#define QUERY_TRANSFORM_HPP_
 
 #include <cuda_runtime.h>
 #include <thrust/device_vector.h>
@@ -161,4 +161,4 @@ class OutputVectorBinder {
 };
 
 }  // namespace ares
-#endif  // QUERY_TRANSFORM_H_
+#endif  // QUERY_TRANSFORM_HPP_

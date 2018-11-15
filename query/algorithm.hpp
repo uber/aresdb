@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUERY_ALGORITHM_H_
-#define QUERY_ALGORITHM_H_
+#ifndef QUERY_ALGORITHM_HPP_
+#define QUERY_ALGORITHM_HPP_
 #include <cuda_runtime.h>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
@@ -76,4 +76,4 @@ void write_geo_shape_dim(int shapeTotalWords,
 
 }  // namespace ares
 
-#endif  // QUERY_ALGORITHM_H_
+#endif  // QUERY_ALGORITHM_HPP_

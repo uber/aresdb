@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUERY_UTILS_H_
-#define QUERY_UTILS_H_
+#ifndef QUERY_UTILS_HPP_
+#define QUERY_UTILS_HPP_
 #include <cuda_runtime.h>
 #include <cfloat>
 #include <cstdint>
@@ -133,4 +133,4 @@ __host__ __device__ uint32_t murmur3sum32(const uint8_t *key, int bytes,
 __host__ __device__ void murmur3sum128(const uint8_t *key, int len,
                                        uint32_t seed, uint64_t *out);
 }  // namespace ares
-#endif  // QUERY_UTILS_H_
+#endif  // QUERY_UTILS_HPP_
