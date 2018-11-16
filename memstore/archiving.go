@@ -95,24 +95,27 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 
 		if minValue < cutoff {
 			for recordIdx := 0; recordIdx < numRecords; recordIdx++ {
-				time := *(*uint32)(timeColumn.GetDataValue(recordIdx).OtherVal)
-				if time < cutoff {
-					if time >= oldCutoff {
-						// Add the record for archiving
-						day := int32(time / 86400)
-						patch := patchByDay[day]
-						if patch == nil {
-							patch = &archivingPatch{
-								data:        ss,
-								sortColumns: sortColumns,
+				dataValue := timeColumn.GetDataValue(recordIdx)
+				if dataValue.Valid {
+					time := *(*uint32)(dataValue.OtherVal)
+					if time < cutoff {
+						if time >= oldCutoff {
+							// Add the record for archiving
+							day := int32(time / 86400)
+							patch := patchByDay[day]
+							if patch == nil {
+								patch = &archivingPatch{
+									data:        ss,
+									sortColumns: sortColumns,
+								}
+								patchByDay[day] = patch
 							}
-							patchByDay[day] = patch
+							patch.recordIDs = append(patch.recordIDs,
+								RecordID{int32(batchIdx), uint32(recordIdx)})
+							numRecordsArchived++
+						} else {
+							numRecordsIgnored++
 						}
-						patch.recordIDs = append(patch.recordIDs,
-							RecordID{int32(batchIdx), uint32(recordIdx)})
-						numRecordsArchived++
-					} else {
-						numRecordsIgnored++
 					}
 				}
 			}
@@ -138,12 +141,24 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 func (s *LiveStore) getBatchIDsToPurge(cutoff uint32) []int32 {
 	var batchIDs []int32
 	s.RLock()
+
+	s.tableSchema.RLock()
+	allowMissingEventTime := s.tableSchema.Schema.Config.AllowMissingEventTime
+	s.tableSchema.RUnlock()
+
 	for batchID, batch := range s.Batches {
 		if batchID >= s.LastReadRecord.BatchID {
 			continue
 		}
 
-		if _, maxValue := batch.Columns[0].(common.LiveVectorParty).GetMinMaxValue(); maxValue < cutoff {
+		timeColumn := batch.Columns[0]
+		if timeColumn != nil {
+			if _, maxValue := timeColumn.(common.LiveVectorParty).GetMinMaxValue(); maxValue < cutoff {
+				if !allowMissingEventTime || timeColumn.GetNonDefaultValueCount() == batch.Capacity || batch.MaxArrivalTime < cutoff {
+					batchIDs = append(batchIDs, batchID)
+				}
+			}
+		} else if !allowMissingEventTime || batch.MaxArrivalTime < cutoff {
 			batchIDs = append(batchIDs, batchID)
 		}
 	}

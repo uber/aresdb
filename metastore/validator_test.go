@@ -522,4 +522,141 @@ var _ = ginkgo.Describe("Validator", func() {
 		Ω(ValidateDefaultValue("Point(-122.44231998,37.77901703)", common.GeoPoint)).Should(BeNil())
 		Ω(ValidateDefaultValue("  Point( -122.44231998 37.77901703  ) ", common.GeoPoint)).Should(BeNil())
 	})
+
+	ginkgo.It("should fail for setting default value for time column column", func() {
+		zero := "0"
+		newTable := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name:         "col1",
+					Type:         "Int32",
+					DefaultValue: &zero,
+				},
+				{
+					Name: "col2",
+					Type: "Int32",
+				},
+				{
+					Name: "col3",
+					Type: "Int32",
+				},
+			},
+			IsFactTable: true,
+		}
+		// removing sort columns is not allowed
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		err := validator.Validate()
+		Ω(err).Should(Equal(ErrTimeColumnDoesNotAllowDefault))
+	})
+
+	ginkgo.It("should fail when disallow missing event time", func() {
+		oldTable := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Int32",
+				},
+				{
+					Name: "col2",
+					Type: "Int32",
+				},
+				{
+					Name: "col3",
+					Type: "Int32",
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+			Version:           0,
+			Config: common.TableConfig{
+				AllowMissingEventTime: true,
+			},
+		}
+
+		newTable := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Int32",
+				},
+				{
+					Name: "col2",
+					Type: "Int32",
+				},
+				{
+					Name: "col3",
+					Type: "Int32",
+				},
+			},
+			IsFactTable:       true,
+			PrimaryKeyColumns: []int{1},
+			Version:           1,
+			Config: common.TableConfig{
+				AllowMissingEventTime: false,
+			},
+		}
+
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
+		err := validator.Validate()
+		Ω(err).Should(Equal(ErrDisallowMissingEventTime))
+
+		oldTable = common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Int32",
+				},
+				{
+					Name: "col2",
+					Type: "Int32",
+				},
+				{
+					Name: "col3",
+					Type: "Int32",
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+			Version:           0,
+			Config: common.TableConfig{
+				AllowMissingEventTime: false,
+			},
+		}
+
+		newTable = common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Int32",
+				},
+				{
+					Name: "col2",
+					Type: "Int32",
+				},
+				{
+					Name: "col3",
+					Type: "Int32",
+				},
+			},
+			IsFactTable:       true,
+			PrimaryKeyColumns: []int{1},
+			Version:           1,
+			Config: common.TableConfig{
+				AllowMissingEventTime: true,
+			},
+		}
+
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
+		err = validator.Validate()
+		Ω(err).Should(BeNil())
+	})
 })

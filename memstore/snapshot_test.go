@@ -144,7 +144,7 @@ var _ = ginkgo.Describe("snapshot", func() {
 
 	ginkgo.BeforeEach(func() {
 		memStore = createMemStore(tableName, 0, []memCom.DataType{memCom.Uint16, memCom.SmallEnum, memCom.UUID, memCom.Uint32},
-			[]int{0}, batchSize, false, metaStore, diskStore)
+			[]int{0}, batchSize, false, false, metaStore, diskStore)
 		shard, _ = memStore.GetTableShard(tableName, 0)
 	})
 
@@ -196,7 +196,7 @@ var _ = ginkgo.Describe("snapshot", func() {
 
 		// using new instance to avoid data conflict
 		memStore = createMemStore(tableName, 0, []memCom.DataType{memCom.Uint16, memCom.SmallEnum, memCom.UUID, memCom.Uint32},
-			[]int{0}, batchSize, false, metaStore, diskStore)
+			[]int{0}, batchSize, false, false, metaStore, diskStore)
 		shard, _ = memStore.GetTableShard(tableName, 0)
 
 		shard.LiveStore.SnapshotManager.ApplyUpsertBatch(0, 0, 0, RecordID{})

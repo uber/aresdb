@@ -40,6 +40,9 @@ type LiveBatch struct {
 	// For convenience to access fields of live store.
 	// Schema locks should be acquired after data locks.
 	liveStore *LiveStore
+
+	// maximum of arrival time
+	MaxArrivalTime uint32
 }
 
 // LiveStore stores live batches of columnar data.

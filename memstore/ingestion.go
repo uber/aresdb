@@ -59,6 +59,7 @@ func (shard *TableShard) ApplyUpsertBatch(upsertBatch *UpsertBatch, redoLogFile 
 	shard.Schema.RLock()
 	valueTypeByColumn := shard.Schema.ValueTypeByColumn
 	columnDeletions := shard.Schema.GetColumnDeletions()
+	allowMissingEventTime := shard.Schema.Schema.Config.AllowMissingEventTime
 	shard.Schema.RUnlock()
 	primaryKeyColumns := shard.Schema.GetPrimaryKeyColumns()
 	// IsFactTable should be immutable.
@@ -89,7 +90,7 @@ func (shard *TableShard) ApplyUpsertBatch(upsertBatch *UpsertBatch, redoLogFile 
 
 	// For fact table ingestion, we will need to get the event time from the first column. we don't
 	// have to validate the column type in the upsertbatch because the loop above already handled it.
-	if isFactTable && eventTimeColumnIndex < 0 {
+	if isFactTable && eventTimeColumnIndex < 0 && !allowMissingEventTime {
 		utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetCounter(utils.TimeColumnMissing).Inc(1)
 		return false, utils.StackError(nil, "Fact table's event time column (first column) is missing")
 	}
@@ -161,6 +162,8 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 
 	shard.Schema.RLock()
 	recordRetentionDays := shard.Schema.Schema.Config.RecordRetentionInDays
+	allowMissingEventTime := shard.Schema.Schema.Config.AllowMissingEventTime
+	isFactTable := shard.Schema.Schema.IsFactTable
 	shard.Schema.RUnlock()
 
 	key := make([]byte, primaryKeyBytes)
@@ -172,6 +175,7 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 	tableName := shard.Schema.Schema.Name
 	shardID := shard.ShardID
 	var eventTime uint32
+	var isEventTimeValid bool
 	var backfillRows = make([]int, 0)
 	var numRecordsIngested int64
 	var numRecordsAppended int64
@@ -183,23 +187,33 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 			return nil, nil, nil, utils.StackError(err, "Failed to create primary key at row %d", row)
 		}
 
-		var nowInSeconds = uint32(utils.Now().Unix())
-		var oldestRecordDays int
-		if recordRetentionDays > 0 {
-			oldestRecordDays = int(nowInSeconds/86400) - recordRetentionDays
-		}
-
 		// For fact table we need to get the event time from the first column.
 		if eventTimeColumnIndex >= 0 {
 			value, validity, err := upsertBatch.GetValue(row, eventTimeColumnIndex)
 			if err != nil {
 				return nil, nil, nil, utils.StackError(err, "Failed to get event time for row %d", row)
 			}
-			if !validity {
+
+			isEventTimeValid = validity
+			if isEventTimeValid {
+				eventTime = *(*uint32)(value)
+			}
+		}
+
+		var primaryKeyEventTime uint32
+		if !isEventTimeValid {
+			if isFactTable && !allowMissingEventTime {
 				return nil, nil, nil, utils.StackError(err, "Event time for row %d is null", row)
 			}
+			primaryKeyEventTime = upsertBatch.ArrivalTime
+		} else {
+			var nowInSeconds = uint32(utils.Now().Unix())
+			var oldestRecordDays int
+			if recordRetentionDays > 0 {
+				oldestRecordDays = int(nowInSeconds/86400) - recordRetentionDays
+			}
 
-			eventTime = *(*uint32)(value)
+			primaryKeyEventTime = eventTime
 
 			eventDay := int(eventTime / 86400)
 
@@ -241,7 +255,7 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 		}
 
 		numRecordsIngested++
-		existing, record, err := shard.LiveStore.PrimaryKey.FindOrInsert(key, nextWriteRecord, eventTime)
+		existing, record, err := shard.LiveStore.PrimaryKey.FindOrInsert(key, nextWriteRecord, primaryKeyEventTime)
 		if err != nil {
 			return nil, nil, nil, utils.StackError(err, "Failed to insert key for row %d", row)
 		}
@@ -339,6 +353,10 @@ func writeBatchRecords(columnDeletions []bool,
 
 		batch.RLock()
 		defer batch.RUnlock()
+	}
+
+	if batch.MaxArrivalTime < upsertBatch.ArrivalTime {
+		batch.MaxArrivalTime = upsertBatch.ArrivalTime
 	}
 
 	for _, recordInfo := range records {

@@ -12,7 +12,7 @@ import (
 
 var _ = ginkgo.Describe("batch stats should work", func() {
 	metaStore := &metaMocks.MetaStore{}
-	memStore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{0}, 10, true, metaStore, CreateMockDiskStore())
+	memStore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{0}, 10, true, false, metaStore, CreateMockDiskStore())
 
 	batchStatsReporter := NewBatchStatsReporter(1, memStore, metaStore)
 

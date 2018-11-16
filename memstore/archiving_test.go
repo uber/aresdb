@@ -96,21 +96,22 @@ var _ = ginkgo.Describe("archiving", func() {
 			LastReadRecord: RecordID{-101, 3},
 			Batches: map[int32]*LiveBatch{
 				-110: {
-					*batch110,
-					5,
-					nil,
+					Batch:     *batch110,
+					Capacity:  5,
+					liveStore: nil,
 				},
 				-101: {
-					*batch101,
-					5,
-					nil,
+					Batch:     *batch101,
+					Capacity:  5,
+					liveStore: nil,
 				},
 				-99: {
-					*batch99,
-					5,
-					nil,
+					Batch:     *batch99,
+					Capacity:  5,
+					liveStore: nil,
 				},
 			},
+			tableSchema:       shard.Schema,
 			PrimaryKey:        NewPrimaryKey(16, true, 0, hostMemoryManager),
 			HostMemoryManager: hostMemoryManager,
 		}
@@ -286,5 +287,84 @@ var _ = ginkgo.Describe("archiving", func() {
 		// Archive again, there should be no crashes or errors.
 		Ω(m.Archive(table, shardID, cutoff+100, jobManager.reportArchiveJobDetail)).Should(BeNil())
 		utils.ResetClockImplementation()
+	})
+
+	ginkgo.It("create patch for table with invalid event time", func() {
+		table := "table2"
+		shardID := 0
+		key := getIdentifier(table, shardID, memCom.ArchivingJobType)
+		liveStore := &LiveStore{}
+		batch120, err := getFactory().ReadLiveBatch("archiving/batch-120")
+		Ω(err).Should(BeNil())
+		liveStore.Batches = map[int32]*LiveBatch{
+			-120: {
+				Batch:     *batch120,
+				Capacity:  6,
+				liveStore: nil,
+			},
+			-110: {
+				Batch:     *batch110,
+				Capacity:  6,
+				liveStore: nil,
+			},
+		}
+		ss := liveStore.snapshot()
+		mockReporter := func(key string, mutator ArchiveJobDetailMutator) {}
+		patchByDay := ss.createArchivingPatches(cutoff, oldCutoff, []int{1, 2},
+			mockReporter, key, table, shardID)
+		Ω(patchByDay[0].sortColumns).Should(Equal(
+			[]int{1, 2},
+		))
+
+		sort.Slice(patchByDay[0].recordIDs, func(i, j int) bool {
+			if patchByDay[0].recordIDs[i].BatchID == patchByDay[0].recordIDs[j].BatchID {
+				return patchByDay[0].recordIDs[i].Index < patchByDay[0].recordIDs[j].Index
+			}
+			return patchByDay[0].recordIDs[i].BatchID < patchByDay[0].recordIDs[j].BatchID
+		})
+
+		Ω(patchByDay[0].recordIDs).Should(Equal(
+			[]RecordID{
+				{0, 1},
+				{0, 2},
+				{1, 1},
+				{1, 2},
+				{1, 3},
+				{1, 4},
+			},
+		))
+	})
+
+	ginkgo.It("purge live batch with missing event time", func() {
+		liveStore := &LiveStore{
+			tableSchema: &TableSchema{
+				Schema: metaCom.Table{
+					Config: metaCom.TableConfig{
+						AllowMissingEventTime: true,
+					},
+				},
+			},
+		}
+		batch120, err := getFactory().ReadLiveBatch("archiving/batch-120")
+		Ω(err).Should(BeNil())
+
+		// all event time are old
+		var cutoff uint32 = 150
+		liveStore.Batches = map[int32]*LiveBatch{
+			-120: {
+				Batch:          *batch120,
+				Capacity:       6,
+				MaxArrivalTime: 150,
+				liveStore:      nil,
+			},
+			-110: {
+				Batch:          *batch110,
+				Capacity:       6,
+				MaxArrivalTime: 150,
+				liveStore:      nil,
+			},
+		}
+		batchIDs := liveStore.getBatchIDsToPurge(cutoff)
+		Ω(batchIDs).Should(Equal([]int32{-110}))
 	})
 })
