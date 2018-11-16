@@ -17,7 +17,6 @@ package memstore
 import (
 	"github.com/uber/aresdb/memstore/common"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
@@ -27,6 +26,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	metaCom "github.com/uber/aresdb/metastore/common"
 )
 
 var _ = ginkgo.Describe("recovery", func() {
@@ -52,12 +52,12 @@ var _ = ginkgo.Describe("recovery", func() {
 		diskStore.On("ListLogFiles", "abc", 0).Return([]int64{1}, nil)
 		diskStore.On("OpenLogFileForReplay", "abc", 0, int64(1)).Return(file, nil)
 
-		events := make(chan metastore.ShardOwnership)
+		events := make(chan metaCom.ShardOwnership)
 		done := make(chan struct{})
 		metaStore := &mocks.MetaStore{}
 		metaStore.On("GetOwnedShards", "abc").Return([]int{0}, nil)
 		metaStore.On("WatchShardOwnershipEvents").Return(
-			(<-chan metastore.ShardOwnership)(events),
+			(<-chan metaCom.ShardOwnership)(events),
 			(chan<- struct{})(done), nil)
 		metaStore.On("GetArchivingCutoff", "abc", 0).Return(uint32(0), nil)
 		metaStore.On("GetBackfillProgressInfo", "abc", 0).Return(int64(0), uint32(0), nil)
@@ -86,7 +86,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		diskStore.On("OpenLogFileForReplay", "abc", 1, int64(1)).Return(file2, nil)
 		metaStore.On("GetArchivingCutoff", "abc", 1).Return(uint32(0), nil)
 
-		events <- metastore.ShardOwnership{"abc", 1, true}
+		events <- metaCom.ShardOwnership{"abc", 1, true}
 		<-done
 
 		shard = memstore.TableShards["abc"][1]
