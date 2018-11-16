@@ -315,6 +315,14 @@ var _ = ginkgo.Describe("archiving", func() {
 		Ω(patchByDay[0].sortColumns).Should(Equal(
 			[]int{1, 2},
 		))
+
+		sort.Slice(patchByDay[0].recordIDs, func(i, j int) bool {
+			if patchByDay[0].recordIDs[i].BatchID == patchByDay[0].recordIDs[j].BatchID {
+				return patchByDay[0].recordIDs[i].Index < patchByDay[0].recordIDs[j].Index
+			}
+			return patchByDay[0].recordIDs[i].BatchID < patchByDay[0].recordIDs[j].BatchID
+		})
+
 		Ω(patchByDay[0].recordIDs).Should(Equal(
 			[]RecordID{
 				{0, 1},
@@ -344,18 +352,16 @@ var _ = ginkgo.Describe("archiving", func() {
 		var cutoff uint32 = 150
 		liveStore.Batches = map[int32]*LiveBatch{
 			-120: {
-				Batch:                      *batch120,
-				Capacity:                   6,
-				NumRecordsWithoutEventTime: 2,
-				MaxArrivalTime:             150,
-				liveStore:                  nil,
+				Batch:          *batch120,
+				Capacity:       6,
+				MaxArrivalTime: 150,
+				liveStore:      nil,
 			},
 			-110: {
-				Batch:                      *batch110,
-				Capacity:                   6,
-				NumRecordsWithoutEventTime: 0,
-				MaxArrivalTime:             150,
-				liveStore:                  nil,
+				Batch:          *batch110,
+				Capacity:       6,
+				MaxArrivalTime: 150,
+				liveStore:      nil,
 			},
 		}
 		batchIDs := liveStore.getBatchIDsToPurge(cutoff)
