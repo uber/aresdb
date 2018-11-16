@@ -41,8 +41,6 @@ type LiveBatch struct {
 	// Schema locks should be acquired after data locks.
 	liveStore *LiveStore
 
-	// number of records without event time
-	NumRecordsWithoutEventTime int
 	// maximum of arrival time
 	MaxArrivalTime uint32
 }
@@ -226,9 +224,8 @@ func (s *LiveStore) appendBatch(batchID int32) *LiveBatch {
 		Batch: Batch{
 			Columns: make([]common.VectorParty, numColumns),
 		},
-		Capacity:                   s.BatchSize,
-		NumRecordsWithoutEventTime: s.BatchSize,
-		liveStore:                  s,
+		Capacity:  s.BatchSize,
+		liveStore: s,
 	}
 	s.Lock()
 	s.Batches[batchID] = batch

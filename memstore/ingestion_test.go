@@ -700,7 +700,6 @@ var _ = ginkgo.Describe("ingestion", func() {
 		Ω(err).Should(BeNil())
 
 		shard, err := memstore.GetTableShard("abc", 0)
-		Ω(shard.LiveStore.Batches[BaseBatchID].NumRecordsWithoutEventTime).Should(Equal(9))
 		Ω(shard.LiveStore.Batches[BaseBatchID].MaxArrivalTime).Should(Equal(uint32(10)))
 		utils.ResetClockImplementation()
 	})

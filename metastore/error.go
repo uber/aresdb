@@ -70,5 +70,7 @@ var (
 	// ErrDuplicatedColumn indicates a column is used more than onces in sort or pk columns
 	ErrDuplicatedColumn = errors.New("Illegal deplicated use of column")
 	// ErrDuplicatedColumnName indicates duplicated column name in same table
-	ErrDuplicatedColumnName = errors.New("Duplicated column name found")
+	ErrDuplicatedColumnName          = errors.New("Duplicated column name found")
+	ErrTimeColumnDoesNotAllowDefault = errors.New("Time column does not allow default value")
+	ErrDisallowMissingEventTime      = errors.New("Can not disallow missing event time")
 )

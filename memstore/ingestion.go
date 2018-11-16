@@ -379,18 +379,12 @@ func writeBatchRecords(columnDeletions []bool,
 
 			newValue := &dataValue
 			needToWrite := newValue.Valid
-			isFactEventTimeColumn := shard.Schema.Schema.IsFactTable && columnID == 0
-			isFirstEventTime := isFactEventTimeColumn && newValue.Valid
 
 			if forUpdate {
 				var oldValue common.DataValue
 				// only read oldValue when mode within add, min, max
 				if columnUpdateMode > common.UpdateOverwriteNotNull {
 					oldValue = vectorParty.GetDataValue(recordInfo.index)
-				}
-
-				if isFirstEventTime && vectorParty.GetValidity(recordInfo.index) {
-					isFirstEventTime = false
 				}
 
 				switch columnUpdateMode {
@@ -412,10 +406,6 @@ func writeBatchRecords(columnDeletions []bool,
 
 			if needToWrite {
 				vectorParty.SetDataValue(recordInfo.index, *newValue, IgnoreCount)
-			}
-
-			if isFirstEventTime {
-				batch.NumRecordsWithoutEventTime--
 			}
 		}
 	}

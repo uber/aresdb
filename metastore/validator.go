@@ -52,7 +52,7 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 
 	nonDeletedColumnsCount := 0
 	colNameDedup := make(map[string]bool)
-	for _, column := range table.Columns {
+	for columnID, column := range table.Columns {
 		if !column.Deleted {
 			nonDeletedColumnsCount++
 		} else {
@@ -70,6 +70,9 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 			return ErrInvalidDataType
 		}
 		if column.DefaultValue != nil {
+			if table.IsFactTable && columnID == 0 {
+				return ErrTimeColumnDoesNotAllowDefault
+			}
 			err = ValidateDefaultValue(*column.DefaultValue, column.Type)
 			if err != nil {
 				return err
@@ -145,6 +148,10 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 	if len(newTable.Columns) < len(oldTable.Columns) {
 		// even with column deletion, or recreation, column id are not reused
 		return ErrInsufficientColumnCount
+	}
+
+	if oldTable.IsFactTable && oldTable.Config.AllowMissingEventTime && !newTable.Config.AllowMissingEventTime {
+		return ErrDisallowMissingEventTime
 	}
 
 	var i int
