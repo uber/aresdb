@@ -74,7 +74,7 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 	ginkgo.It("should work with schema changes", func() {
 		mockControllerCli.On("GetSchemaHash", "cluster1").Return("456", nil).Once()
 		mockControllerCli.On("GetAllSchema", "cluster1").Return([]common.Table{testTable1, testTable2m, testTable3}, nil).Once()
-		//					 creation     update      no-op        deletion
+		//                   creation     update      no-op        deletion
 		// existing tables [          , testTable2, testTable3, testTable4]
 		// from controller [testTable1, testTable2m,testTable3, (deletion)]
 		mockSchemaMutator.On("ListTables").Return([]string{"testTable2", "testTable3", "testTable4"}, nil).Once()

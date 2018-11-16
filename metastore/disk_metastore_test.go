@@ -501,7 +501,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(BeNil())
 		Ω(mockWriterCloser.Bytes()).Should(Equal(testTableCBytes))
 
-		// watcher should got the change before CreateTable return
+		// watcher should got the change before UpdataTable return
 		Ω(*schemaEvent).Should(Equal(testTableC))
 	})
 

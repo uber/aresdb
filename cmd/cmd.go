@@ -160,7 +160,7 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 			logger.Fatal("Missing controller client config", err)
 		}
 		controllerClient := clients.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
-		schemaFetchJob := metastore.NewSchemaFetchJob(10, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.ClusterName, "")
+		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.ClusterName, "")
 		go schemaFetchJob.Run()
 	}
 
