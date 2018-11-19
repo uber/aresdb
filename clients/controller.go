@@ -24,12 +24,12 @@ type ControllerHTTPClient struct {
 }
 
 // NewControllerHTTPClient returns new ControllerHTTPClient
-func NewControllerHTTPClient(controllerHost string, controllerPort int, heasers http.Header) *ControllerHTTPClient {
+func NewControllerHTTPClient(controllerHost string, controllerPort int, headers http.Header) *ControllerHTTPClient {
 	return &ControllerHTTPClient{
 		c:              &http.Client{},
 		controllerHost: controllerHost,
 		controllerPort: controllerPort,
-		headers:        heasers,
+		headers:        headers,
 	}
 }
 

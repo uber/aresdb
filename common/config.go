@@ -14,7 +14,9 @@
 
 package common
 
-import "net/http"
+import (
+	"net/http"
+)
 
 // TimezoneConfig is the static config for timezone column support
 type TimezoneConfig struct {
@@ -55,6 +57,11 @@ type ClientsConfig struct {
 	Controller *ControllerConfig `yaml:"controller,omitempty"`
 }
 
+type ClusterConfig struct {
+	Enable      bool   `yaml:"enable"`
+	ClusterName string `yaml:"cluster_name"`
+}
+
 // AresServerConfig is config specific for ares server.
 type AresServerConfig struct {
 	// HTTP port for serving.
@@ -75,9 +82,9 @@ type AresServerConfig struct {
 	// Build version of the server currently running
 	Version string `yaml:"version"`
 
-	Query       QueryConfig     `yaml:"query"`
-	DiskStore   DiskStoreConfig `yaml:"disk_store"`
-	HTTP        HTTPConfig      `yaml:"http"`
-	ClusterName string          `yaml:"cluster_name"`
-	Clients     ClientsConfig   `yaml:"clients"`
+	Query     QueryConfig     `yaml:"query"`
+	DiskStore DiskStoreConfig `yaml:"disk_store"`
+	HTTP      HTTPConfig      `yaml:"http"`
+	Cluster   ClusterConfig   `yaml:"cluster"`
+	Clients   ClientsConfig   `yaml:"clients"`
 }

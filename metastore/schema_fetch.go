@@ -10,31 +10,31 @@ import (
 
 // SchemaFetchJob is a job that periodically pings ares-controller and updates table schemas if applicable
 type SchemaFetchJob struct {
-	clusterName      string
-	hash             string
-	interval         int
-	schemaMutator    TableSchemaMutator
-	schemaValidator  TableSchemaValidator
-	controllerClient clients.ControllerClient
-	stopChan         chan struct{}
+	clusterName       string
+	hash              string
+	intervalInSeconds int
+	schemaMutator     TableSchemaMutator
+	schemaValidator   TableSchemaValidator
+	controllerClient  clients.ControllerClient
+	stopChan          chan struct{}
 }
 
 // NewSchemaFetchJob creates a new SchemaFetchJob
-func NewSchemaFetchJob(interval int, schemaMutator TableSchemaMutator, schemaValidator TableSchemaValidator, controllerClient clients.ControllerClient, clusterName, initialHash string) *SchemaFetchJob {
+func NewSchemaFetchJob(intervalInSeconds int, schemaMutator TableSchemaMutator, schemaValidator TableSchemaValidator, controllerClient clients.ControllerClient, clusterName, initialHash string) *SchemaFetchJob {
 	return &SchemaFetchJob{
-		clusterName:      clusterName,
-		hash:             initialHash,
-		interval:         interval,
-		schemaMutator:    schemaMutator,
-		schemaValidator:  schemaValidator,
-		stopChan:         make(chan struct{}),
-		controllerClient: controllerClient,
+		clusterName:       clusterName,
+		hash:              initialHash,
+		intervalInSeconds: intervalInSeconds,
+		schemaMutator:     schemaMutator,
+		schemaValidator:   schemaValidator,
+		stopChan:          make(chan struct{}),
+		controllerClient:  controllerClient,
 	}
 }
 
 // Run starts the scheduling
 func (j *SchemaFetchJob) Run() {
-	tickChan := time.NewTicker(time.Second * time.Duration(j.interval)).C
+	tickChan := time.NewTicker(time.Second * time.Duration(j.intervalInSeconds)).C
 
 	for {
 		select {

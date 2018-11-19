@@ -37,7 +37,7 @@ type SchemaHandler struct {
 // NewSchemaHandler will create a new SchemaHandler with memStore and metaStore.
 func NewSchemaHandler(metaStore metastore.MetaStore, isClusterMode bool) *SchemaHandler {
 	return &SchemaHandler{
-		metaStore: metaStore,
+		metaStore:     metaStore,
 		isClusterMode: isClusterMode,
 	}
 }

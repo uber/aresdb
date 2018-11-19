@@ -16,7 +16,7 @@ http:
   max_connections: 300
   read_time_out_in_seconds: 20
   write_time_out_in_seconds: 300 # 5 minutes to write the result
-cluster_name: "" # cluster name to join, empty means standalone
+
 clients:
   # example controller client configs
   controller:
@@ -27,3 +27,8 @@ clients:
         - aresdb
       RPC-Service:
         - ares-controller
+
+cluster:
+  enable: false
+  cluster_name: ""
+

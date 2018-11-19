@@ -25,8 +25,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
-	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
 )
 
 var _ = ginkgo.Describe("recovery", func() {
