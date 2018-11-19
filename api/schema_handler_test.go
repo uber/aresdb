@@ -66,10 +66,11 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 
 	testMetaStore := &mocks.MetaStore{}
 	var testMemStore *memMocks.MemStore
+	var schemaHandler *SchemaHandler
 
 	ginkgo.BeforeEach(func() {
 		testMemStore = CreateMemStore(&testTableSchema, 0, nil, nil)
-		schemaHandler := NewSchemaHandler(testMetaStore)
+		schemaHandler = NewSchemaHandler(testMetaStore, false)
 		testRouter := mux.NewRouter()
 		schemaHandler.Register(testRouter.PathPrefix("/schema").Subrouter())
 		testServer = httptest.NewUnstartedServer(WithPanicHandling(testRouter))
@@ -237,5 +238,13 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 			hostPort, "testTable", "testColumn"), bytes.NewReader(b))
 		resp, _ = http.DefaultClient.Do(req)
 		Ω(resp.StatusCode).Should(Equal(http.StatusInternalServerError))
+	})
+
+	ginkgo.It("Should reject updates when cluster mode", func() {
+		schemaHandler.isClusterMode = true
+		tableSchemaBytes, _ := json.Marshal(testTableSchema.Schema)
+
+		resp, _ := http.Post(fmt.Sprintf("http://%s/schema/tables", hostPort), "application/json", bytes.NewBuffer(tableSchemaBytes))
+		Ω(resp.StatusCode).Should(Equal(http.StatusMethodNotAllowed))
 	})
 })

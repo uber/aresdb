@@ -30,12 +30,15 @@ import (
 type SchemaHandler struct {
 	// all write requests will go to metaStore.
 	metaStore metastore.MetaStore
+	// if isClusterMode, disable all write operations from handler
+	isClusterMode bool
 }
 
 // NewSchemaHandler will create a new SchemaHandler with memStore and metaStore.
-func NewSchemaHandler(metaStore metastore.MetaStore) *SchemaHandler {
+func NewSchemaHandler(metaStore metastore.MetaStore, isClusterMode bool) *SchemaHandler {
 	return &SchemaHandler{
 		metaStore: metaStore,
+		isClusterMode: isClusterMode,
 	}
 }
 
@@ -128,6 +131,10 @@ func (handler *SchemaHandler) GetTable(w http.ResponseWriter, r *http.Request) {
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
+	if handler.isClusterMode {
+		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
+	}
+
 	var addTableRequest AddTableRequest
 	err := ReadRequest(r, &addTableRequest)
 	if err != nil {
@@ -161,6 +168,10 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) UpdateTableConfig(w http.ResponseWriter, r *http.Request) {
+	if handler.isClusterMode {
+		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
+	}
+
 	var request UpdateTableConfigRequest
 	err := ReadRequest(r, &request)
 	if err != nil {
@@ -184,6 +195,9 @@ func (handler *SchemaHandler) UpdateTableConfig(w http.ResponseWriter, r *http.R
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) DeleteTable(w http.ResponseWriter, r *http.Request) {
+	if handler.isClusterMode {
+		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
+	}
 
 	var deleteTableRequest DeleteTableRequest
 	err := ReadRequest(r, &deleteTableRequest)
@@ -213,6 +227,10 @@ func (handler *SchemaHandler) DeleteTable(w http.ResponseWriter, r *http.Request
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) {
+	if handler.isClusterMode {
+		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
+	}
+
 	var addColumnRequest AddColumnRequest
 	err := ReadRequest(r, &addColumnRequest)
 	if err != nil {
@@ -258,6 +276,10 @@ func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) 
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) UpdateColumn(w http.ResponseWriter, r *http.Request) {
+	if handler.isClusterMode {
+		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
+	}
+
 	var updateColumnRequest UpdateColumnRequest
 
 	err := ReadRequest(r, &updateColumnRequest)
@@ -284,6 +306,10 @@ func (handler *SchemaHandler) UpdateColumn(w http.ResponseWriter, r *http.Reques
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) DeleteColumn(w http.ResponseWriter, r *http.Request) {
+	if handler.isClusterMode {
+		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
+	}
+
 	var deleteColumnRequest DeleteColumnRequest
 
 	err := ReadRequest(r, &deleteColumnRequest)

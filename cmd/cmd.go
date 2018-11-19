@@ -32,8 +32,8 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/uber-common/bark"
-	"github.com/uber/aresdb/clients"
 	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/clients"
 )
 
 // StartService is the entry point of starting ares.
@@ -86,8 +86,10 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 		utils.GetLogger().Fatal(err)
 	}
 
+	isClusterMode := cfg.ClusterName != ""
+
 	// create schema handler
-	schemaHandler := api.NewSchemaHandler(metaStore)
+	schemaHandler := api.NewSchemaHandler(metaStore, isClusterMode)
 
 	// create enum handler
 	enumHander := api.NewEnumHandler(memStore, metaStore)
@@ -153,8 +155,7 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, metaStore)
 	go batchStatsReporter.Run()
 
-	if cfg.ClusterName != "" {
-		// cluster mode
+	if isClusterMode {
 		controllerClientCfg := cfg.Clients.Controller
 		if controllerClientCfg == nil {
 			logger.Fatal("Missing controller client config", err)
