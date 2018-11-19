@@ -30,15 +30,12 @@ import (
 type SchemaHandler struct {
 	// all write requests will go to metaStore.
 	metaStore metastore.MetaStore
-	// if isClusterMode, disable all write operations from handler
-	isClusterMode bool
 }
 
 // NewSchemaHandler will create a new SchemaHandler with memStore and metaStore.
-func NewSchemaHandler(metaStore metastore.MetaStore, isClusterMode bool) *SchemaHandler {
+func NewSchemaHandler(metaStore metastore.MetaStore) *SchemaHandler {
 	return &SchemaHandler{
-		metaStore:     metaStore,
-		isClusterMode: isClusterMode,
+		metaStore: metaStore,
 	}
 }
 
@@ -131,9 +128,6 @@ func (handler *SchemaHandler) GetTable(w http.ResponseWriter, r *http.Request) {
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
-	if handler.isClusterMode {
-		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
-	}
 
 	var addTableRequest AddTableRequest
 	err := ReadRequest(r, &addTableRequest)

@@ -45,7 +45,7 @@ func (c *ControllerHTTPClient) GetSchemaHash(namespace string) (hash string, err
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = utils.StackError(fmt.Errorf("controller client error fetching hash"), fmt.Sprintf("code %d", resp.StatusCode))
+		err = utils.StackError(nil, fmt.Sprintf("controller client error fetching hash, status code %d", resp.StatusCode))
 	}
 
 	var b []byte
@@ -69,7 +69,7 @@ func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []common.T
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
-		err = utils.StackError(fmt.Errorf("controller client error fetching schema"), fmt.Sprintf("code %d", resp.StatusCode))
+		err = utils.StackError(nil, fmt.Sprintf("controller client error fetching schema, status code %d", resp.StatusCode))
 	}
 
 	var b []byte

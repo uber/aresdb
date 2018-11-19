@@ -87,7 +87,7 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 	}
 
 	// create schema handler
-	schemaHandler := api.NewSchemaHandler(metaStore, cfg.Cluster.Enable)
+	schemaHandler := api.NewSchemaHandler(metaStore)
 
 	// create enum handler
 	enumHander := api.NewEnumHandler(memStore, metaStore)
@@ -132,7 +132,11 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 
 	httpWrappers = append([]utils.HTTPHandlerWrapper{utils.WithMetricsFunc}, httpWrappers...)
 
-	schemaHandler.Register(router.PathPrefix("/schema").Subrouter(), httpWrappers...)
+	schemaRouter := router.PathPrefix("/schema")
+	if cfg.Cluster.Enable {
+		schemaRouter = schemaRouter.Methods(http.MethodGet)
+	}
+	schemaHandler.Register(schemaRouter.Subrouter(), httpWrappers...)
 	enumHander.Register(router.PathPrefix("/schema").Subrouter(), httpWrappers...)
 	dataHandler.Register(router.PathPrefix("/data").Subrouter(), httpWrappers...)
 	queryHandler.Register(router.PathPrefix("/query").Subrouter(), httpWrappers...)
