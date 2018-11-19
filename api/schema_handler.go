@@ -162,10 +162,6 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) UpdateTableConfig(w http.ResponseWriter, r *http.Request) {
-	if handler.isClusterMode {
-		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
-	}
-
 	var request UpdateTableConfigRequest
 	err := ReadRequest(r, &request)
 	if err != nil {
@@ -189,10 +185,6 @@ func (handler *SchemaHandler) UpdateTableConfig(w http.ResponseWriter, r *http.R
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) DeleteTable(w http.ResponseWriter, r *http.Request) {
-	if handler.isClusterMode {
-		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
-	}
-
 	var deleteTableRequest DeleteTableRequest
 	err := ReadRequest(r, &deleteTableRequest)
 	if err != nil {
@@ -221,10 +213,6 @@ func (handler *SchemaHandler) DeleteTable(w http.ResponseWriter, r *http.Request
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) {
-	if handler.isClusterMode {
-		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
-	}
-
 	var addColumnRequest AddColumnRequest
 	err := ReadRequest(r, &addColumnRequest)
 	if err != nil {
@@ -270,10 +258,6 @@ func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) 
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) UpdateColumn(w http.ResponseWriter, r *http.Request) {
-	if handler.isClusterMode {
-		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
-	}
-
 	var updateColumnRequest UpdateColumnRequest
 
 	err := ReadRequest(r, &updateColumnRequest)
@@ -300,10 +284,6 @@ func (handler *SchemaHandler) UpdateColumn(w http.ResponseWriter, r *http.Reques
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) DeleteColumn(w http.ResponseWriter, r *http.Request) {
-	if handler.isClusterMode {
-		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, nil)
-	}
-
 	var deleteColumnRequest DeleteColumnRequest
 
 	err := ReadRequest(r, &deleteColumnRequest)
