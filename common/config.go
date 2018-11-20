@@ -57,9 +57,15 @@ type ClientsConfig struct {
 	Controller *ControllerConfig `yaml:"controller,omitempty"`
 }
 
+// ClusterConfig is the config for starting current instance with cluster mode
 type ClusterConfig struct {
-	Enable      bool   `yaml:"enable"`
+	// Enable controls whether to start in cluster mode
+	Enable bool `yaml:"enable"`
+	// ClusterName is the cluster to join
 	ClusterName string `yaml:"cluster_name"`
+	// InstanceName is the cluster wide unique name to identify current instance
+	// it can be static configured in yaml, or dynamically set on start up
+	InstanceName string `yaml:"instance_name"`
 }
 
 // AresServerConfig is config specific for ares server.
