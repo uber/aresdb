@@ -154,6 +154,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 	mockFileSystem.On("ReadFile", "base/a/schema").Return(testTableABytes, nil)
 	mockFileSystem.On("ReadFile", "base/b/schema").Return(testTableBBytes, nil)
+	mockFileSystem.On("ReadFile", "base/c/schema").Return(testTableCBytes, nil)
 	mockFileSystem.On("ReadFile", "base/a/enums/column1").Return([]byte(fmt.Sprintf("foo%sbar", enumDelimiter)), nil)
 	mockFileSystem.On("ReadFile", "base/a/enums/column4").Return([]byte(fmt.Sprintf("foo%sbar", enumDelimiter)), nil)
 	mockFileSystem.On("ReadFile", "base/a/shards/0/version").Return([]byte("1"), nil)
@@ -485,7 +486,26 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(BeNil())
 	})
 
-	ginkgo.It("UpdateTable", func() {
+	ginkgo.It("UpdataTable", func() {
+		diskMetaStore := createDiskMetastore("base")
+		// watch schema change
+		events, done, err := diskMetaStore.WatchTableSchemaEvents()
+		Ω(err).Should(BeNil())
+		var schemaEvent *common.Table
+		go func() {
+			schemaEvent = <-events
+			done <- struct{}{}
+		}()
+
+		err = diskMetaStore.UpdateTable(testTableC)
+		Ω(err).Should(BeNil())
+		Ω(mockWriterCloser.Bytes()).Should(Equal(testTableCBytes))
+
+		// watcher should got the change before UpdataTable return
+		Ω(*schemaEvent).Should(Equal(testTableC))
+	})
+
+	ginkgo.It("UpdateTableConfig", func() {
 		diskMetaStore := createDiskMetastore("base")
 		updateConfig := common.TableConfig{
 			ArchivingDelayMinutes:    60,

@@ -66,10 +66,11 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 
 	testMetaStore := &mocks.MetaStore{}
 	var testMemStore *memMocks.MemStore
+	var schemaHandler *SchemaHandler
 
 	ginkgo.BeforeEach(func() {
 		testMemStore = CreateMemStore(&testTableSchema, 0, nil, nil)
-		schemaHandler := NewSchemaHandler(testMetaStore)
+		schemaHandler = NewSchemaHandler(testMetaStore)
 		testRouter := mux.NewRouter()
 		schemaHandler.Register(testRouter.PathPrefix("/schema").Subrouter())
 		testServer = httptest.NewUnstartedServer(WithPanicHandling(testRouter))

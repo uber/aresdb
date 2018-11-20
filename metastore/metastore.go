@@ -18,14 +18,6 @@ import (
 	"github.com/uber/aresdb/metastore/common"
 )
 
-// ShardOwnership defines an instruction on whether the receiving instance
-// should start to own or disown the specified table shard.
-type ShardOwnership struct {
-	TableName string
-	Shard     int
-	ShouldOwn bool
-}
-
 // MetaStore defines interfaces of the external metastore,
 // which can be implemented using file system, SQLite, Zookeeper etc.
 type MetaStore interface {
@@ -58,7 +50,7 @@ type MetaStore interface {
 	// Should only be called once.
 	// Returns an event channel that emits desired ownership states,
 	// and a done channel for consumer to ack once the event is processed.
-	WatchShardOwnershipEvents() (events <-chan ShardOwnership, done chan<- struct{}, err error)
+	WatchShardOwnershipEvents() (events <-chan common.ShardOwnership, done chan<- struct{}, err error)
 
 	// A subset of newly added columns can be appended to the end of
 	// ArchivingSortColumns by adding their index in columns to archivingSortColumns

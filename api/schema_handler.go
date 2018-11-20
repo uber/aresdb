@@ -128,6 +128,7 @@ func (handler *SchemaHandler) GetTable(w http.ResponseWriter, r *http.Request) {
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
+
 	var addTableRequest AddTableRequest
 	err := ReadRequest(r, &addTableRequest)
 	if err != nil {
@@ -184,7 +185,6 @@ func (handler *SchemaHandler) UpdateTableConfig(w http.ResponseWriter, r *http.R
 //    default: errorResponse
 //        200: noContentResponse
 func (handler *SchemaHandler) DeleteTable(w http.ResponseWriter, r *http.Request) {
-
 	var deleteTableRequest DeleteTableRequest
 	err := ReadRequest(r, &deleteTableRequest)
 	if err != nil {

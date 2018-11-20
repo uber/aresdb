@@ -93,6 +93,11 @@ const (
 	RecordsFromFuture
 	BatchSize
 	BatchSizeReportTime
+	SchemaFetchSuccess
+	SchemaFetchFailure
+	SchemaUpdateCount
+	SchemaDeletionCount
+	SchemaCreationCount
 	// Enum sentinel.
 	NumMetricNames
 )
@@ -186,6 +191,11 @@ const (
 	scopeNameFutureRecords                   = "records_from_future"
 	scopeNameBatchSize                       = "batch_size"
 	scopeNameBatchSizeReportTime             = "batch_size_report_time"
+	scopeNameSchemaFetchSuccess              = "schema_fetch_success"
+	scopeNameSchemaFetchFailure              = "schema_fetch_failure"
+	scopeNameSchemaUpdateCount               = "schema_updates"
+	scopeNameSchemaDeletionCount             = "schema_deletions"
+	scopeNameSchemaCreationCount             = "schema_creations"
 )
 
 // Metric tag names
@@ -731,6 +741,41 @@ var metricsDefs = map[MetricName]metricDefinition{
 		metricType: Timer,
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentStats,
+		},
+	},
+	SchemaFetchSuccess: {
+		name:       scopeNameSchemaFetchSuccess,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMetaStore,
+		},
+	},
+	SchemaFetchFailure: {
+		name:       scopeNameSchemaFetchFailure,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMetaStore,
+		},
+	},
+	SchemaUpdateCount: {
+		name:       scopeNameSchemaUpdateCount,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMetaStore,
+		},
+	},
+	SchemaDeletionCount: {
+		name:       scopeNameSchemaDeletionCount,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMetaStore,
+		},
+	},
+	SchemaCreationCount: {
+		name:       scopeNameSchemaCreationCount,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMetaStore,
 		},
 	},
 }

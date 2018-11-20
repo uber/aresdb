@@ -8,25 +8,25 @@ import (
 
 // BatchStatsReporter is used to report batch level stats like row count
 type BatchStatsReporter struct {
-	interval  int
-	memStore  MemStore
-	metaStore metastore.MetaStore
-	stopChan  chan struct{}
+	intervalInSeconds int
+	memStore          MemStore
+	metaStore         metastore.MetaStore
+	stopChan          chan struct{}
 }
 
 // NewBatchStatsReporter create a new BatchStatsReporter instance
-func NewBatchStatsReporter(interval int, memStore MemStore, metaStore metastore.MetaStore) *BatchStatsReporter {
+func NewBatchStatsReporter(intervalInSeconds int, memStore MemStore, metaStore metastore.MetaStore) *BatchStatsReporter {
 	return &BatchStatsReporter{
-		interval:  interval,
-		memStore:  memStore,
-		metaStore: metaStore,
-		stopChan:  make(chan struct{}),
+		intervalInSeconds: intervalInSeconds,
+		memStore:          memStore,
+		metaStore:         metaStore,
+		stopChan:          make(chan struct{}),
 	}
 }
 
 // Run is a ticker function to run report periodically
 func (batchStats *BatchStatsReporter) Run() {
-	tickChan := time.NewTicker(time.Second * time.Duration(batchStats.interval)).C
+	tickChan := time.NewTicker(time.Second * time.Duration(batchStats.intervalInSeconds)).C
 
 	for {
 		select {
