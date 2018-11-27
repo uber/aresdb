@@ -167,7 +167,7 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 		// check that no column configs are modified, even for deleted columns
 		if oldCol.Name != newCol.Name ||
 			oldCol.Type != newCol.Type ||
-			oldCol.DefaultValue != newCol.DefaultValue ||
+			!reflect.DeepEqual(oldCol.DefaultValue, newCol.DefaultValue) ||
 			oldCol.CaseInsensitive != newCol.CaseInsensitive ||
 			oldCol.DisableAutoExpand != newCol.DisableAutoExpand {
 			return ErrSchemaUpdateNotAllowed

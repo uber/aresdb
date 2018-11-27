@@ -70,7 +70,8 @@ func (j *SchemaFetchJob) fetchSchema() {
 		}
 		j.hash = newHash
 	}
-	utils.GetRootReporter().GetCounter(utils.SchemaFetchSuccess)
+	utils.GetLogger().Info("Succeeded to run schema fetch job")
+	utils.GetRootReporter().GetCounter(utils.SchemaFetchSuccess).Inc(1)
 }
 
 func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
@@ -131,6 +132,6 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 }
 
 func reportError(err error) {
-	utils.GetRootReporter().GetCounter(utils.SchemaFetchFailure)
+	utils.GetRootReporter().GetCounter(utils.SchemaFetchFailure).Inc(1)
 	utils.GetLogger().Error(utils.StackError(err, "err running schema fetch job"))
 }
