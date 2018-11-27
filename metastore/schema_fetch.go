@@ -34,15 +34,12 @@ func NewSchemaFetchJob(intervalInSeconds int, schemaMutator TableSchemaMutator, 
 
 // Run starts the scheduling
 func (j *SchemaFetchJob) Run() {
-	// immediate initial fetch
-	j.fetchSchema()
-
 	tickChan := time.NewTicker(time.Second * time.Duration(j.intervalInSeconds)).C
 
 	for {
 		select {
 		case <-tickChan:
-			j.fetchSchema()
+			j.FetchSchema()
 		case <-j.stopChan:
 			return
 		}
@@ -54,7 +51,7 @@ func (j *SchemaFetchJob) Stop() {
 	close(j.stopChan)
 }
 
-func (j *SchemaFetchJob) fetchSchema() {
+func (j *SchemaFetchJob) FetchSchema() {
 	newHash, err := j.controllerClient.GetSchemaHash(j.clusterName)
 	if err != nil {
 		reportError(err)
