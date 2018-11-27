@@ -34,6 +34,9 @@ func NewSchemaFetchJob(intervalInSeconds int, schemaMutator TableSchemaMutator, 
 
 // Run starts the scheduling
 func (j *SchemaFetchJob) Run() {
+	// immediate initial fetch
+	j.fetchSchema()
+
 	tickChan := time.NewTicker(time.Second * time.Duration(j.intervalInSeconds)).C
 
 	for {
