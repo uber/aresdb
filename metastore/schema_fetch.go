@@ -70,6 +70,7 @@ func (j *SchemaFetchJob) fetchSchema() {
 		}
 		j.hash = newHash
 	}
+	utils.GetLogger().Info("Succeeded to run schema fetch job")
 	utils.GetRootReporter().GetCounter(utils.SchemaFetchSuccess).Inc(1)
 }
 
