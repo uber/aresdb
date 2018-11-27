@@ -108,12 +108,20 @@ var _ = ginkgo.Describe("Validator", func() {
 	})
 
 	ginkgo.It("should be happy with valid updates", func() {
+		dv1 := "foo"
+		dv2 := "foo"
+
 		oldTable := common.Table{
 			Name: "testTable",
 			Columns: []common.Column{
 				{
 					Name: "col1",
 					Type: "Int32",
+				},
+				{
+					Name: "col2",
+					Type: "SmallEnum",
+					DefaultValue: &dv1,
 				},
 			},
 			PrimaryKeyColumns:    []int{0},
@@ -130,6 +138,11 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 				{
 					Name: "col2",
+					Type: "SmallEnum",
+					DefaultValue: &dv2,
+				},
+				{
+					Name: "col3",
 					Type: "Int32",
 				},
 			},
