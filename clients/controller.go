@@ -9,6 +9,11 @@ import (
 	"net/http"
 )
 
+const (
+	// InstanceNameHeaderKey is the key for instance name http header
+	InstanceNameHeaderKey = "AresDB-InstanceName"
+)
+
 // ControllerClient defines methods to communicate with ares-controller
 type ControllerClient interface {
 	GetSchemaHash(namespace string) (string, error)

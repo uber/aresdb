@@ -82,6 +82,9 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 		if controllerClientCfg == nil {
 			logger.Fatal("Missing controller client config", err)
 		}
+		if cfg.Cluster.InstanceName != "" {
+			controllerClientCfg.Headers.Add(clients.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
+		}
 		controllerClient := clients.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
 		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.ClusterName, "")
 		// immediate initial fetch
@@ -172,7 +175,7 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 
 	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, metaStore)
 	go batchStatsReporter.Run()
-
+  
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", *port, cfg.HTTP.MaxConnections)
 	utils.LimitServe(*port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	batchStatsReporter.Stop()
