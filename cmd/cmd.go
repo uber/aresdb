@@ -73,6 +73,22 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 		logger.Panic(err)
 	}
 
+	// fetch schema from controller and start periodical job
+	if cfg.Cluster.Enable {
+		if cfg.Cluster.ClusterName == "" {
+			logger.Fatal("Missing cluster name")
+		}
+		controllerClientCfg := cfg.Clients.Controller
+		if controllerClientCfg == nil {
+			logger.Fatal("Missing controller client config", err)
+		}
+		controllerClient := clients.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
+		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.ClusterName, "")
+		// immediate initial fetch
+		schemaFetchJob.FetchSchema()
+		go schemaFetchJob.Run()
+	}
+
 	// Create DiskStore.
 	diskStore := diskstore.NewLocalDiskStore(*rootPath)
 
@@ -156,23 +172,7 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 
 	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, metaStore)
 	go batchStatsReporter.Run()
-
-	if cfg.Cluster.Enable {
-		if cfg.Cluster.ClusterName == "" {
-			logger.Fatal("Missing cluster name")
-		}
-		controllerClientCfg := cfg.Clients.Controller
-		if controllerClientCfg == nil {
-			logger.Fatal("Missing controller client config", err)
-		}
-		if cfg.Cluster.InstanceName != "" {
-			controllerClientCfg.Headers.Add(clients.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
-		}
-		controllerClient := clients.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
-		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.ClusterName, "")
-		go schemaFetchJob.Run()
-	}
-
+  
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", *port, cfg.HTTP.MaxConnections)
 	utils.LimitServe(*port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	batchStatsReporter.Stop()

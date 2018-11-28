@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 
 	ginkgo.It("should work with no schema changes", func() {
 		mockControllerCli.On("GetSchemaHash", "cluster1").Return("123", nil)
-		job.fetchSchema()
+		job.FetchSchema()
 	})
 
 	ginkgo.It("should work with schema changes", func() {
@@ -86,6 +86,6 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 		mockSchemaValidator.On("SetNewTable", mock.Anything).Return(nil)
 		mockSchemaValidator.On("SetOldTable", mock.Anything).Return(nil)
 		mockSchemaValidator.On("Validate").Return(nil)
-		job.fetchSchema()
+		job.FetchSchema()
 	})
 })
