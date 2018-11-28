@@ -59,14 +59,17 @@ endif
 libs: lib/libmem.so lib/libalgorithm.so
 
 clang-lint:
-	echo $(C_SRC)
+ifneq ($(C_SRC),)
 	cppcheck --std=c++11 --language=c++ --inline-suppr --suppress=selfInitialization $(C_SRC)
 	cpplint --extensions=cu,hpp $(C_SRC) # do cpplint for cpp source files only
+endif
 
 golang-lint:
+ifneq ($(GO_SRC),)
 	gofmt -w $(GO_SRC)
 	golint -set_exit_status $(GO_SRC)
 	go vet
+endif
 
 lint-all: C_SRC := $(ALL_C_SRC)
 lint-all: GO_SRC := $(ALL_GO_SRC)

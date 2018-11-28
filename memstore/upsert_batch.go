@@ -347,7 +347,6 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 			valueVectorLength := utils.AlignOffset(newBatch.NumRows*valueBits, 8) / 8
 			newCol.valueVector = make([]byte, valueVectorLength)
 			newBatch.alternativeBytes += valueVectorLength
-
 			for newRow, oldRow := range backfillRows {
 				if valueBits == 1 {
 					boolValue := readBool(oldCol.valueVector, oldRow)
