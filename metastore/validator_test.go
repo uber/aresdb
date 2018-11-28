@@ -137,8 +137,8 @@ var _ = ginkgo.Describe("Validator", func() {
 					Type: "Int32",
 				},
 				{
-					Name:         "col2",
-					Type:         "SmallEnum",
+					Name: "col2",
+					Type: "SmallEnum",
 					DefaultValue: &dv2,
 				},
 				{
