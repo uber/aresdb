@@ -37,6 +37,7 @@ ifndef QUERY_MODE
     QUERY_MODE := $(if $(CUDA_DRIVER_ENABLED),DEVICE,HOST)
 endif
 
+
 # specify dependencies for memory allocation library based on whether cuda driver is available.
 ifeq "$(QUERY_MODE)" "DEVICE"
 lib/libmem.so:
