@@ -39,7 +39,7 @@ func (j *SchemaFetchJob) Run() {
 	for {
 		select {
 		case <-tickChan:
-			j.fetchSchema()
+			j.FetchSchema()
 		case <-j.stopChan:
 			return
 		}
@@ -51,7 +51,7 @@ func (j *SchemaFetchJob) Stop() {
 	close(j.stopChan)
 }
 
-func (j *SchemaFetchJob) fetchSchema() {
+func (j *SchemaFetchJob) FetchSchema() {
 	newHash, err := j.controllerClient.GetSchemaHash(j.clusterName)
 	if err != nil {
 		reportError(err)

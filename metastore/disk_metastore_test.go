@@ -286,6 +286,12 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		err := diskMetaStore.CreateTable(&testTableA)
 		Ω(err).Should(Equal(ErrTableAlreadyExist))
 
+		// should work without watchers
+		err = diskMetaStore.CreateTable(&testTableC)
+		Ω(err).Should(BeNil())
+		Ω(mockWriterCloser.Bytes()).Should(Equal(testTableCBytes))
+		mockWriterCloser.Reset()
+
 		// watch schema change
 		events, done, err := diskMetaStore.WatchTableSchemaEvents()
 		Ω(err).Should(BeNil())
@@ -314,6 +320,10 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		diskMetaStore := createDiskMetastore("base")
 		err := diskMetaStore.DeleteTable(testTableC.Name)
 		Ω(err).Should(Equal(ErrTableDoesNotExist))
+
+		// should work without watchers
+		err = diskMetaStore.DeleteTable(testTableB.Name)
+		Ω(err).Should(BeNil())
 
 		events, done, err := diskMetaStore.WatchTableListEvents()
 		Ω(err).Should(BeNil())
@@ -488,6 +498,13 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 	ginkgo.It("UpdataTable", func() {
 		diskMetaStore := createDiskMetastore("base")
+
+		// should work without watchers
+		err := diskMetaStore.UpdateTable(testTableC)
+		Ω(err).Should(BeNil())
+		Ω(mockWriterCloser.Bytes()).Should(Equal(testTableCBytes))
+		mockWriterCloser.Reset()
+
 		// watch schema change
 		events, done, err := diskMetaStore.WatchTableSchemaEvents()
 		Ω(err).Should(BeNil())

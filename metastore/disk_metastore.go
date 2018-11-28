@@ -340,9 +340,7 @@ func (dm *diskMetaStore) CreateTable(table *common.Table) (err error) {
 		dm.Unlock()
 		if err == nil {
 			dm.pushSchemaChange(table)
-
-			dm.shardOwnershipWatcher <- common.ShardOwnership{table.Name, 0, true}
-			<-dm.shardOwnershipDone
+			dm.pushShardOwnershipChange(table.Name)
 		}
 	}()
 
@@ -802,6 +800,13 @@ func (dm *diskMetaStore) pushSchemaChange(table *common.Table) {
 	if dm.tableSchemaWatcher != nil {
 		dm.tableSchemaWatcher <- table
 		<-dm.tableSchemaDone
+	}
+}
+
+func (dm *diskMetaStore) pushShardOwnershipChange(tableName string) {
+	if dm.shardOwnershipWatcher != nil {
+		dm.shardOwnershipWatcher <- common.ShardOwnership{tableName, 0, true}
+		<-dm.shardOwnershipDone
 	}
 }
 
