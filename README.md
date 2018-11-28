@@ -1,3 +1,5 @@
+[![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
+
 AresDB
 ==============
 AresDB is a GPU-based analytics engine with storage and query capabilities. The goal of AresDB is to develop a real-time analytics system with fresh data and interactive response time at a low cost.
