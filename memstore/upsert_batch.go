@@ -373,6 +373,7 @@ func (u *UpsertBatch) GetColumnNames(schema *TableSchema) ([]string, error) {
 			return nil, err
 		}
 
+
 		schema.RLock()
 		if columnID > len(schema.Schema.Columns) {
 			schema.RUnlock()
