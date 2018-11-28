@@ -175,7 +175,7 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 
 	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, metaStore)
 	go batchStatsReporter.Run()
-
+  
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", *port, cfg.HTTP.MaxConnections)
 	utils.LimitServe(*port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	batchStatsReporter.Stop()
