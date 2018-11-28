@@ -7,7 +7,7 @@ ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-bu
   -e ".*/_.*" \
   -e ".*/mocks.*")
 
-CHANGED_GO_SRC := $(git diff HEAD origin/master --name-only | grep --include \*.go)
+CHANGED_GO_SRC := $(git diff HEAD origin/master --name-only | grep -e ".*\.go")
 
 ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h -o -iname \*.hpp -o -iname \*.c \) | grep -v -e Godeps -e vendor -e go-build \
   -e build \
@@ -15,7 +15,7 @@ ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h -o -iname \*.
   -e ".*/_.*" \
   -e ".*/mocks.*")
 
-CHANGED_C_SRC := $(git diff HEAD origin/master --name-only | grep --include \*.cu --include \*.h --include \*.hpp --include \*.c)
+CHANGED_C_SRC := $(git diff HEAD origin/master --name-only | grep -e ".*\.\(cu\|c\|h\|hpp\)")
 
 CUDA_DRIVER_ENABLED := $(shell which nvidia-smi && nvidia-smi | grep "Driver Version:")
 
