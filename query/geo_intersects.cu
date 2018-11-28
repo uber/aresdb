@@ -22,7 +22,6 @@
 namespace ares {
 class GeoIntersectionContext {
  public:
-
   GeoIntersectionContext(GeoShapeBatch geoShapes,
              int indexVectorLength,
              uint32_t startCount,

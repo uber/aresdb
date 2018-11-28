@@ -7,7 +7,9 @@ ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-bu
   -e ".*/_.*" \
   -e ".*/mocks.*")
 
-CHANGED_GO_SRC := $(git diff HEAD origin/master --name-only | grep -e ".*\.go")
+CHANGED_GO_SRC := $(shell git diff HEAD origin/master --name-only | grep -e ".*\.go")
+
+GO_SRC := $(CHANGED_GO_SRC)
 
 ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h -o -iname \*.hpp -o -iname \*.c \) | grep -v -e Godeps -e vendor -e go-build \
   -e build \
@@ -15,7 +17,10 @@ ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h -o -iname \*.
   -e ".*/_.*" \
   -e ".*/mocks.*")
 
-CHANGED_C_SRC := $(git diff HEAD origin/master --name-only | grep -e ".*\.\(cu\|c\|h\|hpp\)")
+CHANGED_C_SRC := $(shell git diff HEAD origin/master --name-only | grep -e ".*\.\(cu\|c\|h\|hpp\)")
+
+C_SRC := $(CHANGED_C_SRC)
+
 
 CUDA_DRIVER_ENABLED := $(shell which nvidia-smi && nvidia-smi | grep "Driver Version:")
 
@@ -54,6 +59,7 @@ endif
 libs: lib/libmem.so lib/libalgorithm.so
 
 clang-lint:
+	echo $(C_SRC)
 	cppcheck --std=c++11 --language=c++ --inline-suppr --suppress=selfInitialization $(C_SRC)
 	cpplint --extensions=cu,hpp $(C_SRC) # do cpplint for cpp source files only
 
