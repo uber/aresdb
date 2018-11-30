@@ -3,10 +3,16 @@ package clients
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/uber/aresdb/metastore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/utils"
 	"io/ioutil"
 	"net/http"
+	"time"
+)
+
+const (
+	defaultRequestTimeout = 5
 )
 
 const (
@@ -17,7 +23,7 @@ const (
 // ControllerClient defines methods to communicate with ares-controller
 type ControllerClient interface {
 	GetSchemaHash(namespace string) (string, error)
-	GetAllSchema(namespace string) ([]common.Table, error)
+	GetAllSchema(namespace string) ([]metaCom.Table, error)
 }
 
 // ControllerHTTPClient implements ControllerClient over http
@@ -29,12 +35,18 @@ type ControllerHTTPClient struct {
 }
 
 // NewControllerHTTPClient returns new ControllerHTTPClient
-func NewControllerHTTPClient(controllerHost string, controllerPort int, headers http.Header) *ControllerHTTPClient {
+func NewControllerHTTPClient(cfg common.ControllerConfig) *ControllerHTTPClient {
+	if cfg.Timeout <= 0 {
+		cfg.Timeout = defaultRequestTimeout
+	}
+
 	return &ControllerHTTPClient{
-		c:              &http.Client{},
-		controllerHost: controllerHost,
-		controllerPort: controllerPort,
-		headers:        headers,
+		c:              &http.Client{
+			Timeout: time.Duration(cfg.Timeout) * time.Second,
+		},
+		controllerHost: cfg.Host,
+		controllerPort: cfg.Port,
+		headers:        cfg.Headers,
 	}
 }
 
@@ -62,7 +74,7 @@ func (c *ControllerHTTPClient) GetSchemaHash(namespace string) (hash string, err
 	return
 }
 
-func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []common.Table, err error) {
+func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []metaCom.Table, err error) {
 	var req *http.Request
 	req, err = c.getRequest(namespace, false)
 	if err != nil {

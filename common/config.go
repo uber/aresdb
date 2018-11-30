@@ -49,6 +49,8 @@ type HTTPConfig struct {
 type ControllerConfig struct {
 	Host    string      `yaml:"host"`
 	Port    int         `yaml:"port"`
+	// Timeout for all requests in seconds. if < 0, will use default value 5
+	Timeout int         `yaml:"timeout"`
 	Headers http.Header `yaml:"headers"`
 }
 

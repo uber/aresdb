@@ -85,7 +85,7 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 		if cfg.Cluster.InstanceName != "" {
 			controllerClientCfg.Headers.Add(clients.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
 		}
-		controllerClient := clients.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
+		controllerClient := clients.NewControllerHTTPClient(*controllerClientCfg)
 		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.ClusterName, "")
 		// immediate initial fetch
 		schemaFetchJob.FetchSchema()

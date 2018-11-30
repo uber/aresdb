@@ -5,7 +5,8 @@ import (
 	mux "github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/metastore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/common"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -21,11 +22,11 @@ var _ = ginkgo.Describe("Controller", func() {
 		"Foo": []string{"bar"},
 	}
 
-	tables := []common.Table{
+	tables := []metaCom.Table{
 		{
 			Version: 0,
 			Name:    "test1",
-			Columns: []common.Column{
+			Columns: []metaCom.Column{
 				{
 					Name: "col1",
 					Type: "int32",
@@ -56,7 +57,13 @@ var _ = ginkgo.Describe("Controller", func() {
 	})
 
 	ginkgo.It("NewControllerHTTPClient should work", func() {
-		c := NewControllerHTTPClient(host, port, headers)
+		cfg := common.ControllerConfig{
+			Host: host,
+			Port: port,
+			Headers: headers,
+			Timeout: -1,
+		}
+		c := NewControllerHTTPClient(cfg)
 		Ω(c.controllerPort).Should(Equal(port))
 		Ω(c.controllerHost).Should(Equal(host))
 		Ω(c.headers).Should(Equal(headers))
