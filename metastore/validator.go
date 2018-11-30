@@ -68,7 +68,10 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		// validate data type
 		if dataType := memCom.DataTypeFromString(column.Type); dataType == memCom.Unknown {
 			return ErrInvalidDataType
+		} else if table.IsFactTable && columnID == 0 && dataType != memCom.Uint32 {
+			return ErrMissingTimeColumn
 		}
+
 		if column.DefaultValue != nil {
 			if table.IsFactTable && columnID == 0 {
 				return ErrTimeColumnDoesNotAllowDefault

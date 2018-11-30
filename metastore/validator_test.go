@@ -24,6 +24,23 @@ var _ = ginkgo.Describe("Validator", func() {
 		Ω(err).Should(BeNil())
 	})
 
+	ginkgo.It("should return err for missing time column", func() {
+		table := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "SmallEnum",
+				},
+			},
+			IsFactTable: true,
+		}
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table)
+		err := validator.Validate()
+		Ω(err).Should(Equal(ErrMissingTimeColumn))
+	})
+
 	ginkgo.It("should return err for missing pk", func() {
 		table := common.Table{
 			Name: "testTable",
