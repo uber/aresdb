@@ -13,7 +13,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0},
@@ -47,7 +47,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 		}
@@ -63,11 +63,11 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 		}
@@ -83,7 +83,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0, 0},
@@ -100,7 +100,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns:    []int{0},
@@ -133,7 +133,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
@@ -151,7 +151,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
@@ -160,7 +160,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 				{
 					Name: "col3",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns:    []int{0},
@@ -181,7 +181,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns:    []int{0},
@@ -194,11 +194,11 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns:    []int{0},
@@ -219,7 +219,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns:    []int{0},
@@ -232,7 +232,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns:    []int{0},
@@ -253,7 +253,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns:    []int{0},
@@ -266,7 +266,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns:    []int{0},
@@ -286,11 +286,11 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0},
@@ -301,7 +301,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0},
@@ -320,11 +320,11 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name:    "col2",
-					Type:    "Int32",
+					Type:    "Uint32",
 					Deleted: true,
 				},
 			},
@@ -336,11 +336,11 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0},
@@ -359,11 +359,11 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0},
@@ -374,11 +374,11 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col_mod",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0},
@@ -397,7 +397,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0},
@@ -408,11 +408,11 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name:    "col2",
-					Type:    "Int32",
+					Type:    "Uint32",
 					Deleted: true,
 				},
 			},
@@ -432,7 +432,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0},
@@ -443,11 +443,11 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{0, 1},
@@ -466,15 +466,15 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col3",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			IsFactTable:          true,
@@ -487,15 +487,15 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col3",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			IsFactTable:          true,
@@ -538,8 +538,8 @@ var _ = ginkgo.Describe("Validator", func() {
 		Ω(ValidateDefaultValue("100000000", common.Int16)).ShouldNot(BeNil())
 		Ω(ValidateDefaultValue("0", common.Int16)).Should(BeNil())
 
-		Ω(ValidateDefaultValue("100000000000000", common.Int32)).ShouldNot(BeNil())
-		Ω(ValidateDefaultValue("0", common.Int32)).Should(BeNil())
+		Ω(ValidateDefaultValue("100000000000000", common.Uint32)).ShouldNot(BeNil())
+		Ω(ValidateDefaultValue("0", common.Uint32)).Should(BeNil())
 
 		Ω(ValidateDefaultValue("1.s", common.Float32)).ShouldNot(BeNil())
 		Ω(ValidateDefaultValue("0.0", common.Float32)).Should(BeNil())
@@ -560,16 +560,16 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name:         "col1",
-					Type:         "Int32",
+					Type:         "Uint32",
 					DefaultValue: &zero,
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col3",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			IsFactTable: true,
@@ -587,15 +587,15 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col3",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{1},
@@ -611,15 +611,15 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col3",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			IsFactTable:       true,
@@ -641,15 +641,15 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col3",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			PrimaryKeyColumns: []int{1},
@@ -665,15 +665,15 @@ var _ = ginkgo.Describe("Validator", func() {
 			Columns: []common.Column{
 				{
 					Name: "col1",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col2",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 				{
 					Name: "col3",
-					Type: "Int32",
+					Type: "Uint32",
 				},
 			},
 			IsFactTable:       true,
