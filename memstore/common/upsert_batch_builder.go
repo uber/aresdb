@@ -512,7 +512,7 @@ func (u UpsertBatchBuilder) toByteArrayOld() ([]byte, error)  {
 
 // ToByteArray produces a serialized UpsertBatch in byte array.
 func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
-	return u.toByteArrayOld()
+	return u.ToByteArrayNew()
 }
 
 // UpdateWithAdditionFunc will return the addition of old value and new value
