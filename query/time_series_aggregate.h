@@ -550,13 +550,15 @@ CGoCallResHandle GeoBatchIntersects(
 
 // WriteGeoShapeDim is the interface to write the shape index to the dimension
 // output. This method should be called after GeoBatchIntersects removes all
-// non-intersecting rows.
+// non-intersecting rows. Note we need pass in the index vector length before
+// geo since outputPredicate has not done compaction yet.
 // Note:
 //   1. we assume that the geo join will be many-to-one join
 //   2. we only support IN operation for geo intersects join
 CGoCallResHandle WriteGeoShapeDim(
-    int shapeTotalWords, DimensionOutputVector dimOut, int indexVectorLength,
-    uint32_t *outputPredicate, void *cudaStream, int device);
+    int shapeTotalWords, DimensionOutputVector dimOut,
+    int indexVectorLengthBeforeGeo, uint32_t *outputPredicate,
+    void *cudaStream, int device);
 
 // BoostrapDevice will bootstrap the all gpu devices with approriate actions.
 // For now it will just initialize the constant memory.

@@ -113,7 +113,8 @@ CGoCallResHandle GeoBatchIntersects(
 }
 
 CGoCallResHandle WriteGeoShapeDim(
-    int shapeTotalWords, DimensionOutputVector dimOut, int indexVectorLength,
+    int shapeTotalWords, DimensionOutputVector dimOut,
+    int indexVectorLengthBeforeGeo,
     uint32_t *outputPredicate, void *cudaStream, int device) {
   CGoCallResHandle resHandle = {nullptr, nullptr};
   try {
@@ -121,10 +122,10 @@ CGoCallResHandle WriteGeoShapeDim(
     cudaSetDevice(device);
 #endif
     ares::write_geo_shape_dim(shapeTotalWords, dimOut,
-                                    indexVectorLength,
+                                    indexVectorLengthBeforeGeo,
                                     outputPredicate,
                                     cudaStream);
-    CheckCUDAError("GeoIntersectsJoin");
+    CheckCUDAError("WriteGeoShapeDim");
     return resHandle;
   } catch (const std::exception &e) {
     std::cerr << "Exception happened when doing GeoIntersectsJoin:" << e.what()
@@ -320,12 +321,14 @@ int GeoIntersectionContext::run(uint32_t *indexVector,
 
 struct is_non_negative {
   __host__ __device__
-  bool operator()(const int val) { return val >= 0; }
+  bool operator()(const int val) {
+    return val >= 0;
+  }
 };
 
 void write_geo_shape_dim(
     int shapeTotalWords,
-    DimensionOutputVector dimOut, int indexVectorLength,
+    DimensionOutputVector dimOut, int indexVectorLengthBeforeGeo,
     uint32_t *outputPredicate, void* cudaStream) {
   typedef thrust::tuple<int8_t, uint8_t> DimensionOutputIterValue;
   GeoPredicateIterator geoPredicateIter(outputPredicate, shapeTotalWords);
@@ -333,17 +336,17 @@ void write_geo_shape_dim(
   auto zippedShapeIndexIter = thrust::make_zip_iterator(thrust::make_tuple(
       geoPredicateIter, thrust::constant_iterator<uint8_t>(1)));
 
-  thrust::transform_if(
+  thrust::copy_if(
 #ifdef RUN_ON_DEVICE
       thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
 #else
       thrust::host,
 #endif
-      zippedShapeIndexIter, zippedShapeIndexIter + indexVectorLength,
+      zippedShapeIndexIter, zippedShapeIndexIter + indexVectorLengthBeforeGeo,
       geoPredicateIter,
       ares::make_dimension_output_iterator<uint8_t>(dimOut.DimValues,
                                                     dimOut.DimNulls),
-      thrust::identity<DimensionOutputIterValue>(), is_non_negative());
+                                                    is_non_negative());
 }
 
 }  // namespace ares

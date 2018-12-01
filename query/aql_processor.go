@@ -931,6 +931,7 @@ func (qc *AQLQueryContext) processBatch(
 			qc.OOPK.currentBatch.geoPredicateVectorD = deviceAllocate(qc.OOPK.currentBatch.size*4*numWords, qc.Device)
 		}
 
+		sizeBeforeGeoFilter := qc.OOPK.currentBatch.size
 		qc.doProfile(func() {
 			if qc.OOPK.geoIntersection != nil {
 				pointColumnIndex := qc.TableScanners[qc.OOPK.geoIntersection.pointTableID].
@@ -956,9 +957,12 @@ func (qc *AQLQueryContext) processBatch(
 				dimVectorIndex := qc.OOPK.DimensionVectorIndex[dimIndex]
 				dimValueOffset, dimNullOffset := queryCom.GetDimensionStartOffsets(qc.OOPK.NumDimsPerDimWidth, dimVectorIndex, qc.OOPK.currentBatch.resultCapacity)
 				if qc.OOPK.geoIntersection != nil && qc.OOPK.geoIntersection.dimIndex == dimIndex {
+					for i :=0 ; i < qc.OOPK.currentBatch.size; i++{
+						fmt.Println(*(*uint32)(memutils.MemAccess(qc.OOPK.currentBatch.geoPredicateVectorD.getPointer(), 4 * i)))
+					}
 					qc.OOPK.currentBatch.writeGeoShapeDim(
 						qc.OOPK.geoIntersection, qc.OOPK.currentBatch.geoPredicateVectorD,
-						dimValueOffset, dimNullOffset, stream, qc.Device)
+						dimValueOffset, dimNullOffset, sizeBeforeGeoFilter, stream, qc.Device)
 				} else {
 					dimensionExprRootAction := qc.OOPK.currentBatch.makeWriteToDimensionVectorAction(dimValueOffset, dimNullOffset)
 					qc.OOPK.currentBatch.processExpression(dimension, nil,
