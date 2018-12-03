@@ -580,7 +580,7 @@ func (bc *oopkBatchContext) makeGeoPointInputVector(pointTableID int, pointColum
 }
 
 func (bc *oopkBatchContext) writeGeoShapeDim(geo *geoIntersection,
-	outputPredicate devicePointer, dimValueOffset, dimNullOffset int, stream unsafe.Pointer, device int) {
+	outputPredicate devicePointer, dimValueOffset, dimNullOffset int, sizeBeforeGeoFilter int, stream unsafe.Pointer, device int) {
 	if bc.size <= 0 || geo.shapeLatLongs.isNull() {
 		return
 	}
@@ -598,7 +598,7 @@ func (bc *oopkBatchContext) writeGeoShapeDim(geo *geoIntersection,
 
 	totalWords := (geo.numShapes + 31) / 32
 	doCGoCall(func() C.CGoCallResHandle {
-		return C.WriteGeoShapeDim((C.int)(totalWords), dimensionOutputVector, (C.int)(bc.size),
+		return C.WriteGeoShapeDim((C.int)(totalWords), dimensionOutputVector, (C.int)(sizeBeforeGeoFilter),
 			(*C.uint32_t)(outputPredicate.getPointer()), stream, (C.int)(device))
 	})
 }

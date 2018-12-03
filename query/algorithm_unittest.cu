@@ -1649,9 +1649,9 @@ TEST(GeoBatchIntersectionJoinTest, DimensionWriting) {
   uint32_t indexVectorH[5] = {0, 1, 2, 3, 4};
   uint32_t *indexVector = allocate(indexVectorH, 5);
 
-  // 5 points ,(1.5,1.5),(0,0), (1.5, 3.5),(1.5,4.5),null
-  //             in2     in1,2      in3        out
-  GeoPointT pointsH[5] = {{1.5, 1.5}, {0, 0}, {1.5, 3.5}, {1.5, 4.5}, {0, 0}};
+  // 5 points  (1.5,1.5) (0,0) (1.5,4.5) (1.5, 3.5)   null
+  //             in2     in1,2  out            in3        out
+  GeoPointT pointsH[5] = {{1.5, 1.5}, {0, 0}, {1.5, 4.5}, {1.5, 3.5}, {0, 0}};
   uint8_t nullsH[1] = {0x0F};
 
   uint32_t outputPredicateH[5] = {0};
@@ -1679,16 +1679,16 @@ TEST(GeoBatchIntersectionJoinTest, DimensionWriting) {
 
   resHandle = WriteGeoShapeDim(1, outputDimension, 5, outputPredicate, 0, 0);
 
-  uint32_t expectedOutputPredicate[5] = {2, 3, 4, 0, 0};
+  uint32_t expectedOutputPredicate[5] = {2, 3, 0, 4, 0};
   GeoPredicateIterator geoIter(expectedOutputPredicate, 1);
   EXPECT_TRUE(
       equal(outputPredicate, outputPredicate + 5, expectedOutputPredicate));
   uint8_t expectedDimValues[5] = {1, 0, 2, 0, 0};
   uint8_t expectedDimNulls[5] = {1, 1, 1, 0, 0};
-  EXPECT_TRUE(equal(outputDimension.DimValues, outputDimension.DimValues + 5,
-                    expectedDimValues));
-  EXPECT_TRUE(equal(outputDimension.DimNulls, outputDimension.DimNulls + 5,
-                    expectedDimNulls));
+  EXPECT_TRUE(equal(outputDimension.DimValues,
+      outputDimension.DimValues + 5, expectedDimValues));
+  EXPECT_TRUE(equal_print(outputDimension.DimNulls,
+      outputDimension.DimNulls + 5, expectedDimNulls));
 
   release(outputPredicate);
   release(indexVector);
