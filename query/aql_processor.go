@@ -957,9 +957,6 @@ func (qc *AQLQueryContext) processBatch(
 				dimVectorIndex := qc.OOPK.DimensionVectorIndex[dimIndex]
 				dimValueOffset, dimNullOffset := queryCom.GetDimensionStartOffsets(qc.OOPK.NumDimsPerDimWidth, dimVectorIndex, qc.OOPK.currentBatch.resultCapacity)
 				if qc.OOPK.geoIntersection != nil && qc.OOPK.geoIntersection.dimIndex == dimIndex {
-					for i :=0 ; i < qc.OOPK.currentBatch.size; i++{
-						fmt.Println(*(*uint32)(memutils.MemAccess(qc.OOPK.currentBatch.geoPredicateVectorD.getPointer(), 4 * i)))
-					}
 					qc.OOPK.currentBatch.writeGeoShapeDim(
 						qc.OOPK.geoIntersection, qc.OOPK.currentBatch.geoPredicateVectorD,
 						dimValueOffset, dimNullOffset, sizeBeforeGeoFilter, stream, qc.Device)
