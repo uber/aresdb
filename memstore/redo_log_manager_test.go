@@ -152,6 +152,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 
 	ginkgo.It("truncate redo log file works for invalid size", func() {
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
+		correctBufferSize := len(buffer)
 
 		file1 := &testing.TestReadWriteCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
@@ -172,7 +173,8 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		diskStore.On("ListLogFiles", mock.Anything, mock.Anything).Return([]int64{1, 2}, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(1)).Return(file1, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(2)).Return(file2, nil)
-		diskStore.On("TruncateLogFile", "abc", 0, int64(2), int64(24)).Return(nil)
+		// magic header (uint32) + size (uint32) + correctBufferSize
+		diskStore.On("TruncateLogFile", "abc", 0, int64(2), int64(4+4+correctBufferSize)).Return(nil)
 		redoManager := NewRedoLogManager(10, 1<<30, diskStore, "abc", 0)
 		nextUpsertBatch := redoManager.NextUpsertBatch()
 
@@ -197,6 +199,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 
 	ginkgo.It("truncate redo log file works for invalid upsert batch", func() {
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
+		correctBufferSize := len(buffer)
 
 		file1 := &testing.TestReadWriteCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
@@ -220,7 +223,8 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		diskStore.On("ListLogFiles", mock.Anything, mock.Anything).Return([]int64{1, 2}, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(1)).Return(file1, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(2)).Return(file2, nil)
-		diskStore.On("TruncateLogFile", "abc", 0, int64(2), int64(24)).Return(nil)
+		// magic header (uint32) + size (uint32) + correctBufferSize
+		diskStore.On("TruncateLogFile", "abc", 0, int64(2), int64(4+4+correctBufferSize)).Return(nil)
 		redoManager := NewRedoLogManager(10, 1<<30, diskStore, "abc", 0)
 		nextUpsertBatch := redoManager.NextUpsertBatch()
 
@@ -245,6 +249,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 
 	ginkgo.It("truncate redo log file works for insufficient buffer length", func() {
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
+		correctBufferSize := len(buffer)
 
 		file1 := &testing.TestReadWriteCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
@@ -268,7 +273,8 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		diskStore.On("ListLogFiles", mock.Anything, mock.Anything).Return([]int64{1, 2}, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(1)).Return(file1, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(2)).Return(file2, nil)
-		diskStore.On("TruncateLogFile", "abc", 0, int64(2), int64(24)).Return(nil)
+		// magic header (uint32) + size (uint32) + correctBufferSize
+		diskStore.On("TruncateLogFile", "abc", 0, int64(2), int64(4+4+correctBufferSize)).Return(nil)
 		redoManager := NewRedoLogManager(10, 1<<30, diskStore, "abc", 0)
 		nextUpsertBatch := redoManager.NextUpsertBatch()
 
@@ -293,6 +299,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 
 	ginkgo.It("truncate redo log file should continue to read next file", func() {
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
+		correctBufferSize := len(buffer)
 
 		file1 := &testing.TestReadWriteCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
@@ -323,7 +330,8 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(1)).Return(file1, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(2)).Return(file2, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(3)).Return(file3, nil)
-		diskStore.On("TruncateLogFile", "abc", 0, int64(2), int64(24)).Return(nil)
+		// magic header (uint32) + size (uint32) + correctBufferSize
+		diskStore.On("TruncateLogFile", "abc", 0, int64(2), int64(4+4+correctBufferSize)).Return(nil)
 		redoManager := NewRedoLogManager(10, 1<<30, diskStore, "abc", 0)
 		nextUpsertBatch := redoManager.NextUpsertBatch()
 

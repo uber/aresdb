@@ -323,7 +323,7 @@ var _ = ginkgo.Describe("archiving", func() {
 			return patchByDay[0].recordIDs[i].BatchID < patchByDay[0].recordIDs[j].BatchID
 		})
 
-		Ω(patchByDay[0].recordIDs).Should(Equal(
+		Ω(patchByDay[0].recordIDs).Should(Or(Equal(
 			[]RecordID{
 				{0, 1},
 				{0, 2},
@@ -331,7 +331,15 @@ var _ = ginkgo.Describe("archiving", func() {
 				{1, 2},
 				{1, 3},
 				{1, 4},
-			},
+			}), Equal(
+			[]RecordID{
+				{0, 1},
+				{0, 2},
+				{0, 3},
+				{0, 4},
+				{1, 1},
+				{1, 2},
+			}),
 		))
 	})
 

@@ -21,7 +21,11 @@ import (
 	"time"
 )
 
-var _ = ginkgo.Describe("upsert batch", func() {
+var _ = ginkgo.Describe("upsert batch builder", func() {
+
+	ginkgo.BeforeEach(func() {
+		utils.SetCurrentTime(time.Unix(10, 0))
+	})
 
 	ginkgo.AfterEach(func() {
 		utils.ResetClockImplementation()
@@ -29,13 +33,8 @@ var _ = ginkgo.Describe("upsert batch", func() {
 
 	ginkgo.It("works for empty batch", func() {
 		builder := NewUpsertBatchBuilder()
-		buffer, err := builder.ToByteArray()
-		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
-
 		// write with new version
-		utils.SetCurrentTime(time.Unix(10, 0))
-		bufferNew, err := builder.ToByteArrayNew()
+		bufferNew, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
 		Ω(bufferNew).Should(Equal([]byte{1, 0, 237, 254, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0}))
 	})
@@ -45,7 +44,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		builder.AddColumn(123, Uint8)
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{0, 0, 0, 0, 1, 0, 0, 0, 23, 0, 0, 0, 23, 0, 0, 0, 8, 0, 2, 0, 123, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 0, 123, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("works for empty column", func() {
@@ -53,7 +52,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		builder.AddRow()
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("works for one row, one col, no value", func() {
@@ -63,7 +62,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(err).Should(BeNil())
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{1, 0, 0, 0, 1, 0, 0, 0, 23, 0, 0, 0, 23, 0, 0, 0, 8, 0, 2, 0, 123, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 0, 123, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("works for one row, one col, one value", func() {
@@ -73,8 +72,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		builder.SetValue(0, 0, uint8(135))
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{1, 0, 0, 0, 1, 0, 0, 0, 23, 0, 0, 0, 25, 0, 0, 0, 8, 0, 2, 0, 123, 0, 1, 0, 135, 0, 0, 0, 0, 0, 0, 0}))
-
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 0, 123, 0, 1, 0, 0, 0, 0, 0, 135, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("reset row works", func() {
@@ -85,7 +83,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		builder.ResetRows()
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{0, 0, 0, 0, 1, 0, 0, 0, 23, 0, 0, 0, 23, 0, 0, 0, 8, 0, 2, 0, 123, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 0, 123, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("raises error when setting wrong value type", func() {
@@ -95,7 +93,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		err := builder.SetValue(0, 0, "a")
 		Ω(err).ShouldNot(BeNil())
 		buffer, err := builder.ToByteArray()
-		Ω(buffer).Should(Equal([]byte{1, 0, 0, 0, 1, 0, 0, 0, 23, 0, 0, 0, 23, 0, 0, 0, 8, 0, 2, 0, 123, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 0, 123, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("last value wins", func() {
@@ -108,22 +106,19 @@ var _ = ginkgo.Describe("upsert batch", func() {
 
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{2, 0, 0, 0, 1, 0, 0, 0, 23, 0, 0, 0, 25, 0, 0, 0, 1, 0, 0, 0,
-			123, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 123, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
 
 		buffer, err = builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{2, 0, 0, 0, 1, 0, 0, 0, 23, 0, 0, 0, 25, 0, 0, 0, 1, 0, 0, 0,
-			123, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 123, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
 
 		err = builder.SetValue(0, 0, nil)
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{2, 0, 0, 0, 1, 0, 0, 0,
-			23, 0, 0, 0, 25, 0, 0, 0, 1, 0, 0, 0, 123, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 123, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
 
 		buffer, err = builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{2, 0, 0, 0, 1, 0, 0, 0, 23, 0, 0, 0, 23, 0, 0, 0, 1, 0, 0, 0, 123, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("works for bool type", func() {
@@ -150,9 +145,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		Ω(buffer).Should(Equal([]byte{2, 0, 0, 0, 3, 0, 0, 0, 45, 0, 0, 0, 45, 0, 0, 0, 49, 0, 0, 0, 57, 0, 0, 0, 1, 0,
-			0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 123, 0, 200, 1, 21, 3, 0, 2, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-			1, 0, 0, 0, 0, 0, 0, 0}))
+		Ω(buffer).Should(Equal([]byte{1, 0, 237, 254, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 89, 0, 0, 0, 89, 0, 0, 0, 97, 0, 0, 0, 105, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 123, 0, 200, 1, 21, 3, 0, 2, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("UpdateOverWrite add column ex fail", func() {
