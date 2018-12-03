@@ -1,4 +1,4 @@
-[![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
+[![Build Status](https://travis-ci.com/uber/aresdb.svg?branch=master)](https://travis-ci.com/uber/aresdb)
 
 AresDB
 ==============
