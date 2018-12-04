@@ -18,7 +18,7 @@ cache:
     - gtest
 
 before_cache:
-  - currentCommit="$(git ref-parse HEAD)" && echo "${currentCommit}" > lib/.cached_commit
+  - currentCommit="$(git rev-parse HEAD)" && echo "${currentCommit}" > lib/.cached_commit
 
 # safelist
 branches:

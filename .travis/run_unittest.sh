@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -ex
 
-cachedLibCommit=$(cat lib/.cached_commit 2>/dev/null)
+if [ -f "lib/.cached_commit" ]; then
+  cachedLibCommit=$(cat lib/.cached_commit)
+fi
+
 cudaFileChanged=false
 if [ ! -z "${cachedLibCommit}" ]; then
   changefiles=$(git diff "${cachedLibCommit}")
