@@ -7,10 +7,16 @@ env:
     - CUDA_VERSION="10.0"
     - CUDA_PKG_VERSION="130-1"
     - CUDA_PKG=cuda-repo-ubuntu1404_${CUDA_VERSION}.${CUDA_PKG_VERSION}_amd64.deb
-    - CUDA_HOME=/usr/local/cuda
-    - PATH=${PATH}:${CUDA_HOME}/bin:${GOPATH}/bin
-    - LD_LIBRARY_PATH=${CUDA_HOME}/lib:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
+    - CUDA_LIB_LOCAL=${HOME}/cuda_lib
+    - CUDA_HOME=${CUDA_LIB_LOCAL}
+    - PATH=${PATH}:${CUDA_HOME}/bin:${GOPATH}/bin:${CUDA_HOME}/nvvm/bin
+    - LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
+    - NVCCFLAGS="-ldir ${CUDA_HOME}/nvvm/libdevice -noprof -I ${CUDA_HOME}/include/ -L ${CUDA_HOME}/lib64"
     - GTEST_ROOT=./build/googletest
+
+cache:
+  directories:
+  - $CUDA_LIB_LOCAL
 
 install:
   - .travis/install_cuda.sh
