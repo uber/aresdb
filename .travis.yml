@@ -12,6 +12,11 @@ env:
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
     - GTEST_ROOT=./build/googletest
 
+# safelist
+branches:
+  only:
+    - master
+
 install:
   - .travis/install_cuda.sh
   - .travis/install_golang_tools.sh
