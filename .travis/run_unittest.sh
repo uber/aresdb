@@ -7,7 +7,7 @@ fi
 
 cudaFileChanged=false
 if [ ! -z "${cachedLibCommit}" ]; then
-  changefiles=$(git diff "${cachedLibCommit}")
+  changefiles=$(git diff "${cachedLibCommit}" --name-only)
   for file in ${changefiles}
   do
     ext="${file##*.}"
