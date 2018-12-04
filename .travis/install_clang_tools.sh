@@ -13,6 +13,7 @@ popd
 mv /tmp/googletest ${output_dir}
 
 # install cppcheck
+sudo apt-get update
 sudo apt-get install cppcheck
 
 # install cpplint
