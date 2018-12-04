@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -ex
+
+ls -r lib
 # run test-cuda in host mode
 make test-cuda -j
 
