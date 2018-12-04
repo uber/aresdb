@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 set -ex
 
-ls -la lib 
-ls -la lib/algorithm 
-ls -la gtest
-ls -la query
+find lib -type f  -exec touch {} +
+find gtest -type f  -exec touch {} +
 # run test-cuda in host mode
 make test-cuda -j
 
