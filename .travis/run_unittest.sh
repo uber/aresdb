@@ -23,7 +23,7 @@ fi
 
 if [ "${cudaFileChanged}" == "true" ]; then
   # clean up lib and cuda test when cuda file change found
-	make clean
+  make clean
   make clean-cuda-test
 else
   # touch files in lib and gtest to update the timestamp so that make will not treat lib objects as outdated 
