@@ -21,5 +21,9 @@ script:
   - make lint
   - make travis
 
+after_success:
+  - gover . coverage.out
+  - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken wPbvWbglxjTOdHlL31KmyC9Rl946eJ3RK
+
 after_script:
   - .travis/cleanup.sh

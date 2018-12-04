@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/uber/aresdb.svg?branch=master)](https://travis-ci.com/uber/aresdb)
+[![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
 
 AresDB
 ==============
@@ -87,3 +87,8 @@ Interested in learning more about AresDB? Read the blog post:
 License
 -------
 Apache 2.0 License, please see [LICENSE](LICENSE) for details.
+
+[ci-img]: https://travis-ci.com/uber/aresdb.svg?branch=master
+[ci]: https://travis-ci.com/uber/aresdb
+[cov-img]: https://coveralls.io/repos/github/uber/aresdb/badge.svg
+[cov]: https://coveralls.io/github/uber/aresdb
