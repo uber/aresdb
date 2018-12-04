@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -ex
 
-pwd && ls -r lib/algorithm
+touch lib/*
+touch gtest/*
 # run test-cuda in host mode
 make test-cuda -j
 
