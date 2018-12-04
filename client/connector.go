@@ -274,7 +274,7 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 			}
 
 			// skip rows if time column is nil for fact table
-			if value == nil && schema.Table.IsFactTable && columnID == 0 {
+			if value == nil && schema.Table.IsFactTable && !schema.Table.Config.AllowMissingEventTime && columnID == 0 {
 				upsertBatchBuilder.RemoveRow()
 				c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "table": tableName, "columnID": columnID, "value": value}).Error("Time column is nil")
 				break
@@ -321,7 +321,7 @@ func (c *connector) checkPrimaryKeys(schema *tableSchema, columnNames []string) 
 
 // checkTimeColumnExistence checks if time column is missing for fact table
 func (c *connector) checkTimeColumnExistence(schema *tableSchema, columnNames []string) error {
-	if !schema.Table.IsFactTable {
+	if !schema.Table.IsFactTable || schema.Table.Config.AllowMissingEventTime {
 		return nil
 	}
 

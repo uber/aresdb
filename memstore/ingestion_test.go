@@ -694,7 +694,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(1, 0, uint32(10))
 		builder.SetValue(1, 1, uint8(2))
 
-		buffer, _ := builder.ToByteArrayNew()
+		buffer, _ := builder.ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())

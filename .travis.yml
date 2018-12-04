@@ -17,6 +17,11 @@ cache:
     - lib
     - gtest
 
+# safelist
+branches:
+  only:
+    - master
+
 install:
   - .travis/install_cuda.sh
   - .travis/install_golang_tools.sh
