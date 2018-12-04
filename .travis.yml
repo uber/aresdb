@@ -15,6 +15,7 @@ env:
 cache: 
   directories:
     - lib
+    - gtest
 
 install:
   - .travis/install_cuda.sh
