@@ -7,11 +7,20 @@ ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-bu
   -e ".*/_.*" \
   -e ".*/mocks.*")
 
+CHANGED_GO_SRC := $(shell git diff HEAD origin/master --name-only | grep -e ".*\.go")
+
+GO_SRC := $(CHANGED_GO_SRC)
+
 ALL_C_SRC := $(shell find . -type f \( -iname \*.cu -o -iname \*.h -o -iname \*.hpp -o -iname \*.c \) | grep -v -e Godeps -e vendor -e go-build \
   -e build \
   -e ".*/\..*" \
   -e ".*/_.*" \
   -e ".*/mocks.*")
+
+CHANGED_C_SRC := $(shell git diff HEAD origin/master --name-only | grep -e ".*\.\(cu\|c\|h\|hpp\)")
+
+C_SRC := $(CHANGED_C_SRC)
+
 
 CUDA_DRIVER_ENABLED := $(shell which nvidia-smi && nvidia-smi | grep "Driver Version:")
 
@@ -37,6 +46,7 @@ ifndef QUERY_MODE
     QUERY_MODE := $(if $(CUDA_DRIVER_ENABLED),DEVICE,HOST)
 endif
 
+
 # specify dependencies for memory allocation library based on whether cuda driver is available.
 ifeq "$(QUERY_MODE)" "DEVICE"
 lib/libmem.so:
@@ -49,17 +59,25 @@ endif
 libs: lib/libmem.so lib/libalgorithm.so
 
 clang-lint:
-	cppcheck --std=c++11 --language=c++ --inline-suppr --suppress=selfInitialization $(ALL_C_SRC)
-	cpplint --extensions=cu,hpp $(ALL_C_SRC) # do cpplint for cpp source files only
+ifneq ($(C_SRC),)
+	cppcheck --std=c++11 --language=c++ --inline-suppr --suppress=selfInitialization $(C_SRC)
+	cpplint --extensions=cu,hpp $(C_SRC) # do cpplint for cpp source files only
+endif
 
 golang-lint:
-	gofmt -w $(ALL_GO_SRC)
-	golint -set_exit_status $(ALL_GO_SRC)
+ifneq ($(GO_SRC),)
+	gofmt -w $(GO_SRC)
+	golint -set_exit_status $(GO_SRC)
 	go vet
+endif
 
+lint-all: C_SRC := $(ALL_C_SRC)
+lint-all: GO_SRC := $(ALL_GO_SRC)
+lint-all: deps golang-lint clang-lint
 
+lint: C_SRC := $(CHANGED_C_SRC)
+lint: GO_SRC := $(CHANGED_GO_SRC)
 lint: deps golang-lint clang-lint
-
 
 ares: libs
 	go build -o $@

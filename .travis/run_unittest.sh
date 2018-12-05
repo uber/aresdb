@@ -33,17 +33,10 @@ make test-cuda -j
 make ares -j
 
 # run test
-ginkgo -r
+ginkgo -r -cover
 
 # update cached_commit
 if [ "${cudaFileChanged}" == "true" ]; then
   currentCommit="$(git rev-list --no-merges -n 1 HEAD)"
   echo "${currentCommit}" > lib/.cached_commit
 fi
-
-echo "mode: atomic" > coverage.out
-for file in $(find . -name "*.coverprofile" ! \( -name "coverage.out"  -o -name "expr.coverprofile" \) ); do \
-    cat $file | grep -v "mode: atomic" | awk 's=index($0,"ares")+length("ares") { print "." substr($0, s)}' >> coverage.out ; \
-    #rm $file ; \
-done
-gocov convert coverage.out | gocov-xml > coverage.xml
