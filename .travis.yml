@@ -11,25 +11,26 @@ env:
     - PATH=${PATH}:${CUDA_HOME}/bin:${GOPATH}/bin
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
     - GTEST_ROOT=./build/googletest
-
-# safelist
+    # coverall token ROPOTOKEN
+    - secure: "MiZu9qbg0Ftps3i3RQK2u13WfAip4SrH7FrWyWAgW0dLY+CIPyzekxWqGJzfiSbcasoO4obysz7BroNTHu+x/4O3COacVknUPw7cajX9C7YXWMk5JAg+3oV5RQGu02k7bugE6pigNvkfdJM2A6Gw/453VLWhQJkvKY/o65jVlsxaqXsowT7inuYRzp6HwWrNDXgIVPEHj1HLGBDKTheM9AGMFX89oqwC+hqf8hB0lgxFZ+Xz1rqHDLXVvri30woEcC+DSS5E0RsId75aAzhP3WQnJBvo81VVw4hGtrqnxQPuU14W2UXf+OavGj7CZInFCYrrDdl/hI+NlhWKraLwBap9z8ZMzwPyJkWr7G+WJ5WzI1ikXWcvuIhhm9D+xrL6/cEw8e7lb8EsilT0kri2g4tW/ot2bAykc2WJmpxUgpNb1ty6Ef66Ro3dgAWULCP85SkgCjJwNOUyoi3pEZguvjFa8O6eh26p3WVxGDBKD0ngSjqkqSX4pB4pTOMczKvLYqL6x+ydThFzFb+e9PBbqAUG7BKeKFCI33LBOad3BU2f+PeVaR2vG4/VAaTzAzw0/KXXKFa3NeOcbn+RTl6AHxlbRmTzIS+VT5r5jp3y+Q6C3UEy5eCzCk1ZQX5uP+3B+QMNWJfdkZMFsd2yI+tygJg32LG5zgqDmsOXkCcGALQ="
+    # codecov token CODECOV_TOKEN
+    - secure: "k2bo3dEOvYB3tgOlzvcq0U4wA94QDMg3jjohK+fo8K8Vv/5ivSeT2X0mVMvPAWgwBExzsh5/IQa0rZvyXPh7BaVGeCVqR2cl2mEWto7zrwGP95TOKxTVfKt+XwHV98Exzlz/K8Jv/Yp0EM9zZXoevdQLO6JvpBASJKi3I17W+YY3UDctz2oP5DKwnT2EwpGQK0j+U95+qShgoNfBiNs4h6pAsiZ0Lg/A7a57hiAzcXGyWKAoFIV8kX0MGCFHoMqD5M5ZGv+JTR3der8RcqnnmxzkYdsqmAQQ2QTex4jziY7cLFS/NFNk6nPK0xFY/BVuQQYhwLqGd1unEJevzmPztfWwI8mEvS9FKhl3LVxYdUGxmpieKDA8tw+rN1RR91RzZW0896xsZQEWwjpAugaLKYTGpcQlvotolG76IIlcJlCacd1mg7E/iiVfRDesyKzKGTocFZUPhLoLAMt7frj+pKR2nU1Yu+7nzv/FXWCtssZBXI81JRmuUSIne3yI1ciJPuRpRngoyxd5KNdlbARsi1WBVYSFNySsiB9de7TAZvnkiimK+tzE0CNJ5OvJH+U/6dNCmDunE5lFn0Jcs6oSFmtyQuWGJvFljcQ2U7qUM3a6If82sNRY9/0naotO1ABRZbg7MNQGdGLmpeoYNYKsL82gX5JgcC4OVjupEzP1+dA="
 branches:
   only:
     - master
-
 install:
   - .travis/install_cuda.sh
   - .travis/install_golang_tools.sh
   - .travis/install_clang_tools.sh
-
 script:
   - make lint
   - make travis
-
 after_success:
   - rm query/expr/expr.coverprofile
   - gover . coverage.out
-  - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken wPbvWbglxjTOdHlL31KmyC9Rl946eJ3RK
-
+  - head coverage.out
+  - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $ROPOTOKEN
+  - mv coverage.out coverage.txt
+  - bash <(curl -s https://codecov.io/bash)
 after_script:
   - .travis/cleanup.sh
