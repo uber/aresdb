@@ -18,6 +18,11 @@ cache:
   directories:
   - $CUDA_LIB_LOCAL
 
+# safelist
+branches:
+  only:
+    - master
+
 install:
   - .travis/install_cuda.sh
   - .travis/install_golang_tools.sh
