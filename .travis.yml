@@ -12,6 +12,11 @@ env:
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
     - GTEST_ROOT=./build/googletest
 
+cache: 
+  directories:
+    - lib
+    - gtest
+
 # safelist
 branches:
   only:
