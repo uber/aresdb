@@ -13,6 +13,10 @@ env:
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
     - NVCCFLAGS="-ldir ${CUDA_HOME}/nvvm/libdevice -noprof -I ${CUDA_HOME}/include/ -L ${CUDA_HOME}/lib64"
     - GTEST_ROOT=./build/googletest
+cache: 
+  directories:
+    - lib
+    - gtest
 
 cache:
   directories:
@@ -22,15 +26,22 @@ cache:
 branches:
   only:
     - master
-
 install:
   - .travis/install_cuda.sh
   - .travis/install_golang_tools.sh
   - .travis/install_clang_tools.sh
-
 script:
   - make lint
   - make travis
-
+after_success:
+  # exclude query/expr from coverage
+  - rm query/expr/expr.coverprofile
+  # generate coverage output file
+  - gover . coverage.out
+  # send to coverall
+  - goveralls -coverprofile=coverage.out -service=travis-ci 
+  # send to codecov.io
+  - mv coverage.out coverage.txt
+  - bash <(curl -s https://codecov.io/bash)
 after_script:
   - .travis/cleanup.sh
