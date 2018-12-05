@@ -34,14 +34,9 @@ script:
   - make lint
   - make travis
 after_success:
-  # exclude query/expr from coverage
-  - rm query/expr/expr.coverprofile
   # generate coverage output file
-  - gover . coverage.out
-  # send to coverall
-  - goveralls -coverprofile=coverage.out -service=travis-ci 
+  - gover . coverage.txt
   # send to codecov.io
-  - mv coverage.out coverage.txt
   - bash <(curl -s https://codecov.io/bash)
 after_script:
   - .travis/cleanup.sh
