@@ -12,7 +12,7 @@ env:
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
     - GTEST_ROOT=./build/googletest
     # coverall token COVERALLS_TOKEN
-    - secure: "nPYBfMqQjw3bzc84bXcN6FnNH52Zha060cRrPa6kUM1R2WiR+YYgOdMxE+OCglvqi6c4ykktHqh5T8+hM6VQzIrtEGMu4WMhrOrNrBCWHB4t2+7Fo5/reADW9WxqakWomvHbNQZmJB+OMl1qYtmkwo8Dy2NnyUX0tmC+04cnINk0naAmp/wTMbMvf3IDPZmFsROTBl+d37y/dfb4MvpHLtj7xMYZi3UmFqvbnIfWGknd64uLf/NX/+cRHXEsKIWgS7F5uD3ptFepbEpZqJ28QAUeLsSg24FTroDxmkQvpFwytbC5ByAesb3SMOY7nky5ZUpK8mz0mJaKLQK8f5TR4eFU4kxnJ+69InsQhKqRB4HvJWwjB9auMY6v/KYWq+nkGxlyAtIeN1rFrOksIuEIZVIJyCHrziVBnoCvrt6rPecsEHkZIisruIQhiu0c1ywrfOUye9y/4q2nMZYZ/eEkuHGfjL+FKO2wiqM1Ew4ATdeP7GWO+4ACNVXwR6kdAM9hP5lTbSnIQOxYmHVktjkuPY6BYmPVcnKZvWT9VfDKgXTNSunSCxCPwgoP6Uc0fRyvqGmo2MM2InmYnawkSxZsiRKr7BL1QIY5ly3dMP++kMkeM4j2EuvC3lUvtr06d+k/5AxzWfpkwHJIzhPNDlMqYix7v7ef2ejtNqUGPK3lt94="
+    - secure: "UrLFtHwHz9G8T471aFe6+zn0gt294uFvpY0TFLHA/aYpZ9O7lJNLHd3lsNl5NYLIwdeuOSTBDX3PUFTPf/INcrpdEcqj6d0tDVkLrlUfXeRs7wTJ1JcwN+KTQP7LFw3S5cq05JXgrQlVWNlDkF13Ij6Ck0Tak8psw2VuHFL2TYR6kroM58ytEEFRRVrrCQeGQ2SK/NisCb9U93ySsNcyiGAdYIAkhErhbhb3cyWTBRls8O8TvPi0tg7z8S7F4cLoVkwe6zkRkdU5l61UbNxTH2He9eTiD1DNK2O8PmhNedo/YYsEJI5YwOFQnwtgW9yjy9cUTQLxywXxM71D4yF16oJQ4QTx35O+EVWijO1OW3UW9FpsbdOB5p/ybzsuhPIqlIZZJYRD+hr4zfvCvMDr+0RMzbeIv/yIzpEiREFQbizFFzHfyPpiVG7dmhNo1wyQznBZem1WkrI0N5tSXkq9+mxCo7GzTJVeRRInetfdu5Jjye82UM7TAVwsjA6t3fgVoaj7GfhvCZFSwQYawDbCv4nwW6SjtaWQeC5vFdhOrknC8Q3FFljLeG+3rT0vdc8E7wkvkGO0m61GIMCnFlkNllwSnC/gs3Fjrt9aa9c8WDPrT3EkBkl8ybnRZrcd+YhkJ6bRMkyoDkXhU1I/sCWABtSfnRWw6vebE8DhrtjJCLM="
     # codecov token CODECOV_TOKEN
     - secure: "k2bo3dEOvYB3tgOlzvcq0U4wA94QDMg3jjohK+fo8K8Vv/5ivSeT2X0mVMvPAWgwBExzsh5/IQa0rZvyXPh7BaVGeCVqR2cl2mEWto7zrwGP95TOKxTVfKt+XwHV98Exzlz/K8Jv/Yp0EM9zZXoevdQLO6JvpBASJKi3I17W+YY3UDctz2oP5DKwnT2EwpGQK0j+U95+qShgoNfBiNs4h6pAsiZ0Lg/A7a57hiAzcXGyWKAoFIV8kX0MGCFHoMqD5M5ZGv+JTR3der8RcqnnmxzkYdsqmAQQ2QTex4jziY7cLFS/NFNk6nPK0xFY/BVuQQYhwLqGd1unEJevzmPztfWwI8mEvS9FKhl3LVxYdUGxmpieKDA8tw+rN1RR91RzZW0896xsZQEWwjpAugaLKYTGpcQlvotolG76IIlcJlCacd1mg7E/iiVfRDesyKzKGTocFZUPhLoLAMt7frj+pKR2nU1Yu+7nzv/FXWCtssZBXI81JRmuUSIne3yI1ciJPuRpRngoyxd5KNdlbARsi1WBVYSFNySsiB9de7TAZvnkiimK+tzE0CNJ5OvJH+U/6dNCmDunE5lFn0Jcs6oSFmtyQuWGJvFljcQ2U7qUM3a6If82sNRY9/0naotO1ABRZbg7MNQGdGLmpeoYNYKsL82gX5JgcC4OVjupEzP1+dA="
 cache: 
@@ -36,7 +36,7 @@ after_success:
   - gover . coverage.out
   - head coverage.out
   - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
-  - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken xKiEh57SohfELSQf4MMeszxjokApeHwOI
+  - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken tYPyObXoTFdbplZY9FFEfIwmWABXDClRV
   - mv coverage.out coverage.txt
   - bash <(curl -s https://codecov.io/bash)
 after_script:
