@@ -8,7 +8,7 @@ fi
 cudaFileChanged=false
 if [ ! -z "${cachedLibCommit}" ]; then
   changeCudaFiles=$(git diff "${cachedLibCommit}" --name-only | grep -c -e "\\.hpp" -e "\\.h" -e "\\.cu")
-  if [ "${changeCudaFiles}" -lt 0 ]; then 
+  if [[ "${changeCudaFiles}" -gt 0 ]]; then 
     cudaFileChanged=true	
   fi
 else
