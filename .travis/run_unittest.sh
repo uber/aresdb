@@ -33,7 +33,10 @@ make test-cuda -j
 make ares -j
 
 # run test
-ginkgo -r -cover
+cd query/expr
+ginkgo -r
+cd ../..
+ginkgo -r -cover -skipPackage expr
 
 # update cached_commit
 if [ "${cudaFileChanged}" == "true" ]; then

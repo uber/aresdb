@@ -90,6 +90,6 @@ Apache 2.0 License, please see [LICENSE](LICENSE) for details.
 
 [ci-img]: https://travis-ci.com/uber/aresdb.svg?branch=master
 [ci]: https://travis-ci.com/uber/aresdb
-[cov-img]: https://coveralls.io/repos/github/uber/aresdb/badge.svg?branch=master
-[cov]: https://coveralls.io/github/uber/aresdb
+[cov-img]: https://codecov.io/gh/uber/aresdb/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/uber/aresdb
 
