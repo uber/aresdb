@@ -17,10 +17,6 @@ cache:
     - lib
     - gtest
 
-before_cache:
-  # record the last non merge commit
-  - currentCommit="$(git rev-list --no-merges -n 1 HEAD)" && echo "${currentCommit}" > lib/.cached_commit
-
 # safelist
 branches:
   only:

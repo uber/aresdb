@@ -7,13 +7,14 @@ fi
 
 cudaFileChanged=false
 if [ ! -z "${cachedLibCommit}" ]; then
-  changeCudaFiles=$(git diff "${cachedLibCommit}" --name-only | grep -c -e "\\.hpp" -e "\\.h" -e "\\.cu")
-  if [[ "${changeCudaFiles}" -gt 0 ]]; then 
-    cudaFileChanged=true	
+  numCUDAFilesChanged=$(git diff "${cachedLibCommit}" --name-only | grep -c -e "\\.hpp" -e "\\.h" -e "\\.cu" || true)
+  if [ "${numCUDAFilesChanged}" -gt 0 ]; then
+    cudaFileChanged=true
   fi
 else
   cudaFileChanged=true
 fi
+
 
 if [ "${cudaFileChanged}" == "true" ]; then
   # clean up lib and cuda test when cuda file change found
@@ -33,6 +34,12 @@ make ares -j
 
 # run test
 ginkgo -r
+
+# update cached_commit
+if [ "${cudaFileChanged}" == "true" ]; then
+  currentCommit="$(git rev-list --no-merges -n 1 HEAD)"
+  echo "${currentCommit}" > lib/.cached_commit
+fi
 
 echo "mode: atomic" > coverage.out
 for file in $(find . -name "*.coverprofile" ! \( -name "coverage.out"  -o -name "expr.coverprofile" \) ); do \
