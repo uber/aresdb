@@ -32,8 +32,8 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/uber-common/bark"
-	"github.com/uber/aresdb/clients"
 	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/distributed"
 )
 
 // StartService is the entry point of starting ares.
@@ -82,14 +82,12 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 		if controllerClientCfg == nil {
 			logger.Fatal("Missing controller client config", err)
 		}
-		if cfg.Cluster.InstanceName != "" {
-			controllerClientCfg.Headers.Add(clients.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
+		memberhipManager := distributed.NewMembershipManager(cfg, metaStore)
+		err = memberhipManager.Connect()
+		if err != nil {
+			utils.GetLogger().Fatal(err)
 		}
-		controllerClient := clients.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
-		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.ClusterName, "")
-		// immediate initial fetch
-		schemaFetchJob.FetchSchema()
-		go schemaFetchJob.Run()
+		defer memberhipManager.Disconnect()
 	}
 
 	// Create DiskStore.

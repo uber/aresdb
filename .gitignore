@@ -16,3 +16,4 @@ ares-root
 default.yaml
 bower_components
 node_modules
+zookeeper-*

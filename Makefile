@@ -91,7 +91,7 @@ clean:
 clean-cuda-test:
 	-rm -rf gtest/*
 
-test: ares
+test: ares zookeeper-3.4.10
 	bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
 
 travis:
@@ -242,3 +242,9 @@ $(GTEST_OUT_DIR)/%_unittest.o: $(CXX_SRC_DIR)/query/%_unittest.cu
 
 $(GTEST_OUT_DIR)/all_unittest : $(patsubst %,$(GTEST_OUT_DIR)/%.o,$(CUDA_TESTS)) $(GTEST_OUT_DIR)/gtest_main.a
 	$(NVCC) $(CPPFLAGS) $(CXXFLAGS) $(NVCCFLAGS) $^ -o $@  -lpthread -lalgorithm
+
+zookeeper-3.4.10.tar.gz:
+	wget http://apache.cs.utah.edu/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
+
+zookeeper-3.4.10:  zookeeper-3.4.10.tar.gz
+	tar -zxvf zookeeper*tar.gz && zip -d zookeeper-3.4.10/contrib/fatjar/zookeeper-3.4.10-fatjar.jar 'META-INF/*.SF' 'META-INF/*.DSA'

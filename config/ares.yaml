@@ -27,8 +27,11 @@ clients:
         - aresdb
       RPC-Service:
         - ares-controller
+  zk:
+    zks: "localhost:2181"
+    timeoutSeconds: 1
 
 cluster:
   enable: false
   cluster_name: ""
-
+  instance_name: ""
