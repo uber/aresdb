@@ -32,8 +32,8 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/uber-common/bark"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/distributed"
+	"github.com/uber/aresdb/memutils"
 )
 
 // StartService is the entry point of starting ares.

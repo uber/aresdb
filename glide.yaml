@@ -16,3 +16,6 @@ import:
 - package: github.com/uber/jaeger-client-go
   subpackages:
   - config
+- package: github.com/samuel/go-zookeeper
+  subpackages:
+  - zk

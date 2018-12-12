@@ -54,14 +54,14 @@ type ControllerConfig struct {
 
 // ZKConfig is the config for zookeeper client
 type ZKConfig struct {
-	ZKs string `yaml:"zks"`
-	TimeoutSeconds int `yaml:"timeoutSeconds"`
+	ZKs            string `yaml:"zks"`
+	TimeoutSeconds int    `yaml:"timeoutSeconds"`
 }
 
 // ClientsConfig is the config for all clients
 type ClientsConfig struct {
 	Controller *ControllerConfig `yaml:"controller,omitempty"`
-	ZK *ZKConfig `yaml:"zk,omitempty"`
+	ZK         *ZKConfig         `yaml:"zk,omitempty"`
 }
 
 // ClusterConfig is the config for starting current instance with cluster mode

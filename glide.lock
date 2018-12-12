@@ -1,5 +1,5 @@
-hash: d55ac617d74142aedd50f262650fd3a2c6efb2fe0073f6024c4628970075ef4e
-updated: 2018-11-02T16:32:10.630331-07:00
+hash: c4d046257afa47bbdf3475c75f0c63cc2ba9b3fb107ec60fe22895b12a1833ca
+updated: 2018-12-11T18:11:38.768475-08:00
 imports:
 - name: github.com/cactus/go-statsd-client
   version: 138b925ccdf617776955904ba7759fce64406cec
@@ -23,7 +23,7 @@ imports:
 - name: github.com/gorilla/mux
   version: e3702bed27f0d39777b0b37b664b6280e8ef8fbf
 - name: github.com/onsi/ginkgo
-  version: 3774a09d95489ccaa16032e0770d08ea77ba6184
+  version: 2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f
   subpackages:
   - config
   - internal/codelocation
@@ -43,7 +43,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: b6ea1ea48f981d0f615a154a45eabb9dd466556d
+  version: 65fb64232476ad9046e57c26cd0bff3d3a8dc6cd
   subpackages:
   - format
   - internal/assertion
@@ -62,6 +62,10 @@ imports:
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
+- name: github.com/samuel/go-zookeeper
+  version: c4fab1ac1bec58281ad0667dc3f0907a9476ac47
+  subpackages:
+  - zk
 - name: github.com/satori/go.uuid
   version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/sirupsen/logrus
