@@ -97,7 +97,7 @@ test: ares zookeeper-3.4.10
 travis:
 	ARES_ENV=test .travis/run_unittest.sh
 
-test-cuda :
+test-cuda : zookeeper-3.4.10
 	@mkdir -p $(GTEST_OUT_DIR)
 	$(MAKE) $(GTEST_OUT_DIR)/all_unittest
 	$(GTEST_OUT_DIR)/all_unittest --gtest_output=xml:junit.xml
