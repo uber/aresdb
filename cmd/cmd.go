@@ -73,7 +73,7 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 		logger.Panic(err)
 	}
 
-	// fetch schema from controller and start periodical job
+	// init and start distributed connections and jobs
 	if cfg.Cluster.Enable {
 		if cfg.Cluster.ClusterName == "" {
 			logger.Fatal("Missing cluster name")

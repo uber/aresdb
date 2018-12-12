@@ -1,4 +1,4 @@
-package metastore
+package distributed
 
 import (
 	"github.com/onsi/ginkgo"

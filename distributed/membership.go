@@ -96,7 +96,7 @@ func (mm *membershipManagerImpl) Connect() (err error) {
 	// start jobs
 	controllerClient := clients.NewControllerHTTPClient(mm.cfg.Clients.Controller.Host, mm.cfg.Clients.Controller.Port, mm.cfg.Clients.Controller.Headers)
 	// TODO: (shz) rewrite schema fetch job to use zk watches
-	schemaFetchJob := metastore.NewSchemaFetchJob(5*60, mm.metaStore, metastore.NewTableSchameValidator(), controllerClient, clusterName, "")
+	schemaFetchJob := NewSchemaFetchJob(5*60, mm.metaStore, metastore.NewTableSchameValidator(), controllerClient, clusterName, "")
 	schemaFetchJob.FetchSchema()
 	go schemaFetchJob.Run()
 

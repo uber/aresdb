@@ -1,4 +1,4 @@
-package metastore
+package distributed
 
 import (
 	"github.com/uber/aresdb/clients"
@@ -6,6 +6,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	"reflect"
 	"time"
+	"github.com/uber/aresdb/metastore"
 )
 
 // SchemaFetchJob is a job that periodically pings ares-controller and updates table schemas if applicable
@@ -13,14 +14,14 @@ type SchemaFetchJob struct {
 	clusterName       string
 	hash              string
 	intervalInSeconds int
-	schemaMutator     TableSchemaMutator
-	schemaValidator   TableSchemaValidator
+	schemaMutator     metastore.TableSchemaMutator
+	schemaValidator   metastore.TableSchemaValidator
 	controllerClient  clients.ControllerClient
 	stopChan          chan struct{}
 }
 
 // NewSchemaFetchJob creates a new SchemaFetchJob
-func NewSchemaFetchJob(intervalInSeconds int, schemaMutator TableSchemaMutator, schemaValidator TableSchemaValidator, controllerClient clients.ControllerClient, clusterName, initialHash string) *SchemaFetchJob {
+func NewSchemaFetchJob(intervalInSeconds int, schemaMutator metastore.TableSchemaMutator, schemaValidator metastore.TableSchemaValidator, controllerClient clients.ControllerClient, clusterName, initialHash string) *SchemaFetchJob {
 	return &SchemaFetchJob{
 		clusterName:       clusterName,
 		hash:              initialHash,
