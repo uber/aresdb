@@ -64,9 +64,7 @@ var _ = ginkgo.Describe("MembershipManager", func() {
 			Port: 1234,
 		}))
 
-		err = mm.Disconnect()
-		Ω(err).Should(BeNil())
-
+		mm.Disconnect()
 		exists, _, _ := conn2.Exists("/ares_controller/cluster1/instances/instance1")
 		Ω(exists).Should(BeFalse())
 

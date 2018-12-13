@@ -26,14 +26,14 @@ import (
 )
 
 //membership manager does several things:
-//	1. it creates session based ephermal node in zookeeper, to indicate current node's activeness
+//	1. it creates session based ephemeral node in zookeeper, to indicate current node's activeness
 //	2. it manages cluster/remote mode specific jobs
 type MembershipManager interface {
 	// Connect to an AresDB cluster, this can mean communicating to ares controller or zk.
 	// It also starts all periodical jobs
 	Connect() error
 	// Disconnect from cluster and stops jobs properly (if necessary)
-	Disconnect() error
+	Disconnect()
 }
 
 // NewMembershipManager creates a new MembershipManager
@@ -45,9 +45,10 @@ func NewMembershipManager(cfg common.AresServerConfig, metaStore metastore.MetaS
 }
 
 type membershipManagerImpl struct {
-	cfg       common.AresServerConfig
-	metaStore metastore.MetaStore
-	zkc       *zk.Conn
+	cfg            common.AresServerConfig
+	metaStore      metastore.MetaStore
+	zkc            *zk.Conn
+	schemaFetchJob *SchemaFetchJob
 }
 
 func (mm *membershipManagerImpl) Connect() (err error) {
@@ -87,23 +88,26 @@ func (mm *membershipManagerImpl) Connect() (err error) {
 		return
 	}
 
-	_, err = mm.zkc.Create(getZNodePath(clusterName, instanceName), instanceBytes, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
+	_, err = mm.zkc.Create(
+		fmt.Sprintf("/ares_controller/%s/instances/%s", clusterName, instanceName),
+		instanceBytes, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
 	if err != nil {
 		return
 	}
 
 	// start jobs
-	schemaFetchJob := NewSchemaFetchJob(mm.metaStore, metastore.NewTableSchameValidator(), clusterName, mm.zkc)
-	err = schemaFetchJob.FetchApplySchema(true)
+	mm.schemaFetchJob = NewSchemaFetchJob(mm.metaStore, metastore.NewTableSchameValidator(), clusterName, mm.zkc)
+	err = mm.schemaFetchJob.FetchApplySchema(true)
 	if err != nil {
 		return
 	}
-	go schemaFetchJob.Run()
+	go mm.schemaFetchJob.Run()
 	return
 }
 
-func (mm *membershipManagerImpl) Disconnect() (err error) {
+func (mm *membershipManagerImpl) Disconnect() {
 	mm.zkc.Close()
+	mm.schemaFetchJob.Stop()
 	return
 }
 
@@ -112,9 +116,4 @@ func (mm *membershipManagerImpl) initZKConnection() (err error) {
 	zks := strings.Split(zksStr, ",")
 	mm.zkc, _, err = zk.Connect(zks, time.Duration(mm.cfg.Clients.ZK.TimeoutSeconds)*time.Second)
 	return
-}
-
-// getZNodePath returns path to instance znode givien its name and cluster name.
-func getZNodePath(clusterName, instanceName string) string {
-	return fmt.Sprintf("/ares_controller/%s/instances/%s", clusterName, instanceName)
 }
