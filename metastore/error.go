@@ -55,8 +55,6 @@ var (
 	ErrColumnDeleted = errors.New("Column already deleted")
 	// ErrInvalidDataType indicates invalid data type
 	ErrInvalidDataType = errors.New("Invalid data type")
-	// ErrIllegalSchemaVersion indicates new schema is not greater than old one
-	ErrIllegalSchemaVersion = errors.New("New schema version not greater than old")
 	// ErrSchemaUpdateNotAllowed indicates changes attemped on immutable fields
 	ErrSchemaUpdateNotAllowed = errors.New("Illegal schame update on immutable field")
 	// ErrInsufficientColumnCount indicates no column in a schame

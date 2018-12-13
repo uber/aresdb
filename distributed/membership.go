@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
-	"github.com/uber/aresdb/clients"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/metastore"
 	"os"
@@ -94,12 +93,12 @@ func (mm *membershipManagerImpl) Connect() (err error) {
 	}
 
 	// start jobs
-	controllerClient := clients.NewControllerHTTPClient(mm.cfg.Clients.Controller.Host, mm.cfg.Clients.Controller.Port, mm.cfg.Clients.Controller.Headers)
-	// TODO: (shz) rewrite schema fetch job to use zk watches
-	schemaFetchJob := NewSchemaFetchJob(5*60, mm.metaStore, metastore.NewTableSchameValidator(), controllerClient, clusterName, "")
-	schemaFetchJob.FetchSchema()
+	schemaFetchJob := NewSchemaFetchJob(mm.metaStore, metastore.NewTableSchameValidator(), clusterName, mm.zkc)
+	err = schemaFetchJob.FetchApplySchema(true)
+	if err != nil {
+		return
+	}
 	go schemaFetchJob.Run()
-
 	return
 }
 

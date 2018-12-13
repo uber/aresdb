@@ -124,16 +124,11 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 
 // checks performed
 //	check that new table is valid table
-//	check new table has larger version number
 //	check no changes on immutable fields (table name, type, pk)
 //	check updates on columns and sort columns are valid
 func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *common.Table) (err error) {
 	if err := v.validateIndividualSchema(newTable, false); err != nil {
 		return err
-	}
-
-	if newTable.Version <= oldTable.Version {
-		return ErrIllegalSchemaVersion
 	}
 
 	if newTable.Name != oldTable.Name {

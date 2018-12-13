@@ -42,6 +42,8 @@ var _ = ginkgo.Describe("MembershipManager", func() {
 		_, err = conn.Create("/ares_controller", nil, int32(0), acls)
 		_, err = conn.Create("/ares_controller/cluster1", nil, int32(0), acls)
 		_, err = conn.Create("/ares_controller/cluster1/instances", nil, int32(0), acls)
+		_, err = conn.Create("/ares_controller/cluster1/schema", nil, int32(0), acls)
+		mockMetaStore.On("ListTables").Return([]string{}, nil)
 
 		mm := membershipManagerImpl{
 			cfg:       cfg,
