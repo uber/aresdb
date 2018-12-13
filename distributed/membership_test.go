@@ -19,7 +19,6 @@ var _ = ginkgo.Describe("MembershipManager", func() {
 					ZKs:            "localhost:2181",
 					TimeoutSeconds: 1,
 				},
-				Controller: &common.ControllerConfig{},
 			},
 			Cluster: common.ClusterConfig{
 				Enable:       true,
@@ -83,7 +82,6 @@ var _ = ginkgo.Describe("MembershipManager", func() {
 					ZKs:            "localhost:2181",
 					TimeoutSeconds: 1,
 				},
-				Controller: &common.ControllerConfig{},
 			},
 			Cluster: common.ClusterConfig{
 				Enable:       true,
@@ -122,7 +120,6 @@ var _ = ginkgo.Describe("MembershipManager", func() {
 					ZKs:            "localhost:2181",
 					TimeoutSeconds: 1,
 				},
-				Controller: &common.ControllerConfig{},
 			},
 			Cluster: common.ClusterConfig{
 				Enable:      true,
@@ -160,7 +157,6 @@ var _ = ginkgo.Describe("MembershipManager", func() {
 					ZKs:            "localhost:2181",
 					TimeoutSeconds: 1,
 				},
-				Controller: &common.ControllerConfig{},
 			},
 			Cluster: common.ClusterConfig{
 				Enable:      true,
