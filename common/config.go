@@ -14,10 +14,6 @@
 
 package common
 
-import (
-	"net/http"
-)
-
 // TimezoneConfig is the static config for timezone column support
 type TimezoneConfig struct {
 	// table to lookup timezone columns
@@ -45,13 +41,6 @@ type HTTPConfig struct {
 	WriteTimeOutInSeconds int `yaml:"write_time_out_in_seconds"`
 }
 
-// ControllerConfig is the config for ares-controller client
-type ControllerConfig struct {
-	Host    string      `yaml:"host"`
-	Port    int         `yaml:"port"`
-	Headers http.Header `yaml:"headers"`
-}
-
 // ZKConfig is the config for zookeeper client
 type ZKConfig struct {
 	ZKs            string `yaml:"zks"`
@@ -60,7 +49,6 @@ type ZKConfig struct {
 
 // ClientsConfig is the config for all clients
 type ClientsConfig struct {
-	Controller *ControllerConfig `yaml:"controller,omitempty"`
 	ZK         *ZKConfig         `yaml:"zk,omitempty"`
 }
 

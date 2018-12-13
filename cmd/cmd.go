@@ -78,10 +78,6 @@ func StartService(cfg common.AresServerConfig, logger bark.Logger, queryLogger b
 		if cfg.Cluster.ClusterName == "" {
 			logger.Fatal("Missing cluster name")
 		}
-		controllerClientCfg := cfg.Clients.Controller
-		if controllerClientCfg == nil {
-			logger.Fatal("Missing controller client config", err)
-		}
 		memberhipManager := distributed.NewMembershipManager(cfg, metaStore)
 		err = memberhipManager.Connect()
 		if err != nil {

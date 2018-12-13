@@ -158,44 +158,6 @@ var _ = ginkgo.Describe("Validator", func() {
 		Ω(err).Should(BeNil())
 	})
 
-	ginkgo.It("should fail for bad version", func() {
-		oldTable := common.Table{
-			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Int32",
-				},
-			},
-			PrimaryKeyColumns:    []int{0},
-			IsFactTable:          true,
-			ArchivingSortColumns: []int{1},
-			Version:              0,
-		}
-		newTable := common.Table{
-			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Int32",
-				},
-				{
-					Name: "col2",
-					Type: "Int32",
-				},
-			},
-			PrimaryKeyColumns:    []int{0},
-			IsFactTable:          true,
-			ArchivingSortColumns: []int{1},
-			Version:              0,
-		}
-		validator := NewTableSchameValidator()
-		validator.SetNewTable(newTable)
-		validator.SetOldTable(oldTable)
-		err := validator.Validate()
-		Ω(err).Should(Equal(ErrIllegalSchemaVersion))
-	})
-
 	ginkgo.It("should fail for name change", func() {
 		oldTable := common.Table{
 			Name: "testTable",
