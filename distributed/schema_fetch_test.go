@@ -1,13 +1,13 @@
 package distributed
 
 import (
+	"encoding/json"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/samuel/go-zookeeper/zk"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
-	"github.com/samuel/go-zookeeper/zk"
-	"encoding/json"
 	"time"
 )
 
@@ -109,13 +109,13 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 		mockSchemaMutator.On("UpdateTable", mock.Anything).Return(nil).Once()
 
 		// test schema update
-		testTable3.Version=100
+		testTable3.Version = 100
 		tableBytes, _ := json.Marshal(testTable3)
-		_,stat,_:=conn.Get("/ares_controller/cluster1/schema/"+testTable3.Name)
+		_, stat, _ := conn.Get("/ares_controller/cluster1/schema/" + testTable3.Name)
 		conn.Set("/ares_controller/cluster1/schema/"+testTable3.Name, tableBytes, stat.Version)
 
 		// had to wait a bit before killing the job, so the table update above have a chance to be reacted on
-		time.Sleep(time.Duration(250)*time.Microsecond)
+		time.Sleep(time.Duration(250) * time.Microsecond)
 		job.Stop()
 	})
 })

@@ -18,7 +18,7 @@ type SchemaFetchJob struct {
 	zkc             *zk.Conn
 	// node update event and schema root children change events
 	eventChan chan zk.Event
-	stopChan chan struct{}
+	stopChan  chan struct{}
 }
 
 // NewSchemaFetchJob creates a new SchemaFetchJob
@@ -30,7 +30,7 @@ func NewSchemaFetchJob(schemaMutator metastore.TableSchemaMutator, schemaValidat
 		schemaValidator: schemaValidator,
 		zkc:             zkc,
 		eventChan:       make(chan zk.Event, 1),
-		stopChan: make(chan struct{}),
+		stopChan:        make(chan struct{}),
 	}
 }
 
@@ -69,7 +69,6 @@ func (j *SchemaFetchJob) Run() {
 func (j *SchemaFetchJob) Stop() {
 	j.stopChan <- struct{}{}
 }
-
 
 func (j *SchemaFetchJob) FetchApplySchema(bootstrap bool) (err error) {
 	remoteTables, err := j.getAllSchema()
