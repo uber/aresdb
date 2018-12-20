@@ -1,4 +1,5 @@
 [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fuber%2Faresdb.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fuber%2Faresdb?ref=badge_shield)
 
 AresDB
 ==============
@@ -93,3 +94,7 @@ Apache 2.0 License, please see [LICENSE](LICENSE) for details.
 [cov-img]: https://codecov.io/gh/uber/aresdb/branch/master/graph/badge.svg
 [cov]: https://codecov.io/gh/uber/aresdb
 
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fuber%2Faresdb.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fuber%2Faresdb?ref=badge_large)
