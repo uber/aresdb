@@ -69,6 +69,7 @@ var (
 	ErrDuplicatedColumn = errors.New("Illegal deplicated use of column")
 	// ErrDuplicatedColumnName indicates duplicated column name in same table
 	ErrDuplicatedColumnName          = errors.New("Duplicated column name found")
+	ErrMissingTimeColumn = errors.New("Fact table has to have time column as first column")
 	ErrTimeColumnDoesNotAllowDefault = errors.New("Time column does not allow default value")
 	ErrDisallowMissingEventTime      = errors.New("Can not disallow missing event time")
 )

@@ -42,6 +42,7 @@ func (v tableSchemaValidatorImpl) Validate() (err error) {
 // checks performed:
 //	table has at least 1 valid column
 //	table has at least 1 valid primary key column
+//  fact table must have a time column as first column
 //	fact table must have sort columns that are valid
 //	each column have valid data type and default value
 //	sort columns cannot have duplicate columnID
@@ -68,7 +69,10 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		// validate data type
 		if dataType := memCom.DataTypeFromString(column.Type); dataType == memCom.Unknown {
 			return ErrInvalidDataType
+		} else if table.IsFactTable && columnID == 0 && dataType != memCom.Uint32 {
+			return ErrMissingTimeColumn
 		}
+
 		if column.DefaultValue != nil {
 			if table.IsFactTable && columnID == 0 {
 				return ErrTimeColumnDoesNotAllowDefault
