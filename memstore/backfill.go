@@ -572,7 +572,10 @@ func (ctx *backfillContext) getChangedPatchRow(patchRecordID RecordID, upsertBat
 			return nil, utils.StackError(err, "Failed to get value at row %d, col %d",
 				patchRecordID.Index, col)
 		}
-		changedRow[columnID] = &value
+
+		if value.Valid {
+			changedRow[columnID] = &value
+		}
 	}
 	return changedRow, nil
 }
