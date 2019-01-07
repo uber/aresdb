@@ -72,6 +72,10 @@ The following command will start an AresDB server locally. You can start to quer
 make run
 ```
 
+Run AresDB Docker
+-----------------
+Please read the [Docker](docs/docker.md) page.
+
 Contributing
 ------------
 
@@ -87,3 +91,9 @@ Interested in learning more about AresDB? Read the blog post:
 License
 -------
 Apache 2.0 License, please see [LICENSE](LICENSE) for details.
+
+[ci-img]: https://travis-ci.com/uber/aresdb.svg?branch=master
+[ci]: https://travis-ci.com/uber/aresdb
+[cov-img]: https://codecov.io/gh/uber/aresdb/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/uber/aresdb
+
