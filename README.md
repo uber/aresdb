@@ -72,6 +72,10 @@ The following command will start an AresDB server locally. You can start to quer
 make run
 ```
 
+Run AresDB Docker
+-----------------
+Please read the [Docker](docs/docker.md) page.
+
 Contributing
 ------------
 
