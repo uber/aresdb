@@ -79,7 +79,7 @@ lint: C_SRC := $(CHANGED_C_SRC)
 lint: GO_SRC := $(CHANGED_GO_SRC)
 lint: deps golang-lint clang-lint
 
-ares: libs
+ares: libs deps
 	go build -o $@
 
 run: ares
@@ -94,7 +94,7 @@ clean-cuda-test:
 test: ares
 	bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
 
-travis:
+travis: deps
 	ARES_ENV=test .travis/run_unittest.sh
 
 test-cuda :
