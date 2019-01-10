@@ -340,6 +340,10 @@ func (qc *AQLQueryContext) prepareForGeoIntersect(memStore memstore.MemStore) (s
 		}
 	}
 
+	if !shapeExists {
+		return
+	}
+
 	numValidShapes := len(numPointsPerShape)
 	shapeIndexs := make([]uint8, totalNumPoints)
 	pointIndex := 0
