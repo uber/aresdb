@@ -104,7 +104,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			},
 		}
 
-		testVectorParty := newArchiveVectorParty(archiveBatch.Size, memCom.Bool, memCom.NullDataValue, &archiveBatch.RWMutex)
+		testVectorParty := newArchiveVectorParty(archiveBatch.Size, memCom.Bool, memCom.NullDataValue, archiveBatch.RWMutex)
 		archiveBatch.Batch.Columns = []memCom.VectorParty{
 			nil,
 			testVectorParty,
