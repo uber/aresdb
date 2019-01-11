@@ -17,6 +17,7 @@ package memstore
 import (
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
+	"sync"
 )
 
 // mergeContext carries all context information used during merge
@@ -366,6 +367,7 @@ func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
 		Size:    ctx.totalSize,
 		BatchID: ctx.base.BatchID,
 		Shard:   ctx.base.Shard,
+		Batch: Batch{RWMutex: &sync.RWMutex{}},
 	}
 
 	for columnID := 0; columnID < ctx.numColumns; columnID++ {

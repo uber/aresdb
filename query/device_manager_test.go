@@ -198,6 +198,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 		liveBatch := &memstore.LiveBatch{
 			Capacity: 5,
 			Batch: memstore.Batch{
+				RWMutex: &sync.RWMutex{},
 				Columns: batch110.Columns,
 			},
 		}
@@ -206,6 +207,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 		Ω(err).Should(BeNil())
 		archiveBatch := &memstore.ArchiveBatch{
 			Batch: memstore.Batch{
+				RWMutex: &sync.RWMutex{},
 				Columns: batchArchive0.Columns,
 			},
 			Size: 5,

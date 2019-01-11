@@ -45,6 +45,7 @@ import (
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query"
 	"unsafe"
+	"sync"
 )
 
 // convertToAPIError wraps up an error into APIError
@@ -117,6 +118,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		testBatch, _ := testFactory.ReadArchiveBatch("archiveBatch")
 		testArchiveBatch := memstore.ArchiveBatch{
 			Batch: memstore.Batch{
+				RWMutex: &sync.RWMutex{},
 				Columns: testBatch.Columns,
 			},
 			Size:    5,

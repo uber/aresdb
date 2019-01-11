@@ -63,6 +63,7 @@ func (t TestFactoryT) ReadArchiveBatch(name string) (*Batch, error) {
 			batch.Columns[i] = archiveColumn
 		}
 	}
+	batch.RWMutex = &sync.RWMutex{}
 	return batch, nil
 }
 

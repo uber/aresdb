@@ -28,6 +28,7 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	utilsMocks "github.com/uber/aresdb/utils/mocks"
+	"sync"
 )
 
 var _ = ginkgo.Describe("archive store", func() {
@@ -48,6 +49,7 @@ var _ = ginkgo.Describe("archive store", func() {
 		ds := new(diskStoreMocks.DiskStore)
 		archiveBatch := &ArchiveBatch{
 			Batch: Batch{
+				RWMutex: &sync.RWMutex{},
 				Columns: []memCom.VectorParty{
 					&archiveVectorParty{
 						cVectorParty: cVectorParty{
@@ -86,6 +88,9 @@ var _ = ginkgo.Describe("archive store", func() {
 		ds := new(diskStoreMocks.DiskStore)
 
 		archiveBatch := &ArchiveBatch{
+			Batch: Batch{
+				RWMutex: &sync.RWMutex{},
+			},
 			Version: cutoff,
 			BatchID: int32(batchID),
 			Shard: &TableShard{
@@ -124,6 +129,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			Size:    5,
 			BatchID: 1,
 			Batch: Batch{
+				RWMutex: &sync.RWMutex{},
 				Columns: make([]memCom.VectorParty, 3),
 			},
 		}

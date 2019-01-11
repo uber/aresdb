@@ -137,6 +137,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Size:    5,
 			Shard:   shard,
 			Batch: memstore.Batch{
+				RWMutex: &sync.RWMutex{},
 				Columns: tmpBatch.Columns,
 			},
 		}
@@ -1080,6 +1081,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}, metaStore, diskStore, hostMemoryManager, shardID)
 		timezoneTableBatch := memstore.LiveBatch{
 			Batch: memstore.Batch{
+				RWMutex: &sync.RWMutex{},
 				Columns: batch120.Columns,
 			},
 			Capacity: 5,
@@ -1795,6 +1797,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		batch := &memstore.LiveBatch{
 			Batch: memstore.Batch{
+				RWMutex: &sync.RWMutex{},
 				Columns: []memCom.VectorParty{
 					column0,
 					column1,

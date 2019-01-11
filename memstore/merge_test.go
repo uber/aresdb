@@ -18,6 +18,7 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
+	"sync"
 )
 
 var _ = ginkgo.Describe("merge", func() {
@@ -691,7 +692,7 @@ var _ = ginkgo.Describe("merge", func() {
 	})
 
 	ginkgo.It("merge with nil base", func() {
-		ctx := newMergeContext(&ArchiveBatch{Shard: shard}, patch,
+		ctx := newMergeContext(&ArchiveBatch{Shard: shard, Batch: Batch{RWMutex: &sync.RWMutex{}}}, patch,
 			[]bool{false, false, false, false, false, false},
 			[]common.DataType{common.Uint32, common.Bool, common.Float32, common.Bool, common.Int32, common.Bool},
 			[]*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue},

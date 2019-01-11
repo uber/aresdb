@@ -23,6 +23,7 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	utilsMocks "github.com/uber/aresdb/utils/mocks"
+	"sync"
 )
 
 var _ = ginkgo.Describe("backfill", func() {
@@ -248,7 +249,9 @@ var _ = ginkgo.Describe("backfill", func() {
 			},
 			PrimaryKeyBytes: 8,
 		}
-		baseBatch := &ArchiveBatch{}
+		baseBatch := &ArchiveBatch{
+			Batch: Batch{RWMutex: &sync.RWMutex{}},
+		}
 		patch := &backfillPatch{}
 		backfillCtx := newBackfillContext(baseBatch, patch, tableSchema, tableSchema.GetColumnDeletions(),
 			tableSchema.Schema.ArchivingSortColumns, tableSchema.Schema.PrimaryKeyColumns,
