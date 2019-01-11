@@ -15,11 +15,12 @@ RUN apt-get update
 RUN apt-get install -y golang-1.9-go git
 
 # clone aresdb repo and set up GOPATH
-RUN mkdir -p
+RUN mkdir -p $UBER_GITHUB_DIR
 WORKDIR $UBER_GITHUB_DIR
 RUN git clone https://github.com/uber/aresdb
 RUN ln -sf $UBER_GITHUB_DIR/aresdb $HOME/aresdb
 WORKDIR aresdb
+RUN make ares -j
 
 # install go tools
 RUN go get github.com/Masterminds/glide
