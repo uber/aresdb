@@ -374,6 +374,7 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 func (b *ArchiveBatch) Clone() *ArchiveBatch {
 	newBatch := &ArchiveBatch{
 		Batch: Batch{
+			RWMutex: b.Batch.RWMutex,
 			Columns: make([]common.VectorParty, len(b.Columns)),
 		},
 		Version: b.Version,
