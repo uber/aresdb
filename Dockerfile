@@ -20,6 +20,7 @@ WORKDIR $UBER_GITHUB_DIR
 RUN git clone https://github.com/uber/aresdb
 RUN ln -sf $UBER_GITHUB_DIR/aresdb $HOME/aresdb
 WORKDIR aresdb
+RUN make ares -j
 
 # install go tools
 RUN go get github.com/Masterminds/glide
