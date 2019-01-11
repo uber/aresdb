@@ -218,7 +218,7 @@ func (b *ArchiveBatch) RequestVectorParty(columnID int) common.ArchiveVectorPart
 	// columnID should always be smaller than len(ValueTypeByColumn).
 	dataType := b.Shard.Schema.ValueTypeByColumn[columnID]
 	defaultValue := b.Shard.Schema.DefaultValues[columnID]
-	vp = newArchiveVectorParty(b.Size, dataType, *defaultValue, &b.RWMutex)
+	vp = newArchiveVectorParty(b.Size, dataType, *defaultValue, b.RWMutex)
 	b.Columns[columnID] = vp
 
 	archiveVP := vp.(common.ArchiveVectorParty)
