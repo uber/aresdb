@@ -991,6 +991,7 @@ func CreateTestArchiveBatchColumns() []common.VectorParty {
 func CreateTestArchiveBatch(shard *TableShard, batchID int) *ArchiveBatch {
 	return &ArchiveBatch{
 		Batch: Batch{
+			RWMutex: &sync.RWMutex{},
 			Columns: CreateTestArchiveBatchColumns(),
 		},
 		Size:    5,
