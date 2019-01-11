@@ -379,13 +379,13 @@ func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
 			// Sort columns.
 			bytes = int64(CalculateVectorPartyBytes(dataType, ctx.mergedLengths[i], true, true))
 			ctx.base.Shard.HostMemoryManager.ReportUnmanagedSpaceUsageChange(bytes)
-			columns[columnID] = newArchiveVectorParty(ctx.mergedLengths[i], dataType, defaultValue, &ctx.merged.RWMutex)
+			columns[columnID] = newArchiveVectorParty(ctx.mergedLengths[i], dataType, defaultValue, ctx.merged.RWMutex)
 			columns[columnID].Allocate(true)
 		} else {
 			// Non-sort columns.
 			bytes = int64(CalculateVectorPartyBytes(dataType, ctx.totalSize, true, false))
 			ctx.base.Shard.HostMemoryManager.ReportUnmanagedSpaceUsageChange(bytes)
-			columns[columnID] = newArchiveVectorParty(ctx.totalSize, dataType, defaultValue, &ctx.merged.RWMutex)
+			columns[columnID] = newArchiveVectorParty(ctx.totalSize, dataType, defaultValue, ctx.merged.RWMutex)
 			if !ctx.columnDeletions[columnID] {
 				columns[columnID].Allocate(false)
 			}
