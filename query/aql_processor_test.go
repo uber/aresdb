@@ -160,18 +160,21 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Batches: map[int32]*memstore.LiveBatch{
 				-110: {
 					Batch: memstore.Batch{
+						RWMutex: &sync.RWMutex{},
 						Columns: batch110.Columns,
 					},
 					Capacity: 5,
 				},
 				-101: {
 					Batch: memstore.Batch{
+						RWMutex: &sync.RWMutex{},
 						Columns: batch101.Columns,
 					},
 					Capacity: 5,
 				},
 				-99: {
 					Batch: memstore.Batch{
+						RWMutex: &sync.RWMutex{},
 						Columns: batch99.Columns,
 					},
 					Capacity: 5,
@@ -1113,6 +1116,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Batches: map[int32]*memstore.LiveBatch{
 				-2147483648: {
 					Batch: memstore.Batch{
+						RWMutex: &sync.RWMutex{},
 						Columns: batch130.Columns,
 					},
 					Capacity: 5,
@@ -1287,6 +1291,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				Batches: map[int32]*memstore.LiveBatch{
 					memstore.BaseBatchID: {
 						Batch: memstore.Batch{
+							RWMutex: &sync.RWMutex{},
 							Columns: []memCom.VectorParty{
 								tripTimeLiveVP,
 								pointLiveVP,
@@ -1352,6 +1357,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{
 			memstore.BaseBatchID: {
 				Batch: memstore.Batch{
+					RWMutex: &sync.RWMutex{},
 					Columns: []memCom.VectorParty{
 						shapeUUIDLiveVP,
 						shapeLiveVP,
@@ -1552,6 +1558,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				Batches: map[int32]*memstore.LiveBatch{
 					memstore.BaseBatchID: {
 						Batch: memstore.Batch{
+							RWMutex: &sync.RWMutex{},
 							Columns: []memCom.VectorParty{
 								tripTimeLiveVP,
 								pointLiveVP,
@@ -1617,6 +1624,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{
 			memstore.BaseBatchID: {
 				Batch: memstore.Batch{
+					RWMutex: &sync.RWMutex{},
 					Columns: []memCom.VectorParty{
 						shapeUUIDLiveVP,
 						shapeLiveVP,
@@ -1939,6 +1947,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				Batches: map[int32]*memstore.LiveBatch{
 					memstore.BaseBatchID: {
 						Batch: memstore.Batch{
+							RWMutex: &sync.RWMutex{},
 							Columns: []memCom.VectorParty{
 								tripTimeLiveVP,
 								pointLiveVP,
