@@ -44,8 +44,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query"
-	"unsafe"
 	"sync"
+	"unsafe"
 )
 
 // convertToAPIError wraps up an error into APIError

@@ -144,7 +144,7 @@ func (v *ArchiveStoreVersion) RequestBatch(batchID int32) *ArchiveBatch {
 		Size:    size,
 		BatchID: batchID,
 		Shard:   v.shard,
-		Batch: Batch{RWMutex: &sync.RWMutex{}},
+		Batch:   Batch{RWMutex: &sync.RWMutex{}},
 	}
 	v.Batches[batchID] = batch
 	return batch

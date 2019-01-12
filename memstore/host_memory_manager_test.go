@@ -448,7 +448,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		for day := today + 1; day > today-10; day-- {
 			testMemStore.TableShards[testTableName][0].ArchiveStore.CurrentVersion.Batches[int32(day)] =
 				&ArchiveBatch{
-					Batch: Batch{RWMutex: &sync.RWMutex{}},
+					Batch:   Batch{RWMutex: &sync.RWMutex{}},
 					Size:    4,
 					Shard:   testMemStore.TableShards[testTableName][0],
 					BatchID: int32(day),

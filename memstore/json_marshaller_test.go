@@ -21,8 +21,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"time"
 	"sync"
+	"time"
 )
 
 var _ = ginkgo.Describe("json marshaller", func() {

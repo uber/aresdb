@@ -367,7 +367,7 @@ func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
 		Size:    ctx.totalSize,
 		BatchID: ctx.base.BatchID,
 		Shard:   ctx.base.Shard,
-		Batch: Batch{RWMutex: &sync.RWMutex{}},
+		Batch:   Batch{RWMutex: &sync.RWMutex{}},
 	}
 
 	for columnID := 0; columnID < ctx.numColumns; columnID++ {

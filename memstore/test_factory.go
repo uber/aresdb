@@ -94,6 +94,7 @@ func (t TestFactoryT) ReadLiveBatch(name string) (*Batch, error) {
 			batch.Columns[i] = liveColumn
 		}
 	}
+	batch.RWMutex = &sync.RWMutex{}
 	return batch, nil
 }
 
