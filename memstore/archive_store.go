@@ -144,6 +144,7 @@ func (v *ArchiveStoreVersion) RequestBatch(batchID int32) *ArchiveBatch {
 		Size:    size,
 		BatchID: batchID,
 		Shard:   v.shard,
+		Batch:   Batch{RWMutex: &sync.RWMutex{}},
 	}
 	v.Batches[batchID] = batch
 	return batch
@@ -218,7 +219,7 @@ func (b *ArchiveBatch) RequestVectorParty(columnID int) common.ArchiveVectorPart
 	// columnID should always be smaller than len(ValueTypeByColumn).
 	dataType := b.Shard.Schema.ValueTypeByColumn[columnID]
 	defaultValue := b.Shard.Schema.DefaultValues[columnID]
-	vp = newArchiveVectorParty(b.Size, dataType, *defaultValue, &b.RWMutex)
+	vp = newArchiveVectorParty(b.Size, dataType, *defaultValue, b.RWMutex)
 	b.Columns[columnID] = vp
 
 	archiveVP := vp.(common.ArchiveVectorParty)
@@ -374,6 +375,7 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 func (b *ArchiveBatch) Clone() *ArchiveBatch {
 	newBatch := &ArchiveBatch{
 		Batch: Batch{
+			RWMutex: b.Batch.RWMutex,
 			Columns: make([]common.VectorParty, len(b.Columns)),
 		},
 		Version: b.Version,

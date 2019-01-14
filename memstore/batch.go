@@ -37,7 +37,7 @@ type Batch struct {
 	// For sorted bathes this is also locked in writer mode for initiating loading
 	// from disk (vector party creation, Loader/Users initialization), and for
 	// vector party detaching during eviction.
-	sync.RWMutex
+	*sync.RWMutex
 	// For live batches, index out of bound and nil VectorParty indicates
 	// mode 0 for the corresponding VectorParty.
 	// For archive batches, index out of bound and nil VectorParty indicates that

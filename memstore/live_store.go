@@ -222,6 +222,7 @@ func (s *LiveStore) appendBatch(batchID int32) *LiveBatch {
 
 	batch := &LiveBatch{
 		Batch: Batch{
+			RWMutex: &sync.RWMutex{},
 			Columns: make([]common.VectorParty, numColumns),
 		},
 		Capacity:  s.BatchSize,

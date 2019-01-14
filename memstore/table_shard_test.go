@@ -74,6 +74,7 @@ var _ = ginkgo.Describe("table Shard", func() {
 
 		// Prepare archive store
 		aBatch := &ArchiveBatch{
+			Batch:   Batch{RWMutex: &sync.RWMutex{}},
 			Version: 1600,
 			BatchID: 100,
 			Shard:   shard,

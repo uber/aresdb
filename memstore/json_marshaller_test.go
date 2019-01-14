@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"sync"
 	"time"
 )
 
@@ -30,6 +31,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
 
 	liveBatch := LiveBatch{Batch: Batch{
+		RWMutex: &sync.RWMutex{},
 		Columns: make([]common.VectorParty, 10),
 	}}
 
@@ -51,6 +53,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 
 	archiveBatch := ArchiveBatch{
 		Batch: Batch{
+			RWMutex: &sync.RWMutex{},
 			Columns: make([]common.VectorParty, 10),
 		}}
 
