@@ -257,7 +257,16 @@ func (w *JSONQueryResponseWriter) ReportQueryContext(qc *query.AQLQueryContext) 
 
 // ReportResult writes the query result to the response.
 func (w *JSONQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQueryContext) {
-	qc.Results = qc.Postprocess()
+	if qc.OOPK.IsHLL() {
+		result, err := queryCom.NewTimeSeriesHLLResult(qc.HLLQueryResult, queryCom.OldHLLDataHeader)
+		if err != nil {
+			// should never be here except bug
+			w.ReportError(queryIndex, qc.Query.Table, err, http.StatusInternalServerError)
+		}
+		qc.Results = queryCom.ComputeHLLResult(result)
+	} else {
+		qc.Results = qc.Postprocess()
+	}
 	w.response.Results[queryIndex] = qc.Results
 }
 

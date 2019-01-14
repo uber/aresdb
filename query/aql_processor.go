@@ -129,7 +129,7 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 	if qc.Error == nil {
 		// Copy the result to host memory.
 		qc.OOPK.ResultSize = qc.OOPK.currentBatch.resultSize
-		if qc.ReturnHLLData {
+		if qc.OOPK.IsHLL() {
 			qc.HLLQueryResult, qc.Error = qc.PostprocessAsHLLData()
 		} else {
 			qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
