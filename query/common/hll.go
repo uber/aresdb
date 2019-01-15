@@ -503,12 +503,12 @@ func computeHLLResultRecursive(result interface{}) interface{} {
 			r[k] = computeHLLResultRecursive(v)
 		}
 		return r
-	case float64:
-		return r
 	case HLL:
 		return r.Compute()
+	default:
+		// return original for all other types
+		return r
 	}
-	return nil
 }
 
 // NewTimeSeriesHLLResult creates a new NewTimeSeriesHLLResult and deserialize the buffer into the result.

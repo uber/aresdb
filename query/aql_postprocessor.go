@@ -20,6 +20,7 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"unsafe"
+	"github.com/uber/aresdb/utils"
 )
 
 // Postprocess converts the internal dimension and measure vector in binary
@@ -27,6 +28,16 @@ import (
 // values back to their string representations.
 func (qc *AQLQueryContext) Postprocess() queryCom.AQLTimeSeriesResult {
 	oopkContext := qc.OOPK
+	if oopkContext.IsHLL() {
+		result, err := queryCom.NewTimeSeriesHLLResult(qc.HLLQueryResult, queryCom.OldHLLDataHeader)
+		if err != nil {
+			// should never be here except bug
+			qc.Error = utils.StackError(err, "failed to read hll result")
+			return nil
+		}
+		return queryCom.ComputeHLLResult(result)
+	}
+
 	result := make(queryCom.AQLTimeSeriesResult)
 	dimValues := make([]*string, len(oopkContext.Dimensions))
 	dataTypes := make([]memCom.DataType, len(oopkContext.Dimensions))

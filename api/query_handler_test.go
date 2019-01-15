@@ -25,13 +25,13 @@ import (
 	memMocks "github.com/uber/aresdb/memstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query"
-	"encoding/json"
 )
 
 var _ = ginkgo.Describe("QueryHandler", func() {
@@ -215,13 +215,13 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 		Ω(err).Should(BeNil())
 		rw := NewJSONQueryResponseWriter(2)
 		rw.ReportResult(0, &query.AQLQueryContext{
-			Query: q,
-			OOPK: oopk,
+			Query:          q,
+			OOPK:           oopk,
 			HLLQueryResult: []byte{0, 0, 0, 0, 0, 0, 0, 0},
 		})
 		rw.ReportResult(1, &query.AQLQueryContext{
-			Query: q,
-			OOPK: oopk,
+			Query:          q,
+			OOPK:           oopk,
 			HLLQueryResult: data,
 		})
 
