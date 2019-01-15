@@ -12,7 +12,7 @@ import:
 - package: golang.org/x/text
 - package: github.com/emirpasic/gods
 - package: github.com/satori/go.uuid
-- package: github.com/tsenart/vegeta
 - package: github.com/uber/jaeger-client-go
   subpackages:
   - config
+- package: github.com/spf13/viper
