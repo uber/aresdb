@@ -261,7 +261,7 @@ func (w *JSONQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQuer
 		result, err := queryCom.NewTimeSeriesHLLResult(qc.HLLQueryResult, queryCom.OldHLLDataHeader)
 		if err != nil {
 			// should never be here except bug
-			w.ReportError(queryIndex, qc.Query.Table, err, http.StatusInternalServerError)
+			w.ReportError(queryIndex, qc.Query.Table, utils.StackError(err, "failed to read hll result"), http.StatusInternalServerError)
 		}
 		qc.Results = queryCom.ComputeHLLResult(result)
 	} else {

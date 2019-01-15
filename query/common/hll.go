@@ -487,16 +487,15 @@ func parseTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
 
 // ComputeHLLResult computes hll result
 func ComputeHLLResult(result AQLTimeSeriesResult) AQLTimeSeriesResult {
-	return computeHLLResultRecursive(result)
+	return computeHLLResultRecursive(result).(AQLTimeSeriesResult)
 }
 
+// computeHLLResultRecursive computes hll value
 func computeHLLResultRecursive(result interface{}) interface{} {
 	switch r := result.(type) {
 	case AQLTimeSeriesResult:
 		for k, v := range r {
-			for k, v := range r {
-				r[k] = computeHLLResultRecursive(v)
-			}
+			r[k] = computeHLLResultRecursive(v)
 		}
 		return r
 	case map[string]interface{}:
@@ -509,6 +508,7 @@ func computeHLLResultRecursive(result interface{}) interface{} {
 	case HLL:
 		return r.Compute()
 	}
+	return nil
 }
 
 // NewTimeSeriesHLLResult creates a new NewTimeSeriesHLLResult and deserialize the buffer into the result.

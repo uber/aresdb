@@ -31,6 +31,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query"
+	"encoding/json"
 )
 
 var _ = ginkgo.Describe("QueryHandler", func() {
@@ -198,6 +199,59 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 		hllRW := rw.(*HLLQueryResponseWriter)
 		Ω(hllRW.response.GetBytes()).Should(Equal([]byte{1, 1, 237, 172, 0, 0, 0, 0, 8, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
+	})
+
+	ginkgo.It("Report hll result in JsonResponseWriter should work", func() {
+		q := &query.AQLQuery{
+			Table: "trips",
+		}
+
+		oopk := query.OOPKContext{
+			// C.AGGR_HLL
+			AggregateType: 10,
+		}
+
+		data, err := ioutil.ReadFile("../testing/data/query/hll")
+		Ω(err).Should(BeNil())
+		rw := NewJSONQueryResponseWriter(2)
+		rw.ReportResult(0, &query.AQLQueryContext{
+			Query: q,
+			OOPK: oopk,
+			HLLQueryResult: []byte{0, 0, 0, 0, 0, 0, 0, 0},
+		})
+		rw.ReportResult(1, &query.AQLQueryContext{
+			Query: q,
+			OOPK: oopk,
+			HLLQueryResult: data,
+		})
+
+		Ω(rw.(*JSONQueryResponseWriter).response.Results).Should(HaveLen(2))
+		resultJson, err := json.Marshal(rw.(*JSONQueryResponseWriter).response.Results)
+		Ω(resultJson).Should(MatchJSON(`
+		[
+			null,
+			{
+				"1": {
+					"c": {
+						"2": 2
+					}
+				},
+				"4294967295": {
+					"d": {
+						"514": 4
+					}
+				},
+				"NULL": {
+					"NULL": {
+						"NULL": 3
+					}
+				}
+			}
+		]
+		`))
+		Ω(rw.(*JSONQueryResponseWriter).response.Errors).Should(HaveLen(2))
+		Ω(rw.(*JSONQueryResponseWriter).response.Errors[0]).ShouldNot(BeNil())
+		Ω(rw.(*JSONQueryResponseWriter).response.Errors[1]).Should(BeNil())
 	})
 
 	ginkgo.It("Verbose should work", func() {

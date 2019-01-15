@@ -951,7 +951,7 @@ func (qc *AQLQueryContext) processBatch(
 		}, "geo_intersect", stream)
 
 		// Prepare for dimension and measure evaluation.
-		qc.OOPK.currentBatch.prepareForDimAndMeasureEval(qc.OOPK.DimRowBytes, qc.OOPK.MeasureBytes, qc.OOPK.NumDimsPerDimWidth, qc.OOPK.isHLL(), stream)
+		qc.OOPK.currentBatch.prepareForDimAndMeasureEval(qc.OOPK.DimRowBytes, qc.OOPK.MeasureBytes, qc.OOPK.NumDimsPerDimWidth, qc.OOPK.IsHLL(), stream)
 
 		qc.reportTimingForCurrentBatch(stream, &start, prepareForDimAndMeasureTiming)
 
@@ -986,14 +986,14 @@ func (qc *AQLQueryContext) processBatch(
 		qc.OOPK.currentBatch.cleanupBeforeAggregation()
 
 		// init dimIndexVectorD for sorting and reducing
-		if qc.OOPK.isHLL() {
+		if qc.OOPK.IsHLL() {
 			initIndexVector(qc.OOPK.currentBatch.dimIndexVectorD[0].getPointer(), 0, qc.OOPK.currentBatch.resultSize, stream, qc.Device)
 			initIndexVector(qc.OOPK.currentBatch.dimIndexVectorD[1].getPointer(), qc.OOPK.currentBatch.resultSize, qc.OOPK.currentBatch.resultSize+qc.OOPK.currentBatch.size, stream, qc.Device)
 		} else {
 			initIndexVector(qc.OOPK.currentBatch.dimIndexVectorD[0].getPointer(), 0, qc.OOPK.currentBatch.resultSize+qc.OOPK.currentBatch.size, stream, qc.Device)
 		}
 
-		if qc.OOPK.isHLL() {
+		if qc.OOPK.IsHLL() {
 			qc.doProfile(func() {
 				qc.OOPK.hllVectorD, qc.OOPK.hllDimRegIDCountD, qc.OOPK.hllVectorSize =
 					qc.OOPK.currentBatch.hll(qc.OOPK.NumDimsPerDimWidth, isLastBatch, stream, qc.Device)
@@ -1092,7 +1092,7 @@ func (qc *AQLQueryContext) calculateMemoryRequirement(memStore memstore.MemStore
 	//TODO(jians): hard code hll query memory requirement here for now,
 	//we can track memory usage
 	//based on table, dimensions, duration to do estimation
-	if qc.OOPK.isHLL() {
+	if qc.OOPK.IsHLL() {
 		return hllQueryRequiredMemoryInMB
 	}
 
