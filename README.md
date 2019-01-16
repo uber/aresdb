@@ -1,4 +1,4 @@
-[![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
+[![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![license](https://img.shields.io/github/license/uber/aresdb.svg)](LICENSE)
 
 AresDB
 ==============
