@@ -34,17 +34,9 @@ import (
 	"github.com/uber/aresdb/clients"
 	"github.com/uber/aresdb/memutils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/spf13/pflag"
-	"github.com/mitchellh/mapstructure"
-	"os"
 )
 
-var (
-	cfgFile string
-)
-
-// AppParams contains for
+// AppParams contains application parameters for creating command
 type AppParams struct {
 	DefaultCfg   map[string]interface{}
 	ServerLogger bark.Logger
@@ -53,61 +45,22 @@ type AppParams struct {
 	HttpWrappers []utils.HTTPHandlerWrapper
 }
 
-func readConfig(defaultCfg map[string]interface{}, flags *pflag.FlagSet) common.AresServerConfig {
-	v := viper.New()
-	v.SetConfigType("yaml")
-	v.BindPFlags(flags)
-
-	v.SetEnvPrefix("ares")
-	v.BindEnv("env")
-
-	// set defaults
-	v.SetDefault("root_path", "ares-root")
-
-	hostname, err := os.Hostname()
-	if err != nil {
-		panic(utils.StackError(err, "cannot get host name"))
-	}
-	v.SetDefault("cluster", map[string]interface{}{
-		 "instance_name": hostname,
-	})
-
-	v.MergeConfigMap(defaultCfg)
-
-	// merge in config file
-	if cfgFile != "" {
-		v.SetConfigFile(cfgFile)
-	} else {
-		v.SetConfigName("ares")
-		v.AddConfigPath("./config")
-	}
-
-	if err := v.MergeInConfig(); err == nil {
-		fmt.Println("Using config file: ", v.ConfigFileUsed())
-	}
-
-	var cfg common.AresServerConfig
-	err = v.Unmarshal(&cfg, func(config *mapstructure.DecoderConfig) {
-		config.TagName = "yaml"
-	})
-
-	if err != nil {
-		panic(err)
-	}
-
-	return cfg
-}
-
 // BuildCommand builds command
 func BuildCommand(params AppParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "ares",
 		Short: "AresDB",
 		Long: `AresDB is a GPU-powered real-time analytical engine`,
-		Example: `./ares --port 9374 --debug_port 43202 --root_path ares-root`,
+		Example: `./ares --config config/ares.yaml --port 9374 --debug_port 43202 --root_path ares-root`,
 		Run: func(cmd *cobra.Command, args []string) {
+
+			cfg, err := utils.ReadConfig(params.DefaultCfg, cmd.Flags())
+			if err != nil {
+				params.ServerLogger.WithField("err", err.Error()).Fatal("failed to read configs")
+			}
+
 			start(
-				readConfig(params.DefaultCfg, cmd.Flags()),
+				cfg,
 				params.ServerLogger,
 				params.QueryLogger,
 				params.Metrics,
@@ -115,11 +68,7 @@ func BuildCommand(params AppParams) *cobra.Command {
 			)
 		},
 	}
-	cmd.Flags().StringVar(&cfgFile, "config", "", "Ares config file")
-	cmd.Flags().IntP("port", "p", 0, "Ares service port")
-	cmd.Flags().IntP("debug_port", "d", 0, "Ares service debug port")
-	cmd.Flags().StringP("root_path", "r", "ares-root", "Root path of the data directory")
-	cmd.Flags().Bool("scheduler_off",false, "Start server with scheduler off, no archiving and backfill")
+	utils.AddFlags(cmd)
 	return cmd
 }
 
@@ -146,7 +95,7 @@ func start(cfg common.AresServerConfig, logger bark.Logger, queryLogger bark.Log
 	serverRestartTimer := scope.Timer("restart").Start()
 
 	// Create MetaStore.
-	metaStorePath := filepath.Join(utils.GetConfig().RootPath, "metastore")
+	metaStorePath := filepath.Join(cfg.RootPath, "metastore")
 	metaStore, err := metastore.NewDiskMetaStore(metaStorePath)
 	if err != nil {
 		logger.Panic(err)
@@ -172,7 +121,7 @@ func start(cfg common.AresServerConfig, logger bark.Logger, queryLogger bark.Log
 	}
 
 	// Create DiskStore.
-	diskStore := diskstore.NewLocalDiskStore(utils.GetConfig().RootPath)
+	diskStore := diskstore.NewLocalDiskStore(cfg.RootPath)
 
 	// Create MemStore.
 	memStore := memstore.NewMemStore(metaStore, diskStore)
@@ -216,13 +165,13 @@ func start(cfg common.AresServerConfig, logger bark.Logger, queryLogger bark.Log
 		debugRouter.HandleFunc("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
 		debugRouter.PathPrefix("/debug/pprof/").Handler(http.HandlerFunc(pprof.Index))
 
-		utils.GetLogger().Infof("Starting HTTP server on dbg-port %d", utils.GetConfig().DebugPort)
-		utils.GetLogger().Fatal(http.ListenAndServe(fmt.Sprintf(":%d", utils.GetConfig().DebugPort), debugRouter))
+		utils.GetLogger().Infof("Starting HTTP server on dbg-port %d", cfg.DebugPort)
+		utils.GetLogger().Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.DebugPort), debugRouter))
 	}()
 
 	// Init shards.
-	utils.GetLogger().Infof("Initializing shards from local DiskStore %s", utils.GetConfig().RootPath)
-	memStore.InitShards(utils.GetConfig().SchedulerOff)
+	utils.GetLogger().Infof("Initializing shards from local DiskStore %s", cfg.RootPath)
+	memStore.InitShards(cfg.SchedulerOff)
 
 	// Start serving.
 	dataHandler := api.NewDataHandler(memStore)
@@ -255,7 +204,7 @@ func start(cfg common.AresServerConfig, logger bark.Logger, queryLogger bark.Log
 	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, metaStore)
 	go batchStatsReporter.Run()
 
-	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", utils.GetConfig().Port, cfg.HTTP.MaxConnections)
-	utils.LimitServe(utils.GetConfig().Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
+	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
+	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	batchStatsReporter.Stop()
 }

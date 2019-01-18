@@ -931,6 +931,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(qc.Error).Should(BeNil())
 		Ω(da.(*deviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(2))
 		deviceFreeAndSetNil(&qc.OOPK.currentBatch.timezoneLookupD)
+		utils.ResetDefaults()
 	})
 
 	ginkgo.It("ProcessQuery should work", func() {
@@ -1165,6 +1166,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		bc := qc.OOPK.currentBatch
 		Ω(bc.timezoneLookupD).Should(BeZero())
+		utils.ResetDefaults()
 	})
 
 	ginkgo.It("dimValResVectorSize should work", func() {
