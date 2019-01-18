@@ -9,7 +9,7 @@ const (
 	EnvTest    AresEnv = "test"
 )
 
-// GetAresEnv ...
+// GetAresEnv gets the running environment setting for ares
 func GetAresEnv() AresEnv {
 	aresEnv := AresEnv(GetConfig().Env)
 	switch aresEnv {

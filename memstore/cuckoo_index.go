@@ -26,10 +26,6 @@ import (
 	"time"
 )
 
-var (
-	defaultInitNumBuckets = getDefaultInitNumBuckets()
-)
-
 const (
 	bucketSize = 8
 	// log2(numHashes)
@@ -578,7 +574,7 @@ func (c *CuckooIndex) allocate() {
 func newCuckooIndex(keyBytes int, hasEventTime bool, initNumBuckets int,
 	hostMemoryManager common.HostMemoryManager) *CuckooIndex {
 	if initNumBuckets <= 0 {
-		initNumBuckets = defaultInitNumBuckets
+		initNumBuckets = getDefaultInitNumBuckets()
 	}
 
 	cuckooIndex := &CuckooIndex{
