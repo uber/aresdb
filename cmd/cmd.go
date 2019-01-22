@@ -30,18 +30,18 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/spf13/cobra"
 	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/clients"
 	"github.com/uber/aresdb/memutils"
-	"github.com/spf13/cobra"
 )
 
 // Options represents options for executing command
 type Options struct {
 	DefaultCfg   map[string]interface{}
 	ServerLogger bark.Logger
-	QueryLogger bark.Logger
-	Metrics common.Metrics
+	QueryLogger  bark.Logger
+	Metrics      common.Metrics
 	HttpWrappers []utils.HTTPHandlerWrapper
 }
 
@@ -49,43 +49,44 @@ type Options struct {
 type Option func(*Options)
 
 // Execute executes command with options
-func Execute(opts ...Option) {
-	opts := &Options{}
+func Execute(setters ...Option) {
+
+	options := &Options{}
 	for _, setter := range setters {
-		setter(opts)
+		setter(options)
 	}
 
 	loggerFactory := common.NewLoggerFactory()
-	if opts.ServerLogger == nil {
-		opts.ServerLogger = loggerFactory.GetDefaultLogger()
+	if options.ServerLogger == nil {
+		options.ServerLogger = loggerFactory.GetDefaultLogger()
 	}
 
-	if opts.QueryLogger == nil {
-		opts.ServerLogger = loggerFactory.GetLogger("query")
+	if options.QueryLogger == nil {
+		options.ServerLogger = loggerFactory.GetLogger("query")
 	}
 
-	if opts.Metrics == nil {
-		opts.Metrics = common.NewNoopMetrics()
+	if options.Metrics == nil {
+		options.Metrics = common.NewNoopMetrics()
 	}
 
 	cmd := &cobra.Command{
-		Use: "ares",
-		Short: "AresDB",
-		Long: `AresDB is a GPU-powered real-time analytical engine`,
+		Use:     "ares",
+		Short:   "AresDB",
+		Long:    `AresDB is a GPU-powered real-time analytical engine`,
 		Example: `./ares --config config/ares.yaml --port 9374 --debug_port 43202 --root_path ares-root`,
 		Run: func(cmd *cobra.Command, args []string) {
 
-			cfg, err := utils.ReadConfig(opts.DefaultCfg, cmd.Flags())
+			cfg, err := utils.ReadConfig(options.DefaultCfg, cmd.Flags())
 			if err != nil {
-				opts.ServerLogger.WithField("err", err.Error()).Fatal("failed to read configs")
+				options.ServerLogger.WithField("err", err.Error()).Fatal("failed to read configs")
 			}
 
 			start(
 				cfg,
-				opts.ServerLogger,
-				opts.QueryLogger,
-				opts.Metrics,
-				opts.HttpWrappers...,
+				options.ServerLogger,
+				options.QueryLogger,
+				options.Metrics,
+				options.HttpWrappers...,
 			)
 		},
 	}
