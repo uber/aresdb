@@ -183,7 +183,7 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 		Ω(rw.GetStatusCode()).Should(Equal(http.StatusBadRequest))
 
 		hllRW := rw.(*HLLQueryResponseWriter)
-		Ω(hllRW.response.GetBytes()).Should(Equal([]byte{1, 1, 237, 172, 0, 0, 0, 0, 8, 0, 0, 0,
+		Ω(hllRW.response.GetBytes()).Should(Equal([]byte{2, 1, 237, 172, 0, 0, 0, 0, 8, 0, 0, 0,
 			1, 0, 0, 0, 116, 101, 115, 116, 32, 101, 114, 114, 0, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
@@ -197,7 +197,7 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 		rw.ReportResult(0, &query.AQLQueryContext{HLLQueryResult: []byte{0, 0, 0, 0, 0, 0, 0, 0}})
 
 		hllRW := rw.(*HLLQueryResponseWriter)
-		Ω(hllRW.response.GetBytes()).Should(Equal([]byte{1, 1, 237, 172, 0, 0, 0, 0, 8, 0, 0,
+		Ω(hllRW.response.GetBytes()).Should(Equal([]byte{2, 1, 237, 172, 0, 0, 0, 0, 8, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
