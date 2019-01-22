@@ -16,16 +16,8 @@ package main
 
 import (
 	"github.com/uber/aresdb/cmd"
-	"github.com/uber/aresdb/common"
 )
 
 func main() {
-	logFactory := common.NewLoggerFactory()
-	defaultLogger := logFactory.GetDefaultLogger()
-	defaultMetric := common.NewNoopMetrics()
-	cmd.BuildCommand(cmd.AppParams{
-		ServerLogger: defaultLogger,
-		QueryLogger: logFactory.GetLogger("query"),
-		Metrics: defaultMetric,
-	}).Execute()
+	cmd.Execute()
 }

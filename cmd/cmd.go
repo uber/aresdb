@@ -36,8 +36,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AppParams contains application parameters for creating command
-type AppParams struct {
+// Options represents options for executing command
+type Options struct {
 	DefaultCfg   map[string]interface{}
 	ServerLogger bark.Logger
 	QueryLogger bark.Logger
@@ -45,8 +45,29 @@ type AppParams struct {
 	HttpWrappers []utils.HTTPHandlerWrapper
 }
 
-// BuildCommand builds command
-func BuildCommand(params AppParams) *cobra.Command {
+// Option is for setting option
+type Option func(*Options)
+
+// Execute executes command with options
+func Execute(opts ...Option) {
+	opts := &Options{}
+	for _, setter := range setters {
+		setter(opts)
+	}
+
+	loggerFactory := common.NewLoggerFactory()
+	if opts.ServerLogger == nil {
+		opts.ServerLogger = loggerFactory.GetDefaultLogger()
+	}
+
+	if opts.QueryLogger == nil {
+		opts.ServerLogger = loggerFactory.GetLogger("query")
+	}
+
+	if opts.Metrics == nil {
+		opts.Metrics = common.NewNoopMetrics()
+	}
+
 	cmd := &cobra.Command{
 		Use: "ares",
 		Short: "AresDB",
@@ -54,22 +75,22 @@ func BuildCommand(params AppParams) *cobra.Command {
 		Example: `./ares --config config/ares.yaml --port 9374 --debug_port 43202 --root_path ares-root`,
 		Run: func(cmd *cobra.Command, args []string) {
 
-			cfg, err := utils.ReadConfig(params.DefaultCfg, cmd.Flags())
+			cfg, err := utils.ReadConfig(opts.DefaultCfg, cmd.Flags())
 			if err != nil {
-				params.ServerLogger.WithField("err", err.Error()).Fatal("failed to read configs")
+				opts.ServerLogger.WithField("err", err.Error()).Fatal("failed to read configs")
 			}
 
 			start(
 				cfg,
-				params.ServerLogger,
-				params.QueryLogger,
-				params.Metrics,
-				params.HttpWrappers...,
+				opts.ServerLogger,
+				opts.QueryLogger,
+				opts.Metrics,
+				opts.HttpWrappers...,
 			)
 		},
 	}
 	utils.AddFlags(cmd)
-	return cmd
+	cmd.Execute()
 }
 
 // start is the entry point of starting ares.
