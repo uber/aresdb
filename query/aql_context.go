@@ -377,6 +377,6 @@ type AQLQueryContext struct {
 	timezoneTable timezoneTableContext
 }
 
-func (ctx *OOPKContext) isHLL() bool {
+func (ctx *OOPKContext) IsHLL() bool {
 	return ctx.AggregateType == C.AGGR_HLL
 }
