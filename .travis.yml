@@ -17,10 +17,7 @@ cache:
   directories:
     - lib
     - gtest
-
-cache:
-  directories:
-  - $CUDA_LIB_LOCAL
+    - $CUDA_LIB_LOCAL
 
 # safelist
 branches:
