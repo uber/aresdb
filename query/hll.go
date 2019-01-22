@@ -34,7 +34,7 @@ type HLLQueryResults struct {
 // padding to underlying buffer.
 func NewHLLQueryResults() *HLLQueryResults {
 	r := &HLLQueryResults{}
-	header := queryCom.OldHLLDataHeader
+	header := queryCom.HLLDataHeader
 	r.buffer.Write((*(*[4]byte)(unsafe.Pointer(&header)))[:])
 	// Padding.
 	var bs [4]byte
@@ -168,52 +168,57 @@ func (qc *AQLQueryContext) SerializeHLL(dataTypes []memCom.DataType,
 	return builder.buffer, nil
 }
 
-// SerializeHeader first serializes header into buffer the builder holds.
+// SerializeHeader
+//	-----------query result 0-------------------
+//	 <header>
+//	 [uint8] num_enum_columns [uint8] bytes per dim ... [padding for 8 bytes]
+//	 [uint32] result_size [uint32] raw_dim_values_vector_length
+//	 [uint8] dim_index_0... [uint8] dim_index_n [padding for 8 bytes]
+//	 [uint32] data_type_0...[uint32] data_type_n [padding for 8 bytes]
+//
+//	 <enum cases 0>
+//	 [uint32_t] number of bytes of enum cases [uint16] column_index [2 bytes: padding]
+//	 <enum values 0> delimited by "\u0000\n" [padding for 8 bytes]
+//
+// 	 <end of header>
 func (builder *HLLDataWriter) SerializeHeader() error {
 	writer := utils.NewBufferWriter(builder.buffer)
 
-	if err := writer.AppendUint8(uint8(builder.NumDimsPerDimWidth[2])); err != nil {
-		return err
-	}
-
-	if err := writer.AppendUint8(uint8(builder.NumDimsPerDimWidth[3])); err != nil {
-		return err
-	}
-
-	if err := writer.AppendUint8(uint8(builder.NumDimsPerDimWidth[4])); err != nil {
-		return err
-	}
-
+	// num_enum_columns
 	if err := writer.AppendUint8(uint8(len(builder.EnumDicts))); err != nil {
 		return err
 	}
 
-	// Writer dim values.
+	// bytes per dim
+	if err := writer.Append([]byte(builder.NumDimsPerDimWidth[:])); err != nil {
+		return err
+	}
+	writer.AlignBytes(8)
+
+	// result_size
 	if err := writer.AppendUint32(builder.ResultSize); err != nil {
 		return err
 	}
 
-	// Write raw dim values vector size.
+	// raw_dim_values_vector_length
 	if err := writer.AppendUint32(builder.PaddedRawDimValuesVectorLength); err != nil {
 		return err
 	}
 
-	writer.SkipBytes(4)
-
+	// dim_indexes
 	for _, dimIndex := range builder.DimIndexes {
 		if err := writer.AppendUint8(uint8(dimIndex)); err != nil {
 			return err
 		}
 	}
-
 	writer.AlignBytes(8)
 
+	// data_types
 	for _, dataType := range builder.DataTypes {
 		if err := writer.AppendUint32(uint32(dataType)); err != nil {
 			return err
 		}
 	}
-
 	writer.AlignBytes(8)
 
 	// Write enum cases.
@@ -247,3 +252,4 @@ func (builder *HLLDataWriter) SerializeHeader() error {
 	}
 	return nil
 }
+

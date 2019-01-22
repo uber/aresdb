@@ -208,7 +208,7 @@ var _ = ginkgo.Describe("hll", func() {
 		data, err := qc.SerializeHLL(dataTypes, enumReverseDict, nil)
 		Ω(err).Should(BeNil())
 		//ioutil.WriteFile("../testing/data/query/hll_new", data, 0644)
-		res, err := queryCom.NewTimeSeriesHLLResult(data, queryCom.OldHLLDataHeader)
+		res, err := queryCom.NewTimeSeriesHLLResult(data, queryCom.HLLDataHeader)
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"NULL": map[string]interface{}{
