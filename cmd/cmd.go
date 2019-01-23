@@ -51,22 +51,15 @@ type Option func(*Options)
 // Execute executes command with options
 func Execute(setters ...Option) {
 
-	options := &Options{}
+	loggerFactory := common.NewLoggerFactory()
+	options := &Options{
+		ServerLogger: loggerFactory.GetDefaultLogger(),
+		QueryLogger:  loggerFactory.GetLogger("query"),
+		Metrics:      common.NewNoopMetrics(),
+	}
+
 	for _, setter := range setters {
 		setter(options)
-	}
-
-	loggerFactory := common.NewLoggerFactory()
-	if options.ServerLogger == nil {
-		options.ServerLogger = loggerFactory.GetDefaultLogger()
-	}
-
-	if options.QueryLogger == nil {
-		options.ServerLogger = loggerFactory.GetLogger("query")
-	}
-
-	if options.Metrics == nil {
-		options.Metrics = common.NewNoopMetrics()
 	}
 
 	cmd := &cobra.Command{
