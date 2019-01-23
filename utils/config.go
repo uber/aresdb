@@ -10,13 +10,13 @@ import (
 	"os"
 )
 
-// BindenvsToViper binds environment variables to viper
+// bindEnvironments binds environment variables to viper
 func bindEnvironments(v *viper.Viper) {
 	v.SetEnvPrefix("ares")
 	v.BindEnv("env")
 }
 
-// AddFlagsToCommand adds flags to command
+// AddFlags adds flags to command
 func AddFlags(cmd *cobra.Command) {
 	cmd.Flags().String("config", "config/ares.yaml", "Ares config file")
 	cmd.Flags().IntP("port", "p", 0, "Ares service port")
