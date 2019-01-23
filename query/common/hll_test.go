@@ -20,6 +20,7 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"io/ioutil"
 	"unsafe"
+	"fmt"
 )
 
 var _ = ginkgo.Describe("hll", func() {
@@ -172,6 +173,7 @@ var _ = ginkgo.Describe("hll", func() {
 		data, err := ioutil.ReadFile("../../testing/data/query/hll_empty_results")
 		Ω(err).Should(BeNil())
 		results, errs, err := ParseHLLQueryResults(data)
+		fmt.Println(errs, err)
 		Ω(results).Should(Equal([]AQLTimeSeriesResult{{}}))
 		Ω(errs).Should(Equal([]error{nil}))
 		Ω(err).Should(BeNil())

@@ -252,4 +252,3 @@ func (builder *HLLDataWriter) SerializeHeader() error {
 	}
 	return nil
 }
-

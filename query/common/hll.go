@@ -81,19 +81,25 @@ type HLLData struct {
 
 // CalculateSizes returns the header size and total size of used by this hll data.
 func (data *HLLData) CalculateSizes() (uint32, int64) {
-	// Dims per width + num enum columns + result size + raw dim value vector size + padding
-	var headerSize uint32 = 16
+	// num enum columns (1 byte)
+	var headerSize = 1
+	// Dims per width (1 byte * numDims)
+	headerSize += len(data.NumDimsPerDimWidth)
+	// padding for 8 bytes
+	headerSize = utils.AlignOffset(headerSize, 8)
+	// result size (4 bytes) + raw_dim_values_vector_length (4 bytes)
+	headerSize += 8
 
 	// Dim indexes.
-	headerSize += uint32((len(data.DimIndexes) + 7) / 8 * 8)
+	headerSize += (len(data.DimIndexes) + 7) / 8 * 8
 
 	// Data types.
-	headerSize += uint32((len(data.DataTypes)*4 + 7) / 8 * 8)
+	headerSize += (len(data.DataTypes)*4 + 7) / 8 * 8
 
 	// Enum cases.
 	for _, enumCases := range data.EnumDicts {
 		// number of bytes of enum cases + column index + padding = 8 bytes.
-		headerSize += 8 + CalculateEnumCasesBytes(enumCases)
+		headerSize += int(8 + CalculateEnumCasesBytes(enumCases))
 	}
 
 	totalSize := int64(headerSize)
@@ -107,7 +113,7 @@ func (data *HLLData) CalculateSizes() (uint32, int64) {
 	// HLL dense vector.
 	totalSize += data.PaddedHLLVectorLength
 
-	return headerSize, totalSize
+	return uint32(headerSize), totalSize
 }
 
 // CalculateEnumCasesBytes calculates how many bytes the enum case values will occupy including 8 bytes alignment.
