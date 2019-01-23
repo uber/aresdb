@@ -141,6 +141,7 @@ var _ = ginkgo.Describe("Time Bucketizer", func() {
 		exp, err = qc.buildTimeDimensionExpr("1 centry", timeColumn)
 		Ω(exp).Should(BeNil())
 		Ω(err).ShouldNot(BeNil())
+		utils.ResetDefaults()
 	})
 
 	ginkgo.It("qc.buildTimeDimensionExpr for irregular interval should work", func() {

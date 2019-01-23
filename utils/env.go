@@ -1,7 +1,5 @@
 package utils
 
-import "os"
-
 type AresEnv string
 
 const (
@@ -11,8 +9,9 @@ const (
 	EnvTest    AresEnv = "test"
 )
 
+// GetAresEnv gets the running environment setting for ares
 func GetAresEnv() AresEnv {
-	aresEnv := AresEnv(os.Getenv("ARES_ENV"))
+	aresEnv := AresEnv(GetConfig().Env)
 	switch aresEnv {
 	case EnvProd:
 		break

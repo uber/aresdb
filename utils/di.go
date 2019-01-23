@@ -18,6 +18,7 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/common"
+	"github.com/spf13/viper"
 )
 
 // stores all common components together to avoid scattered references.
@@ -30,10 +31,21 @@ var (
 
 // init loads default implementations of common components for unit tests' purpose.
 func init() {
+	ResetDefaults()
+}
+
+// ResetDefaults reset default config, logger and metrics settings
+func ResetDefaults() {
 	logger = common.NewLoggerFactory().GetDefaultLogger()
 	queryLogger = common.NewLoggerFactory().GetDefaultLogger()
 	scope := tally.NewTestScope("test", nil)
 	reporterFactory = NewReporterFactory(scope)
+
+	bindEnvironments(viper.GetViper())
+	viper.ReadInConfig()
+
+	config = common.AresServerConfig{}
+	viper.Unmarshal(&config)
 }
 
 // Init loads application specific common components settings.
