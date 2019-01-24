@@ -182,7 +182,7 @@ var _ = ginkgo.Describe("hll", func() {
 		Ω(data[104 : 104+queryCom.DenseDataLength+28]).Should(Equal(hllData[:]))
 
 		// Then we deserialize it.
-		res, err := queryCom.NewTimeSeriesHLLResult(data, queryCom.OldHLLDataHeader)
+		res, err := queryCom.NewTimeSeriesHLLResult(data, queryCom.HLLDataHeader)
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"NULL": map[string]interface{}{
@@ -207,8 +207,8 @@ var _ = ginkgo.Describe("hll", func() {
 		enumReverseDict := map[int][]string{1: {"a", "b", "c", "d"}}
 		data, err := qc.SerializeHLL(dataTypes, enumReverseDict, nil)
 		Ω(err).Should(BeNil())
-		//ioutil.WriteFile("../testing/data/query/hll_new", data, 0644)
-		res, err := queryCom.NewTimeSeriesHLLResult(data, queryCom.OldHLLDataHeader)
+		//ioutil.WriteFile("../testing/data/query/hll", data, 0644)
+		res, err := queryCom.NewTimeSeriesHLLResult(data, queryCom.HLLDataHeader)
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"NULL": map[string]interface{}{
@@ -233,8 +233,11 @@ var _ = ginkgo.Describe("hll", func() {
 		dataTypes := []memCom.DataType{memCom.Uint32, memCom.Uint8, memCom.Int16}
 		enumReverseDict := map[int][]string{1: {"a", "b", "c", "d"}}
 
-		queryResults := NewHLLQueryResults()
+		//queryE := NewHLLQueryResults()
+		//queryE.WriteResult([]byte{})
+		//err := ioutil.WriteFile("../testing/data/query/hll_empty_results", queryE.GetBytes(), 0644)
 
+		queryResults := NewHLLQueryResults()
 		data, err := qc.SerializeHLL(dataTypes, enumReverseDict, nil)
 		Ω(err).Should(BeNil())
 
@@ -265,7 +268,7 @@ var _ = ginkgo.Describe("hll", func() {
 
 		queryResults.WriteError(errors.New("test"))
 		bs := queryResults.GetBytes()
-		// ioutil.WriteFile("../testing/data/query/hll_query_results", bs, 0644)
+		//ioutil.WriteFile("../testing/data/query/hll_query_results", bs, 0644)
 
 		results, errs, err = queryCom.ParseHLLQueryResults(bs)
 		Ω(err).Should(BeNil())
