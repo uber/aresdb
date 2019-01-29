@@ -2,9 +2,7 @@ package: github.com/uber/aresdb
 import:
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega
-- package: github.com/uber-common/bark
 - package: github.com/uber-go/tally
-- package: github.com/sirupsen/logrus
 - package: gopkg.in/yaml.v2
 - package: github.com/stretchr/testify
 - package: github.com/gorilla/mux

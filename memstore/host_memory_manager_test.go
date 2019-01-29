@@ -33,7 +33,6 @@ import (
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 )
@@ -100,8 +99,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	})
 
 	// Initialize logging.
-	logrus.SetOutput(os.Stdout)
-	logger := zap.NewNop().Sugar()
+	logger := zap.NewExample().Sugar()
 
 	ginkgo.It("Test shardBatchID", func() {
 		logger.Infof("Test shardBatchID Started")

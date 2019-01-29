@@ -125,7 +125,7 @@ var _ = ginkgo.Describe("gforceDB connector", func() {
 			Address: hostPort,
 		}
 
-		logger := zap.NewNop().Sugar()
+		logger := zap.NewExample().Sugar()
 		rootScope, _, _ := common.NewNoopMetrics().NewRootScope()
 
 		errConfig := ConnectorConfig{

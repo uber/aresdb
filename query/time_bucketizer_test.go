@@ -99,7 +99,7 @@ var _ = ginkgo.Describe("Time Bucketizer", func() {
 
 		utils.Init(common.AresServerConfig{Query: common.QueryConfig{TimezoneTable: common.TimezoneConfig{
 			TableName: "",
-		}}}, common.NewZapLoggerFactory().GetDefaultLogger().Sugar(), common.NewZapLoggerFactory().GetDefaultLogger().Sugar(), tally.NewTestScope("test", nil))
+		}}}, common.NewLoggerFactory().GetDefaultLogger().Sugar(), common.NewLoggerFactory().GetDefaultLogger().Sugar(), tally.NewTestScope("test", nil))
 		qc.timezoneTable.tableColumn = "timezone"
 		qc.timezoneTable.tableAlias = defaultTimezoneTableAlias
 		qc.TableIDByAlias = map[string]int{defaultTimezoneTableAlias: 0}

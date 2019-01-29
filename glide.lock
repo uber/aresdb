@@ -1,10 +1,6 @@
-hash: e21db22baf6a337d9eccb818ba7e77ae02ab4ce986bae88c938e32c2a677c900
-updated: 2019-01-29T13:08:58.035008-08:00
+hash: 03bab46cdeefbea42ab079458e263d3311fedf4e8df566dbc5bc5fb4699552c1
+updated: 2019-01-29T14:28:08.084001-08:00
 imports:
-- name: github.com/cactus/go-statsd-client
-  version: 138b925ccdf617776955904ba7759fce64406cec
-  subpackages:
-  - statsd
 - name: github.com/davecgh/go-spew
   version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
@@ -36,8 +32,6 @@ imports:
   - json/token
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
-- name: github.com/konsorten/go-windows-terminal-sequences
-  version: 5c8c8bd35d3832f5d134ae1e1e375b69a4d25242
 - name: github.com/magiconair/properties
   version: 7757cc9fdb852f7579b24170bcacda2c7471bb6a
 - name: github.com/mitchellh/mapstructure
@@ -86,8 +80,6 @@ imports:
   - difflib
 - name: github.com/satori/go.uuid
   version: b2ce2384e17bbe0c6d34077efa39dbab3e09123b
-- name: github.com/sirupsen/logrus
-  version: 659e47340eafb203ad3c2ce461023fde46356615
 - name: github.com/spf13/afero
   version: a5d6946387efe7d64d09dcba68cdd523dc1273a3
   subpackages:
@@ -109,10 +101,6 @@ imports:
   subpackages:
   - assert
   - mock
-- name: github.com/uber-common/bark
-  version: 362cbdc2431a7f2414126b4fb4914820b876fad4
-  subpackages:
-  - zbark
 - name: github.com/uber-go/tally
   version: d0a004a77fc9f0b9733e3afe638994d18da13f3d
 - name: github.com/uber/jaeger-client-go
@@ -131,10 +119,6 @@ imports:
   - internal/color
   - internal/exit
   - zapcore
-- name: golang.org/x/crypto
-  version: ff983b9c42bc9fbf91556e191cc8efb585c16908
-  subpackages:
-  - ssh/terminal
 - name: golang.org/x/net
   version: 915654e7eabcea33ae277abbecf52f0d8b7a9fdc
   subpackages:
@@ -146,7 +130,6 @@ imports:
   version: 11f53e03133963fb11ae0588e08b5e0b85be8be5
   subpackages:
   - unix
-  - windows
 - name: golang.org/x/text
   version: e6919f6577db79269a6443b9dc46d18f2238fb5d
   subpackages:

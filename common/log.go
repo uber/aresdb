@@ -15,9 +15,6 @@
 package common
 
 import (
-	"github.com/sirupsen/logrus"
-	"github.com/uber-common/bark"
-	"github.com/uber-common/bark/zbark"
 	"go.uber.org/zap"
 )
 
@@ -29,35 +26,13 @@ type LoggerFactory interface {
 	GetLogger(name string) *zap.Logger
 }
 
-// LogrusLoggerFactory is the standard logrus implementation of LoggerFactory
-type LogrusLoggerFactory struct {
-	logger *logrus.Logger
-}
-
 // ZapLoggerFactory is the stdlog implementation of LoggerFactory
 type ZapLoggerFactory struct {
 	logger *zap.Logger
 }
 
-// NewLoggerFactory creates a default logrus LoggerFactory implementation.
+// NewLoggerFactory creates a default zap LoggerFactory implementation.
 func NewLoggerFactory() LoggerFactory {
-	return &LogrusLoggerFactory{
-		logger: logrus.StandardLogger(),
-	}
-}
-
-// GetDefaultLogger returns the default zap logger.
-func (r *LogrusLoggerFactory) GetDefaultLogger() *zap.Logger {
-	return zbark.Zapify(bark.NewLoggerFromLogrus(r.logger))
-}
-
-// GetLogger of LogrusLoggerFactory ignores the given name and just return the default logger.
-func (r *LogrusLoggerFactory) GetLogger(name string) *zap.Logger {
-	return zbark.Zapify(bark.NewLoggerFromLogrus(r.logger))
-}
-
-// NewZapLoggerFactory creates a default zap LoggerFactory implementation.
-func NewZapLoggerFactory() LoggerFactory {
 	return &ZapLoggerFactory{
 		logger: zap.NewExample(),
 	}

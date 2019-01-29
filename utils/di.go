@@ -36,8 +36,8 @@ func init() {
 
 // ResetDefaults reset default config, logger and metrics settings
 func ResetDefaults() {
-	logger = common.NewZapLoggerFactory().GetDefaultLogger().Sugar()
-	queryLogger = common.NewZapLoggerFactory().GetDefaultLogger().Sugar()
+	logger = common.NewLoggerFactory().GetDefaultLogger().Sugar()
+	queryLogger = common.NewLoggerFactory().GetDefaultLogger().Sugar()
 	scope := tally.NewTestScope("test", nil)
 	reporterFactory = NewReporterFactory(scope)
 

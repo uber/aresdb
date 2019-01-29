@@ -22,7 +22,6 @@ import (
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils/mocks"
@@ -180,7 +179,6 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("Remove", "base/a/enums/column4").Return(nil)
 
 	var createDiskMetastore = func(basepath string) *diskMetaStore {
-		logrus.SetOutput(os.Stdout)
 		diskMetaStore := &diskMetaStore{
 			FileSystem:       mockFileSystem,
 			writeLock:        sync.Mutex{},
