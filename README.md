@@ -80,8 +80,7 @@ Please read the [Docker](docs/docker.md) page.
 Documentation
 --------------
 
-Interested in learning more about AresDB? Read the blog post:
-[TBD](TBD)
+Interested in learning more about AresDB? Read the [blog post](https://eng.uber.com/aresdb/)
 
 License
 -------
