@@ -2,7 +2,8 @@
 
 AresDB
 ==============
-AresDB is a GPU-based analytics engine with storage and query capabilities. The goal of AresDB is to develop a real-time analytics system with fresh data and interactive response time at a low cost.
+AresDB is a GPU-based real-time analytics storage and query engine. It features low query latency, high data freshness and highly efficient in-memory and on disk storage management. Please see AresDB's features, architecture design described in the [Uber Engineering Blog](https://eng.uber.com/aresdb/).
+
 This repo contains the source code of AresDB and debug UI.
 
 Legal Note
