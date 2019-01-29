@@ -20,16 +20,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
-	"strconv"
-	"strings"
+	"go.uber.org/zap"
 )
 
 const (
@@ -73,7 +73,7 @@ type connector struct {
 
 	cfg         ConnectorConfig
 	httpClient  http.Client
-	logger      bark.Logger
+	logger      *zap.SugaredLogger
 	metricScope tally.Scope
 
 	// mapping from table name to table schema
@@ -103,7 +103,7 @@ type ConnectorConfig struct {
 }
 
 // NewConnector returns a new ares Connector
-func (cfg ConnectorConfig) NewConnector(logger bark.Logger, metricScope tally.Scope) (Connector, error) {
+func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope tally.Scope) (Connector, error) {
 	if cfg.SchemaRefreshInterval <= 0 {
 		cfg.SchemaRefreshInterval = defaultSchemaRefreshInterval
 	}
@@ -138,7 +138,8 @@ func (cfg ConnectorConfig) NewConnector(logger bark.Logger, metricScope tally.Sc
 		for range ticks {
 			err = connector.fetchAllTables()
 			if err != nil {
-				logger.WithFields(bark.Fields{"error": err.Error()}).Errorf("Failed to fetch table schema")
+				logger.With(
+					"error", err.Error()).Errorf("Failed to fetch table schema")
 			}
 		}
 	}(cfg.SchemaRefreshInterval)
@@ -269,14 +270,22 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 			// prevent primary key being nil
 			if value == nil && utils.IndexOfInt(schema.Table.PrimaryKeyColumns, columnID) >= 0 {
 				upsertBatchBuilder.RemoveRow()
-				c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "table": tableName, "columnID": columnID, "value": value}).Error("PrimaryKey column is nil")
+				c.logger.With(
+					"name", "prepareUpsertBatch",
+					"table", tableName,
+					"columnID", columnID,
+					"value", value).Error("PrimaryKey column is nil")
 				break
 			}
 
 			// skip rows if time column is nil for fact table
 			if value == nil && schema.Table.IsFactTable && !schema.Table.Config.AllowMissingEventTime && columnID == 0 {
 				upsertBatchBuilder.RemoveRow()
-				c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "table": tableName, "columnID": columnID, "value": value}).Error("Time column is nil")
+				c.logger.With(
+					"name", "prepareUpsertBatch",
+					"table", tableName,
+					"columnID", columnID,
+					"value", value).Error("Time column is nil")
 				break
 			}
 
@@ -284,7 +293,12 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 				value, err = c.translateEnum(tableName, columnID, value, column.CaseInsensitive)
 				if err != nil {
 					upsertBatchBuilder.RemoveRow()
-					c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "error": err.Error(), "table": tableName, "columnID": columnID, "value": value}).Error("Failed to translate enum")
+					c.logger.With(
+						"name", "prepareUpsertBatch",
+						"error", err.Error(),
+						"table", tableName,
+						"columnID", columnID,
+						"value", value).Error("Failed to translate enum")
 					break
 				}
 
@@ -296,7 +310,12 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 			// Set value to the last row.
 			if err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, value); err != nil {
 				upsertBatchBuilder.RemoveRow()
-				c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "error": err.Error(), "table": tableName, "columnID": columnID, "value": value}).Error("Failed to set value")
+				c.logger.With(
+					"name", "prepareUpsertBatch",
+					"error", err.Error(),
+					"table", tableName,
+					"columnID", columnID,
+					"value", value).Error("Failed to set value")
 				break
 			}
 			upsertBatchColumnIndex++
@@ -364,8 +383,12 @@ func (c *connector) prepareEnumCases(tableName, columnName string, colIndex, col
 			}
 			c.RUnlock()
 		} else {
-			c.logger.WithFields(bark.Fields{"name": "prepareEnumCases", "error": "Enum value should be string",
-				"table": tableName, "columnID": columnID, "value": value}).Debug("Enum value is not string")
+			c.logger.With(
+				"name", "prepareEnumCases",
+				"error", "Enum value should be string",
+				"table", tableName,
+				"columnID", columnID,
+				"value", value).Debug("Enum value is not string")
 			c.metricScope.Tagged(map[string]string{"table": tableName, "columnID": strconv.Itoa(columnID)}).
 				Counter("abandoned_rows").Inc(1)
 			abandonRows[rowIndex] = nil
@@ -378,14 +401,12 @@ func (c *connector) prepareEnumCases(tableName, columnName string, colIndex, col
 
 	if disableAutoExpand {
 		// It's recommended to set up elk or sentry logging to catch this error.
-		c.logger.WithFields(
-			bark.Fields{
-				"TableName":       tableName,
-				"ColumnName":      columnName,
-				"ColumnID":        columnID,
-				"newEnumCasesSet": newEnumCasesSet,
-				"caseInsensitive": caseInsensitive,
-			},
+		c.logger.With(
+			"TableName", tableName,
+			"ColumnName", columnName,
+			"ColumnID", columnID,
+			"newEnumCasesSet", newEnumCasesSet,
+			"caseInsensitive", caseInsensitive,
 		).Error("Finding new enum cases during ingestion but enum auto expansion is disabled")
 		c.metricScope.Tagged(
 			map[string]string{

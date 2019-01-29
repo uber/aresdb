@@ -258,7 +258,7 @@ func (scheduler *schedulerImpl) run() {
 		for _, job := range jobManager.generateJobs() {
 			// Waiting for job to finish.
 			if err := <-scheduler.SubmitJob(job); err != nil {
-				utils.GetLogger().WithField("job", job).Panic("Panic due to failure to run job")
+				utils.GetLogger().With("job", job).Panic("Panic due to failure to run job")
 			}
 		}
 	}

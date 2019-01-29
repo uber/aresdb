@@ -17,13 +17,13 @@ package query
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/uber-common/bark"
-	"github.com/uber/aresdb/memutils"
-	"github.com/uber/aresdb/utils"
 	"math"
 	"sort"
 	"time"
 	"unsafe"
+
+	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/utils"
 )
 
 // stageName represents each query stage.
@@ -236,13 +236,13 @@ func (qc *AQLQueryContext) reportBatch(isArchiveBatch bool) {
 		}
 		stats := qc.OOPK.currentBatch.stats
 		utils.GetQueryLogger().
-			WithFields(bark.Fields{
-				"timings":   stats.timings,
-				"total":     stats.totalTiming,
-				"batchID":   stats.batchID,
-				"batchSize": stats.batchSize,
-				"batchType": batchType,
-			}).Infof("Query stats")
+			With(
+				"timings", stats.timings,
+				"total", stats.totalTiming,
+				"batchID", stats.batchID,
+				"batchSize", stats.batchSize,
+				"batchType", batchType,
+			).Infof("Query stats")
 		if isArchiveBatch {
 			qc.OOPK.ArchiveBatchStats.applyBatchStats(stats)
 		} else {

@@ -19,6 +19,10 @@ import (
 
 	"encoding/binary"
 	"encoding/json"
+	"math"
+	"strconv"
+	"sync"
+
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -37,9 +41,6 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"math"
-	"strconv"
-	"sync"
 )
 
 // readDeviceVPSlice reads a vector party from file and also translate it to device vp format:
@@ -927,7 +928,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		utils.Init(common.AresServerConfig{Query: common.QueryConfig{TimezoneTable: common.TimezoneConfig{
 			TableName: "tableName",
-		}}}, common.NewLoggerFactory().GetDefaultLogger(), common.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
+		}}}, common.NewZapLoggerFactory().GetDefaultLogger().Sugar(), common.NewZapLoggerFactory().GetDefaultLogger().Sugar(), tally.NewTestScope("test", nil))
 		qc := &AQLQueryContext{
 			timezoneTable: timezoneTableContext{tableColumn: "timezone"},
 		}
@@ -1135,7 +1136,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		utils.Init(common.AresServerConfig{Query: common.QueryConfig{TimezoneTable: common.TimezoneConfig{
 			TableName: timezoneTable,
-		}}}, common.NewLoggerFactory().GetDefaultLogger(), common.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
+		}}}, common.NewZapLoggerFactory().GetDefaultLogger().Sugar(), common.NewZapLoggerFactory().GetDefaultLogger().Sugar(), tally.NewTestScope("test", nil))
 
 		qc := &AQLQueryContext{}
 		q := &AQLQuery{

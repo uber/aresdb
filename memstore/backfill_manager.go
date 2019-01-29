@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"encoding/json"
+
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
@@ -115,7 +116,7 @@ func (r *BackfillManager) Append(upsertBatch *UpsertBatch, redoFile int64, batch
 	utils.GetReporter(r.TableName, r.Shard).GetGauge(utils.BackfillBufferNumRecords).Update(float64(r.NumRecords))
 
 	if r.CurrentBufferSize+r.BackfillingBufferSize >= int64(float64(r.MaxBufferSize)*0.95) {
-		utils.GetLogger().WithField("size", r.CurrentBufferSize+r.BackfillingBufferSize).
+		utils.GetLogger().With("size", r.CurrentBufferSize+r.BackfillingBufferSize).
 			Warnf("Table %s Backfill buffer is full", r.TableName)
 		return true
 	}

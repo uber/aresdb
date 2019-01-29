@@ -26,15 +26,16 @@ import (
 
 	"bytes"
 	"encoding/json"
+	"io"
+	"sync"
+	"time"
+
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
-	"github.com/uber-common/bark"
-	"io"
-	"sync"
-	"time"
+	"go.uber.org/zap"
 )
 
 var _ = ginkgo.Describe("HostMemoryManager", func() {
@@ -100,7 +101,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 
 	// Initialize logging.
 	logrus.SetOutput(os.Stdout)
-	logger := bark.NewLoggerFromLogrus(logrus.New())
+	logger := zap.NewNop().Sugar()
 
 	ginkgo.It("Test shardBatchID", func() {
 		logger.Infof("Test shardBatchID Started")

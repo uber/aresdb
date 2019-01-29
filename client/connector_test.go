@@ -23,11 +23,10 @@ import (
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
-	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"go.uber.org/zap"
 )
 
 var _ = ginkgo.Describe("gforceDB connector", func() {
@@ -126,7 +125,7 @@ var _ = ginkgo.Describe("gforceDB connector", func() {
 			Address: hostPort,
 		}
 
-		logger := bark.NewLoggerFromLogrus(logrus.New())
+		logger := zap.NewNop().Sugar()
 		rootScope, _, _ := common.NewNoopMetrics().NewRootScope()
 
 		errConfig := ConnectorConfig{

@@ -23,7 +23,6 @@ import (
 	"github.com/uber/aresdb/utils"
 
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
-	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/memstore/common"
 )
 
@@ -472,13 +471,11 @@ func (h *hostMemoryManager) tryEviction() {
 			if isPreloadingDays {
 				utils.GetReporter(columnBatchInfos.table, batchPriority.shardID).
 					GetCounter(utils.PreloadingZoneEvicted).Inc(1)
-				utils.GetLogger().WithFields(
-					bark.Fields{
-						"table":  columnBatchInfos.table,
-						"shard":  batchPriority.shardID,
-						"batch":  batchPriority.batchID,
-						"column": batchPriority.columnID,
-					},
+				utils.GetLogger().With(
+					"table", columnBatchInfos.table,
+					"shard", batchPriority.shardID,
+					"batch", batchPriority.batchID,
+					"column", batchPriority.columnID,
 				).Warn("Column in preloading zone is evicted")
 			}
 

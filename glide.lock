@@ -1,8 +1,8 @@
 hash: e21db22baf6a337d9eccb818ba7e77ae02ab4ce986bae88c938e32c2a677c900
-updated: 2019-01-17T16:53:12.282351-08:00
+updated: 2019-01-29T13:08:58.035008-08:00
 imports:
 - name: github.com/cactus/go-statsd-client
-  version: 23713bd9ff66e6949ab5c578ed8de1646631eee3
+  version: 138b925ccdf617776955904ba7759fce64406cec
   subpackages:
   - statsd
 - name: github.com/davecgh/go-spew
@@ -111,12 +111,26 @@ imports:
   - mock
 - name: github.com/uber-common/bark
   version: 362cbdc2431a7f2414126b4fb4914820b876fad4
+  subpackages:
+  - zbark
 - name: github.com/uber-go/tally
   version: d0a004a77fc9f0b9733e3afe638994d18da13f3d
 - name: github.com/uber/jaeger-client-go
   version: 6733ee486c780528f2c8088305e16fdb685134c7
   subpackages:
   - config
+- name: go.uber.org/atomic
+  version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
+- name: go.uber.org/multierr
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/zap
+  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - zapcore
 - name: golang.org/x/crypto
   version: ff983b9c42bc9fbf91556e191cc8efb585c16908
   subpackages:

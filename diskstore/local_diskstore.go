@@ -18,16 +18,15 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/utils"
-	"path/filepath"
 )
 
 // LocalDiskStore is the implementation of Diskstore for local disk.
@@ -265,7 +264,10 @@ func (l LocalDiskStore) DeleteSnapshot(table string, shard int, latestRedoLogFil
 
 			if redoLogFile < latestRedoLogFile || (redoLogFile == latestRedoLogFile && uint32(offset) < latestOffset) {
 				snapshotToDeleteFilePath := GetPathForTableSnapshotDirPath(l.rootPath, table, shard, redoLogFile, uint32(offset))
-				utils.GetLogger().WithFields(bark.Fields{"action": "delete_snapshot", "redoLog": latestRedoLogFile, "offset": latestOffset}).Infof("delete snapshot: %s", snapshotToDeleteFilePath)
+				utils.GetLogger().With(
+					"action", "delete_snapshot",
+					"redoLog", latestRedoLogFile,
+					"offset", latestOffset).Infof("delete snapshot: %s", snapshotToDeleteFilePath)
 				err := os.RemoveAll(snapshotToDeleteFilePath)
 				if err != nil {
 					return utils.StackError(err, "Failed to delete snapshot file: %s", f.Name())
@@ -398,10 +400,9 @@ func (l LocalDiskStore) DeleteColumn(table string, columnID int, shard int) erro
 				vectorPartyFilePath := GetPathForTableArchiveBatchColumnFile(l.rootPath, table, shard, batchID,
 					batchVersion, seqNum, columnID)
 				if err = os.Remove(vectorPartyFilePath); err != nil && !os.IsNotExist(err) {
-					utils.GetLogger().WithFields(bark.Fields{
-						"vectorPartyFilePath": vectorPartyFilePath,
-						"err": err,
-					},
+					utils.GetLogger().With(
+						"vectorPartyFilePath", vectorPartyFilePath,
+						"err", err,
 					).Warn("Failed to delete a vector party file")
 					continue
 				}

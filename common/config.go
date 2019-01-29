@@ -90,7 +90,7 @@ type AresServerConfig struct {
 
 	// environment
 	Env string `yaml: "env"`
-	
+
 	Query     QueryConfig     `yaml:"query"`
 	DiskStore DiskStoreConfig `yaml:"disk_store"`
 	HTTP      HTTPConfig      `yaml:"http"`

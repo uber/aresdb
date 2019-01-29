@@ -17,19 +17,26 @@ package common
 import (
 	"github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
+	"github.com/uber-common/bark/zbark"
+	"go.uber.org/zap"
 )
 
 // LoggerFactory defines the log factory ares needs.
 type LoggerFactory interface {
 	// GetDefaultLogger returns the default logger.
-	GetDefaultLogger() bark.Logger
+	GetDefaultLogger() *zap.Logger
 	// GetLogger returns logger given the logger name.
-	GetLogger(name string) bark.Logger
+	GetLogger(name string) *zap.Logger
 }
 
 // LogrusLoggerFactory is the standard logrus implementation of LoggerFactory
 type LogrusLoggerFactory struct {
 	logger *logrus.Logger
+}
+
+// ZapLoggerFactory is the stdlog implementation of LoggerFactory
+type ZapLoggerFactory struct {
+	logger *zap.Logger
 }
 
 // NewLoggerFactory creates a default logrus LoggerFactory implementation.
@@ -39,12 +46,29 @@ func NewLoggerFactory() LoggerFactory {
 	}
 }
 
-// GetDefaultLogger returns the default logrus logger.
-func (r *LogrusLoggerFactory) GetDefaultLogger() bark.Logger {
-	return bark.NewLoggerFromLogrus(r.logger)
+// GetDefaultLogger returns the default zap logger.
+func (r *LogrusLoggerFactory) GetDefaultLogger() *zap.Logger {
+	return zbark.Zapify(bark.NewLoggerFromLogrus(r.logger))
 }
 
 // GetLogger of LogrusLoggerFactory ignores the given name and just return the default logger.
-func (r *LogrusLoggerFactory) GetLogger(name string) bark.Logger {
-	return bark.NewLoggerFromLogrus(r.logger)
+func (r *LogrusLoggerFactory) GetLogger(name string) *zap.Logger {
+	return zbark.Zapify(bark.NewLoggerFromLogrus(r.logger))
+}
+
+// NewZapLoggerFactory creates a default zap LoggerFactory implementation.
+func NewZapLoggerFactory() LoggerFactory {
+	return &ZapLoggerFactory{
+		logger: zap.NewExample(),
+	}
+}
+
+// GetDefaultLogger returns the default zap logger.
+func (r *ZapLoggerFactory) GetDefaultLogger() *zap.Logger {
+	return r.logger
+}
+
+// GetLogger of ZapLoggerFactory ignores the given name and just return the default logger.
+func (r *ZapLoggerFactory) GetLogger(name string) *zap.Logger {
+	return r.logger
 }

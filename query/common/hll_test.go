@@ -15,12 +15,12 @@
 package common
 
 import (
+	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"io/ioutil"
 	"unsafe"
-	"fmt"
 )
 
 var _ = ginkgo.Describe("hll", func() {

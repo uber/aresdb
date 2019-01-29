@@ -23,10 +23,10 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 
-	"github.com/gorilla/mux"
-	"github.com/uber-common/bark"
-	"github.com/uber/aresdb/common"
 	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/uber/aresdb/common"
 )
 
 // QueryHandler handles query execution.
@@ -81,15 +81,15 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 			errStr = err.Error()
 		}
 
-		l := utils.GetQueryLogger().WithFields(bark.Fields{
-			"error":             errStr,
-			"request":           aqlRequest,
-			"queries_enabled_":  aqlRequest.Body.Queries,
-			"duration":          duration,
-			"statusCode":        statusCode,
-			"contexts_enabled_": qcs,
-			"headers":           r.Header,
-		})
+		l := utils.GetQueryLogger().With(
+			"error", errStr,
+			"request", aqlRequest,
+			"queries_enabled_", aqlRequest.Body.Queries,
+			"duration", duration,
+			"statusCode", statusCode,
+			"contexts_enabled_", qcs,
+			"headers", r.Header,
+		)
 
 		if statusCode == http.StatusOK {
 			l.Info("All queries succeeded")
@@ -178,11 +178,11 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 		// Execute.
 		qc.ProcessQuery(handler.memStore)
 		if qc.Error != nil {
-			utils.GetQueryLogger().WithFields(bark.Fields{
-				"error":   qc.Error,
-				"request": aqlRequest,
-				"context": qc,
-			}).Error("Error happened when processing query")
+			utils.GetQueryLogger().With(
+				"error", qc.Error,
+				"request", aqlRequest,
+				"context", qc,
+			).Error("Error happened when processing query")
 			queryResponseWriter.ReportError(i, q.Table, qc.Error, http.StatusInternalServerError)
 		} else {
 			// Postprocess
