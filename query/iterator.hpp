@@ -531,19 +531,31 @@ template<typename Value>
 class MeasureProxy {
  public:
   __host__ __device__
-  MeasureProxy(Value *outputIter, Value identity, uint32_t count)
+  MeasureProxy(Value *outputIter, Value identity, uint32_t count, bool isAvg)
       : outputIter(outputIter),
         count(count),
-        identity(identity) {
+        identity(identity), isAvg(isAvg) {
   }
 
   __host__ __device__
   MeasureProxy operator=(thrust::tuple<Value, bool> t) const {
     if (!thrust::get<1>(t)) {
       *outputIter = identity;
+    } else if (isAvg) {
+      return assignAvg(t);
     } else {
       *outputIter = thrust::get<0>(t) * count;
     }
+    return *this;
+  }
+
+  __host__ __device__
+  MeasureProxy assignAvg(thrust::tuple<Value, bool> t) const {
+    // Each operand is 64bits where higher 32bits are used for count and
+    // lower bits are for intermediate average.
+    float_t v = thrust::get<0>(t);
+    *reinterpret_cast<float_t *>(outputIter) = v;
+    *(reinterpret_cast<uint32_t *>(outputIter) + 1) = count;
     return *this;
   }
 
@@ -551,6 +563,7 @@ class MeasureProxy {
   Value *outputIter;
   Value identity;
   uint32_t count;
+  bool isAvg;
 };
 
 // MeasureOutputIterator is the output iterator for the final step of measure
@@ -587,10 +600,11 @@ class MeasureOutputIterator : public thrust::iterator_adaptor<
         baseCounts(baseCounts),
         indexVector(indexVector) {
     // We don't need to do anything for this value if it's not sum.
-    if (!(aggFunc == AGGR_SUM_UNSIGNED || aggFunc == AGGR_SUM_SIGNED
-        || aggFunc == AGGR_SUM_FLOAT)) {
+    if (!((aggFunc >= AGGR_SUM_UNSIGNED && aggFunc <= AGGR_SUM_FLOAT)
+        || (aggFunc == AGGR_AVG_FLOAT))) {
       skipCount = true;
     }
+    isAvg = aggFunc == AGGR_AVG_FLOAT;
     identity = get_identity_value<Value>(aggFunc);
   }
 
@@ -599,13 +613,14 @@ class MeasureOutputIterator : public thrust::iterator_adaptor<
   const uint32_t *indexVector;
   Value identity;
   bool skipCount = false;
+  bool isAvg = false;
 
   __host__ __device__
   typename super_t::reference dereference() const {
     uint32_t index = *indexVector;
     uint32_t count = !skipCount && baseCounts != nullptr ? baseCounts[index + 1]
         - baseCounts[index] : 1;
-    return MeasureProxy<Value>(this->base_reference(), identity, count);
+    return MeasureProxy<Value>(this->base_reference(), identity, count, isAvg);
   }
 
   __host__ __device__

@@ -46,9 +46,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					DataType: memCom.Uint32,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.Float,
-				DataType: memCom.Float32,
 			},
 			MeasureBytes:         4,
 			DimRowBytes:          5,
@@ -86,9 +85,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.Float,
-				DataType: memCom.Float32,
 			},
 			MeasureBytes:       4,
 			DimRowBytes:        8,
@@ -126,9 +124,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					DataType: memCom.Float32,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.UnknownType,
-				DataType: memCom.Unknown,
 			},
 			DimRowBytes:        5,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0},
@@ -173,9 +170,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.Float,
-				DataType: memCom.Float32,
 			},
 			MeasureBytes:       4,
 			DimRowBytes:        10,
@@ -302,9 +298,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.Float,
-				DataType: memCom.Float32,
 			},
 			MeasureBytes:       4,
 			DimRowBytes:        10,
@@ -337,6 +332,26 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 				"2": 6.400000095367432,
 			},
 		}))
+	})
 
+	ginkgo.It("readMeasure should work", func() {
+		// read an 8 bytes int64
+		measureVectorInt := [1]int64{1}
+		measureAST := &expr.NumberLiteral{
+			ExprType: expr.Signed,
+		}
+
+		measureVal := readMeasure(unsafe.Pointer(&measureVectorInt[0]), measureAST, 8)
+		Ω(measureVal).ShouldNot(BeNil())
+		Ω(*measureVal).Should(Equal(1.0))
+
+		// read a 4 bytes float
+		measureVectorFloat := [2]float32{1.0, 0}
+		measureAST = &expr.NumberLiteral{
+			ExprType: expr.Float,
+		}
+		measureVal = readMeasure(unsafe.Pointer(&measureVectorFloat[0]), measureAST, 4)
+		Ω(measureVal).ShouldNot(BeNil())
+		Ω(*measureVal).Should(BeEquivalentTo(1.0))
 	})
 })

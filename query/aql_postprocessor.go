@@ -14,8 +14,11 @@
 
 package query
 
+// #include "time_series_aggregate.h"
+import "C"
+
 import (
-	memCom "github.com/uber/aresdb/memstore/common"
+		memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
@@ -87,8 +90,16 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLTimeSeriesResult {
 				timeDimensionMeta, dimensionValueCache[dimIndex])
 		}
 
+		measureBytes := oopkContext.MeasureBytes
+
+		// For avg aggregation function, we only need to read first 4 bytes which is the average.
+		if qc.OOPK.AggregateType == C.AGGR_AVG_FLOAT {
+			measureBytes = 4
+		}
+
 		measureValue := readMeasure(
-			memutils.MemAccess(oopkContext.measureVectorH, i*oopkContext.MeasureBytes), oopkContext.Measure, oopkContext.MeasureBytes)
+			memutils.MemAccess(oopkContext.measureVectorH, i*oopkContext.MeasureBytes), oopkContext.Measure,
+			measureBytes)
 
 		result.Set(dimValues, measureValue)
 	}
@@ -149,10 +160,10 @@ func (qc *AQLQueryContext) ReleaseHostResultsBuffers() {
 	qc.OOPK.geoIntersection = nil
 }
 
-func readMeasure(measureRow unsafe.Pointer, ast expr.Expr, MeasureBytes int) *float64 {
+func readMeasure(measureRow unsafe.Pointer, ast expr.Expr, measureBytes int) *float64 {
 	// TODO: consider converting non-zero identity values to nil.
 	var result float64
-	if MeasureBytes == 4 {
+	if measureBytes == 4 {
 		switch ast.Type() {
 		case expr.Unsigned:
 			result = float64(*(*uint32)(measureRow))
@@ -164,9 +175,8 @@ func readMeasure(measureRow unsafe.Pointer, ast expr.Expr, MeasureBytes int) *fl
 			// Should never happen
 			return nil
 		}
-	} else if MeasureBytes == 8 {
+	} else if measureBytes == 8 {
 		switch ast.Type() {
-
 		case expr.Unsigned:
 			result = float64(*(*uint64)(measureRow))
 		case expr.Signed, expr.Boolean:
