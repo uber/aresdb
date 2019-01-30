@@ -1,7 +1,7 @@
 [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![license](https://img.shields.io/github/license/uber/aresdb.svg)](LICENSE) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fuber%2Faresdb.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fuber%2Faresdb?ref=badge_shield)
 
 <br>
-<p align="center"><img src="docs/logo.png" alt="AresDB Logo" width="220" height="220"></p>
+<p align="center"><img src="docs/logo.png" alt="AresDB Logo" width="220" height="209"></p>
 
 AresDB
 ==============
