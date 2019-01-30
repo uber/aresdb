@@ -27,8 +27,6 @@
 #include "query/time_series_aggregate.h"
 #include "query/transform.hpp"
 #include "query/unittest_utils.hpp"
-#include "time_series_aggregate.h"
-#include "iterator.hpp"
 
 namespace ares {
 

@@ -20,8 +20,7 @@
 #include <exception>
 #include "query/algorithm.hpp"
 #include "query/iterator.hpp"
-#include "time_series_aggregate.h"
-#include "iterator.hpp"
+#include "query/time_series_aggregate.h"
 
 CGoCallResHandle Sort(DimensionColumnVector keys,
                       uint8_t *values,
@@ -164,8 +163,7 @@ int reduceInternal(uint64_t *inputHashValues, uint32_t *inputIndexVector,
 #endif
 }
 
-struct rolling_avg
-{
+struct rolling_avg {
   typedef uint64_t first_argument_type;
   typedef uint64_t second_argument_type;
   typedef uint64_t result_type;
@@ -175,7 +173,7 @@ struct rolling_avg
     uint32_t lCount = lhs >> 32;
     uint32_t rCount = rhs >> 32;
     uint32_t totalCount = lCount + rCount;
-    if (totalCount == 0){
+    if (totalCount == 0) {
       return 0;
     }
 
