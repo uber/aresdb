@@ -34,6 +34,10 @@ vendor/glide.updated: glide.lock glide.yaml
 
 deps: vendor/glide.updated $(ALL_GO_SRC)
 
+setup:
+	curl https://glide.sh/get | sh
+	go get -u github.com/go-swagger/go-swagger/cmd/swagger
+
 pwd := $(shell pwd)
 
 swagger-gen:
