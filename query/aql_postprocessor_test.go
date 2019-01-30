@@ -46,7 +46,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					DataType: memCom.Uint32,
 				},
 			},
-			Measure: &expr.Call{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.Float,
 			},
 			MeasureBytes:         4,
@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.Call{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.Float,
 			},
 			MeasureBytes:       4,
@@ -124,7 +124,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					DataType: memCom.Float32,
 				},
 			},
-			Measure: &expr.Call{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.UnknownType,
 			},
 			DimRowBytes:        5,
@@ -170,7 +170,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.Call{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.Float,
 			},
 			MeasureBytes:       4,
@@ -298,7 +298,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.Call{
+			Measure: &expr.NumberLiteral{
 				ExprType: expr.Float,
 			},
 			MeasureBytes:       4,
@@ -336,33 +336,22 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 	ginkgo.It("readMeasure should work", func() {
 		// read an 8 bytes int64
-		measureVectorInt := [1]int64{1};
-		measureAST := &expr.Call{
+		measureVectorInt := [1]int64{1}
+		measureAST := &expr.NumberLiteral{
 			ExprType: expr.Signed,
-			Name: sumCallName,
 		}
 
-		measureVal := readMeasure(unsafe.Pointer(&measureVectorInt[0]),measureAST,8)
+		measureVal := readMeasure(unsafe.Pointer(&measureVectorInt[0]), measureAST, 8)
 		Ω(measureVal).ShouldNot(BeNil())
 		Ω(*measureVal).Should(Equal(1.0))
 
 		// read a 4 bytes float
-		measureVectorFloat := [2]float32{1.0, 0};
-		measureAST = &expr.Call{
+		measureVectorFloat := [2]float32{1.0, 0}
+		measureAST = &expr.NumberLiteral{
 			ExprType: expr.Float,
-			Name: sumCallName,
 		}
-		measureVal = readMeasure(unsafe.Pointer(&measureVectorFloat[0]),measureAST,4)
+		measureVal = readMeasure(unsafe.Pointer(&measureVectorFloat[0]), measureAST, 4)
 		Ω(measureVal).ShouldNot(BeNil())
 		Ω(*measureVal).Should(BeEquivalentTo(1.0))
-
-		// read the first 4 bytes since it's an avg call
-		measureAST = &expr.Call{
-			ExprType: expr.Float,
-			Name: avgCallName,
-		}
-		measureVal = readMeasure(unsafe.Pointer(&measureVectorFloat[0]),measureAST,8)
-		Ω(measureVal).ShouldNot(BeNil())
-		Ω(*measureVal).Should(Equal(1.0))
 	})
 })

@@ -1066,10 +1066,9 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			}
 			// For avg, the expression type should always be float.
 			if e.Name == avgCallName {
-				e.ExprType = expr.Float
-			} else {
-				e.ExprType = e.Args[0].Type()
+				e.Args[0] = cast(e.Args[0], expr.Float)
 			}
+			e.ExprType = e.Args[0].Type()
 		default:
 			qc.Error = utils.StackError(nil, "unknown function %s", e.Name)
 		}
