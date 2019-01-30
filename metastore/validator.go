@@ -73,6 +73,11 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 			return ErrMissingTimeColumn
 		}
 
+		// validate hll config
+		if err := column.ValidateHLLConfig(); err != nil {
+			return err
+		}
+
 		if column.DefaultValue != nil {
 			if table.IsFactTable && columnID == 0 {
 				return ErrTimeColumnDoesNotAllowDefault
@@ -173,7 +178,8 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 			oldCol.Type != newCol.Type ||
 			!reflect.DeepEqual(oldCol.DefaultValue, newCol.DefaultValue) ||
 			oldCol.CaseInsensitive != newCol.CaseInsensitive ||
-			oldCol.DisableAutoExpand != newCol.DisableAutoExpand {
+			oldCol.DisableAutoExpand != newCol.DisableAutoExpand ||
+			oldCol.HLLConfig != newCol.HLLConfig {
 			return ErrSchemaUpdateNotAllowed
 		}
 	}

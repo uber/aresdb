@@ -136,20 +136,26 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newTable := addTableRequest.Body
 	validator := metastore.NewTableSchameValidator()
-	validator.SetNewTable(addTableRequest.Body)
+	validator.SetNewTable(newTable)
 	err = validator.Validate()
 	if err != nil {
 		RespondWithBadRequest(w, err)
 		return
 	}
 
-	err = handler.metaStore.CreateTable(&addTableRequest.Body)
+	err = newTable.AddHLLColumns()
+	if err != nil {
+		RespondWithBadRequest(w, err)
+		return
+	}
+
+	err = handler.metaStore.CreateTable(&newTable)
 	if err != nil {
 		RespondWithError(w, err)
 		return
 	}
-
 	RespondWithJSONObject(w, nil)
 }
 
