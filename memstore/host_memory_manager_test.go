@@ -434,7 +434,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			testDiskStore, testHostMemoryManager, 0)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
-		testMemStore.TableShards[testTableName][0].ArchiveStore = ArchiveStore{
+		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
 			CurrentVersion: &ArchiveStoreVersion{
 				Batches:         map[int32]*ArchiveBatch{},
 				ArchivingCutoff: 100,
@@ -596,14 +596,14 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			testDiskStore, testHostMemoryManager, 1)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
-		testMemStore.TableShards[testTableName][0].ArchiveStore = ArchiveStore{
+		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
 			CurrentVersion: &ArchiveStoreVersion{
 				Batches:         map[int32]*ArchiveBatch{},
 				ArchivingCutoff: 100,
 			},
 		}
 
-		testMemStore.TableShards[testTableName][1].ArchiveStore = ArchiveStore{
+		testMemStore.TableShards[testTableName][1].ArchiveStore = &ArchiveStore{
 			CurrentVersion: &ArchiveStoreVersion{
 				Batches:         map[int32]*ArchiveBatch{},
 				ArchivingCutoff: 100,
@@ -743,7 +743,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			testDiskStore, testHostMemoryManager, 0)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
-		testMemStore.TableShards[testTableName][0].ArchiveStore = ArchiveStore{
+		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
 			CurrentVersion: &ArchiveStoreVersion{
 				Batches:         map[int32]*ArchiveBatch{},
 				ArchivingCutoff: 100,
@@ -853,7 +853,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		testMemStore.TableSchemas[testTableName] = testSchema
 
 		testBatchID1 := int32(15739)
-		testMemStore.TableShards[testTableName][0].ArchiveStore = ArchiveStore{
+		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
 			CurrentVersion: &ArchiveStoreVersion{
 				Batches:         map[int32]*ArchiveBatch{},
 				ArchivingCutoff: 100,

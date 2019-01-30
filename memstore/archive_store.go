@@ -85,8 +85,8 @@ type ArchiveStore struct {
 
 // NewArchiveStore creates a new archive store. Current version is just a place holder for test.
 // It will be replaced during recovery.
-func NewArchiveStore(shard *TableShard) ArchiveStore {
-	return ArchiveStore{
+func NewArchiveStore(shard *TableShard) *ArchiveStore {
+	return &ArchiveStore{
 		PurgeManager:   NewPurgeManager(shard),
 		CurrentVersion: NewArchiveStoreVersion(0, shard),
 	}

@@ -54,7 +54,7 @@ type DeviceInfo struct {
 // 3. Assign queries to chosen device according to routing strategy specified
 type DeviceManager struct {
 	// lock to sync ops.
-	sync.RWMutex `json:"-"`
+	*sync.RWMutex `json:"-"`
 	// device to DeviceInfo map
 	DeviceInfos []*DeviceInfo `json:"deviceInfos"`
 	// default DeviceChoosingTimeout for finding a device
@@ -98,6 +98,7 @@ func NewDeviceManager(cfg common.QueryConfig) *DeviceManager {
 	}
 
 	deviceManager := &DeviceManager{
+		RWMutex:            &sync.RWMutex{},
 		DeviceInfos:        deviceInfos,
 		MaxAvailableMemory: maxAvailableMem,
 		Timeout:            timeout,

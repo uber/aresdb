@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("job manager", func() {
 		},
 	}, m.metaStore, m.diskStore, hostMemoryManager, 1)
 
-	shard1.ArchiveStore = ArchiveStore{
+	shard1.ArchiveStore = &ArchiveStore{
 		PurgeManager: NewPurgeManager(shard1),
 		CurrentVersion: &ArchiveStoreVersion{
 			ArchivingCutoff: now - 3*60*60,
@@ -90,7 +90,7 @@ var _ = ginkgo.Describe("job manager", func() {
 
 	shard2.LiveStore.BackfillManager.CurrentBufferSize = 15
 
-	shard2.ArchiveStore = ArchiveStore{
+	shard2.ArchiveStore = &ArchiveStore{
 		PurgeManager: NewPurgeManager(shard2),
 		CurrentVersion: &ArchiveStoreVersion{
 			ArchivingCutoff: now - 12*60*60,
@@ -113,7 +113,7 @@ var _ = ginkgo.Describe("job manager", func() {
 
 	shard3.LiveStore.BackfillManager.CurrentBufferSize = 15
 
-	shard3.ArchiveStore = ArchiveStore{
+	shard3.ArchiveStore = &ArchiveStore{
 		PurgeManager: NewPurgeManager(shard3),
 		CurrentVersion: &ArchiveStoreVersion{
 			ArchivingCutoff: now - 12*60*60,
@@ -133,7 +133,7 @@ var _ = ginkgo.Describe("job manager", func() {
 
 	shard4.LiveStore.SnapshotManager.NumMutations = 200
 
-	shard4.ArchiveStore = ArchiveStore{
+	shard4.ArchiveStore = &ArchiveStore{
 		PurgeManager: NewPurgeManager(shard4),
 		CurrentVersion: &ArchiveStoreVersion{
 			ArchivingCutoff: now - 12*60*60,

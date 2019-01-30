@@ -68,7 +68,7 @@ golang-lint:
 ifneq ($(GO_SRC),)
 	gofmt -w $(GO_SRC)
 	golint -set_exit_status $(GO_SRC)
-	go vet
+	go vet -unsafeptr=false ./...
 endif
 
 lint-all: C_SRC := $(ALL_C_SRC)
