@@ -140,10 +140,10 @@ func (qc *AQLQueryContext) ReleaseHostResultsBuffers() {
 
 func readMeasure(measureRow unsafe.Pointer, ast expr.Expr, measureBytes int) *float64 {
 	// TODO: consider converting non-zero identity values to nil.
-	// should always be a call expr which is ensured by compiler
 	var result float64
+	// Should always be a call expr which is ensured by compiler.
 	if aggregate, ok := ast.(*expr.Call); ok && aggregate.Name == avgCallName {
-		// read the first 4 bytes
+		// Read the first 4 bytes
 		measureBytes = 4
 	}
 

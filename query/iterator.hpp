@@ -551,6 +551,8 @@ class MeasureProxy {
 
   __host__ __device__
   MeasureProxy assignAvg(thrust::tuple<Value, bool> t) const {
+    // Each operand is 64bits where higher 32bits are used for count and
+    // lower bits are for intermediate average.
     float_t v = thrust::get<0>(t);
     *reinterpret_cast<float_t *>(outputIter) = v;
     *(reinterpret_cast<uint32_t *>(outputIter) + 1) = count;
