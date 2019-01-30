@@ -1,5 +1,7 @@
 [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![license](https://img.shields.io/github/license/uber/aresdb.svg)](LICENSE) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fuber%2Faresdb.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fuber%2Faresdb?ref=badge_shield)
 
+<p align="center"><img src="docs/logo.png" alt="AresDB Logo" width="256" height="270"></p>
+
 AresDB
 ==============
 AresDB is a GPU-based real-time analytics storage and query engine. It features low query latency, high data freshness and highly efficient in-memory and on disk storage management. Please see AresDB's features, architecture design described in the [Uber Engineering Blog](https://eng.uber.com/aresdb/).
