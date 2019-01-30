@@ -52,7 +52,7 @@ We use [glide](https://glide.sh) to manage Go dependencies. Please make sure `gl
 
 Local Test
 ----------
-AresDB is written in C++ (query engine) and Golang (mem store, disk store, disk store and other query components). Because of this, we break testing into two parts:
+AresDB is written in C++ (query engine) and Golang (mem store, disk store and other query components). Because of this, we break testing into two parts:
 ### Test Golang Code
 #### Ginkgo
 We use [Ginkgo](https://github.com/onsi/ginkgo) as the test framework for running the Golang unit test and coverage. Install Ginkgo first and run
