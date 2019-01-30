@@ -14,6 +14,13 @@
 
 package common
 
+import "fmt"
+
+const (
+	// default hll column suffix
+	defaultHLLColumnSuffix = "hll"
+)
+
 // ColumnConfig defines the schema of a column config that can be mutated by
 // UpdateColumn API call.
 // swagger:model columnConfig
@@ -59,6 +66,17 @@ type Column struct {
 
 	// Mutable column configs.
 	Config ColumnConfig `json:"config,omitempty"`
+
+	// HLLEnabled determines whether a column is enabled for hll cardinality estimation
+	HLLConfig HLLConfig `json:"hllConfig, omitempty"`
+}
+
+// HLLConfig defines hll configuration
+type HLLConfig struct {
+	// Suffix of hyperloglog column, will use default if not set
+	Suffix string `json:"suffix, omitempty"`
+	// Whether hll is enabled for the column
+	Enabled bool  `json:"enabled, omitempty"`
 }
 
 // TableConfig defines the table configurations that can be changed
@@ -138,6 +156,20 @@ type Table struct {
 // IsEnumColumn checks whether a column is enum column
 func (c Column) IsEnumColumn() bool {
 	return c.Type == BigEnum || c.Type == SmallEnum
+}
+
+// IsHLLEnabled checks whether a column is enabled for fast hll computation
+func (c Column) IsHLLEnabled() bool {
+	return c.HLLConfig.Enabled
+}
+
+// GetHLLColumnName returns the hyperloglog related column name of a column
+func (c Column) GetHLLColumnName() string {
+	suffix := defaultHLLColumnSuffix
+	if c.HLLConfig.Suffix != "" {
+		suffix = c.HLLConfig.Suffix
+	}
+	return fmt.Sprintf("%s_%s", c.Name, suffix)
 }
 
 // IsOverwriteOnlyDataType checks whether a column is overwrite only

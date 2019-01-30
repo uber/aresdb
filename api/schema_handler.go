@@ -141,6 +141,7 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 	err = validator.Validate()
 	if err != nil {
 		RespondWithBadRequest(w, err)
+		return
 	}
 
 	err = handler.metaStore.CreateTable(&addTableRequest.Body)

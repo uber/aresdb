@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +28,9 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"strconv"
+	"strings"
+	"unsafe"
 )
 
 const (
@@ -198,6 +199,56 @@ func (c *connector) Insert(tableName string, columnNames []string, rows []Row, u
 	return numRows, nil
 }
 
+// hllHash computes hash value from original value
+func hllHash(dataType memCom.DataType, value interface{}) (uint64, error) {
+	var out [2]uint64
+	var ok bool
+	numBytes := 4
+	switch dataType {
+	case memCom.UUID:
+		out, ok = memCom.ConvertToUUID(value)
+		if ok {
+			return out[0] ^ out[1], nil
+		}
+	case memCom.Uint32:
+		value, ok = memCom.ConvertToUint32(value)
+		numBytes = 4
+	case memCom.Int32:
+		value, ok = memCom.ConvertToInt32(value)
+		numBytes = 4
+	case memCom.Int64:
+		value, ok = memCom.ConvertToInt64(value)
+		numBytes = 8
+	default:
+		return 0, utils.StackError(nil, "Unsupported data type for hyperloglog computation")
+	}
+	if !ok {
+		return 0, utils.StackError(nil, "Invalid %v for data type %s", memCom.DataTypeName[dataType])
+	}
+	out = utils.Murmur3Sum128(unsafe.Pointer(&value), numBytes,  0)
+	return out[0], nil
+}
+
+// getHLLValue populate hyperloglog value
+func getHLLValue(dataType memCom.DataType, value interface{}) (uint32, error) {
+	hashed, err := hllHash(dataType, value)
+	if err != nil {
+		return 0, err
+	}
+	p := uint32(14) // max 16
+	group := uint32(hashed & ((1 << p) - 1))
+	var rho uint32
+	for {
+		h := hashed & (1 << (rho + p))
+		if rho+p < 64 && h == 0 {
+			rho++
+		} else {
+			break
+		}
+	}
+	return rho<<16 | group, nil
+}
+
 // prepareUpsertBatch prepares the upsert batch for upsert,
 // returns upsertBatch byte array, number of rows in upsert batch and error.
 func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, updateModes []memCom.ColumnUpdateMode, rows []Row) ([]byte, int, error) {
@@ -242,6 +293,20 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 
 		if err = upsertBatchBuilder.AddColumnWithUpdateMode(columnID, memCom.DataTypeFromString(column.Type), updateModes[colIndex]); err != nil {
 			return nil, 0, err
+		}
+
+		// add hll column
+		if column.IsHLLEnabled() {
+			hllColumnName := column.GetHLLColumnName()
+			columnID, exist := schema.ColumnDict[hllColumnName]
+			if !exist {
+				// should not happen here
+				return nil, 0, utils.StackError(nil, "hll column %s for column %s does not exist", hllColumnName, columnName)
+			}
+			hllColumn := schema.Table.Columns[columnID]
+			if err = upsertBatchBuilder.AddColumn(columnID, memCom.DataTypeFromString(hllColumn.Type)); err != nil {
+				return nil, 0, err
+			}
 		}
 
 		if column.IsEnumColumn() {
@@ -317,6 +382,22 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 					"columnID", columnID,
 					"value", value).Error("Failed to set value")
 				break
+			}
+
+			if column.IsHLLEnabled() {
+				hllValue, err := getHLLValue(memCom.DataTypeFromString(column.Type), value)
+				if err != nil {
+					upsertBatchBuilder.RemoveRow()
+					c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "error": err.Error(), "table": tableName, "columnID": columnID, "value": value}).Error("Failed to set value")
+					break
+				}
+				err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, hllValue)
+				if err != nil {
+					upsertBatchBuilder.RemoveRow()
+					c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "error": err.Error(), "table": tableName, "columnID": columnID, "value": value}).Error("Failed to set value")
+					break
+				}
+				upsertBatchColumnIndex++
 			}
 			upsertBatchColumnIndex++
 		}
