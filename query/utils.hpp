@@ -72,6 +72,7 @@ struct common_type<GeoPointT, GeoPointT> {
 template <typename Value>
 __host__ __device__ Value get_identity_value(AggregateFunction aggFunc) {
   switch (aggFunc) {
+    case AGGR_AVG_FLOAT:return 0; // zero avg and zero count.
     case AGGR_SUM_UNSIGNED:
     case AGGR_SUM_SIGNED:
     case AGGR_SUM_FLOAT:return 0;

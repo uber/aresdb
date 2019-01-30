@@ -138,10 +138,17 @@ func (qc *AQLQueryContext) ReleaseHostResultsBuffers() {
 	qc.OOPK.geoIntersection = nil
 }
 
-func readMeasure(measureRow unsafe.Pointer, ast expr.Expr, MeasureBytes int) *float64 {
+func readMeasure(measureRow unsafe.Pointer, ast expr.Expr, measureBytes int) *float64 {
 	// TODO: consider converting non-zero identity values to nil.
+	// should always be a call expr which is ensured by compiler
 	var result float64
-	if MeasureBytes == 4 {
+	aggregate, _ := ast.(*expr.Call)
+	if aggregate.Name == avgCallName {
+		// read the first 4 bytes
+		measureBytes = 4
+	}
+
+	if measureBytes == 4 {
 		switch ast.Type() {
 		case expr.Unsigned:
 			result = float64(*(*uint32)(measureRow))
@@ -153,9 +160,8 @@ func readMeasure(measureRow unsafe.Pointer, ast expr.Expr, MeasureBytes int) *fl
 			// Should never happen
 			return nil
 		}
-	} else if MeasureBytes == 8 {
+	} else if measureBytes == 8 {
 		switch ast.Type() {
-
 		case expr.Unsigned:
 			result = float64(*(*uint64)(measureRow))
 		case expr.Signed, expr.Boolean:

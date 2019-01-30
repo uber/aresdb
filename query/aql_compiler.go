@@ -73,6 +73,7 @@ const (
 	maxCallName              = "max"
 	minCallName              = "min"
 	sumCallName              = "sum"
+	avgCallName              = "avg"
 )
 
 // Compile returns the compiled AQLQueryContext for data feeding and query
@@ -1057,13 +1058,18 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				break
 			}
 			e.ExprType = e.Args[0].Type()
-		case sumCallName, minCallName, maxCallName:
+		case sumCallName, minCallName, maxCallName, avgCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
 					nil, "expect 1 argument for %s, but got %s", e.Name, e.String())
 				break
 			}
-			e.ExprType = e.Args[0].Type()
+			// For avg, the expression type should always be float.
+			if e.Name == avgCallName {
+				e.ExprType = expr.Float
+			}else{
+				e.ExprType = e.Args[0].Type()
+			}
 		default:
 			qc.Error = utils.StackError(nil, "unknown function %s", e.Name)
 		}
@@ -1726,6 +1732,11 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 				unsupportedInputType, sumCallName, qc.OOPK.Measure.String())
 			return
 		}
+	case avgCallName:
+		// 4 bytes for storing average result and another 4 byte for count
+		qc.OOPK.MeasureBytes = 8
+		// for average, we should always use float type as the agg type.
+		qc.OOPK.AggregateType = C.AGGR_AVG_FLOAT
 	case minCallName:
 		switch qc.OOPK.Measure.Type() {
 		case expr.Float:

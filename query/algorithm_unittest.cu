@@ -27,6 +27,8 @@
 #include "query/time_series_aggregate.h"
 #include "query/transform.hpp"
 #include "query/unittest_utils.hpp"
+#include "time_series_aggregate.h"
+#include "iterator.hpp"
 
 namespace ares {
 
@@ -163,7 +165,7 @@ TEST(UnaryTransformTest, CheckConstant) {
 }
 
 // cppcheck-suppress *
-TEST(UnaryTransformTest, CheckMeasureOutputIterator) {
+TEST(UnaryTransformTest, CheckMeasureOutputIteratorForAvg) {
   const int size = 3;
   uint32_t indexVectorH[size * 2] = {0, 1, 2};
   uint32_t baseCountsH[size + 1] = {0, 3, 9, 12};
@@ -171,36 +173,51 @@ TEST(UnaryTransformTest, CheckMeasureOutputIterator) {
   // T T F
   uint8_t inputNullsH[1 + ((size - 1) / 8)] = {0x03};
 
-  int outputValuesH[size] = {0, 0, 0};
+  int64_t outputValuesH[size] = {0, 0, 0};
 
   uint32_t *indexVector = allocate(&indexVectorH[0], size * 2);
   uint32_t *baseCounts = allocate(&baseCountsH[0], size + 1);
   uint8_t *basePtr =
       allocate_column(nullptr, &inputNullsH[0], &inputValuesH[0], 0, 1, 12);
-  int *outputValues = allocate(&outputValuesH[0], size);
+  int64_t *outputValues = allocate(&outputValuesH[0], size);
 
   DefaultValue defaultValue = {false, {.Int32Val = 0}};
   VectorPartySlice inputVP = {basePtr, 0, 8, 0, Int32, defaultValue};
 
   MeasureOutputVector outputMeasure = {
-      reinterpret_cast<uint32_t *>(outputValues), Int32,
-      AGGR_SUM_UNSIGNED};
+      reinterpret_cast<uint32_t *>(outputValues), Int64,
+      AGGR_SUM_SIGNED};
 
   InputVector input = {{.VP = inputVP}, VectorPartyInput};
   OutputVector output = {{.Measure = outputMeasure}, MeasureOutput};
 
   UnaryTransform(input, output, indexVector, size, baseCounts, 0,
                  Negate, 0, 0);
-  int expectedValues[3] = {3, -6, 0};
+  int64_t expectedValues[3] = {3, -6, 0};
   EXPECT_TRUE(equal(outputValues, outputValues + size,
                     &expectedValues[0]));
 
   // Test NOOP functor
   UnaryTransform(input, output, indexVector, size, baseCounts, 0,
                  Noop, 0, 0);
-  int expectedValues2[3] = {-3, 6, 0};
+  int64_t expectedValues2[3] = {-3, 6, 0};
   EXPECT_TRUE(equal(outputValues, outputValues + size,
                     &expectedValues2[0]));
+
+  // Test avg aggregation.
+  MeasureOutputVector outputMeasure2 = {
+      reinterpret_cast<uint32_t *>(outputValues), Float64,
+      AGGR_AVG_FLOAT};
+
+  OutputVector output2 = {{.Measure = outputMeasure2}, MeasureOutput};
+
+  UnaryTransform(input, output2, indexVector, size, baseCounts, 0,
+                 Noop, 0, 0);
+  float_t expectedValues3[6] = {-1.0, 0, 1.0, 0, 0, 0};
+  *reinterpret_cast<uint32_t*>(&expectedValues3[1]) = 3;
+  *reinterpret_cast<uint32_t*>(&expectedValues3[3]) = 6;
+  EXPECT_TRUE(equal_print(outputValues, outputValues + size,
+                    reinterpret_cast<int64_t*>(&expectedValues3[0])));
 
   release(basePtr);
   release(outputValues);
@@ -1107,6 +1124,78 @@ TEST(ReduceDimColumnVectorTest, CheckReduce) {
   EXPECT_TRUE(equal(outputDimValues, outputDimValues + 60, expectedDimValues));
 }
 
+TEST(SortAndReduceTest, CheckReduceByAvg) {
+  // 6 elements 1 2 3 2 3 1
+  uint8_t inputDimValuesH[30] = {1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0,
+                                 0, 3, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1};
+  uint64_t inputHashValuesH[6] = {1, 1, 2, 2, 3, 3};
+  uint32_t inputIndexVectorH[6] = {1, 3, 2, 4, 0, 5};
+  float_t inputValuesH[12] = {5.0, 0, 1.0, 0, 3.0, 0, 2.0, 0, 4.0, 0, 6.0, 0};
+  // set count to be 1.
+  for (int i = 0; i < 6; i++) {
+    *reinterpret_cast<uint32_t*>(&inputValuesH[i*2+1]) = uint32_t(1);
+  }
+
+  uint8_t outputDimValuesH[30] = {0};
+  uint64_t outputHashValuesH[6] = {0};
+  uint32_t outputIndexVectorH[6] = {0};
+  uint64_t outputValuesH[6] = {0};
+
+  uint8_t *inputDimValues = allocate(inputDimValuesH, 30);
+  uint64_t *inputHashValues = allocate(inputHashValuesH, 6);
+  uint32_t *inputIndexVector = allocate(inputIndexVectorH, 6);
+  uint32_t *inputValues =
+      allocate(reinterpret_cast<uint32_t*>(&inputValuesH[0]), 12);
+
+  uint8_t *outputDimValues = allocate(outputDimValuesH, 30);
+  uint64_t *outputHashValues = allocate(outputHashValuesH, 6);
+  uint32_t *outputIndexVector = allocate(outputIndexVectorH, 6);
+  uint64_t *outputValues = allocate(outputValuesH, 6);
+
+  float_t expectedValuesF[6] = {1.5, 0, 3.5, 0, 5.5, 0};
+  uint64_t* expectedValues = reinterpret_cast<uint64_t*>(&expectedValuesF[0]);
+  for (int i = 0; i < 3; i++) {
+    *(reinterpret_cast<uint32_t *>(&expectedValues[i]) + 1) = 2;
+  }
+
+  uint32_t expectedIndex[3] = {1, 2, 0};
+  // output dimension values should be [2,3,1] for each dim vector
+  uint8_t expectedDimValues[30] = {
+      2, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0,
+  };
+
+  int length = 6;
+  int vectorCapacity = 6;
+  DimensionColumnVector inputKeys = {
+      inputDimValues,
+      inputHashValues,
+      inputIndexVector,
+      vectorCapacity,
+      {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)0, (uint8_t)0}};
+
+  DimensionColumnVector outputKeys = {
+      outputDimValues,
+      outputHashValues,
+      outputIndexVector,
+      vectorCapacity,
+      {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)0, (uint8_t)0}};
+  CGoCallResHandle
+      resHandle = Reduce(inputKeys,
+                         reinterpret_cast<uint8_t *>(inputValues),
+                         outputKeys,
+                         reinterpret_cast<uint8_t *>(outputValues),
+                         8,
+                         length,
+                         AGGR_AVG_FLOAT, 0, 0);
+  EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 3);
+  EXPECT_EQ(resHandle.pStrErr, nullptr);
+
+  EXPECT_TRUE(equal(outputValues, outputValues + 3, expectedValues));
+  EXPECT_TRUE(equal(outputIndexVector, outputIndexVector + 3, expectedIndex));
+  EXPECT_TRUE(equal(outputDimValues, outputDimValues + 30, expectedDimValues));
+}
+
 // cppcheck-suppress *
 TEST(SortAndReduceTest, CheckHash) {
   int size = 8;
@@ -1687,7 +1776,7 @@ TEST(GeoBatchIntersectionJoinTest, DimensionWriting) {
   uint8_t expectedDimNulls[5] = {1, 1, 1, 0, 0};
   EXPECT_TRUE(equal(outputDimension.DimValues,
       outputDimension.DimValues + 5, expectedDimValues));
-  EXPECT_TRUE(equal_print(outputDimension.DimNulls,
+  EXPECT_TRUE(equal(outputDimension.DimNulls,
       outputDimension.DimNulls + 5, expectedDimNulls));
 
   release(outputPredicate);

@@ -49,7 +49,8 @@ enum AggregateFunction {
   AGGR_MAX_UNSIGNED = 7,
   AGGR_MAX_SIGNED = 8,
   AGGR_MAX_FLOAT = 9,
-  AGGR_HLL = 10
+  AGGR_HLL = 10,
+  AGGR_AVG_FLOAT = 11,
 };
 
 // All supported data type to covert golang vector to iterator.
