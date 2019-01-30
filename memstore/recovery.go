@@ -66,7 +66,7 @@ func (shard *TableShard) ReplayRedoLogs() {
 		shard.LiveStore.WriterLock.Unlock()
 
 		if err != nil {
-			utils.GetLogger().With(err).Panic("Failed to apply upsert batch during recovery")
+			utils.GetLogger().With("err", err).Panic("Failed to apply upsert batch during recovery")
 		}
 	}
 
