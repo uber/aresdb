@@ -425,10 +425,10 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 		return nil, utils.StackError(err, "Failed to write number of columns")
 	}
 	writer.SkipBytes(14)
-	if err := writer.AppendUint32(uint32(utils.Now().Unix())); err != nil  {
+	if err := writer.AppendUint32(uint32(utils.Now().Unix())); err != nil {
 		return nil, utils.StackError(err, "Failed to write arrival time")
 	}
-	columnHeader := NewUpsertBatchHeaderNew(buffer[writer.GetOffset(): headerSize], numCols)
+	columnHeader := NewUpsertBatchHeaderNew(buffer[writer.GetOffset():headerSize], numCols)
 	// skip to data offset
 	writer.SkipBytes(columnHeaderSize)
 

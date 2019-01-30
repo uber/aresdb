@@ -15,7 +15,6 @@
 package memstore
 
 import (
-	"github.com/uber-common/bark"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 )
@@ -42,7 +41,9 @@ func (m *memStoreImpl) Snapshot(table string, shardID int, reporter SnapshotJobD
 	}
 
 	defer shard.Users.Done()
-	utils.GetLogger().WithFields(bark.Fields{"job": "snapshot", "table": table}).Infof("Creating snapshot")
+	utils.GetLogger().With(
+		"job", "snapshot",
+		"table", table).Infof("Creating snapshot")
 
 	snapshotMgr := shard.LiveStore.SnapshotManager
 	// keep the current redofile and offset
@@ -73,7 +74,9 @@ func (m *memStoreImpl) Snapshot(table string, shardID int, reporter SnapshotJobD
 		status.Stage = SnapshotComplete
 	})
 
-	utils.GetLogger().WithFields(bark.Fields{"job": "snapshot", "table": table}).Infof("Snapshot done")
+	utils.GetLogger().With(
+		"job", "snapshot",
+		"table", table).Infof("Snapshot done")
 
 	return nil
 }
@@ -92,7 +95,9 @@ func (m *memStoreImpl) createSnapshot(shard *TableShard, redoFile int64, batchOf
 				// column deleted likely
 				continue
 			}
-			utils.GetLogger().WithFields(bark.Fields{"job": "snapshot", "table": shard.Schema.Schema.Name}).Infof("batch: %d, columeID: %d", batchID, colID)
+			utils.GetLogger().With(
+				"job", "snapshot",
+				"table", shard.Schema.Schema.Name).Infof("batch: %d, columeID: %d", batchID, colID)
 
 			serializer := NewVectorPartySnapshotSerializer(shard, colID, int(batchID), 0, 0, redoFile, batchOffset)
 			if err := serializer.WriteVectorParty(vp); err != nil {

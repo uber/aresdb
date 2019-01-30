@@ -15,16 +15,14 @@
 package memstore
 
 import (
-	"sync"
-
 	"encoding/json"
+	"sync"
+	"unsafe"
 
-	"github.com/uber-common/bark"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
-	"unsafe"
 )
 
 // TableSchema stores metadata of the table such as columns and primary keys.
@@ -143,20 +141,20 @@ func (t *TableSchema) SetDefaultValue(columnID int) {
 		enumDict, ok := t.EnumDicts[column.Name]
 		if !ok {
 			// Should no happen since the enum dict should already be created.
-			utils.GetLogger().WithFields(bark.Fields{
-				"data_type":     t.Schema.Columns[columnID].Type,
-				"default_value": *defStrVal,
-				"column":        t.Schema.Columns[columnID].Name,
-			}).Panic("Cannot find EnumDict for column")
+			utils.GetLogger().With(
+				"data_type", t.Schema.Columns[columnID].Type,
+				"default_value", *defStrVal,
+				"column", t.Schema.Columns[columnID].Name,
+			).Panic("Cannot find EnumDict for column")
 		}
 		enumVal, ok := enumDict.Dict[*defStrVal]
 		if !ok {
 			// Should no happen since the enum value should already be created.
-			utils.GetLogger().WithFields(bark.Fields{
-				"data_type":     t.Schema.Columns[columnID].Type,
-				"default_value": *defStrVal,
-				"column":        t.Schema.Columns[columnID].Name,
-			}).Panic("Cannot find enum value for column")
+			utils.GetLogger().With(
+				"data_type", t.Schema.Columns[columnID].Type,
+				"default_value", *defStrVal,
+				"column", t.Schema.Columns[columnID].Name,
+			).Panic("Cannot find enum value for column")
 		}
 
 		if dataType == memCom.SmallEnum {
@@ -170,11 +168,11 @@ func (t *TableSchema) SetDefaultValue(columnID int) {
 		dataValue, err := memCom.ValueFromString(*defStrVal, dataType)
 		if err != nil {
 			// Should not happen since the string value is already validated by schema handler.
-			utils.GetLogger().WithFields(bark.Fields{
-				"data_type":     t.Schema.Columns[columnID].Type,
-				"default_value": *defStrVal,
-				"column":        t.Schema.Columns[columnID].Name,
-			}).Panic("Cannot parse default value")
+			utils.GetLogger().With(
+				"data_type", t.Schema.Columns[columnID].Type,
+				"default_value", *defStrVal,
+				"column", t.Schema.Columns[columnID].Name,
+			).Panic("Cannot parse default value")
 		}
 
 		if dataType == memCom.Bool {
@@ -378,7 +376,10 @@ func (m *memStoreImpl) applyTableSchema(newTable *metaCom.Table) {
 		for _, column := range newEnumColumns {
 			err := m.watchEnumCases(tableName, column, startEnumID)
 			if err != nil {
-				utils.GetLogger().WithFields(bark.Fields{"error": err.Error(), "table": tableName, "column": column}).
+				utils.GetLogger().With(
+					"error", err.Error(),
+					"table", tableName,
+					"column", column).
 					Panic("Failed to watch enum dict events")
 			}
 		}

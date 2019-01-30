@@ -26,7 +26,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 )
@@ -754,9 +753,11 @@ func (dm *diskMetaStore) GetArchiveBatchVersion(table string, shard, batchID int
 
 		if err != nil {
 			// this should never happen
-			utils.GetLogger().WithFields(bark.Fields{
-				"error": err.Error(), "table": table,
-				"shard": shard, "batchID": batchID}).
+			utils.GetLogger().With(
+				"error", err.Error(),
+				"table", table,
+				"shard", shard,
+				"batchID", batchID).
 				Panic("Incorrect batch version")
 		}
 		return uint32(version) > cutoff

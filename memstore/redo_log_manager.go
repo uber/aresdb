@@ -19,7 +19,6 @@ import (
 	"io"
 	"sync"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/utils"
 )
@@ -113,7 +112,10 @@ func (r *RedoLogManager) openFileForWrite(upsertBatchSize uint32) {
 	}
 
 	if r.currentLogFile, err = r.diskStore.OpenLogFileForAppend(r.tableName, r.shard, dataTime); err != nil {
-		utils.GetLogger().WithFields(bark.Fields{"table": r.tableName, "shard": r.shard, "error": err.Error()}).Panic("Failed to open new redo log file")
+		utils.GetLogger().With(
+			"table", r.tableName,
+			"shard", r.shard,
+			"error", err.Error()).Panic("Failed to open new redo log file")
 	}
 
 	writer := utils.NewStreamDataWriter(r.currentLogFile)
@@ -140,11 +142,11 @@ func (r *RedoLogManager) WriteUpsertBatch(upsertBatch *UpsertBatch) (int64, uint
 	writer := utils.NewStreamDataWriter(r.currentLogFile)
 	// Write buffer size.
 	if err := writer.WriteUint32(uint32(len(buffer))); err != nil {
-		utils.GetLogger().WithField("error", err).Panic("Failed to write buffer size into the redo log")
+		utils.GetLogger().With("error", err).Panic("Failed to write buffer size into the redo log")
 	}
 
 	if _, err := r.currentLogFile.Write(buffer); err != nil {
-		utils.GetLogger().WithField("error", err).Panic("Failed to write upsert buffer into the redo log")
+		utils.GetLogger().With("error", err).Panic("Failed to write upsert buffer into the redo log")
 	}
 
 	// update current redo log size
@@ -180,9 +182,11 @@ func (r *RedoLogManager) closeRedoLogFile(creationTime int64, offset uint32, cur
 	currentIndex *int, needToTruncate bool) {
 	// End of file encountered. Move to next file.
 	if err := (*currentFile).Close(); err != nil {
-		utils.GetLogger().WithFields(bark.Fields{
-			"table": r.tableName, "shard": r.shard,
-			"err": err, "file": creationTime}).Panic("Failed to close redo log file")
+		utils.GetLogger().With(
+			"table", r.tableName,
+			"shard", r.shard,
+			"err", err,
+			"file", creationTime).Panic("Failed to close redo log file")
 	}
 	*currentFile = nil
 	*currentIndex++
@@ -191,9 +195,11 @@ func (r *RedoLogManager) closeRedoLogFile(creationTime int64, offset uint32, cur
 		utils.GetLogger().Error("Corrupted file found, truncating it to resume processing")
 		// truncate current file and move to next file.
 		if err := r.diskStore.TruncateLogFile(r.tableName, r.shard, creationTime, int64(offset)); err != nil {
-			utils.GetLogger().WithFields(bark.Fields{
-				"table": r.tableName, "shard": r.shard,
-				"err": err, "file": creationTime}).Panic("Failed to truncate redo log file")
+			utils.GetLogger().With(
+				"table", r.tableName,
+				"shard", r.shard,
+				"err", err,
+				"file", creationTime).Panic("Failed to truncate redo log file")
 		}
 		utils.GetReporter(r.tableName, r.shard).GetCounter(utils.RedoLogFileCorrupt).Inc(1)
 	}
@@ -225,10 +231,10 @@ func (r *RedoLogManager) NextUpsertBatch() func() (*UpsertBatch, int64, uint32) 
 
 				key := files[currentIndex]
 
-				utils.GetLogger().WithFields(bark.Fields{
-					"table": r.tableName,
-					"shard": r.shard,
-				}).Infof("Start replaying redo log file %d [%d/%d]", key, currentIndex+1, len(files))
+				utils.GetLogger().With(
+					"table", r.tableName,
+					"shard", r.shard,
+				).Infof("Start replaying redo log file %d [%d/%d]", key, currentIndex+1, len(files))
 				currentFile, err = r.diskStore.OpenLogFileForReplay(r.tableName, r.shard, key)
 				if err != nil {
 					utils.GetLogger().Panicf("Failed to open redo log file %v for replay", key)

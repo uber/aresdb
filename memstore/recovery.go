@@ -17,11 +17,11 @@ package memstore
 import (
 	"sync"
 
-	"github.com/uber-common/bark"
-	memcom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/utils"
 	"math"
 	"sort"
+
+	memcom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 )
 
 // ReplayRedoLogs loads data for the table Shard from disk store and recovers the Shard for serving.
@@ -66,7 +66,7 @@ func (shard *TableShard) ReplayRedoLogs() {
 		shard.LiveStore.WriterLock.Unlock()
 
 		if err != nil {
-			utils.GetLogger().WithError(err).Panic("Failed to apply upsert batch during recovery")
+			utils.GetLogger().With("err", err).Panic("Failed to apply upsert batch during recovery")
 		}
 	}
 
@@ -85,12 +85,16 @@ func (shard *TableShard) cleanOldSnapshotAndLogs(redoLogFile int64, offset uint3
 	tableName := shard.Schema.Schema.Name
 	// snapshot won't care about the cutoff.
 	if err := shard.LiveStore.RedoLogManager.PurgeRedologFileAndData(math.MaxUint32, redoLogFile, offset); err != nil {
-		utils.GetLogger().WithFields(bark.Fields{"job": "snapshot_cleanup", "table": tableName}).Errorf(
+		utils.GetLogger().With(
+			"job", "snapshot_cleanup",
+			"table", tableName).Errorf(
 			"Purge redologs failed, shard: %d, error: %v", shard.ShardID, err)
 	}
 	// delete old snapshots
 	if err := shard.diskStore.DeleteSnapshot(shard.Schema.Schema.Name, shard.ShardID, redoLogFile, offset); err != nil {
-		utils.GetLogger().WithFields(bark.Fields{"job": "snapshot_cleanup", "table": tableName}).Errorf(
+		utils.GetLogger().With(
+			"job", "snapshot_cleanup",
+			"table", tableName).Errorf(
 			"Delete snapshots failed, shard: %d, error: %v", shard.ShardID, err)
 	}
 }
@@ -142,14 +146,21 @@ func (m *memStoreImpl) loadSnapshots() {
 		go func(tableName string) {
 			tableShards := m.TableShards[tableName]
 			for _, shard := range tableShards {
-				utils.GetLogger().WithFields(bark.Fields{"job": "snapshot_load",
-					"table": shard.Schema.Schema.Name, "shard": shard.ShardID}).
+				utils.GetLogger().With(
+					"job", "snapshot_load",
+					"table", shard.Schema.Schema.Name,
+					"shard", shard.ShardID).
 					Info("Loading snapshots")
 				if err := shard.LoadSnapshot(); err != nil {
-					utils.GetLogger().WithFields(bark.Fields{"job": "snapshot_load", "table": shard.Schema.Schema.Name, "shard": shard.ShardID}).Panic(err)
+					utils.GetLogger().With(
+						"job", "snapshot_load",
+						"table", shard.Schema.Schema.Name,
+						"shard", shard.ShardID).Panic(err)
 				}
-				utils.GetLogger().WithFields(bark.Fields{"job": "snapshot_load",
-					"table": shard.Schema.Schema.Name, "shard": shard.ShardID}).
+				utils.GetLogger().With(
+					"job", "snapshot_load",
+					"table", shard.Schema.Schema.Name,
+					"shard", shard.ShardID).
 					Info("Loading snapshots done")
 			}
 			wg.Done()
@@ -170,12 +181,16 @@ func (m *memStoreImpl) replayRedoLogs() {
 			tableShards := m.TableShards[tableName]
 			// Replay all redologs
 			for _, shard := range tableShards {
-				utils.GetLogger().WithFields(bark.Fields{"job": "replay_redo_logs",
-					"table": shard.Schema.Schema.Name, "shard": shard.ShardID}).
+				utils.GetLogger().With(
+					"job", "replay_redo_logs",
+					"table", shard.Schema.Schema.Name,
+					"shard", shard.ShardID).
 					Info("Replaying redo logs")
 				shard.ReplayRedoLogs()
-				utils.GetLogger().WithFields(bark.Fields{"job": "replay_redo_logs",
-					"table": shard.Schema.Schema.Name, "shard": shard.ShardID}).
+				utils.GetLogger().With(
+					"job", "replay_redo_logs",
+					"table", shard.Schema.Schema.Name,
+					"shard", shard.ShardID).
 					Info("Replaying redo logs done")
 			}
 			wg.Done()
@@ -310,7 +325,10 @@ func (shard *TableShard) LoadSnapshot() error {
 	tableName := shard.Schema.Schema.Name
 	shardID := shard.ShardID
 
-	utils.GetLogger().WithFields(bark.Fields{"job": "snapshot_load", "table": tableName, "shard": shardID}).Info("Load data from snapshot")
+	utils.GetLogger().With(
+		"job", "snapshot_load",
+		"table", tableName,
+		"shard", shardID).Info("Load data from snapshot")
 
 	var batchIDs []int
 	var err error
@@ -364,7 +382,12 @@ func (shard *TableShard) loadTableShardSnapshot(
 	batch := shard.LiveStore.getOrCreateBatch(int32(batchID))
 	defer batch.Unlock()
 	for colID, column := range columns {
-		utils.GetLogger().WithFields(bark.Fields{"job": "snapshot_load", "table": shard.Schema.Schema.Name, "shard": shardID, "batch": batchID, "column": colID}).Info("Load snapshot column")
+		utils.GetLogger().With(
+			"job", "snapshot_load",
+			"table", shard.Schema.Schema.Name,
+			"shard", shardID,
+			"batch", batchID,
+			"column", colID).Info("Load snapshot column")
 
 		index := sort.SearchInts(cols, colID)
 		existing := index >= 0 && index < len(cols) && cols[index] == colID
@@ -391,7 +414,9 @@ func (shard *TableShard) rebuildIndexForLiveStore(batchID int32, lastRecord uint
 		buildIndexTimer.Record(duration)
 	}()
 
-	utils.GetLogger().WithFields(bark.Fields{"job": "snapshot_load", "table": shard.Schema.Schema.Name}).Info("Rebuilding index")
+	utils.GetLogger().With(
+		"job", "snapshot_load",
+		"table", shard.Schema.Schema.Name).Info("Rebuilding index")
 
 	batch := shard.LiveStore.Batches[batchID]
 	primaryKeyBytes := shard.Schema.PrimaryKeyBytes

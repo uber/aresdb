@@ -18,10 +18,10 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/uber-common/bark"
+	"strconv"
+
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
-	"strconv"
 )
 
 // ArchiveBatch represents a archive batch.
@@ -133,10 +133,10 @@ func (v *ArchiveStoreVersion) RequestBatch(batchID int32) *ArchiveBatch {
 	version, seqNum, size, err := v.shard.metaStore.GetArchiveBatchVersion(
 		v.shard.Schema.Schema.Name, v.shard.ShardID, int(batchID), v.ArchivingCutoff)
 	if err != nil {
-		utils.GetLogger().WithFields(bark.Fields{
-			"table":   v.shard.Schema.Schema.Name,
-			"shard":   v.shard.ShardID,
-			"batchID": batchID}).Panic(err)
+		utils.GetLogger().With(
+			"table", v.shard.Schema.Schema.Name,
+			"shard", v.shard.ShardID,
+			"batchID", batchID).Panic(err)
 	}
 	batch = &ArchiveBatch{
 		Version: version,
@@ -356,12 +356,12 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 	}
 
 	if numDuplicateRecords > 0 {
-		utils.GetLogger().WithFields(bark.Fields{
-			"table": b.Shard.Schema.Schema.Name,
-			"shard": b.Shard.ShardID,
-			"batch": b.BatchID,
-			"error": "duplicate record",
-		}).Errorf("duplicate record found when building index")
+		utils.GetLogger().With(
+			"table", b.Shard.Schema.Schema.Name,
+			"shard", b.Shard.ShardID,
+			"batch", b.BatchID,
+			"error", "duplicate record",
+		).Errorf("duplicate record found when building index")
 		utils.GetReporter(b.Shard.Schema.Schema.Name, b.Shard.ShardID).GetChildGauge(map[string]string{
 			"batch": strconv.FormatInt(int64(b.BatchID), 10),
 		}, utils.DuplicateRecordRatio).Update(float64(numDuplicateRecords) / float64(b.Size))

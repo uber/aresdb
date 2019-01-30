@@ -16,6 +16,8 @@ package query
 
 import (
 	"encoding/json"
+	"time"
+
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -23,7 +25,6 @@ import (
 	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"time"
 )
 
 var _ = ginkgo.Describe("Time Bucketizer", func() {
@@ -98,7 +99,7 @@ var _ = ginkgo.Describe("Time Bucketizer", func() {
 
 		utils.Init(common.AresServerConfig{Query: common.QueryConfig{TimezoneTable: common.TimezoneConfig{
 			TableName: "",
-		}}}, common.NewLoggerFactory().GetDefaultLogger(), common.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
+		}}}, common.NewLoggerFactory().GetDefaultLogger().Sugar(), common.NewLoggerFactory().GetDefaultLogger().Sugar(), tally.NewTestScope("test", nil))
 		qc.timezoneTable.tableColumn = "timezone"
 		qc.timezoneTable.tableAlias = defaultTimezoneTableAlias
 		qc.TableIDByAlias = map[string]int{defaultTimezoneTableAlias: 0}

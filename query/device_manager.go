@@ -17,13 +17,13 @@ package query
 import (
 	"sync"
 
-	"github.com/uber-common/bark"
-	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/memutils"
-	"github.com/uber/aresdb/utils"
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/utils"
 )
 
 const (
@@ -70,22 +70,23 @@ type DeviceManager struct {
 func NewDeviceManager(cfg common.QueryConfig) *DeviceManager {
 	deviceMemoryUtilization := cfg.DeviceMemoryUtilization
 	if deviceMemoryUtilization <= 0 || deviceMemoryUtilization > 1 {
-		utils.GetLogger().WithField("deviceMemoryUtilization", deviceMemoryUtilization).
+		utils.GetLogger().With("deviceMemoryUtilization", deviceMemoryUtilization).
 			Error("Invalid deviceMemoryUtilization config, setting to default")
 		deviceMemoryUtilization = defaultDeviceUtilization
 	}
 
 	timeout := cfg.DeviceChoosingTimeout
 	if timeout <= 0 {
-		utils.GetLogger().WithField("timeout", timeout).
+		utils.GetLogger().With("timeout", timeout).
 			Error("Invalid timeout config, setting to default")
 		timeout = defaultTimeout
 	}
 
 	// retrieve device counts
 	deviceCount := memutils.GetDeviceCount()
-	utils.GetLogger().WithFields(bark.Fields{"utilization": deviceMemoryUtilization,
-		"timeout": timeout}).Info("Initialized device manager")
+	utils.GetLogger().With(
+		"utilization", deviceMemoryUtilization,
+		"timeout", timeout).Info("Initialized device manager")
 
 	deviceInfos := make([]*DeviceInfo, deviceCount)
 	maxAvailableMem := 0
@@ -136,13 +137,12 @@ func getDeviceInfo(device int, deviceMemoryUtilization float32) *DeviceInfo {
 // the DeviceChoosingTimeout seconds elapse.
 func (d *DeviceManager) FindDevice(query *AQLQuery, requiredMem int, preferredDevice int, timeout int) int {
 	if requiredMem > d.MaxAvailableMemory {
-		utils.GetQueryLogger().WithFields(
-			bark.Fields{
-				"query":           query,
-				"requiredMem":     requiredMem,
-				"preferredDevice": preferredDevice,
-				"maxAvailableMem": d.MaxAvailableMemory,
-			}).Warn("exceeds max memory")
+		utils.GetQueryLogger().With(
+			"query", query,
+			"requiredMem", requiredMem,
+			"preferredDevice", preferredDevice,
+			"maxAvailableMem", d.MaxAvailableMemory,
+		).Warn("exceeds max memory")
 		return -1
 	}
 
@@ -158,13 +158,11 @@ func (d *DeviceManager) FindDevice(query *AQLQuery, requiredMem int, preferredDe
 	device := -1
 	for {
 		if utils.Now().Sub(start) >= timeoutDuration {
-			utils.GetQueryLogger().WithFields(
-				bark.Fields{
-					"query":           query,
-					"requiredMem":     requiredMem,
-					"preferredDevice": preferredDevice,
-					"timeout":         timeout,
-				},
+			utils.GetQueryLogger().With(
+				"query", query,
+				"requiredMem", requiredMem,
+				"preferredDevice", preferredDevice,
+				"timeout", timeout,
 			).Error("DeviceChoosingTimeout when choosing the device for the query")
 			break
 		}
@@ -183,12 +181,10 @@ func (d *DeviceManager) FindDevice(query *AQLQuery, requiredMem int, preferredDe
 // findDevice finds a device to run a given query according to certain strategy.If no such device can't
 // be found, return -1. Caller needs to hold the write lock.
 func (d *DeviceManager) findDevice(query *AQLQuery, requiredMem int, preferredDevice int) int {
-	utils.GetQueryLogger().WithFields(
-		bark.Fields{
-			"query":           query,
-			"requiredMem":     requiredMem,
-			"preferredDevice": preferredDevice,
-		},
+	utils.GetQueryLogger().With(
+		"query", query,
+		"requiredMem", requiredMem,
+		"preferredDevice", preferredDevice,
 	).Debug("trying to find device for query")
 	candidateDevice := -1
 

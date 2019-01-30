@@ -31,16 +31,16 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
-	"github.com/uber-common/bark"
 	"github.com/uber/aresdb/clients"
 	"github.com/uber/aresdb/memutils"
+	"go.uber.org/zap"
 )
 
 // Options represents options for executing command
 type Options struct {
 	DefaultCfg   map[string]interface{}
-	ServerLogger bark.Logger
-	QueryLogger  bark.Logger
+	ServerLogger *zap.SugaredLogger
+	QueryLogger  *zap.SugaredLogger
 	Metrics      common.Metrics
 	HttpWrappers []utils.HTTPHandlerWrapper
 }
@@ -53,8 +53,8 @@ func Execute(setters ...Option) {
 
 	loggerFactory := common.NewLoggerFactory()
 	options := &Options{
-		ServerLogger: loggerFactory.GetDefaultLogger(),
-		QueryLogger:  loggerFactory.GetLogger("query"),
+		ServerLogger: loggerFactory.GetDefaultLogger().Sugar(),
+		QueryLogger:  loggerFactory.GetLogger("query").Sugar(),
 		Metrics:      common.NewNoopMetrics(),
 	}
 
@@ -71,7 +71,7 @@ func Execute(setters ...Option) {
 
 			cfg, err := utils.ReadConfig(options.DefaultCfg, cmd.Flags())
 			if err != nil {
-				options.ServerLogger.WithField("err", err.Error()).Fatal("failed to read configs")
+				options.ServerLogger.With("err", err.Error()).Fatal("failed to read configs")
 			}
 
 			start(
@@ -88,8 +88,8 @@ func Execute(setters ...Option) {
 }
 
 // start is the entry point of starting ares.
-func start(cfg common.AresServerConfig, logger bark.Logger, queryLogger bark.Logger, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
-	logger.WithField("config", cfg).Info("Bootstrapping service")
+func start(cfg common.AresServerConfig, logger *zap.SugaredLogger, queryLogger *zap.SugaredLogger, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
+	logger.With("config", cfg).Info("Bootstrapping service")
 
 	// Check whether we have a correct device running environment
 	memutils.DeviceFree(unsafe.Pointer(nil), 0)
