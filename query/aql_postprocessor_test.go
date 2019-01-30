@@ -46,9 +46,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					DataType: memCom.Uint32,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.Call{
 				ExprType: expr.Float,
-				DataType: memCom.Float32,
 			},
 			MeasureBytes:         4,
 			DimRowBytes:          5,
@@ -86,9 +85,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.Call{
 				ExprType: expr.Float,
-				DataType: memCom.Float32,
 			},
 			MeasureBytes:       4,
 			DimRowBytes:        8,
@@ -126,9 +124,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					DataType: memCom.Float32,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.Call{
 				ExprType: expr.UnknownType,
-				DataType: memCom.Unknown,
 			},
 			DimRowBytes:        5,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0},
@@ -173,9 +170,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.Call{
 				ExprType: expr.Float,
-				DataType: memCom.Float32,
 			},
 			MeasureBytes:       4,
 			DimRowBytes:        10,
@@ -302,9 +298,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.VarRef{
+			Measure: &expr.Call{
 				ExprType: expr.Float,
-				DataType: memCom.Float32,
 			},
 			MeasureBytes:       4,
 			DimRowBytes:        10,

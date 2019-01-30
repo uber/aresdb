@@ -20,7 +20,7 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"unsafe"
-)
+	)
 
 // Postprocess converts the internal dimension and measure vector in binary
 // format to AQLTimeSeriesResult nested result format. It also translates enum
@@ -142,8 +142,7 @@ func readMeasure(measureRow unsafe.Pointer, ast expr.Expr, measureBytes int) *fl
 	// TODO: consider converting non-zero identity values to nil.
 	// should always be a call expr which is ensured by compiler
 	var result float64
-	aggregate, _ := ast.(*expr.Call)
-	if aggregate.Name == avgCallName {
+	if aggregate, ok := ast.(*expr.Call); ok && aggregate.Name == avgCallName {
 		// read the first 4 bytes
 		measureBytes = 4
 	}
