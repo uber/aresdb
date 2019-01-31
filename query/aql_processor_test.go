@@ -928,7 +928,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		utils.Init(common.AresServerConfig{Query: common.QueryConfig{TimezoneTable: common.TimezoneConfig{
 			TableName: "tableName",
-		}}}, common.NewLoggerFactory().GetDefaultLogger().Sugar(), common.NewLoggerFactory().GetDefaultLogger().Sugar(), tally.NewTestScope("test", nil))
+		}}}, common.NewLoggerFactory().GetDefaultLogger(), common.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
 		qc := &AQLQueryContext{
 			timezoneTable: timezoneTableContext{tableColumn: "timezone"},
 		}
@@ -1136,7 +1136,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		utils.Init(common.AresServerConfig{Query: common.QueryConfig{TimezoneTable: common.TimezoneConfig{
 			TableName: timezoneTable,
-		}}}, common.NewLoggerFactory().GetDefaultLogger().Sugar(), common.NewLoggerFactory().GetDefaultLogger().Sugar(), tally.NewTestScope("test", nil))
+		}}}, common.NewLoggerFactory().GetDefaultLogger(), common.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
 
 		qc := &AQLQueryContext{}
 		q := &AQLQuery{

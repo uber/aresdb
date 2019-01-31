@@ -33,14 +33,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/uber/aresdb/clients"
 	"github.com/uber/aresdb/memutils"
-	"go.uber.org/zap"
 )
 
 // Options represents options for executing command
 type Options struct {
 	DefaultCfg   map[string]interface{}
-	ServerLogger *zap.SugaredLogger
-	QueryLogger  *zap.SugaredLogger
+	ServerLogger common.LoggerCommon
+	QueryLogger  common.LoggerCommon
 	Metrics      common.Metrics
 	HttpWrappers []utils.HTTPHandlerWrapper
 }
@@ -53,8 +52,8 @@ func Execute(setters ...Option) {
 
 	loggerFactory := common.NewLoggerFactory()
 	options := &Options{
-		ServerLogger: loggerFactory.GetDefaultLogger().Sugar(),
-		QueryLogger:  loggerFactory.GetLogger("query").Sugar(),
+		ServerLogger: loggerFactory.GetDefaultLogger(),
+		QueryLogger:  loggerFactory.GetLogger("query"),
 		Metrics:      common.NewNoopMetrics(),
 	}
 
@@ -88,7 +87,7 @@ func Execute(setters ...Option) {
 }
 
 // start is the entry point of starting ares.
-func start(cfg common.AresServerConfig, logger *zap.SugaredLogger, queryLogger *zap.SugaredLogger, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
+func start(cfg common.AresServerConfig, logger common.LoggerCommon, queryLogger common.LoggerCommon, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
 	logger.With("config", cfg).Info("Bootstrapping service")
 
 	// Check whether we have a correct device running environment

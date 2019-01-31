@@ -18,32 +18,147 @@ import (
 	"go.uber.org/zap"
 )
 
+// LoggerCommon is a general logger interface
+type LoggerCommon interface {
+	// Log at debug level
+	Debug(args ...interface{})
+
+	// Log at debug level with fmt.Printf-like formatting
+	Debugf(format string, args ...interface{})
+
+	// Log at info level
+	Info(args ...interface{})
+
+	// Log at info level with fmt.Printf-like formatting
+	Infof(format string, args ...interface{})
+
+	// Log at warning level
+	Warn(args ...interface{})
+
+	// Log at warning level with fmt.Printf-like formatting
+	Warnf(format string, args ...interface{})
+
+	// Log at error level
+	Error(args ...interface{})
+
+	// Log at error level with fmt.Printf-like formatting
+	Errorf(format string, args ...interface{})
+
+	// Log at fatal level, then terminate process (irrecoverable)
+	Fatal(args ...interface{})
+
+	// Log at fatal level with fmt.Printf-like formatting, then terminate process (irrecoverable)
+	Fatalf(format string, args ...interface{})
+
+	// Log at panic level, then panic (recoverable)
+	Panic(args ...interface{})
+
+	// Log at panic level with fmt.Printf-like formatting, then panic (recoverable)
+	Panicf(format string, args ...interface{})
+
+	// Return a logger with the specified key-value pair set, to be logged in a subsequent normal logging call
+	With(args ...interface{}) LoggerCommon
+}
+
 // LoggerFactory defines the log factory ares needs.
 type LoggerFactory interface {
 	// GetDefaultLogger returns the default logger.
-	GetDefaultLogger() *zap.Logger
+	GetDefaultLogger() LoggerCommon
 	// GetLogger returns logger given the logger name.
-	GetLogger(name string) *zap.Logger
+	GetLogger(name string) LoggerCommon
 }
 
 // ZapLoggerFactory is the stdlog implementation of LoggerFactory
 type ZapLoggerFactory struct {
-	logger *zap.Logger
+	logger *ZapLogger
 }
 
 // NewLoggerFactory creates a default zap LoggerFactory implementation.
 func NewLoggerFactory() LoggerFactory {
 	return &ZapLoggerFactory{
-		logger: zap.NewExample(),
+		&ZapLogger{
+			zap.NewExample().Sugar(),
+		},
 	}
 }
 
 // GetDefaultLogger returns the default zap logger.
-func (r *ZapLoggerFactory) GetDefaultLogger() *zap.Logger {
+func (r *ZapLoggerFactory) GetDefaultLogger() LoggerCommon {
 	return r.logger
 }
 
 // GetLogger of ZapLoggerFactory ignores the given name and just return the default logger.
-func (r *ZapLoggerFactory) GetLogger(name string) *zap.Logger {
+func (r *ZapLoggerFactory) GetLogger(name string) LoggerCommon {
 	return r.logger
+}
+
+// ZapLogger is wrapper of zap
+type ZapLogger struct {
+	sugaredLogger *zap.SugaredLogger
+}
+
+// Debug is log at debug level
+func (z *ZapLogger) Debug(args ...interface{}) {
+	z.sugaredLogger.Debug(args)
+}
+
+// Debugf is log at debug level with fmt.Printf-like formatting
+func (z *ZapLogger) Debugf(format string, args ...interface{}) {
+	z.sugaredLogger.Debugf(format, args)
+}
+
+// Info is log at info level
+func (z *ZapLogger) Info(args ...interface{}) {
+	z.sugaredLogger.Info(args)
+}
+
+// Infof is log at info level with fmt.Printf-like formatting
+func (z *ZapLogger) Infof(format string, args ...interface{}) {
+	z.sugaredLogger.Infof(format, args)
+}
+
+// Warn is log at warning level
+func (z *ZapLogger) Warn(args ...interface{}) {
+	z.sugaredLogger.Warn(args)
+}
+
+// Warnf is log at warning level with fmt.Printf-like formatting
+func (z *ZapLogger) Warnf(format string, args ...interface{}) {
+	z.sugaredLogger.Warnf(format, args)
+}
+
+// Error is log at error level
+func (z *ZapLogger) Error(args ...interface{}) {
+	z.sugaredLogger.Error(args)
+}
+
+// Errorf is log at error level with fmt.Printf-like formatting
+func (z *ZapLogger) Errorf(format string, args ...interface{}) {
+	z.sugaredLogger.Errorf(format, args)
+}
+
+// Fatal is log at fatal level, then terminate process (irrecoverable)
+func (z *ZapLogger) Fatal(args ...interface{}) {
+	z.sugaredLogger.Fatal(args)
+}
+
+// Fatalf is log at fatal level with fmt.Printf-like formatting, then terminate process (irrecoverable)
+func (z *ZapLogger) Fatalf(format string, args ...interface{}) {
+	z.sugaredLogger.Fatalf(format, args)
+}
+
+// Panic is log at panic level, then panic (recoverable)
+func (z *ZapLogger) Panic(args ...interface{}) {
+	z.sugaredLogger.Panic(args)
+}
+
+// Panicf is log at panic level with fmt.Printf-like formatting, then panic (recoverable)
+func (z *ZapLogger) Panicf(format string, args ...interface{}) {
+	z.sugaredLogger.Panicf(format, args)
+}
+
+// With returns a logger with the specified key-value pair set, to be logged in a subsequent normal logging call
+func (z *ZapLogger) With(args ...interface{}) LoggerCommon {
+	z.sugaredLogger = z.sugaredLogger.With(args...)
+	return z
 }
