@@ -511,37 +511,44 @@ var _ = ginkgo.Describe("DebugHandler", func() {
               {
                 "name": "c0",
                 "type": "",
-                "config": {}
+                "config": {},
+				"hllConfig": {}
               },
               {
                 "name": "c1",
                 "type": "",
-                "config": {}
+                "config": {},
+				"hllConfig": {}
               },
               {
                 "name": "c2",
                 "type": "",
-                "config": {}
+                "config": {},
+				"hllConfig": {}
               },
               {
                 "name": "c3",
                 "type": "",
-                "config": {}
+                "config": {},
+				"hllConfig": {}
               },
               {
                 "name": "c4",
                 "type": "",
-                "config": {}
+                "config": {},
+				"hllConfig": {}
               },
               {
                 "name": "c5",
                 "type": "Bool",
-                "config": {}
+                "config": {},
+				"hllConfig": {}
               },
               {
                 "name": "c6",
                 "type": "SmallEnum",
-                "config": {}
+                "config": {},
+				"hllConfig": {}
               }
             ],
             "primaryKeyColumns": null,

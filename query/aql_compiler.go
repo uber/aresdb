@@ -563,6 +563,29 @@ func (qc *AQLQueryContext) releaseSchema() {
 	}
 }
 
+// this function assume original column itself exists
+func (qc *AQLQueryContext) resolveDerivedHLLColumn(tableID, columnID int) *expr.VarRef {
+	column := qc.TableScanners[tableID].Schema.Schema.Columns[columnID]
+	if column.GetHLLMode() != metaCom.HLLEnabled {
+		return nil
+	}
+	hllColumnName := column.GetDerivedHLLColumnName()
+	hllColumnID, exist := qc.TableScanners[tableID].Schema.ColumnIDs[hllColumnName]
+	if !exist {
+		return nil
+	}
+
+	hllColumn := qc.TableScanners[tableID].Schema.Schema.Columns[hllColumnID]
+	return &expr.VarRef{
+		Val: hllColumnName,
+		TableID: tableID,
+		ColumnID: hllColumnID,
+		ExprType: ColumnTypeToExprType[hllColumn.Type],
+		DataType: qc.TableScanners[tableID].Schema.ValueTypeByColumn[hllColumnID],
+		IsHLLColumn: true,
+	}
+}
+
 // resolveColumn resolves the VarRef identifier against the schema,
 // and returns the matched tableID (query scoped) and columnID (schema scoped).
 func (qc *AQLQueryContext) resolveColumn(identifier string) (int, int, error) {
@@ -656,6 +679,10 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 		e.EnumDict = dict.Dict
 		e.EnumReverseDict = dict.ReverseDict
 		e.DataType = qc.TableScanners[tableID].Schema.ValueTypeByColumn[columnID]
+		e.IsHLLColumn = column.IsHLLColumn()
+		if !e.IsHLLColumn {
+			e.DerivedHLLColumn = qc.resolveDerivedHLLColumn(tableID, columnID)
+		}
 	case *expr.UnaryExpr:
 		if isUUIDColumn(e.Expr) && e.Op != expr.GET_HLL_VALUE {
 			qc.Error = utils.StackError(nil, "uuid column type only supports countdistincthll unary expression")
@@ -1037,11 +1064,21 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 					nil, "expect 1 argument to be a column for %s", e.Name)
 				break
 			}
+
 			e.Name = hllCallName
-			e.Args[0] = &expr.UnaryExpr{
-				Op:       expr.GET_HLL_VALUE,
-				Expr:     colRef,
-				ExprType: expr.Unsigned,
+			if colRef.IsHLLColumn {
+				// 1. column is hll column itself
+				e.Args[0] = colRef
+			} else if colRef.DerivedHLLColumn != nil {
+				// 2. column has derived hll column
+				e.Args[0] = colRef.DerivedHLLColumn
+			} else {
+				// 3. column has to compute hll on the fly
+				e.Args[0] = &expr.UnaryExpr{
+					Op:       expr.GET_HLL_VALUE,
+					Expr:     colRef,
+					ExprType: expr.Unsigned,
+				}
 			}
 			e.ExprType = expr.Unsigned
 		case hllCallName:

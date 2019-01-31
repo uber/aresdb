@@ -29,6 +29,7 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"fmt"
 )
 
 var _ = ginkgo.Describe("AQL compiler", func() {
@@ -1836,26 +1837,17 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("processes hyperloglog", func() {
-		tripsSchema := &memstore.TableSchema{
-			ValueTypeByColumn: []memCom.DataType{
-				memCom.Uint32,
-				memCom.Uint32,
-				memCom.Uint16,
-			},
-			ColumnIDs: map[string]int{
-				"request_at":      0,
-				"client_uuid_hll": 1,
-				"test_field":      2,
-			},
-			Schema: metaCom.Table{
-				IsFactTable: true,
-				Columns: []metaCom.Column{
-					{Name: "request_at", Type: metaCom.Uint32},
-					{Name: "client_uuid_hll", Type: metaCom.Uint32},
-					{Name: "test_field", Type: metaCom.Uint16},
-				},
+		table := metaCom.Table{
+			IsFactTable: true,
+			Columns: []metaCom.Column{
+				{Name: "request_at", Type: metaCom.Uint32},
+				{Name: "test_field", Type: metaCom.Uint16},
+				{Name: "client_uuid", Type: metaCom.UUID, HLLConfig:metaCom.HLLConfig{Mode: metaCom.HLLEnabled}},
+				{Name: "driver_uuid", Type: metaCom.UUID, HLLConfig:metaCom.HLLConfig{Mode: metaCom.HLLOnly}},
 			},
 		}
+		table.DeriveHLLColumns(0)
+		tripsSchema := memstore.NewTableSchema(&table)
 
 		qc := &AQLQueryContext{
 			TableIDByAlias: map[string]int{
@@ -1918,6 +1910,41 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.Query.Measures[0].expr.String()).Should(Equal("hll(client_uuid_hll)"))
+
+
+		qc.Query = &AQLQuery{
+			Table: "trips",
+			Measures: []Measure{
+				{Expr: "countDistinctHLL(client_uuid)"},
+			},
+			TimeFilter: TimeFilter{
+				Column: "request_at",
+				From:   "-1d",
+				To:     "0d",
+			},
+		}
+		qc.Error = nil
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.Measures[0].expr.String()).Should(Equal("hll(client_uuid_hll)"))
+
+		qc.Query = &AQLQuery{
+			Table: "trips",
+			Measures: []Measure{
+				{Expr: "countDistinctHLL(driver_uuid)"},
+			},
+			TimeFilter: TimeFilter{
+				Column: "request_at",
+				From:   "-1d",
+				To:     "0d",
+			},
+		}
+		qc.Error = nil
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.Measures[0].expr.String()).Should(Equal("hll(driver_uuid)"))
 	})
 
 	ginkgo.It("process geo intersection in foreign table", func() {

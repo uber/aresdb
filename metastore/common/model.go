@@ -81,9 +81,10 @@ type Column struct {
 	// HLLConfig is immutable
 	HLLConfig HLLConfig `json:"hllConfig,omitempty"`
 
-	// store the original column name if column is derived
-	// empty if not derived
-	originColumnName string
+	// store the original column type if column is hll column
+	originColumnType string
+	// whether the column is a hll (can run hll directly)
+	isHLLColumn bool
 }
 
 // HLLConfig defines hll configuration
@@ -173,107 +174,43 @@ type Table struct {
 	Version int `json:"version"`
 }
 
-// DeriveHLLColumns derive hll columns as configured
-// Derived columns will be appended to the column slice
-func (t *Table) DeriveHLLColumns() error {
-	columnNames := make(map[string]int)
-	for columnID, column := range t.Columns {
-		if !column.Deleted {
-			columnNames[column.Name] = columnID
-		}
-	}
-
-	// hll enabled columns
-	hllEnabledColumns := make([]int, 0)
-	for columnID, column := range t.Columns {
-		if !column.Deleted {
-			// should not happen after validation
-			continue
-		}
-
-		if column.GetHLLMode() == HLLOnly {
-			// modify data type to use Uint32 for hll only column
-			column.Type = Uint32
-		} else if column.GetHLLMode() == HLLEnabled {
-			// create derived hll column
-			hllColumnName := column.GetDerivedHLLColumnName()
-			hllColumnID, exist := columnNames[hllColumnName]
-			if !exist {
-				hllEnabledColumns = append(hllEnabledColumns, columnID)
-				continue
-			}
-			existColumn := t.Columns[hllColumnID]
-			// if column with the name exists, this could happen when:
-			// 	1. non-derived column with the same name
-			// 	2. another column derived to the same name
-			if existColumn.originColumnName != column.Name {
-				return fmt.Errorf("column already exists with name %s, consider using a different suffix", hllColumnName)
-			}
-			// derived column already exists from the same origin column, then continue without action
-		}
-		// Note: column without hll mode set will still be able to do hll aggregation on the fly
-		// but no derived hll column will be created to do fast aggregation
-	}
-
-	// append derived columns to the end
-	for columnID := range hllEnabledColumns {
-		column := t.Columns[columnID]
-		t.Columns = append(t.Columns, column.CreateHLLColumn())
-	}
-	return nil
-}
-
 // CreateHLLColumn creates the derived hll column for the original column
-func (c Column) CreateHLLColumn() Column {
-	hllColumnName := c.GetDerivedHLLColumnName()
+func (c *Column) CreateHLLColumn() Column {
 	return Column{
-		Name: hllColumnName,
+		Name: c.GetDerivedHLLColumnName(),
 		// currently all hyperloglog column use uint32 value type
-		// for we now used fixed precision
 		Type: Uint32,
 		Config: ColumnConfig{
 			PreloadingDays: c.Config.PreloadingDays,
 			Priority: c.Config.Priority,
 		},
-		originColumnName: c.Name,
+		originColumnType: c.Type,
+		isHLLColumn: true,
 	}
 }
 
-// ValidateHLLConfig validates hll config
-func (c Column) ValidateHLLConfig() error {
-	switch strings.ToLower(c.GetHLLMode()) {
-	case HLLEnabled:
-	case HLLOnly:
-	case "":
-	default:
-		return fmt.Errorf("invalid hll mode: %s, valid options: [%s|%s|%s]",
-			c.GetHLLMode(), HLLEnabled, HLLOnly, "")
-	}
+// GetOriginalColumnType returns the original column data type for hll column
+func (c *Column) GetOriginalColumnType() string {
+	return c.originColumnType
+}
 
-	switch c.Type {
-	case Uint32:
-	case Int32:
-	case Int64:
-	case UUID:
-	default:
-		return fmt.Errorf("data Type %s not allowed for fast hll aggregation, valid options: [%s|%s|%s|%s]",
-			c.Type, Uint32, Int32, Int64, UUID)
-	}
-	return nil
+// IsHLLColumn returns whether the column is a hll column
+func (c *Column) IsHLLColumn() bool {
+	return c.isHLLColumn
 }
 
 // IsEnumColumn checks whether a column is enum column
-func (c Column) IsEnumColumn() bool {
+func (c *Column) IsEnumColumn() bool {
 	return c.Type == BigEnum || c.Type == SmallEnum
 }
 
 // GetHLLMode returns the HLLMode for a column
-func (c Column) GetHLLMode() string {
+func (c *Column) GetHLLMode() string {
 	return strings.ToLower(c.HLLConfig.Mode)
 }
 
 // GetDerivedHLLColumnName returns the hyperloglog related column name of a column
-func (c Column) GetDerivedHLLColumnName() string {
+func (c *Column) GetDerivedHLLColumnName() string {
 	suffix := defaultHLLColumnSuffix
 	if c.HLLConfig.Suffix != "" {
 		suffix = c.HLLConfig.Suffix
@@ -282,12 +219,30 @@ func (c Column) GetDerivedHLLColumnName() string {
 }
 
 // IsOverwriteOnlyDataType checks whether a column is overwrite only
-func (c Column) IsOverwriteOnlyDataType() bool {
+func (c *Column) IsOverwriteOnlyDataType() bool {
 	switch c.Type {
 	case Uint8, Int8, Uint16, Int16, Uint32, Int32, Float32, Int64:
 		return false
 	default:
 		return true
+	}
+}
+
+// DeriveHLLColumns derive hll columns
+func (t *Table) DeriveHLLColumns(startColumnID int) {
+	numColumns := len(t.Columns)
+	for columnID := startColumnID; columnID < numColumns; columnID++ {
+		column := t.Columns[columnID]
+		hllMode := column.GetHLLMode()
+		if hllMode == HLLOnly {
+			column.originColumnType = column.Type
+			column.isHLLColumn = true
+			column.Type = Uint32
+			t.Columns[columnID] = column
+		} else if hllMode == HLLEnabled {
+			column.originColumnType = column.Type
+			t.Columns = append(t.Columns, column.CreateHLLColumn())
+		}
 	}
 }
 

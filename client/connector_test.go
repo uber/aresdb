@@ -47,7 +47,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 					Type: metaCom.Int32,
 					HLLConfig: metaCom.HLLConfig{
 						Suffix: "",
-						Enabled: true,
+						Mode: metaCom.HLLEnabled,
 					},
 				},
 				{

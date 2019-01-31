@@ -31,6 +31,15 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 	mockWriterCloser := &testing.TestReadWriteCloser{}
 
+	testColumn0 := common.Column{
+		Name:    "column0",
+		Type:    common.Uint32,
+		Config: common.ColumnConfig{
+			PreloadingDays: 1,
+			Priority:       3,
+		},
+	}
+
 	testColumn1 := common.Column{
 		Name:    "column1",
 		Type:    common.BigEnum,
@@ -85,6 +94,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	testTableA := common.Table{
 		Name: "a",
 		Columns: []common.Column{
+			testColumn0,
 			testColumn1,
 			testColumn3,
 			testColumn4,
@@ -106,8 +116,8 @@ var _ = ginkgo.Describe("disk metastore", func() {
 			MaxRedoLogFileSize:          1073741824,
 		},
 		IsFactTable:          true,
-		PrimaryKeyColumns:    []int{0},
-		ArchivingSortColumns: []int{1},
+		PrimaryKeyColumns:    []int{1},
+		ArchivingSortColumns: []int{2},
 	}
 	mockTableADir := &mocks.FileInfo{}
 	mockTableADir.On("Name").Return("a")
@@ -134,10 +144,11 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	testTableC := common.Table{
 		Name: "c",
 		Columns: []common.Column{
+			testColumn0,
 			testColumn1,
 		},
 		IsFactTable:       true,
-		PrimaryKeyColumns: []int{0},
+		PrimaryKeyColumns: []int{1},
 	}
 	testTableCBytes, _ := json.MarshalIndent(testTableC, "", "  ")
 
@@ -342,7 +353,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(Equal(ErrTableDoesNotExist))
 
 		err = diskMetaStore.AddColumn(testTableA.Name, testColumn1, true)
-		Ω(err).Should(Equal(ErrColumnAlreadyExist))
+		Ω(err).Should(Equal(ErrDuplicatedColumnName))
 
 		err = diskMetaStore.AddColumn(testTableA.Name, testColumn2, true)
 		Ω(err).Should(BeNil())
@@ -350,8 +361,8 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		var newTableA common.Table
 		json.Unmarshal(mockWriterCloser.Bytes(), &newTableA)
 		Ω(newTableA.Name).Should(Equal(testTableA.Name))
-		Ω(newTableA.Columns).Should(Equal([]common.Column{testColumn1, testColumn3, testColumn4, testColumn5, testColumn2}))
-		Ω(newTableA.ArchivingSortColumns).Should(Equal([]int{1, 4}))
+		Ω(newTableA.Columns).Should(Equal([]common.Column{testColumn0, testColumn1, testColumn3, testColumn4, testColumn5, testColumn2}))
+		Ω(newTableA.ArchivingSortColumns).Should(Equal([]int{2, 5}))
 	})
 
 	ginkgo.It("AddEnumColumnWithDefaultValue", func() {
@@ -372,8 +383,8 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		var newTableA common.Table
 		json.Unmarshal(mockWriterCloser.Bytes(), &newTableA)
 		Ω(newTableA.Name).Should(Equal(testTableA.Name))
-		Ω(newTableA.Columns).Should(Equal([]common.Column{testColumn1, testColumn3, testColumn4, testColumn5, testColumn6}))
-		Ω(newTableA.ArchivingSortColumns).Should(Equal([]int{1, 4}))
+		Ω(newTableA.Columns).Should(Equal([]common.Column{testColumn0, testColumn1, testColumn3, testColumn4, testColumn5, testColumn6}))
+		Ω(newTableA.ArchivingSortColumns).Should(Equal([]int{2, 5}))
 
 		Ω(string(mockWriterCloser2.Bytes())).Should(Equal("default\u0000\n"))
 	})
@@ -386,7 +397,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		err = diskMetaStore.DeleteColumn(testTableA.Name, "unknown")
 		Ω(err).Should(Equal(ErrColumnDoesNotExist))
 
-		err = diskMetaStore.DeleteColumn(testTableA.Name, testColumn1.Name)
+		err = diskMetaStore.DeleteColumn(testTableA.Name, testColumn0.Name)
 		Ω(err).Should(Equal(ErrDeleteTimeColumn))
 
 		events, done, err := diskMetaStore.WatchTableSchemaEvents()

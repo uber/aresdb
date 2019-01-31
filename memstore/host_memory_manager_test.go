@@ -392,6 +392,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			Columns: []metaCom.Column{
 				{
 					Name: "c0",
+					Type: metaCom.Uint32,
 					Config: metaCom.ColumnConfig{
 						PreloadingDays: 0,
 						Priority:       0,
@@ -399,6 +400,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 				},
 				{
 					Name: "c1",
+					Type: metaCom.Uint32,
 					Config: metaCom.ColumnConfig{
 						PreloadingDays: 5,
 						Priority:       10,
@@ -406,12 +408,14 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 				},
 				{
 					Name: "c2",
+					Type: metaCom.Uint32,
 					Config: metaCom.ColumnConfig{
 						PreloadingDays: 10,
 						Priority:       10,
 					},
 				},
 			},
+			PrimaryKeyColumns: []int{1},
 			Config: metaCom.TableConfig{
 				BatchSize: 10,
 			},
@@ -491,7 +495,8 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			<-ownershipEvents
 			done2 <- struct{}{}
 		}()
-		testMetaStore.CreateTable(testTable)
+		err = testMetaStore.CreateTable(testTable)
+		Ω(err).Should(BeNil())
 		// Should not trigger any preload.
 		Ω(testMetaStore.UpdateColumn(testTableName, "c0", newTableConfig)).Should(BeNil())
 

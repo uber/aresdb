@@ -21,9 +21,7 @@ import (
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 
-	"fmt"
 	"github.com/gorilla/mux"
-	memCom "github.com/uber/aresdb/memstore/common"
 )
 
 // SchemaHandler handles schema http requests.
@@ -137,20 +135,6 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newTable := addTableRequest.Body
-	validator := metastore.NewTableSchameValidator()
-	validator.SetNewTable(newTable)
-	err = validator.Validate()
-	if err != nil {
-		RespondWithBadRequest(w, err)
-		return
-	}
-
-	err = newTable.AddHLLColumns()
-	if err != nil {
-		RespondWithBadRequest(w, err)
-		return
-	}
-
 	err = handler.metaStore.CreateTable(&newTable)
 	if err != nil {
 		RespondWithError(w, err)
@@ -223,23 +207,8 @@ func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) 
 	var addColumnRequest AddColumnRequest
 	err := ReadRequest(r, &addColumnRequest)
 	if err != nil {
-		RespondWithError(w, err)
+		RespondWithBadRequest(w, err)
 		return
-	}
-
-	// validate data type
-	if dataType := memCom.DataTypeFromString(addColumnRequest.Body.Type); dataType == memCom.Unknown {
-		RespondWithBadRequest(w, fmt.Errorf("unknown data type: %s", addColumnRequest.Body.Type))
-		return
-	}
-
-	// validate default value
-	if addColumnRequest.Body.DefaultValue != nil {
-		err = metastore.ValidateDefaultValue(*addColumnRequest.Body.DefaultValue, addColumnRequest.Body.Type)
-		if err != nil {
-			RespondWithBadRequest(w, err)
-			return
-		}
 	}
 
 	err = handler.metaStore.AddColumn(addColumnRequest.TableName, addColumnRequest.Body.Column, addColumnRequest.Body.AddToArchivingSortOrder)
