@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
 	}, nil, nil, hostMemoryManager, shardID)
 
-	shard.ArchiveStore = ArchiveStore{CurrentVersion: &ArchiveStoreVersion{
+	shard.ArchiveStore = &ArchiveStore{CurrentVersion: &ArchiveStoreVersion{
 		ArchivingCutoff: 0,
 		Batches:         map[int32]*ArchiveBatch{},
 	}}

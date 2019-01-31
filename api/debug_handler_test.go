@@ -146,7 +146,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		testShard, _ := memStore.GetTableShard(testTableName, testTableShardID)
 		memstore.NewArchiveStoreVersion(100, testShard)
 		testShard.Schema = testSchema
-		testShard.ArchiveStore = memstore.ArchiveStore{
+		testShard.ArchiveStore = &memstore.ArchiveStore{
 			CurrentVersion: memstore.NewArchiveStoreVersion(100, testShard),
 		}
 

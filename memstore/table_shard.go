@@ -41,7 +41,7 @@ type TableShard struct {
 	LiveStore *LiveStore `json:"liveStore"`
 
 	// Archive store.
-	ArchiveStore ArchiveStore `json:"archiveStore"`
+	ArchiveStore *ArchiveStore `json:"archiveStore"`
 
 	// The special column deletion lock,
 	// see https://docs.google.com/spreadsheets/d/1QI3s1_4wgP3Cy-IGoKFCx9BcN23FzIfZGRSNC8I-1Sk/edit#gid=0

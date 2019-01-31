@@ -627,6 +627,7 @@ func (handler *DebugHandler) ShowDeviceStatus(w http.ResponseWriter, r *http.Req
 	deviceManager.RLock()
 	jsonBuffer, err := json.Marshal(*deviceManager)
 	deviceManager.RUnlock()
+
 	RespondWithJSONBytes(w, jsonBuffer, err)
 	return
 }

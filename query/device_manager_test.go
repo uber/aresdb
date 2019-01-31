@@ -47,6 +47,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 		}
 
 		deviceManager = &DeviceManager{
+			RWMutex:            &sync.RWMutex{},
 			DeviceInfos:        deviceInfoArray,
 			Timeout:            5,
 			MaxAvailableMemory: 3000,
@@ -117,6 +118,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 
 	ginkgo.It("query queuing should work", func() {
 		deviceManager = &DeviceManager{
+			RWMutex: &sync.RWMutex{},
 			DeviceInfos: []*DeviceInfo{
 				{
 					DeviceID:             0,

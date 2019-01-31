@@ -143,7 +143,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 		}
 
-		shard.ArchiveStore = memstore.ArchiveStore{CurrentVersion: memstore.NewArchiveStoreVersion(100, shard)}
+		shard.ArchiveStore = &memstore.ArchiveStore{CurrentVersion: memstore.NewArchiveStoreVersion(100, shard)}
 		shard.ArchiveStore.CurrentVersion.Batches[0] = archiveBatch0
 
 		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
@@ -1287,7 +1287,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		tripsTableShard := &memstore.TableShard{
 			Schema: tripsSchema,
-			ArchiveStore: memstore.ArchiveStore{
+			ArchiveStore: &memstore.ArchiveStore{
 				CurrentVersion: memstore.NewArchiveStoreVersion(0, shard),
 			},
 			LiveStore: &memstore.LiveStore{
@@ -1554,7 +1554,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		tripsTableShard := &memstore.TableShard{
 			Schema: tripsSchema,
-			ArchiveStore: memstore.ArchiveStore{
+			ArchiveStore: &memstore.ArchiveStore{
 				CurrentVersion: memstore.NewArchiveStoreVersion(0, shard),
 			},
 			LiveStore: &memstore.LiveStore{
@@ -1943,7 +1943,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		tripsTableShard := &memstore.TableShard{
 			Schema: tripsSchema,
-			ArchiveStore: memstore.ArchiveStore{
+			ArchiveStore: &memstore.ArchiveStore{
 				CurrentVersion: memstore.NewArchiveStoreVersion(0, shard),
 			},
 			LiveStore: &memstore.LiveStore{

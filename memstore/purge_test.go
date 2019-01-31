@@ -78,7 +78,8 @@ var _ = ginkgo.Describe("Purge", func() {
 		archiveBatch1, err := testFactory.ReadArchiveBatch("archiving/archiveBatch0")
 		Ω(err).Should(BeNil())
 
-		tableShard.ArchiveStore = NewArchiveStore(tableShard)
+		archivestore := NewArchiveStore(tableShard)
+		tableShard.ArchiveStore = archivestore
 		tableShard.ArchiveStore.CurrentVersion = NewArchiveStoreVersion(86400*2, tableShard)
 		tableShard.ArchiveStore.CurrentVersion.Batches = map[int32]*ArchiveBatch{
 			1: {

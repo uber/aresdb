@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 	}
 
 	tableShard := TableShard{
-		ArchiveStore: ArchiveStore{
+		ArchiveStore: &ArchiveStore{
 			CurrentVersion: &ArchiveStoreVersion{
 				Batches: map[int32]*ArchiveBatch{
 					int32(1): &archiveBatch,
