@@ -395,7 +395,7 @@ func (c *connector) prepareEnumCases(tableName, columnName string, colIndex, col
 		}
 	}
 
-	if len(newEnumCasesSet) <= 0 {
+	if len(newEnumCasesSet) == 0 {
 		return nil
 	}
 
