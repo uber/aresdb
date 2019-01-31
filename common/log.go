@@ -18,8 +18,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// LoggerCommon is a general logger interface
-type LoggerCommon interface {
+// Logger is a general logger interface
+type Logger interface {
 	// Log at debug level
 	Debug(args ...interface{})
 
@@ -57,15 +57,15 @@ type LoggerCommon interface {
 	Panicf(format string, args ...interface{})
 
 	// Return a logger with the specified key-value pair set, to be logged in a subsequent normal logging call
-	With(args ...interface{}) LoggerCommon
+	With(args ...interface{}) Logger
 }
 
 // LoggerFactory defines the log factory ares needs.
 type LoggerFactory interface {
 	// GetDefaultLogger returns the default logger.
-	GetDefaultLogger() LoggerCommon
+	GetDefaultLogger() Logger
 	// GetLogger returns logger given the logger name.
-	GetLogger(name string) LoggerCommon
+	GetLogger(name string) Logger
 }
 
 // ZapLoggerFactory is the stdlog implementation of LoggerFactory
@@ -83,12 +83,12 @@ func NewLoggerFactory() LoggerFactory {
 }
 
 // GetDefaultLogger returns the default zap logger.
-func (r *ZapLoggerFactory) GetDefaultLogger() LoggerCommon {
+func (r *ZapLoggerFactory) GetDefaultLogger() Logger {
 	return r.logger
 }
 
 // GetLogger of ZapLoggerFactory ignores the given name and just return the default logger.
-func (r *ZapLoggerFactory) GetLogger(name string) LoggerCommon {
+func (r *ZapLoggerFactory) GetLogger(name string) Logger {
 	return r.logger
 }
 
@@ -158,7 +158,7 @@ func (z *ZapLogger) Panicf(format string, args ...interface{}) {
 }
 
 // With returns a logger with the specified key-value pair set, to be logged in a subsequent normal logging call
-func (z *ZapLogger) With(args ...interface{}) LoggerCommon {
+func (z *ZapLogger) With(args ...interface{}) Logger {
 	z.sugaredLogger = z.sugaredLogger.With(args...)
 	return z
 }

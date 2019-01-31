@@ -22,8 +22,8 @@ import (
 
 // stores all common components together to avoid scattered references.
 var (
-	logger          common.LoggerCommon
-	queryLogger     common.LoggerCommon
+	logger          common.Logger
+	queryLogger     common.Logger
 	reporterFactory *ReporterFactory
 	config          common.AresServerConfig
 )
@@ -48,7 +48,7 @@ func ResetDefaults() {
 }
 
 // Init loads application specific common components settings.
-func Init(c common.AresServerConfig, l common.LoggerCommon, ql common.LoggerCommon, s tally.Scope) {
+func Init(c common.AresServerConfig, l common.Logger, ql common.Logger, s tally.Scope) {
 	config = c
 	logger = l
 	queryLogger = ql
@@ -56,12 +56,12 @@ func Init(c common.AresServerConfig, l common.LoggerCommon, ql common.LoggerComm
 }
 
 // GetLogger returns the logger.
-func GetLogger() common.LoggerCommon {
+func GetLogger() common.Logger {
 	return logger
 }
 
 // GetQueryLogger returns the logger for query.
-func GetQueryLogger() common.LoggerCommon {
+func GetQueryLogger() common.Logger {
 	return queryLogger
 }
 

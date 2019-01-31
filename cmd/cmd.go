@@ -38,8 +38,8 @@ import (
 // Options represents options for executing command
 type Options struct {
 	DefaultCfg   map[string]interface{}
-	ServerLogger common.LoggerCommon
-	QueryLogger  common.LoggerCommon
+	ServerLogger common.Logger
+	QueryLogger  common.Logger
 	Metrics      common.Metrics
 	HttpWrappers []utils.HTTPHandlerWrapper
 }
@@ -87,7 +87,7 @@ func Execute(setters ...Option) {
 }
 
 // start is the entry point of starting ares.
-func start(cfg common.AresServerConfig, logger common.LoggerCommon, queryLogger common.LoggerCommon, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
+func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common.Logger, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
 	logger.With("config", cfg).Info("Bootstrapping service")
 
 	// Check whether we have a correct device running environment
