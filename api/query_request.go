@@ -41,4 +41,8 @@ type AQLRequest struct {
 	Origin string `header:"Rpc-Caller" json:"origin"`
 	// in: body
 	Body query.AQLRequest `body:""`
+
+	// contextual fields
+	responseWriter QueryResponseWriter
+	qcs []*query.AQLQueryContext
 }
