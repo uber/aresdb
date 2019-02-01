@@ -6,6 +6,7 @@ import (
 	clientsMocks "github.com/uber/aresdb/clients/mocks"
 	"github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	"errors"
 )
 
 var _ = ginkgo.Describe("schema fetch job", func() {
@@ -86,6 +87,72 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 		mockSchemaValidator.On("SetNewTable", mock.Anything).Return(nil)
 		mockSchemaValidator.On("SetOldTable", mock.Anything).Return(nil)
 		mockSchemaValidator.On("Validate").Return(nil)
+		job.FetchSchema()
+	})
+
+	ginkgo.It("run and stop should work", func() {
+		go job.Run()
+		job.Stop()
+	})
+
+	ginkgo.It("should report errors", func() {
+		someError := errors.New("some error")
+
+		mockSchemaValidator.On("SetNewTable", mock.Anything).Return(nil)
+		mockSchemaValidator.On("SetOldTable", mock.Anything).Return(nil)
+		mockSchemaValidator.On("Validate").Return(nil)
+		mockControllerCli.On("GetSchemaHash", "cluster1").Return("", someError).Once()
+		job.FetchSchema()
+
+		job.hash = ""
+		mockControllerCli.On("GetSchemaHash", "cluster1").Return("123", nil).Once()
+		mockControllerCli.On("GetAllSchema", "cluster1").Return(nil, someError).Once()
+		job.FetchSchema()
+
+		mockControllerCli.On("GetSchemaHash", "cluster1").Return("456", nil).Once()
+		mockControllerCli.On("GetAllSchema", "cluster1").Return([]common.Table{testTable1, testTable2m, testTable3}, nil).Once()
+		mockSchemaMutator.On("ListTables").Return(nil, someError).Once()
+		job.FetchSchema()
+
+		mockControllerCli.On("GetSchemaHash", "cluster1").Return("456", nil).Once()
+		mockControllerCli.On("GetAllSchema", "cluster1").Return([]common.Table{testTable1, testTable2m, testTable3}, nil).Once()
+		mockSchemaMutator.On("ListTables").Return([]string{"testTable2", "testTable3", "testTable4"}, nil).Once()
+		mockSchemaMutator.On("CreateTable", mock.Anything).Return(someError).Once()
+		job.FetchSchema()
+
+		mockControllerCli.On("GetSchemaHash", "cluster1").Return("456", nil).Once()
+		mockControllerCli.On("GetAllSchema", "cluster1").Return([]common.Table{testTable1, testTable2m, testTable3}, nil).Once()
+		mockSchemaMutator.On("ListTables").Return([]string{"testTable2", "testTable3", "testTable4"}, nil).Once()
+		mockSchemaMutator.On("CreateTable", mock.Anything).Return(nil).Once()
+		mockSchemaMutator.On("GetTable", "testTable2").Return(nil, someError).Once()
+		job.FetchSchema()
+
+		mockControllerCli.On("GetSchemaHash", "cluster1").Return("456", nil).Once()
+		mockControllerCli.On("GetAllSchema", "cluster1").Return([]common.Table{testTable1, testTable2m, testTable3}, nil).Once()
+		mockSchemaMutator.On("ListTables").Return([]string{"testTable2", "testTable3", "testTable4"}, nil).Once()
+		mockSchemaMutator.On("CreateTable", mock.Anything).Return(nil).Once()
+		mockSchemaMutator.On("GetTable", "testTable2").Return(&testTable2, nil).Once()
+		mockSchemaMutator.On("GetTable", "testTable3").Return(nil, someError).Once()
+		mockSchemaMutator.On("UpdateTable", mock.Anything).Return(nil).Once()
+		job.FetchSchema()
+
+		mockControllerCli.On("GetSchemaHash", "cluster1").Return("456", nil).Once()
+		mockControllerCli.On("GetAllSchema", "cluster1").Return([]common.Table{testTable1, testTable2m, testTable3}, nil).Once()
+		mockSchemaMutator.On("ListTables").Return([]string{"testTable2", "testTable3", "testTable4"}, nil).Once()
+		mockSchemaMutator.On("CreateTable", mock.Anything).Return(nil).Once()
+		mockSchemaMutator.On("GetTable", "testTable2").Return(&testTable2, nil).Once()
+		mockSchemaMutator.On("GetTable", "testTable3").Return(&testTable3, nil).Once()
+		mockSchemaMutator.On("UpdateTable", mock.Anything).Return(someError).Once()
+		job.FetchSchema()
+
+		mockControllerCli.On("GetSchemaHash", "cluster1").Return("456", nil).Once()
+		mockControllerCli.On("GetAllSchema", "cluster1").Return([]common.Table{testTable1, testTable2m, testTable3}, nil).Once()
+		mockSchemaMutator.On("ListTables").Return([]string{"testTable2", "testTable3", "testTable4"}, nil).Once()
+		mockSchemaMutator.On("CreateTable", mock.Anything).Return(nil).Once()
+		mockSchemaMutator.On("GetTable", "testTable2").Return(&testTable2, nil).Once()
+		mockSchemaMutator.On("GetTable", "testTable3").Return(&testTable3, nil).Once()
+		mockSchemaMutator.On("UpdateTable", mock.Anything).Return(nil).Once()
+		mockSchemaMutator.On("DeleteTable", "testTable4").Return(someError).Once()
 		job.FetchSchema()
 	})
 })
