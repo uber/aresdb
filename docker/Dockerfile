@@ -21,8 +21,10 @@ RUN git clone https://github.com/uber/aresdb
 RUN ln -sf $UBER_GITHUB_DIR/aresdb $HOME/aresdb
 WORKDIR aresdb
 RUN make npm-install
-
+RUN mkdir log
 
 # install go tools
 RUN go get github.com/Masterminds/glide
-RUN make ares -j
+RUN make bin/aresd -j
+
+
