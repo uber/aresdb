@@ -862,7 +862,6 @@ func (dm *diskMetaStore) addColumn(table *common.Table, column common.Column, ap
 
 	newColumnID := len(table.Columns)
 	table.Columns = append(table.Columns, column)
-	table.Version++
 	if appendToArchivingSortOrder {
 		table.ArchivingSortColumns = append(table.ArchivingSortColumns, newColumnID)
 	}

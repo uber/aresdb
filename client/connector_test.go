@@ -128,23 +128,6 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		testServer.Close()
 	})
 
-	ginkgo.It("getHLLValue", func() {
-		tests := [][]interface{}{
-			//{"123e4567e89b12d3-a456426655440000", memCom.UUID, uint32(0x212d3)},
-			{"0000483E-C132-4C38-BE37-2EB5A01BBB30", memCom.UUID, uint32(0)},
-			{[]byte{0, 0, 72, 62, 193, 50, 76, 56, 190, 55, 46, 181, 160, 27, 187, 48}, memCom.UUID, uint32(0)},
-		}
-
-		for _, test := range tests {
-			origValue := test[0]
-			dataType := test[1].(memCom.DataType)
-			//expHLLValue := test[2].(uint32)
-			_, err := getHLLValue(dataType, origValue)
-			Ω(err).Should(BeNil())
-			//Ω(hllValue).Should(Equal(expHLLValue))
-		}
-	})
-
 	ginkgo.It("Insert", func() {
 		config := ConnectorConfig{
 			Address: hostPort,
