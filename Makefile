@@ -26,7 +26,7 @@ CUDA_DRIVER_ENABLED := $(shell which nvidia-smi && nvidia-smi | grep "Driver Ver
 
 QUERY_MODE := ${QUERY_MODE}
 
-default: aresd
+default: bin/aresd
 
 vendor/glide.updated: glide.lock glide.yaml
 	glide install
