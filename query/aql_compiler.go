@@ -25,29 +25,28 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
-	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"strconv"
 )
 
-// ColumnTypeToExprType maps data type from the column schema format to
+// DataTypeToExprType maps data type from the column schema format to
 // expression AST format.
-var ColumnTypeToExprType = map[string]expr.Type{
-	metaCom.Bool:      expr.Boolean,
-	metaCom.Int8:      expr.Signed,
-	metaCom.Int16:     expr.Signed,
-	metaCom.Int32:     expr.Signed,
-	metaCom.Int64:     expr.Signed,
-	metaCom.Uint8:     expr.Unsigned,
-	metaCom.Uint16:    expr.Unsigned,
-	metaCom.Uint32:    expr.Unsigned,
-	metaCom.Float32:   expr.Float,
-	metaCom.SmallEnum: expr.Unsigned,
-	metaCom.BigEnum:   expr.Unsigned,
-	metaCom.GeoPoint:  expr.GeoPoint,
-	metaCom.GeoShape:  expr.GeoShape,
+var DataTypeToExprType = map[memCom.DataType]expr.Type{
+	memCom.Bool:      expr.Boolean,
+	memCom.Int8:      expr.Signed,
+	memCom.Int16:     expr.Signed,
+	memCom.Int32:     expr.Signed,
+	memCom.Int64:     expr.Signed,
+	memCom.Uint8:     expr.Unsigned,
+	memCom.Uint16:    expr.Unsigned,
+	memCom.Uint32:    expr.Unsigned,
+	memCom.Float32:   expr.Float,
+	memCom.SmallEnum: expr.Unsigned,
+	memCom.BigEnum:   expr.Unsigned,
+	memCom.GeoPoint:  expr.GeoPoint,
+	memCom.GeoShape:  expr.GeoShape,
 }
 
 const (
@@ -563,29 +562,6 @@ func (qc *AQLQueryContext) releaseSchema() {
 	}
 }
 
-// this function assume original column itself exists
-func (qc *AQLQueryContext) resolveDerivedHLLColumn(tableID, columnID int) *expr.VarRef {
-	column := qc.TableScanners[tableID].Schema.Schema.Columns[columnID]
-	if column.GetHLLMode() != metaCom.HLLEnabled {
-		return nil
-	}
-	hllColumnName := column.GetDerivedHLLColumnName()
-	hllColumnID, exist := qc.TableScanners[tableID].Schema.ColumnIDs[hllColumnName]
-	if !exist {
-		return nil
-	}
-
-	hllColumn := qc.TableScanners[tableID].Schema.Schema.Columns[hllColumnID]
-	return &expr.VarRef{
-		Val: hllColumnName,
-		TableID: tableID,
-		ColumnID: hllColumnID,
-		ExprType: ColumnTypeToExprType[hllColumn.Type],
-		DataType: qc.TableScanners[tableID].Schema.ValueTypeByColumn[hllColumnID],
-		IsHLLColumn: true,
-	}
-}
-
 // resolveColumn resolves the VarRef identifier against the schema,
 // and returns the matched tableID (query scoped) and columnID (schema scoped).
 func (qc *AQLQueryContext) resolveColumn(identifier string) (int, int, error) {
@@ -672,17 +648,15 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				column.Name, qc.TableScanners[tableID].Schema.Schema.Name)
 			return expression
 		}
-		e.ExprType = ColumnTypeToExprType[column.Type]
+		dataType := qc.TableScanners[tableID].Schema.ValueTypeByColumn[columnID]
+		e.ExprType = DataTypeToExprType[dataType]
 		e.TableID = tableID
 		e.ColumnID = columnID
 		dict := qc.TableScanners[tableID].Schema.EnumDicts[column.Name]
 		e.EnumDict = dict.Dict
 		e.EnumReverseDict = dict.ReverseDict
-		e.DataType = qc.TableScanners[tableID].Schema.ValueTypeByColumn[columnID]
-		e.IsHLLColumn = column.IsHLLColumn()
-		if !e.IsHLLColumn {
-			e.DerivedHLLColumn = qc.resolveDerivedHLLColumn(tableID, columnID)
-		}
+		e.DataType = dataType
+		e.IsHLLColumn = column.HLLConfig.IsHLLColumn
 	case *expr.UnaryExpr:
 		if isUUIDColumn(e.Expr) && e.Op != expr.GET_HLL_VALUE {
 			qc.Error = utils.StackError(nil, "uuid column type only supports countdistincthll unary expression")
@@ -1069,11 +1043,8 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			if colRef.IsHLLColumn {
 				// 1. column is hll column itself
 				e.Args[0] = colRef
-			} else if colRef.DerivedHLLColumn != nil {
-				// 2. column has derived hll column
-				e.Args[0] = colRef.DerivedHLLColumn
 			} else {
-				// 3. column has to compute hll on the fly
+				// 2. column has to compute hll on the fly
 				e.Args[0] = &expr.UnaryExpr{
 					Op:       expr.GET_HLL_VALUE,
 					Expr:     colRef,
@@ -1620,11 +1591,11 @@ func (qc *AQLQueryContext) processTimeFilter() {
 				qc.Query.TimeFilter.Column)
 			return
 		}
-		timeColumnType := qc.TableScanners[0].Schema.Schema.Columns[timeColumnID].Type
-		if timeColumnType != metaCom.Uint32 {
+		timeColumnType := qc.TableScanners[0].Schema.ValueTypeByColumn[timeColumnID]
+		if timeColumnType != memCom.Uint32 {
 			qc.Error = utils.StackError(nil,
 				"expect time filter column %s of type Uint32, but got %s",
-				qc.Query.TimeFilter.Column, timeColumnType)
+				qc.Query.TimeFilter.Column, memCom.DataTypeName[timeColumnType])
 			return
 		}
 	}

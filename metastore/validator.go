@@ -1,12 +1,11 @@
 package metastore
 
 import (
+	"fmt"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"reflect"
-	"strings"
-	"fmt"
 )
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
@@ -43,15 +42,11 @@ func (v tableSchemaValidatorImpl) Validate() (err error) {
 
 // ValidateHLLConfig validates hll config
 func validateColumnHLLConfig(c common.Column) error {
-	hllMode := strings.ToLower(c.GetHLLMode())
-	if hllMode == common.HLLEnabled || hllMode == common.HLLOnly {
+	if c.HLLConfig.IsHLLColumn {
 		if c.Type != common.Uint32 && c.Type != common.Int32 && c.Type != common.Int64 && c.Type != common.UUID {
 			return fmt.Errorf("data Type %s not allowed for fast hll aggregation, valid options: [%s|%s|%s|%s]",
 				c.Type, common.Uint32, common.Int32, common.Int64, common.UUID)
 		}
-	} else if hllMode != "" {
-		return fmt.Errorf("invalid hll mode: %s, valid options: [%s|%s] or empty",
-			hllMode, common.HLLEnabled, common.HLLOnly)
 	}
 	return nil
 }
@@ -96,7 +91,7 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		}
 
 		// time column does not allow hll config
-		if table.IsFactTable && columnID == 0 && column.GetHLLMode() != ""  {
+		if table.IsFactTable && columnID == 0 && column.HLLConfig.IsHLLColumn {
 			return ErrTimeColumnDoesNotAllowHLLConfig
 		}
 
@@ -104,6 +99,11 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 			if table.IsFactTable && columnID == 0 {
 				return ErrTimeColumnDoesNotAllowDefault
 			}
+
+			if column.HLLConfig.IsHLLColumn {
+				return ErrHLLColumnDoesNotAllowDefaultValue
+			}
+
 			err = ValidateDefaultValue(*column.DefaultValue, column.Type)
 			if err != nil {
 				return err

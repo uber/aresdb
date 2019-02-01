@@ -32,8 +32,8 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockWriterCloser := &testing.TestReadWriteCloser{}
 
 	testColumn0 := common.Column{
-		Name:    "column0",
-		Type:    common.Uint32,
+		Name: "column0",
+		Type: common.Uint32,
 		Config: common.ColumnConfig{
 			PreloadingDays: 1,
 			Priority:       3,

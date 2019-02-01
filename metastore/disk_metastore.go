@@ -352,7 +352,6 @@ func (dm *diskMetaStore) CreateTable(table *common.Table) (err error) {
 		return ErrTableAlreadyExist
 	}
 
-	table.DeriveHLLColumns(0)
 	validator := NewTableSchameValidator()
 	validator.SetNewTable(*table)
 	err = validator.Validate()
@@ -865,7 +864,6 @@ func (dm *diskMetaStore) addColumn(table *common.Table, column common.Column, ap
 	if appendToArchivingSortOrder {
 		table.ArchivingSortColumns = append(table.ArchivingSortColumns, newColumnID)
 	}
-	table.DeriveHLLColumns(newColumnID)
 	validator.SetNewTable(*table)
 	err := validator.Validate()
 	if err != nil {
@@ -924,14 +922,10 @@ func (dm *diskMetaStore) removeColumn(table *common.Table, columnName string) er
 				return err
 			}
 
-			if column.Type == common.BigEnum || column.Type == common.SmallEnum {
+			if column.IsEnumColumn() {
 				dm.removeEnumColumn(table.Name, column.Name)
 			}
 
-			if column.GetHLLMode() == common.HLLEnabled {
-				// hll column might get deleted separately so we do not care ErrColumnDoesNotExist
-				dm.removeColumn(table, column.GetDerivedHLLColumnName())
-			}
 			return nil
 		}
 	}
@@ -1293,7 +1287,7 @@ func (dm *diskMetaStore) enumColumnExists(tableName string, columnName string) e
 				continue
 			}
 
-			if column.Type != common.BigEnum && column.Type != common.SmallEnum {
+			if !column.IsEnumColumn() {
 				return ErrNotEnumColumn
 			}
 

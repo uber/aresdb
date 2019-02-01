@@ -45,14 +45,13 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 				{
 					Name: "col1",
 					Type: metaCom.Int32,
-					HLLConfig: metaCom.HLLConfig{
-						Suffix: "",
-						Mode: metaCom.HLLEnabled,
-					},
 				},
 				{
 					Name: "col1_hll",
 					Type: metaCom.Uint32,
+					HLLConfig: metaCom.HLLConfig{
+						IsHLLColumn: true,
+					},
 				},
 				{
 					Name: "col2",

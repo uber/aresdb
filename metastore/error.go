@@ -75,5 +75,6 @@ var (
 	ErrTimeColumnDoesNotAllowDefault = errors.New("Time column does not allow default value")
 	ErrDisallowMissingEventTime      = errors.New("Can not disallow missing event time")
 	// ErrTimeColumnDoesNotAllowHLLConfig indicates hll configured for time column
-	ErrTimeColumnDoesNotAllowHLLConfig	= errors.New("HLLConfig not allowed for time column")
+	ErrTimeColumnDoesNotAllowHLLConfig   = errors.New("HLLConfig not allowed for time column")
+	ErrHLLColumnDoesNotAllowDefaultValue = errors.New("hll column does not allow default value")
 )

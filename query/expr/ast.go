@@ -178,8 +178,6 @@ type VarRef struct {
 
 	// Whether this column is hll column (can run hll directly)
 	IsHLLColumn bool
-	// DerivedHLLColumn
-	DerivedHLLColumn *VarRef
 }
 
 // Type returns the type.

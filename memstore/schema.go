@@ -69,7 +69,7 @@ func NewTableSchema(table *metaCom.Table) *TableSchema {
 		if !column.Deleted {
 			tableSchema.ColumnIDs[column.Name] = id
 		}
-		tableSchema.ValueTypeByColumn[id] = memCom.DataTypeFromString(column.Type)
+		tableSchema.ValueTypeByColumn[id] = memCom.DataTypeForColumn(column)
 	}
 
 	for i, columnID := range table.PrimaryKeyColumns {
@@ -106,7 +106,7 @@ func (t *TableSchema) SetTable(table *metaCom.Table) {
 		}
 
 		if id >= len(t.ValueTypeByColumn) {
-			t.ValueTypeByColumn = append(t.ValueTypeByColumn, memCom.DataTypeFromString(column.Type))
+			t.ValueTypeByColumn = append(t.ValueTypeByColumn, memCom.DataTypeForColumn(column))
 		}
 
 		if id >= len(t.DefaultValues) {
@@ -142,7 +142,7 @@ func (t *TableSchema) SetDefaultValue(columnID int) {
 		if !ok {
 			// Should no happen since the enum dict should already be created.
 			utils.GetLogger().With(
-				"data_type", t.Schema.Columns[columnID].Type,
+				"data_type", memCom.DataTypeName[dataType],
 				"default_value", *defStrVal,
 				"column", t.Schema.Columns[columnID].Name,
 			).Panic("Cannot find EnumDict for column")
@@ -151,7 +151,7 @@ func (t *TableSchema) SetDefaultValue(columnID int) {
 		if !ok {
 			// Should no happen since the enum value should already be created.
 			utils.GetLogger().With(
-				"data_type", t.Schema.Columns[columnID].Type,
+				"data_type", memCom.DataTypeName[dataType],
 				"default_value", *defStrVal,
 				"column", t.Schema.Columns[columnID].Name,
 			).Panic("Cannot find enum value for column")
@@ -169,7 +169,7 @@ func (t *TableSchema) SetDefaultValue(columnID int) {
 		if err != nil {
 			// Should not happen since the string value is already validated by schema handler.
 			utils.GetLogger().With(
-				"data_type", t.Schema.Columns[columnID].Type,
+				"data_type", memCom.DataTypeName[dataType],
 				"default_value", *defStrVal,
 				"column", t.Schema.Columns[columnID].Name,
 			).Panic("Cannot parse default value")

@@ -375,7 +375,7 @@ var _ = ginkgo.Describe("Validator", func() {
 					Name: "col1",
 					Type: "Uint32",
 					HLLConfig: common.HLLConfig{
-						Mode: common.HLLOnly,
+						IsHLLColumn: true,
 					},
 				},
 				{
@@ -701,9 +701,9 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 				{
 					Name: "col2",
-					Type: "Uint32",
+					Type: "SmallEnum",
 					HLLConfig: common.HLLConfig{
-						Mode: "hll",
+						IsHLLColumn: true,
 					},
 				},
 			},
@@ -716,7 +716,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(table1)
 		err := validator.Validate()
 		Ω(err).ShouldNot(BeNil())
-		Ω(err.Error()).Should(ContainSubstring(`invalid hll mode: hll, valid options: [hllenabled|hllonly]`))
+		Ω(err.Error()).Should(ContainSubstring(`data Type SmallEnum not allowed for fast hll aggregation, valid options: [Uint32|Int32|Int64|UUID]`))
 
 		table2 := common.Table{
 			Name: "testTable",
@@ -724,12 +724,8 @@ var _ = ginkgo.Describe("Validator", func() {
 				{
 					Name: "col1",
 					Type: "Uint32",
-				},
-				{
-					Name: "col2",
-					Type: "SmallEnum",
 					HLLConfig: common.HLLConfig{
-						Mode: "hllOnly",
+						IsHLLColumn: true,
 					},
 				},
 			},
@@ -740,28 +736,6 @@ var _ = ginkgo.Describe("Validator", func() {
 
 		validator = NewTableSchameValidator()
 		validator.SetNewTable(table2)
-		err = validator.Validate()
-		Ω(err).ShouldNot(BeNil())
-		Ω(err.Error()).Should(ContainSubstring(`data Type SmallEnum not allowed for fast hll aggregation, valid options: [Uint32|Int32|Int64|UUID]`))
-
-		table3 := common.Table{
-			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Uint32",
-					HLLConfig: common.HLLConfig{
-						Mode: "hllOnly",
-					},
-				},
-			},
-			PrimaryKeyColumns: []int{1},
-			IsFactTable:       true,
-			Version:           0,
-		}
-
-		validator = NewTableSchameValidator()
-		validator.SetNewTable(table3)
 		err = validator.Validate()
 		Ω(err).Should(Equal(ErrTimeColumnDoesNotAllowHLLConfig))
 	})

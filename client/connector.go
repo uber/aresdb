@@ -201,36 +201,17 @@ func (c *connector) Insert(tableName string, columnNames []string, rows []Row, u
 
 // hllHash computes hash value from original value
 func hllHash(dataType memCom.DataType, value interface{}) (uint64, error) {
-	var out [2]uint64
-	var ok bool
-	numBytes := 4
-	switch dataType {
-	case memCom.UUID:
-		out, ok = memCom.ConvertToUUID(value)
-		if ok {
-			return out[0] ^ out[1], nil
-		}
-	case memCom.Uint32:
-		value, ok = memCom.ConvertToUint32(value)
-		numBytes = 4
-	case memCom.Int32:
-		value, ok = memCom.ConvertToInt32(value)
-		numBytes = 4
-	case memCom.Int64:
-		value, ok = memCom.ConvertToInt64(value)
-		numBytes = 8
-	default:
-		return 0, utils.StackError(nil, "Unsupported data type for hyperloglog computation")
+	var err error
+	value, err = memCom.ConvertValueForType(dataType, value)
+	if err != nil {
+		return 0, err
 	}
-	if !ok {
-		return 0, utils.StackError(nil, "Invalid %v for data type %s", memCom.DataTypeName[dataType])
-	}
-	out = utils.Murmur3Sum128(unsafe.Pointer(&value), numBytes,  0)
-	return out[0], nil
+	out := utils.Murmur3Sum64(unsafe.Pointer(&value), memCom.DataTypeBytes(dataType), 0)
+	return out, nil
 }
 
-// getHLLValue populate hyperloglog value
-func getHLLValue(dataType memCom.DataType, value interface{}) (uint32, error) {
+// computeHLLValue populate hyperloglog value
+func computeHLLValue(dataType memCom.DataType, value interface{}) (uint32, error) {
 	hashed, err := hllHash(dataType, value)
 	if err != nil {
 		return 0, err
@@ -291,22 +272,9 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 			return nil, 0, utils.StackError(nil, "column %s only supports overwrite", columnName)
 		}
 
-		if err = upsertBatchBuilder.AddColumnWithUpdateMode(columnID, memCom.DataTypeFromString(column.Type), updateModes[colIndex]); err != nil {
+		dataType := memCom.DataTypeForColumn(column)
+		if err = upsertBatchBuilder.AddColumnWithUpdateMode(columnID, dataType, updateModes[colIndex]); err != nil {
 			return nil, 0, err
-		}
-
-		// add hll column only if column has hllEnabled mode and derived hll column exists
-		if column.GetHLLMode() == metaCom.HLLEnabled {
-			hllColumnName := column.GetDerivedHLLColumnName()
-			columnID, exist := schema.ColumnDict[hllColumnName]
-			if !exist {
-				// should not happen here
-				return nil, 0, utils.StackError(nil, "hll column %s for column %s does not exist", hllColumnName, columnName)
-			}
-			hllColumn := schema.Table.Columns[columnID]
-			if err = upsertBatchBuilder.AddColumn(columnID, memCom.DataTypeFromString(hllColumn.Type)); err != nil {
-				return nil, 0, err
-			}
 		}
 
 		if column.IsEnumColumn() {
@@ -373,41 +341,25 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 				}
 			}
 
-			// compute hll value to insert instead of inserting original value
-			// when column is hllonly mode
-			if column.GetHLLMode() == metaCom.HLLOnly {
-				value, err = getHLLValue(memCom.DataTypeFromString(column.GetOriginalColumnType()), value)
+			// Set value to the last row.
+			// compute hll value to insert
+			if column.HLLConfig.IsHLLColumn {
+				// here use original column data type to compute hll value
+				value, err = computeHLLValue(memCom.DataTypeFromString(column.Type), value)
 				if err != nil {
 					upsertBatchBuilder.RemoveRow()
 					c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
 					break
 				}
-				upsertBatchColumnIndex++
 			} else {
-				// Set value to the last row.
+				// directly insert value
 				if err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, value); err != nil {
 					upsertBatchBuilder.RemoveRow()
 					c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
 					break
 				}
-				upsertBatchColumnIndex++
-				// set hll value to derived column when column is hllEnabled mode
-				if column.GetHLLMode() == metaCom.HLLEnabled {
-					hllValue, err := getHLLValue(memCom.DataTypeFromString(column.Type), value)
-					if err != nil {
-						upsertBatchBuilder.RemoveRow()
-						c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
-						break
-					}
-					err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, hllValue)
-					if err != nil {
-						upsertBatchBuilder.RemoveRow()
-						c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
-						break
-					}
-					upsertBatchColumnIndex++
-				}
 			}
+			upsertBatchColumnIndex++
 		}
 	}
 

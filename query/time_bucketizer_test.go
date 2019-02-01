@@ -287,8 +287,7 @@ var _ = ginkgo.Describe("Time Bucketizer", func() {
 			  "TableID": 0,
 			  "ColumnID": 0,
 			  "DataType": 0,
-			  "IsHLLColumn": false,
-			  "DerivedHLLColumn": null
+			  "IsHLLColumn": false
 			},
 			"RHS": {
 			  "Op": "+",
@@ -314,8 +313,7 @@ var _ = ginkgo.Describe("Time Bucketizer", func() {
 					"TableID": 0,
 					"ColumnID": 0,
 					"DataType": 0,
-					"IsHLLColumn": false,
-					"DerivedHLLColumn": null
+					"IsHLLColumn": false
 				  },
 				  "RHS": {
 					"Val": 0,
