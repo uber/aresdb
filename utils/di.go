@@ -18,13 +18,12 @@ import (
 	"github.com/spf13/viper"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/common"
-	"go.uber.org/zap"
 )
 
 // stores all common components together to avoid scattered references.
 var (
-	logger          *zap.SugaredLogger
-	queryLogger     *zap.SugaredLogger
+	logger          common.Logger
+	queryLogger     common.Logger
 	reporterFactory *ReporterFactory
 	config          common.AresServerConfig
 )
@@ -36,8 +35,8 @@ func init() {
 
 // ResetDefaults reset default config, logger and metrics settings
 func ResetDefaults() {
-	logger = common.NewLoggerFactory().GetDefaultLogger().Sugar()
-	queryLogger = common.NewLoggerFactory().GetDefaultLogger().Sugar()
+	logger = common.NewLoggerFactory().GetDefaultLogger()
+	queryLogger = common.NewLoggerFactory().GetDefaultLogger()
 	scope := tally.NewTestScope("test", nil)
 	reporterFactory = NewReporterFactory(scope)
 
@@ -49,7 +48,7 @@ func ResetDefaults() {
 }
 
 // Init loads application specific common components settings.
-func Init(c common.AresServerConfig, l *zap.SugaredLogger, ql *zap.SugaredLogger, s tally.Scope) {
+func Init(c common.AresServerConfig, l common.Logger, ql common.Logger, s tally.Scope) {
 	config = c
 	logger = l
 	queryLogger = ql
@@ -57,12 +56,12 @@ func Init(c common.AresServerConfig, l *zap.SugaredLogger, ql *zap.SugaredLogger
 }
 
 // GetLogger returns the logger.
-func GetLogger() *zap.SugaredLogger {
+func GetLogger() common.Logger {
 	return logger
 }
 
 // GetQueryLogger returns the logger for query.
-func GetQueryLogger() *zap.SugaredLogger {
+func GetQueryLogger() common.Logger {
 	return queryLogger
 }
 

@@ -38,7 +38,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 		utils.Init(common.AresServerConfig{Query: common.QueryConfig{TimezoneTable: common.TimezoneConfig{
 			TableName: "api_cities",
-		}}}, common.NewLoggerFactory().GetDefaultLogger().Sugar(), common.NewLoggerFactory().GetDefaultLogger().Sugar(), tally.NewTestScope("test", nil))
+		}}}, common.NewLoggerFactory().GetDefaultLogger(), common.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
 
 		qc.processTimezone()
 		Ω(qc.Error).Should(BeNil())
