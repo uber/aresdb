@@ -145,7 +145,6 @@ lib/algorithm:
 lib:
 	mkdir -p $@
 
-
 # header files dependencies.
 query/algorithm.hpp: query/utils.hpp query/iterator.hpp query/functor.hpp query/binder.hpp query/time_series_aggregate.h
 
