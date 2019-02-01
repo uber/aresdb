@@ -29,7 +29,6 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"fmt"
 )
 
 var _ = ginkgo.Describe("AQL compiler", func() {

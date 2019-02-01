@@ -31,7 +31,6 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
-	"github.com/uber-common/bark"
 )
 
 const (
@@ -374,53 +373,41 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 				}
 			}
 
-			// Set value to the last row.
-			if err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, value); err != nil {
-				upsertBatchBuilder.RemoveRow()
-				c.logger.With(
-					"name", "prepareUpsertBatch",
-					"error", err.Error(),
-					"table", tableName,
-					"columnID", columnID,
-					"value", value).Error("Failed to set value")
-				break
-			}
 			// compute hll value to insert instead of inserting original value
 			// when column is hllonly mode
 			if column.GetHLLMode() == metaCom.HLLOnly {
 				value, err = getHLLValue(memCom.DataTypeFromString(column.GetOriginalColumnType()), value)
 				if err != nil {
 					upsertBatchBuilder.RemoveRow()
-					c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "error": err.Error(), "table": tableName, "columnID": columnID, "value": value}).Error("Failed to set value")
+					c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
 					break
 				}
+				upsertBatchColumnIndex++
 			} else {
 				// Set value to the last row.
 				if err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, value); err != nil {
 					upsertBatchBuilder.RemoveRow()
-					c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "error": err.Error(), "table": tableName, "columnID": columnID, "value": value}).Error("Failed to set value")
+					c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
 					break
 				}
-
+				upsertBatchColumnIndex++
 				// set hll value to derived column when column is hllEnabled mode
 				if column.GetHLLMode() == metaCom.HLLEnabled {
 					hllValue, err := getHLLValue(memCom.DataTypeFromString(column.Type), value)
 					if err != nil {
 						upsertBatchBuilder.RemoveRow()
-						c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "error": err.Error(), "table": tableName, "columnID": columnID, "value": value}).Error("Failed to set value")
+						c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
 						break
 					}
 					err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, hllValue)
 					if err != nil {
 						upsertBatchBuilder.RemoveRow()
-						c.logger.WithFields(bark.Fields{"name": "prepareUpsertBatch", "error": err.Error(), "table": tableName, "columnID": columnID, "value": value}).Error("Failed to set value")
+						c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
 						break
 					}
 					upsertBatchColumnIndex++
 				}
 			}
-			upsertBatchColumnIndex++
-
 		}
 	}
 
