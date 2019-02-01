@@ -1,4 +1,4 @@
-.PHONY: test-cuda ares lint travis deps swagger-gen npm-install clean clean-cuda-test test
+.PHONY: test-cuda aresd lint travis deps swagger-gen npm-install clean clean-cuda-test test
 
 # all .go files that don't exist in hidden directories
 ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-build \
@@ -26,7 +26,7 @@ CUDA_DRIVER_ENABLED := $(shell which nvidia-smi && nvidia-smi | grep "Driver Ver
 
 QUERY_MODE := ${QUERY_MODE}
 
-default: ares
+default: aresd
 
 vendor/glide.updated: glide.lock glide.yaml
 	glide install
@@ -68,7 +68,7 @@ golang-lint:
 ifneq ($(GO_SRC),)
 	gofmt -w $(GO_SRC)
 	golint -set_exit_status $(GO_SRC)
-	go vet -unsafeptr=false ./...
+	go vet
 endif
 
 lint-all: C_SRC := $(ALL_C_SRC)
@@ -79,11 +79,14 @@ lint: C_SRC := $(CHANGED_C_SRC)
 lint: GO_SRC := $(CHANGED_GO_SRC)
 lint: deps golang-lint clang-lint
 
-ares: libs deps
+bin:
+	mkdir -p bin
+
+bin/aresd: libs deps bin
 	go build -o $@
 
-run: ares
-	./ares
+run_server: bin/aresd
+	sh '$<'
 
 clean:
 	-rm -rf lib
@@ -91,7 +94,7 @@ clean:
 clean-cuda-test:
 	-rm -rf gtest/*
 
-test: ares
+test: aresd
 	bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
 
 travis: deps
@@ -142,6 +145,7 @@ lib/algorithm:
 
 lib: lib/algorithm
 	mkdir -p lib
+
 
 # header files dependencies.
 query/algorithm.hpp: lib query/utils.hpp query/iterator.hpp query/functor.hpp query/binder.hpp query/time_series_aggregate.h

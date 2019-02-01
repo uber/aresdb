@@ -30,7 +30,7 @@ fi
 make test-cuda -j
 
 # build binary
-make ares -j
+make bin/aresd -j
 
 # run test
 cd query/expr

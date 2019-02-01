@@ -1,5 +1,5 @@
 ## AresDB Docker
-To facilitate the installation process, we have published the [Dockerfile](../Dockerfile) so
+To facilitate the installation process, we have published the [Dockerfile](./Dockerfile) so
 you can get AresDB running in a docker container.
 
 ### Prerequisites
@@ -13,14 +13,14 @@ you can get AresDB running in a docker container.
 
 ```bash
 $ mkdir aresdb-docker
-$ wget -O aresdb-docker/Dockerfile https://raw.githubusercontent.com/uber/aresdb/master/Dockerfile
+$ wget -O aresdb-docker/Dockerfile https://raw.githubusercontent.com/uber/aresdb/master/docker/Dockerfile
 $ docker build -t aresdb:latest aresdb-docker
 ```
 
 ### Run AresDB
 ```
 nvidia-docker run -p 9374:9374/tcp -p 43202:43202/tcp -it aresdb:latest
-root@9e4c5150659c:~/go/src/github.com/aresdb# make run
+root@9e4c5150659c:~/go/src/github.com/aresdb# make run_server&
 ```
 
 This command will compile AresDB and map the ports in the docker container on the docker host.
