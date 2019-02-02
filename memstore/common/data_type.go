@@ -150,7 +150,7 @@ func DataTypeBytes(dataType DataType) int {
 }
 
 // ConvertValueForType converts data value based on data type
-func ConvertValueForType(dataType DataType, value interface{}) (interface{}, error)  {
+func ConvertValueForType(dataType DataType, value interface{}) (interface{}, error) {
 	ok := false
 	var out interface{}
 	switch dataType {
@@ -169,7 +169,7 @@ func ConvertValueForType(dataType DataType, value interface{}) (interface{}, err
 	case Uint16:
 		out, ok = ConvertToUint16(value)
 	case Uint32:
-		out, ok  = ConvertToUint32(value)
+		out, ok = ConvertToUint32(value)
 	case Int32:
 		out, ok = ConvertToInt32(value)
 	case Int64:

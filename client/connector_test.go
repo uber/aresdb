@@ -223,4 +223,20 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).Should(BeNil())
 		Ω(n).Should(Equal(1))
 	})
+
+	ginkgo.It("computeHLLValue should work", func() {
+		tests := [][]interface{}{
+			{memCom.UUID, []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, uint32(329736)},
+			{memCom.Uint32, 67305985, uint32(266211)},
+		}
+
+		for _, test := range tests {
+			dataType := test[0].(memCom.DataType)
+			input := test[1]
+			expected := test[2].(uint32)
+			out, err := computeHLLValue(dataType, input)
+			Ω(err).Should(BeNil())
+			Ω(out).Should(Equal(expected))
+		}
+	})
 })

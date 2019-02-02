@@ -199,35 +199,34 @@ func (c *connector) Insert(tableName string, columnNames []string, rows []Row, u
 	return numRows, nil
 }
 
-// hllHash computes hash value from original value
-func hllHash(dataType memCom.DataType, value interface{}) (uint64, error) {
-	var err error
-	value, err = memCom.ConvertValueForType(dataType, value)
-	if err != nil {
-		return 0, err
-	}
-	out := utils.Murmur3Sum64(unsafe.Pointer(&value), memCom.DataTypeBytes(dataType), 0)
-	return out, nil
-}
-
 // computeHLLValue populate hyperloglog value
 func computeHLLValue(dataType memCom.DataType, value interface{}) (uint32, error) {
-	hashed, err := hllHash(dataType, value)
-	if err != nil {
-		return 0, err
+	var ok bool
+	var hashed uint64
+	switch dataType {
+	case memCom.UUID:
+		var v [2]uint64
+		v, ok = memCom.ConvertToUUID(value)
+		hashed = v[0] ^ v[1]
+	case memCom.Uint32:
+		var v uint32
+		v, ok = memCom.ConvertToUint32(value)
+		hashed = utils.Murmur3Sum64(unsafe.Pointer(&v), memCom.DataTypeBytes(dataType), 0)
+	case memCom.Int32:
+		var v int32
+		v, ok = memCom.ConvertToInt32(value)
+		hashed = utils.Murmur3Sum64(unsafe.Pointer(&v), memCom.DataTypeBytes(dataType), 0)
+	case memCom.Int64:
+		var v int64
+		v, ok = memCom.ConvertToInt64(value)
+		hashed = utils.Murmur3Sum64(unsafe.Pointer(&v), memCom.DataTypeBytes(dataType), 0)
+	default:
+		return 0, utils.StackError(nil, "invalid type %s for fast hll value", memCom.DataTypeName[dataType])
 	}
-	p := uint32(14) // max 16
-	group := uint32(hashed & ((1 << p) - 1))
-	var rho uint32
-	for {
-		h := hashed & (1 << (rho + p))
-		if rho+p < 64 && h == 0 {
-			rho++
-		} else {
-			break
-		}
+	if !ok {
+		return 0, utils.StackError(nil, "invalid data value %v for data type %s", value, memCom.DataTypeName[dataType])
 	}
-	return rho<<16 | group, nil
+	return utils.ComputeHLLValue(hashed), nil
 }
 
 // prepareUpsertBatch prepares the upsert batch for upsert,
