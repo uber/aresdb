@@ -151,7 +151,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	schemaHandler := api.NewSchemaHandler(metaStore)
 
 	// create enum handler
-	enumHander := api.NewEnumHandler(memStore, metaStore)
+	enumHandler := api.NewEnumHandler(memStore, metaStore)
 
 	// create query hanlder.
 	queryHandler := api.NewQueryHandler(memStore, cfg.Query)
@@ -198,7 +198,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 		schemaRouter = schemaRouter.Methods(http.MethodGet)
 	}
 	schemaHandler.Register(schemaRouter.Subrouter(), httpWrappers...)
-	enumHander.Register(router.PathPrefix("/schema").Subrouter(), httpWrappers...)
+	enumHandler.Register(router.PathPrefix("/schema").Subrouter(), httpWrappers...)
 	dataHandler.Register(router.PathPrefix("/data").Subrouter(), httpWrappers...)
 	queryHandler.Register(router.PathPrefix("/query").Subrouter(), httpWrappers...)
 
