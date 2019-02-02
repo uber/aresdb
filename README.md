@@ -73,12 +73,12 @@ Run AresDB Server
 -----------------
 The following command will start an AresDB server locally. You can start to query the server using a curl command or [swagger](https://github.com/uber/aresdb/wiki/Swagger) page.
 ```
-make run
+make run_server
 ```
 
 Run AresDB Docker
 -----------------
-Please read the [Docker](docs/docker.md) page.
+Please read the [Docker](docker/README.md) page.
 
 Documentation
 --------------

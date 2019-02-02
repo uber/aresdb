@@ -1,4 +1,4 @@
-.PHONY: test-cuda ares lint travis deps swagger-gen npm-install clean clean-cuda-test test
+.PHONY: test-cuda lint travis swagger-gen run_server npm-install clean clean-cuda-test test
 
 # all .go files that don't exist in hidden directories
 ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-build \
@@ -26,13 +26,11 @@ CUDA_DRIVER_ENABLED := $(shell which nvidia-smi && nvidia-smi | grep "Driver Ver
 
 QUERY_MODE := ${QUERY_MODE}
 
-default: ares
+default: bin/aresd
 
 vendor/glide.updated: glide.lock glide.yaml
 	glide install
 	touch vendor/glide.updated
-
-deps: vendor/glide.updated $(ALL_GO_SRC)
 
 pwd := $(shell pwd)
 
@@ -56,7 +54,8 @@ lib/libmem.so:
 	@make malloc
 endif
 
-libs: lib/libmem.so lib/libalgorithm.so
+lib/lib.updated: lib/libmem.so lib/libalgorithm.so
+	touch lib/lib.updated
 
 clang-lint:
 ifneq ($(C_SRC),)
@@ -68,22 +67,25 @@ golang-lint:
 ifneq ($(GO_SRC),)
 	gofmt -w $(GO_SRC)
 	golint -set_exit_status $(GO_SRC)
-	go vet -unsafeptr=false ./...
+	go vet
 endif
 
 lint-all: C_SRC := $(ALL_C_SRC)
 lint-all: GO_SRC := $(ALL_GO_SRC)
-lint-all: deps golang-lint clang-lint
+lint-all: vendor/glide.updated golang-lint clang-lint
 
 lint: C_SRC := $(CHANGED_C_SRC)
 lint: GO_SRC := $(CHANGED_GO_SRC)
-lint: deps golang-lint clang-lint
+lint: vendor/glide.updated golang-lint clang-lint
 
-ares: libs deps
+bin:
+	mkdir -p bin
+
+bin/aresd: bin vendor/glide.updated lib/lib.updated
 	go build -o $@
 
-run: ares
-	./ares
+run_server: bin/aresd
+	DYLD_LIBRARY_PATH=$$LIBRARY_PATH ./bin/aresd
 
 clean:
 	-rm -rf lib
@@ -91,10 +93,10 @@ clean:
 clean-cuda-test:
 	-rm -rf gtest/*
 
-test: ares
+test: bin/aresd
 	bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
 
-travis: deps
+travis: vendor/glide.updated
 	ARES_ENV=test .travis/run_unittest.sh
 
 test-cuda :
@@ -138,13 +140,13 @@ CXX_SRC_DIR = .
 GTEST_OUT_DIR = gtest
 
 lib/algorithm:
-	mkdir -p lib/algorithm
+	mkdir -p $@
 
-lib: lib/algorithm
-	mkdir -p lib
+lib:
+	mkdir -p $@
 
 # header files dependencies.
-query/algorithm.hpp: lib query/utils.hpp query/iterator.hpp query/functor.hpp query/binder.hpp query/time_series_aggregate.h
+query/algorithm.hpp: query/utils.hpp query/iterator.hpp query/functor.hpp query/binder.hpp query/time_series_aggregate.h
 
 query/transform.hpp: query/algorithm.hpp
 
@@ -176,8 +178,8 @@ query/functor.cu: query/functor.hpp
 lib/algorithm/%.o: query/%.cu
 	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(MARCROS) -dc -o $@ -c $^
 
-lib/libalgorithm.so: $(ALGO_OBJECT_FILES)
-	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ $^ -shared -cudart=shared
+lib/libalgorithm.so: lib/algorithm $(ALGO_OBJECT_FILES)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ $(ALGO_OBJECT_FILES) -shared -cudart=shared
 
 malloc: lib
 	gcc $(CCFLAGS) -o lib/malloc.o -c memutils/memory/malloc.c
