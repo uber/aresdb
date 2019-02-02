@@ -27,6 +27,9 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"go.uber.org/zap"
+	"io/ioutil"
+	"github.com/uber/aresdb/utils"
+	"time"
 )
 
 var _ = ginkgo.Describe("AresDB connector", func() {
@@ -48,7 +51,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 				},
 				{
 					Name: "col1_hll",
-					Type: metaCom.Uint32,
+					Type: metaCom.UUID,
 					HLLConfig: metaCom.HLLConfig{
 						IsHLLColumn: true,
 					},
@@ -89,6 +92,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 	// extendedEnumIDs
 	column2extendedEnumIDs := []int{2}
 
+	var insertBytes []byte
 	ginkgo.BeforeEach(func() {
 		testServer = httptest.NewUnstartedServer(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +120,13 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 						w.Write(enumIDBytes)
 					}
 				} else if strings.Contains(r.URL.Path, "data") && r.Method == http.MethodPost {
-					w.WriteHeader(http.StatusOK)
+					var err error
+					insertBytes, err = ioutil.ReadAll(r.Body)
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+					} else {
+						w.WriteHeader(http.StatusOK)
+					}
 				}
 			}))
 		testServer.Start()
@@ -144,6 +154,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		connector, err = config.NewConnector(logger, rootScope)
 		Ω(err).Should(BeNil())
 
+		insertBytes = nil
 		n, err := connector.Insert("a", []string{"col0", "col1", "col2", "col3", "col4", "col5"}, []Row{
 			{100, 1, "1", true, "a", "A"},
 			{200, int64(2), "2", false, "A", "a"},
@@ -153,6 +164,20 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).Should(BeNil())
 		Ω(n).Should(Equal(4))
 
+		insertBytes = nil
+		utils.SetClockImplementation(func() time.Time {
+			return time.Unix(10, 0)
+		})
+		n, err = connector.Insert("a", []string{"col0", "col1", "col1_hll"}, []Row{
+			{100, 1, []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
+		})
+		Ω(err).Should(BeNil())
+		Ω(n).Should(Equal(1))
+		Ω(insertBytes).Should(HaveLen(120))
+		Ω(insertBytes).Should(BeEquivalentTo([]byte{1,0,237,254,1,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,0,0,0,89,0,0,0,100,0,0,0,108,0,0,0,116,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,32,0,5,0,32,0,5,0,32,0,6,0,0,0,1,0,2,0,1,1,1,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,8,8,5,0,0,0,0,0}))
+		utils.ResetClockImplementation()
+
+		insertBytes = nil
 		// update primary key with addition
 		n, err = connector.Insert("a", []string{"col0", "col1", "col2", "col3", "col4", "col5"}, []Row{
 			{100, 1, "1", true, "a", "A"},
@@ -163,16 +188,19 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).ShouldNot(BeNil())
 		Ω(n).Should(Equal(0))
 
+		insertBytes = nil
 		// empty rows
 		n, err = connector.Insert("a", []string{"col0", "col1", "col2", "col3"}, []Row{})
 		Ω(err).Should(BeNil())
 		Ω(n).Should(Equal(0))
 
+		insertBytes = nil
 		// empty column names
 		n, err = connector.Insert("a", []string{}, []Row{})
 		Ω(err).ShouldNot(BeNil())
 		Ω(n).Should(Equal(0))
 
+		insertBytes = nil
 		// non matching length between column names and row
 		n, err = connector.Insert("a", []string{"col0", "col1", "col2", "col3"}, []Row{
 			{100, 1, "1", true},
@@ -183,6 +211,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).ShouldNot(BeNil())
 		Ω(n).Should(Equal(0))
 
+		insertBytes = nil
 		// missing primary key columns
 		n, err = connector.Insert("a", []string{"col0", "col2", "col3"}, []Row{
 			{100, "1", true},
@@ -191,6 +220,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).ShouldNot(BeNil())
 		Ω(n).Should(Equal(0))
 
+		insertBytes = nil
 		// primary key is nil
 		n, err = connector.Insert("a", []string{"col0", "col1", "col2", "col3"}, []Row{
 			{100, nil, "1", true},
@@ -199,6 +229,8 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).Should(BeNil())
 		Ω(n).Should(Equal(1))
 
+		insertBytes = nil
+		// primary key is nil
 		// missing time column
 		n, err = connector.Insert("a", []string{"col1", "col2", "col3"}, []Row{
 			{1, "1", true},
@@ -207,6 +239,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).ShouldNot(BeNil())
 		Ω(n).Should(Equal(0))
 
+		insertBytes = nil
 		// time column is nil
 		n, err = connector.Insert("a", []string{"col0", "col1", "col2", "col3"}, []Row{
 			{nil, 1, "1", true},
@@ -215,6 +248,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).Should(BeNil())
 		Ω(n).Should(Equal(1))
 
+		insertBytes = nil
 		// having non-string for enum column
 		n, err = connector.Insert("a", []string{"col0", "col1", "col2", "col3"}, []Row{
 			{100, 2, 1, true},
