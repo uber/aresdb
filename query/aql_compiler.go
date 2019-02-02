@@ -1040,11 +1040,9 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			}
 
 			e.Name = hllCallName
-			if colRef.IsHLLColumn {
-				// 1. column is hll column itself
-				e.Args[0] = colRef
-			} else {
-				// 2. column has to compute hll on the fly
+			// 1. noop when column itself is hll column
+			// 2. compute hll on the fly when column is not hll column
+			if !colRef.IsHLLColumn {
 				e.Args[0] = &expr.UnaryExpr{
 					Op:       expr.GET_HLL_VALUE,
 					Expr:     colRef,

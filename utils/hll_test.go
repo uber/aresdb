@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = ginkgo.Describe("hyperloglog utils", func(){
+var _ = ginkgo.Describe("hyperloglog utils", func() {
 	ginkgo.It("ComputeHLLValue should work", func() {
 		tests := [][]interface{}{
 			{uint64(0), uint32(3276800)},

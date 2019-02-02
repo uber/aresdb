@@ -26,9 +26,9 @@ import (
 	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
 	"io/ioutil"
-	"github.com/uber/aresdb/utils"
 	"time"
 )
 
@@ -174,7 +174,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).Should(BeNil())
 		Ω(n).Should(Equal(1))
 		Ω(insertBytes).Should(HaveLen(120))
-		Ω(insertBytes).Should(BeEquivalentTo([]byte{1,0,237,254,1,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,0,0,0,89,0,0,0,100,0,0,0,108,0,0,0,116,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,32,0,5,0,32,0,5,0,32,0,6,0,0,0,1,0,2,0,1,1,1,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,8,8,5,0,0,0,0,0}))
+		Ω(insertBytes).Should(BeEquivalentTo([]byte{1, 0, 237, 254, 1, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 89, 0, 0, 0, 100, 0, 0, 0, 108, 0, 0, 0, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 5, 0, 32, 0, 5, 0, 32, 0, 6, 0, 0, 0, 1, 0, 2, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 8, 8, 5, 0, 0, 0, 0, 0}))
 		utils.ResetClockImplementation()
 
 		insertBytes = nil

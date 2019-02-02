@@ -1,7 +1,7 @@
 package utils
 
 const (
- 	// use lower 14 bits in hash as group
+	// use lower 14 bits in hash as group
 	groupBits = 14
 	// max 16 bits for group
 	maxGroupBits = 16
