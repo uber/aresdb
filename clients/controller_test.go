@@ -41,6 +41,9 @@ var _ = ginkgo.Describe("Controller", func() {
 			b, _ := json.Marshal(tables)
 			w.Write(b)
 		})
+		testRouter.HandleFunc("/schema/ns_baddata/tables", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`"bad data`))
+		})
 		testRouter.HandleFunc("/schema/ns1/hash", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("123"))
 		})
@@ -68,5 +71,17 @@ var _ = ginkgo.Describe("Controller", func() {
 		tablesGot, err := c.GetAllSchema("ns1")
 		Ω(err).Should(BeNil())
 		Ω(tablesGot).Should(Equal(tables))
+	})
+
+	ginkgo.It("should fail with errors", func() {
+		c := NewControllerHTTPClient(host, port, headers)
+		_, err := c.GetSchemaHash("bad_ns")
+		Ω(err).ShouldNot(BeNil())
+		tablesGot, err := c.GetAllSchema("bad_ns")
+		Ω(err).ShouldNot(BeNil())
+		Ω(tablesGot).Should(BeNil())
+
+		_, err = c.GetAllSchema("ns_baddata")
+		Ω(err).ShouldNot(BeNil())
 	})
 })
