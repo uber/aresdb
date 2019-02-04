@@ -134,4 +134,12 @@ var _ = ginkgo.Describe("live vector party", func() {
 			Counts: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 		}))
 	})
+
+	ginkgo.It("goLiveVectorParty.Equals should correctly compare lengths", func() {
+		vp1 := NewLiveVectorParty(2, common.GeoShape, common.NullDataValue, hostMemoryManager)
+		vp1.Allocate(false)
+		vp2 := NewLiveVectorParty(1, common.GeoShape, common.NullDataValue, hostMemoryManager)
+		vp1.Allocate(false)
+		Ω(vp1.Equals(vp2)).Should(Equal(false))
+	})
 })
