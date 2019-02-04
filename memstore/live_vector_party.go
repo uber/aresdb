@@ -245,7 +245,7 @@ func (vp *goLiveVectorParty) Equals(other common.VectorParty) bool {
 		return false
 	}
 
-	if vp.GetLength() != vp.GetLength() {
+	if vp.GetLength() != other.GetLength() {
 		return false
 	}
 
