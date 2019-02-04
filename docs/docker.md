@@ -23,6 +23,7 @@ nvidia-docker run -p 9374:9374/tcp -p 43202:43202/tcp -it aresdb:latest
 root@9e4c5150659c# cd ~/go/src/github.com/aresdb
 root@9e4c5150659c# make run_server 
 ```
+### Web UI
 Point your browser to :`http://server_ip_address:9374/swagger/`
 
 This command will compile AresDB and map the ports in the docker container on the docker host.
