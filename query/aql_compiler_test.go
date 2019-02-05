@@ -1048,17 +1048,15 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("processes matched time filters", func() {
-		schema := &memstore.TableSchema{
-			ColumnIDs: map[string]int{
-				"request_at": 0,
-			},
-			Schema: metaCom.Table{
-				IsFactTable: true,
-				Columns: []metaCom.Column{
-					{Name: "request_at", Type: metaCom.Uint32},
-				},
+		table := metaCom.Table{
+			IsFactTable: true,
+			Columns: []metaCom.Column{
+				{Name: "request_at", Type: metaCom.Uint32},
 			},
 		}
+
+		schema := memstore.NewTableSchema(&table)
+
 		q := &AQLQuery{
 			Table: "trips",
 			Measures: []Measure{
@@ -1183,18 +1181,14 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("processes unmatched time filters", func() {
-		schema := &memstore.TableSchema{
-			ColumnIDs: map[string]int{
-				"request_at": 1,
+		table := metaCom.Table{
+			Columns: []metaCom.Column{
+				{Name: "uuid", Type: metaCom.UUID},
+				{Name: "request_at", Type: metaCom.Uint32},
 			},
-			Schema: metaCom.Table{
-				Columns: []metaCom.Column{
-					{Name: "uuid", Type: metaCom.UUID},
-					{Name: "request_at", Type: metaCom.Uint32},
-				},
-				IsFactTable: false,
-			},
+			IsFactTable: false,
 		}
+		schema := memstore.NewTableSchema(&table)
 		q := &AQLQuery{
 			Table: "trips",
 			Measures: []Measure{
@@ -1358,31 +1352,17 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("processes measure and dimensions", func() {
-		schema := &memstore.TableSchema{
-			ValueTypeByColumn: []memCom.DataType{
-				memCom.Uint8,
-				memCom.Uint16,
-				memCom.Bool,
-				memCom.Float32,
-				memCom.Uint32,
-			},
-			ColumnIDs: map[string]int{
-				"status":     0,
-				"city_id":    1,
-				"is_first":   2,
-				"fare":       3,
-				"request_at": 4,
-			},
-			Schema: metaCom.Table{
-				Columns: []metaCom.Column{
-					{Name: "status", Type: metaCom.Uint8},
-					{Name: "city_id", Type: metaCom.Int16},
-					{Name: "is_first", Type: metaCom.Bool},
-					{Name: "fare", Type: metaCom.Float32},
-					{Name: "request_at", Type: metaCom.Uint32},
-				},
+
+		table := metaCom.Table{
+			Columns: []metaCom.Column{
+				{Name: "status", Type: metaCom.Uint8},
+				{Name: "city_id", Type: metaCom.Uint16},
+				{Name: "is_first", Type: metaCom.Bool},
+				{Name: "fare", Type: metaCom.Float32},
+				{Name: "request_at", Type: metaCom.Uint32},
 			},
 		}
+		schema := memstore.NewTableSchema(&table)
 
 		qc := &AQLQueryContext{
 			TableIDByAlias: map[string]int{
@@ -1419,7 +1399,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			&expr.VarRef{
 				Val:      "city_id",
 				ColumnID: 1,
-				ExprType: expr.Signed,
+				ExprType: expr.Unsigned,
 				DataType: memCom.Uint16,
 			},
 			&expr.BinaryExpr{
@@ -1836,26 +1816,14 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("processes hyperloglog", func() {
-		tripsSchema := &memstore.TableSchema{
-			ValueTypeByColumn: []memCom.DataType{
-				memCom.Uint32,
-				memCom.Uint32,
-				memCom.Uint16,
-			},
-			ColumnIDs: map[string]int{
-				"request_at":      0,
-				"client_uuid_hll": 1,
-				"test_field":      2,
-			},
-			Schema: metaCom.Table{
-				IsFactTable: true,
-				Columns: []metaCom.Column{
-					{Name: "request_at", Type: metaCom.Uint32},
-					{Name: "client_uuid_hll", Type: metaCom.Uint32},
-					{Name: "test_field", Type: metaCom.Uint16},
-				},
+		table := metaCom.Table{
+			IsFactTable: true,
+			Columns: []metaCom.Column{
+				{Name: "request_at", Type: metaCom.Uint32},
+				{Name: "client_uuid_hll", Type: metaCom.UUID, HLLConfig: metaCom.HLLConfig{IsHLLColumn: true}},
 			},
 		}
+		tripsSchema := memstore.NewTableSchema(&table)
 
 		qc := &AQLQueryContext{
 			TableIDByAlias: map[string]int{
@@ -1868,21 +1836,6 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: tripsSchema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
-			Table: "trips",
-			Measures: []Measure{
-				{Expr: "hll(test_field)"},
-			},
-			TimeFilter: TimeFilter{
-				Column: "request_at",
-				From:   "-1d",
-				To:     "0d",
-			},
-		}
-		qc.parseExprs()
-
-		qc.resolveTypes()
-		Ω(qc.Error).ShouldNot(BeNil())
 
 		qc.Query = &AQLQuery{
 			Table: "trips",
@@ -1906,6 +1859,23 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Table: "trips",
 			Measures: []Measure{
 				{Expr: "hll(client_uuid_hll)"},
+			},
+			TimeFilter: TimeFilter{
+				Column: "request_at",
+				From:   "-1d",
+				To:     "0d",
+			},
+		}
+		qc.Error = nil
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.Measures[0].expr.String()).Should(Equal("hll(client_uuid_hll)"))
+
+		qc.Query = &AQLQuery{
+			Table: "trips",
+			Measures: []Measure{
+				{Expr: "countDistinctHLL(client_uuid_hll)"},
 			},
 			TimeFilter: TimeFilter{
 				Column: "request_at",

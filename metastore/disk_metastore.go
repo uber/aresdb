@@ -352,6 +352,13 @@ func (dm *diskMetaStore) CreateTable(table *common.Table) (err error) {
 		return ErrTableAlreadyExist
 	}
 
+	validator := NewTableSchameValidator()
+	validator.SetNewTable(*table)
+	err = validator.Validate()
+	if err != nil {
+		return err
+	}
+
 	if err = dm.MkdirAll(dm.getTableDirPath(table.Name), 0755); err != nil {
 		return err
 	}
@@ -499,7 +506,6 @@ func (dm *diskMetaStore) AddColumn(tableName string, column common.Column, appen
 	if table, err = dm.readSchemaFile(tableName); err != nil {
 		return err
 	}
-
 	return dm.addColumn(table, column, appendToArchivingSortOrder)
 }
 
@@ -850,19 +856,18 @@ func (dm *diskMetaStore) removeTable(tableName string) error {
 }
 
 func (dm *diskMetaStore) addColumn(table *common.Table, column common.Column, appendToArchivingSortOrder bool) error {
-	for _, existingColumn := range table.Columns {
-		if existingColumn.Name == column.Name {
-			if !existingColumn.Deleted {
-				return ErrColumnAlreadyExist
-			}
-		}
-	}
+	validator := NewTableSchameValidator()
+	validator.SetOldTable(*table)
 
 	newColumnID := len(table.Columns)
 	table.Columns = append(table.Columns, column)
-
 	if appendToArchivingSortOrder {
 		table.ArchivingSortColumns = append(table.ArchivingSortColumns, newColumnID)
+	}
+	validator.SetNewTable(*table)
+	err := validator.Validate()
+	if err != nil {
+		return err
 	}
 
 	if err := dm.writeSchemaFile(table); err != nil {
@@ -917,7 +922,7 @@ func (dm *diskMetaStore) removeColumn(table *common.Table, columnName string) er
 				return err
 			}
 
-			if column.Type == common.BigEnum || column.Type == common.SmallEnum {
+			if column.IsEnumColumn() {
 				dm.removeEnumColumn(table.Name, column.Name)
 			}
 
@@ -1282,7 +1287,7 @@ func (dm *diskMetaStore) enumColumnExists(tableName string, columnName string) e
 				continue
 			}
 
-			if column.Type != common.BigEnum && column.Type != common.SmallEnum {
+			if !column.IsEnumColumn() {
 				return ErrNotEnumColumn
 			}
 

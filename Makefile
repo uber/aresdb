@@ -7,7 +7,7 @@ ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-bu
   -e ".*/_.*" \
   -e ".*/mocks.*")
 
-CHANGED_GO_SRC := $(shell git diff HEAD origin/master --name-only | grep -e ".*\.go")
+CHANGED_GO_SRC := $(shell git diff origin/master HEAD --name-only --diff-filter=AMR | grep -e ".*\.go")
 
 GO_SRC := $(CHANGED_GO_SRC)
 

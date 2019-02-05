@@ -191,16 +191,6 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 		testMetaStore.On("AddColumn", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("Failed to add columns")).Once()
 		resp, _ = http.Post(fmt.Sprintf("http://%s/schema/tables/%s/columns", hostPort, "testTable"), "application/json", bytes.NewBuffer(columnBytes))
 		Ω(resp.StatusCode).Should(Equal(http.StatusInternalServerError))
-
-		errorColumnBytes = []byte(`{"name": "testCol", "type": ""}`)
-		testMetaStore.On("AddColumn", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-		resp, _ = http.Post(fmt.Sprintf("http://%s/schema/tables/%s/columns", hostPort, "testTable"), "application/json", bytes.NewBuffer(errorColumnBytes))
-		Ω(resp.StatusCode).Should(Equal(http.StatusBadRequest))
-
-		errorColumnBytes = []byte(`{"name": "testCol", "type": "Int32", "defaultValue": "hello"}`)
-		testMetaStore.On("AddColumn", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-		resp, _ = http.Post(fmt.Sprintf("http://%s/schema/tables/%s/columns", hostPort, "testTable"), "application/json", bytes.NewBuffer(errorColumnBytes))
-		Ω(resp.StatusCode).Should(Equal(http.StatusBadRequest))
 	})
 
 	ginkgo.It("DeleteColumn should work", func() {

@@ -127,6 +127,15 @@ func DataTypeBits(dataType DataType) int {
 	return int(0x0000FFFF & dataType)
 }
 
+// DataTypeForColumn returns the in memory data type for a column
+func DataTypeForColumn(column metaCom.Column) DataType {
+	dataType := DataTypeFromString(column.Type)
+	if column.HLLConfig.IsHLLColumn {
+		return Uint32
+	}
+	return dataType
+}
+
 // DataTypeFromString convert string representation of data type into DataType
 func DataTypeFromString(str string) DataType {
 	if dataType, exist := StringToDataType[str]; exist {
@@ -138,6 +147,46 @@ func DataTypeFromString(str string) DataType {
 // DataTypeBytes returns how many bytes a value of the data type occupies.
 func DataTypeBytes(dataType DataType) int {
 	return (DataTypeBits(dataType) + 7) / 8
+}
+
+// ConvertValueForType converts data value based on data type
+func ConvertValueForType(dataType DataType, value interface{}) (interface{}, error) {
+	ok := false
+	var out interface{}
+	switch dataType {
+	case Bool:
+		out, ok = ConvertToBool(value)
+	case SmallEnum:
+		fallthrough
+	case Uint8:
+		out, ok = ConvertToUint8(value)
+	case Int8:
+		out, ok = ConvertToInt8(value)
+	case Int16:
+		out, ok = ConvertToInt16(value)
+	case BigEnum:
+		fallthrough
+	case Uint16:
+		out, ok = ConvertToUint16(value)
+	case Uint32:
+		out, ok = ConvertToUint32(value)
+	case Int32:
+		out, ok = ConvertToInt32(value)
+	case Int64:
+		out, ok = ConvertToInt64(value)
+	case Float32:
+		out, ok = ConvertToFloat32(value)
+	case UUID:
+		out, ok = ConvertToUUID(value)
+	case GeoPoint:
+		out, ok = ConvertToGeoPoint(value)
+	case GeoShape:
+		out, ok = ConvertToGeoShape(value)
+	}
+	if !ok {
+		return nil, utils.StackError(nil, "Invalid data value %v for data type %s", DataTypeName[dataType])
+	}
+	return out, nil
 }
 
 // ConvertToBool convert input into bool at best effort

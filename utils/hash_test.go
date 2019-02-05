@@ -22,27 +22,41 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = ginkgo.Describe("MurmurHash32", func() {
-	ginkgo.It("Should Hash Correctly for key with one byte", func() {
-		key := [1]byte{1}
-		Ω(Murmur3Sum32(unsafe.Pointer(&key[0]), 1, 0)).Should(Equal(uint32(3831157163)))
+var _ = ginkgo.Describe("Hash should work", func() {
+
+	ginkgo.It("MurmurHash32 should work", func() {
+		tests := [][]interface{}{
+			{[]byte{1}, 1, uint32(3831157163)},
+			{[]byte{1, 2, 3, 4}, 4, uint32(1043635621)},
+			{[]byte{1, 2, 3, 4, 5, 6, 7}, 7, uint32(4233664437)},
+			{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9}, 9, uint32(2711154856)},
+		}
+
+		for _, test := range tests {
+			key := test[0].([]byte)
+			numBytes := test[1].(int)
+			expHash := test[2].(uint32)
+			actHash := Murmur3Sum32(unsafe.Pointer(&key[0]), numBytes, 0)
+			Ω(actHash).Should(Equal(expHash))
+		}
 	})
 
-	ginkgo.It("Should Hash Correctly for key with four bytes", func() {
-		key := [4]byte{1, 2, 3, 4}
-		Ω(Murmur3Sum32(unsafe.Pointer(&key[0]), 4, 0)).Should(Equal(uint32(1043635621)))
-	})
+	ginkgo.It("MurmurHash128 should work", func() {
+		tests := [][]interface{}{
+			{[]byte{1}, 1, [2]uint64{8849112093580131862, 8613248517421295493}},
+			{[]byte{1, 2, 3, 4}, 4, [2]uint64{720734999560851427, 16923441050003117939}},
+			{[]byte{1, 2, 3, 4, 5, 6, 7}, 7, [2]uint64{17578618098293890537, 4405506937751715985}},
+			{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9}, 9, [2]uint64{13807401213100465550, 17366753655886151073}},
+		}
 
-	ginkgo.It("Should Hash Correctly for key with seven bytes", func() {
-		key := [7]byte{1, 2, 3, 4, 5, 6, 7}
-		Ω(Murmur3Sum32(unsafe.Pointer(&key[0]), 7, 0)).Should(Equal(uint32(4233664437)))
+		for _, test := range tests {
+			key := test[0].([]byte)
+			numBytes := test[1].(int)
+			expHash := test[2].([2]uint64)
+			actHash := Murmur3Sum128(unsafe.Pointer(&key[0]), numBytes, 0)
+			Ω(actHash).Should(Equal(expHash))
+		}
 	})
-
-	ginkgo.It("Should Hash Correctly for key with nine bytes", func() {
-		key := [9]byte{1, 2, 3, 4, 5, 6, 7, 8, 9}
-		Ω(Murmur3Sum32(unsafe.Pointer(&key[0]), 9, 0)).Should(Equal(uint32(2711154856)))
-	})
-
 })
 
 func BenchmarkMurmur3Sum32(b *testing.B) {

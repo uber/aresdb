@@ -59,6 +59,16 @@ type Column struct {
 
 	// Mutable column configs.
 	Config ColumnConfig `json:"config,omitempty"`
+
+	// HLLEnabled determines whether a column is enabled for hll cardinality estimation
+	// HLLConfig is immutable
+	HLLConfig HLLConfig `json:"hllConfig,omitempty"`
+}
+
+// HLLConfig defines hll configuration
+// swagger:model hllConfig
+type HLLConfig struct {
+	IsHLLColumn bool `json:"isHLLColumn,omitempty"`
 }
 
 // TableConfig defines the table configurations that can be changed
@@ -136,12 +146,12 @@ type Table struct {
 }
 
 // IsEnumColumn checks whether a column is enum column
-func (c Column) IsEnumColumn() bool {
+func (c *Column) IsEnumColumn() bool {
 	return c.Type == BigEnum || c.Type == SmallEnum
 }
 
 // IsOverwriteOnlyDataType checks whether a column is overwrite only
-func (c Column) IsOverwriteOnlyDataType() bool {
+func (c *Column) IsOverwriteOnlyDataType() bool {
 	switch c.Type {
 	case Uint8, Int8, Uint16, Int16, Uint32, Int32, Float32, Int64:
 		return false

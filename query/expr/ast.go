@@ -175,6 +175,9 @@ type VarRef struct {
 	EnumReverseDict []string `json:"-"`
 
 	DataType memCom.DataType
+
+	// Whether this column is hll column (can run hll directly)
+	IsHLLColumn bool
 }
 
 // Type returns the type.

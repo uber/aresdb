@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +28,9 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"strconv"
+	"strings"
+	"unsafe"
 )
 
 const (
@@ -198,6 +199,36 @@ func (c *connector) Insert(tableName string, columnNames []string, rows []Row, u
 	return numRows, nil
 }
 
+// computeHLLValue populate hyperloglog value
+func computeHLLValue(dataType memCom.DataType, value interface{}) (uint32, error) {
+	var ok bool
+	var hashed uint64
+	switch dataType {
+	case memCom.UUID:
+		var v [2]uint64
+		v, ok = memCom.ConvertToUUID(value)
+		hashed = v[0] ^ v[1]
+	case memCom.Uint32:
+		var v uint32
+		v, ok = memCom.ConvertToUint32(value)
+		hashed = utils.Murmur3Sum64(unsafe.Pointer(&v), memCom.DataTypeBytes(dataType), 0)
+	case memCom.Int32:
+		var v int32
+		v, ok = memCom.ConvertToInt32(value)
+		hashed = utils.Murmur3Sum64(unsafe.Pointer(&v), memCom.DataTypeBytes(dataType), 0)
+	case memCom.Int64:
+		var v int64
+		v, ok = memCom.ConvertToInt64(value)
+		hashed = utils.Murmur3Sum64(unsafe.Pointer(&v), memCom.DataTypeBytes(dataType), 0)
+	default:
+		return 0, utils.StackError(nil, "invalid type %s for fast hll value", memCom.DataTypeName[dataType])
+	}
+	if !ok {
+		return 0, utils.StackError(nil, "invalid data value %v for data type %s", value, memCom.DataTypeName[dataType])
+	}
+	return utils.ComputeHLLValue(hashed), nil
+}
+
 // prepareUpsertBatch prepares the upsert batch for upsert,
 // returns upsertBatch byte array, number of rows in upsert batch and error.
 func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, updateModes []memCom.ColumnUpdateMode, rows []Row) ([]byte, int, error) {
@@ -240,7 +271,8 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 			return nil, 0, utils.StackError(nil, "column %s only supports overwrite", columnName)
 		}
 
-		if err = upsertBatchBuilder.AddColumnWithUpdateMode(columnID, memCom.DataTypeFromString(column.Type), updateModes[colIndex]); err != nil {
+		dataType := memCom.DataTypeForColumn(column)
+		if err = upsertBatchBuilder.AddColumnWithUpdateMode(columnID, dataType, updateModes[colIndex]); err != nil {
 			return nil, 0, err
 		}
 
@@ -307,16 +339,29 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 					value = nil
 				}
 			}
+
 			// Set value to the last row.
-			if err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, value); err != nil {
-				upsertBatchBuilder.RemoveRow()
-				c.logger.With(
-					"name", "prepareUpsertBatch",
-					"error", err.Error(),
-					"table", tableName,
-					"columnID", columnID,
-					"value", value).Error("Failed to set value")
-				break
+			// compute hll value to insert
+			if column.HLLConfig.IsHLLColumn {
+				// here use original column data type to compute hll value
+				value, err = computeHLLValue(memCom.DataTypeFromString(column.Type), value)
+				if err != nil {
+					upsertBatchBuilder.RemoveRow()
+					c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
+					break
+				}
+				if err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, value); err != nil {
+					upsertBatchBuilder.RemoveRow()
+					c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
+					break
+				}
+			} else {
+				// directly insert value
+				if err = upsertBatchBuilder.SetValue(upsertBatchBuilder.NumRows-1, upsertBatchColumnIndex, value); err != nil {
+					upsertBatchBuilder.RemoveRow()
+					c.logger.With("name", "prepareUpsertBatch", "error", err.Error(), "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
+					break
+				}
 			}
 			upsertBatchColumnIndex++
 		}

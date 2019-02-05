@@ -175,44 +175,6 @@ var _ = ginkgo.Describe("Validator", func() {
 		Ω(err).Should(BeNil())
 	})
 
-	ginkgo.It("should fail for bad version", func() {
-		oldTable := common.Table{
-			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Uint32",
-				},
-			},
-			PrimaryKeyColumns:    []int{0},
-			IsFactTable:          true,
-			ArchivingSortColumns: []int{1},
-			Version:              0,
-		}
-		newTable := common.Table{
-			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Uint32",
-				},
-				{
-					Name: "col2",
-					Type: "Uint32",
-				},
-			},
-			PrimaryKeyColumns:    []int{0},
-			IsFactTable:          true,
-			ArchivingSortColumns: []int{1},
-			Version:              0,
-		}
-		validator := NewTableSchameValidator()
-		validator.SetNewTable(newTable)
-		validator.SetOldTable(oldTable)
-		err := validator.Validate()
-		Ω(err).Should(Equal(ErrIllegalSchemaVersion))
-	})
-
 	ginkgo.It("should fail for name change", func() {
 		oldTable := common.Table{
 			Name: "testTable",
@@ -388,6 +350,45 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err := validator.Validate()
+		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
+
+		// modify hll config not allowed
+		oldTable = common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Uint32",
+				},
+				{
+					Name: "col2",
+					Type: "Uint32",
+				},
+			},
+			PrimaryKeyColumns: []int{0},
+			Version:           0,
+		}
+		newTable = common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Uint32",
+					HLLConfig: common.HLLConfig{
+						IsHLLColumn: true,
+					},
+				},
+				{
+					Name: "col2",
+					Type: "Uint32",
+				},
+			},
+			PrimaryKeyColumns: []int{0},
+			Version:           1,
+		}
+		validator.SetNewTable(newTable)
+		validator.SetOldTable(oldTable)
+		err = validator.Validate()
 		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
 	})
 
@@ -688,5 +689,54 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetOldTable(oldTable)
 		err = validator.Validate()
 		Ω(err).Should(BeNil())
+	})
+
+	ginkgo.It("should fail when hll config is invalid", func() {
+		table1 := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Uint32",
+				},
+				{
+					Name: "col2",
+					Type: "SmallEnum",
+					HLLConfig: common.HLLConfig{
+						IsHLLColumn: true,
+					},
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+			Version:           0,
+		}
+
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table1)
+		err := validator.Validate()
+		Ω(err).ShouldNot(BeNil())
+		Ω(err.Error()).Should(ContainSubstring(`data Type SmallEnum not allowed for fast hll aggregation, valid options: [Uint32|Int32|Int64|UUID]`))
+
+		table2 := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Uint32",
+					HLLConfig: common.HLLConfig{
+						IsHLLColumn: true,
+					},
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+			Version:           0,
+		}
+
+		validator = NewTableSchameValidator()
+		validator.SetNewTable(table2)
+		err = validator.Validate()
+		Ω(err).Should(Equal(ErrTimeColumnDoesNotAllowHLLConfig))
 	})
 })

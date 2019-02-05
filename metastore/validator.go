@@ -1,6 +1,7 @@
 package metastore
 
 import (
+	"fmt"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
@@ -39,6 +40,17 @@ func (v tableSchemaValidatorImpl) Validate() (err error) {
 	return v.validateSchemaUpdate(v.newTable, v.oldTable)
 }
 
+// ValidateHLLConfig validates hll config
+func validateColumnHLLConfig(c common.Column) error {
+	if c.HLLConfig.IsHLLColumn {
+		if c.Type != common.Uint32 && c.Type != common.Int32 && c.Type != common.Int64 && c.Type != common.UUID {
+			return fmt.Errorf("data Type %s not allowed for fast hll aggregation, valid options: [%s|%s|%s|%s]",
+				c.Type, common.Uint32, common.Int32, common.Int64, common.UUID)
+		}
+	}
+	return nil
+}
+
 // checks performed:
 //	table has at least 1 valid column
 //	table has at least 1 valid primary key column
@@ -73,10 +85,25 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 			return ErrMissingTimeColumn
 		}
 
+		// validate hll config
+		if err := validateColumnHLLConfig(column); err != nil {
+			return err
+		}
+
+		// time column does not allow hll config
+		if table.IsFactTable && columnID == 0 && column.HLLConfig.IsHLLColumn {
+			return ErrTimeColumnDoesNotAllowHLLConfig
+		}
+
 		if column.DefaultValue != nil {
 			if table.IsFactTable && columnID == 0 {
 				return ErrTimeColumnDoesNotAllowDefault
 			}
+
+			if column.HLLConfig.IsHLLColumn {
+				return ErrHLLColumnDoesNotAllowDefaultValue
+			}
+
 			err = ValidateDefaultValue(*column.DefaultValue, column.Type)
 			if err != nil {
 				return err
@@ -136,10 +163,6 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 		return err
 	}
 
-	if newTable.Version <= oldTable.Version {
-		return ErrIllegalSchemaVersion
-	}
-
 	if newTable.Name != oldTable.Name {
 		return ErrSchemaUpdateNotAllowed
 	}
@@ -173,7 +196,8 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 			oldCol.Type != newCol.Type ||
 			!reflect.DeepEqual(oldCol.DefaultValue, newCol.DefaultValue) ||
 			oldCol.CaseInsensitive != newCol.CaseInsensitive ||
-			oldCol.DisableAutoExpand != newCol.DisableAutoExpand {
+			oldCol.DisableAutoExpand != newCol.DisableAutoExpand ||
+			oldCol.HLLConfig != newCol.HLLConfig {
 			return ErrSchemaUpdateNotAllowed
 		}
 	}

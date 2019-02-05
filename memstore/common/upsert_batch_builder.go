@@ -58,39 +58,10 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 	if value == nil {
 		c.values[row] = nil
 	} else {
-		ok := false
-		switch c.dataType {
-		case Bool:
-			c.values[row], ok = ConvertToBool(value)
-		case Int8:
-			c.values[row], ok = ConvertToInt8(value)
-		case Uint8:
-			c.values[row], ok = ConvertToUint8(value)
-		case Int16:
-			c.values[row], ok = ConvertToInt16(value)
-		case Uint16:
-			c.values[row], ok = ConvertToUint16(value)
-		case Int32:
-			c.values[row], ok = ConvertToInt32(value)
-		case Uint32:
-			c.values[row], ok = ConvertToUint32(value)
-		case Float32:
-			c.values[row], ok = ConvertToFloat32(value)
-		case Int64:
-			c.values[row], ok = ConvertToInt64(value)
-		case SmallEnum:
-			c.values[row], ok = ConvertToUint8(value)
-		case BigEnum:
-			c.values[row], ok = ConvertToUint16(value)
-		case UUID:
-			c.values[row], ok = ConvertToUUID(value)
-		case GeoPoint:
-			c.values[row], ok = ConvertToGeoPoint(value)
-		case GeoShape:
-			c.values[row], ok = ConvertToGeoShape(value)
-		}
-		if !ok {
-			return utils.StackError(nil, "Value %v does not match expected data type %v", value, DataTypeName[c.dataType])
+		var err error
+		c.values[row], err = ConvertValueForType(c.dataType, value)
+		if err != nil {
+			return err
 		}
 	}
 
