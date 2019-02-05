@@ -18,7 +18,7 @@ package query
 import "C"
 
 import (
-		memCom "github.com/uber/aresdb/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"

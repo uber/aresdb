@@ -113,18 +113,15 @@ void sort(DimensionColumnVector keys,
           int length,
           void *cudaStream) {
   switch (valueBytes) {
+#define  SORT_INTERNAL(ValueType) \
+      sortInternal<ValueType>(keys,reinterpret_cast<ValueType>(values), \
+                               length, cudaStream); \
+      break;
+
     case 4:
-      sortInternal<uint32_t *>(keys,
-                               reinterpret_cast<uint32_t *>(values),
-                               length,
-                               cudaStream);
-      break;
+      SORT_INTERNAL(uint32_t *)
     case 8:
-      sortInternal<uint64_t *>(keys,
-                               reinterpret_cast<uint64_t *>(values),
-                               length,
-                               cudaStream);
-      break;
+      SORT_INTERNAL(uint64_t *)
     default:throw std::invalid_argument("ValueBytes is invalid");
   }
 }
@@ -198,100 +195,49 @@ int bindValueAndAggFunc(uint64_t *inputHashValues,
                         AggregateFunction aggFunc,
                         void *cudaStream) {
   switch (aggFunc) {
+    #define REDUCE_INTERNAL(ValueType, AggFunc) \
+      return reduceInternal< ValueType, AggFunc >( \
+            inputHashValues, \
+            inputIndexVector, \
+            inputValues, \
+            outputHashValues, \
+            outputIndexVector, \
+            outputValues, \
+            length, \
+            cudaStream);
+
     case AGGR_SUM_UNSIGNED:
       if (valueBytes == 4) {
-        return reduceInternal<uint32_t, thrust::plus<uint32_t> >(
-            inputHashValues,
-            inputIndexVector,
-            inputValues,
-            outputHashValues,
-            outputIndexVector,
-            outputValues,
-            length,
-            cudaStream);
+        REDUCE_INTERNAL(uint32_t, thrust::plus<uint32_t>)
       } else {
-        return reduceInternal<uint64_t, thrust::plus<uint64_t> >(
-            inputHashValues,
-            inputIndexVector,
-            inputValues,
-            outputHashValues,
-            outputIndexVector,
-            outputValues,
-            length,
-            cudaStream);
+        REDUCE_INTERNAL(uint64_t, thrust::plus<uint64_t>)
       }
     case AGGR_SUM_SIGNED:
       if (valueBytes == 4) {
-        return reduceInternal<int32_t, thrust::plus<int32_t> >(
-            inputHashValues,
-            inputIndexVector,
-            inputValues,
-            outputHashValues,
-            outputIndexVector,
-            outputValues,
-            length,
-            cudaStream);
+        REDUCE_INTERNAL(int32_t, thrust::plus<int32_t>)
       } else {
-        return reduceInternal<int64_t, thrust::plus<int64_t> >(
-            inputHashValues,
-            inputIndexVector,
-            inputValues,
-            outputHashValues,
-            outputIndexVector,
-            outputValues,
-            length,
-            cudaStream);
+        REDUCE_INTERNAL(int64_t, thrust::plus<int64_t>)
       }
     case AGGR_SUM_FLOAT:
       if (valueBytes == 4) {
-        return reduceInternal<float_t, thrust::plus<float_t> >(
-            inputHashValues,
-            inputIndexVector,
-            inputValues,
-            outputHashValues,
-            outputIndexVector,
-            outputValues,
-            length,
-            cudaStream);
+        REDUCE_INTERNAL(float_t, thrust::plus<float_t>)
       } else {
-        return reduceInternal<double_t, thrust::plus<double_t> >(
-            inputHashValues,
-            inputIndexVector,
-            inputValues,
-            outputHashValues,
-            outputIndexVector,
-            outputValues,
-            length,
-            cudaStream);
+        REDUCE_INTERNAL(double_t, thrust::plus<double_t>)
       }
     case AGGR_MIN_UNSIGNED:
-      return reduceInternal<uint32_t, thrust::minimum<uint32_t> >(
-          inputHashValues, inputIndexVector, inputValues, outputHashValues,
-          outputIndexVector, outputValues, length, cudaStream);
+      REDUCE_INTERNAL(uint32_t, thrust::minimum<uint32_t>)
     case AGGR_MIN_SIGNED:
-      return reduceInternal<int32_t, thrust::minimum<int32_t> >(
-          inputHashValues, inputIndexVector, inputValues, outputHashValues,
-          outputIndexVector, outputValues, length, cudaStream);
+      REDUCE_INTERNAL(int32_t, thrust::minimum<int32_t>)
     case AGGR_MIN_FLOAT:
-      return reduceInternal<float_t, thrust::minimum<float_t> >(
-          inputHashValues, inputIndexVector, inputValues, outputHashValues,
-          outputIndexVector, outputValues, length, cudaStream);
+      REDUCE_INTERNAL(float_t, thrust::minimum<float_t>)
     case AGGR_MAX_UNSIGNED:
-      return reduceInternal<uint32_t, thrust::maximum<uint32_t> >(
-          inputHashValues, inputIndexVector, inputValues, outputHashValues,
-          outputIndexVector, outputValues, length, cudaStream);
+      REDUCE_INTERNAL(uint32_t, thrust::maximum<uint32_t>)
     case AGGR_MAX_SIGNED:
-      return reduceInternal<int32_t, thrust::maximum<int32_t> >(
-          inputHashValues, inputIndexVector, inputValues, outputHashValues,
-          outputIndexVector, outputValues, length, cudaStream);
+      REDUCE_INTERNAL(int32_t, thrust::maximum<int32_t>)
     case AGGR_MAX_FLOAT:
-      return reduceInternal<float_t, thrust::maximum<float_t> >(
-          inputHashValues, inputIndexVector, inputValues, outputHashValues,
-          outputIndexVector, outputValues, length, cudaStream);
+      REDUCE_INTERNAL(float_t, thrust::maximum<float_t>)
     case AGGR_AVG_FLOAT:
-      return reduceInternal<uint64_t, rolling_avg > (
-          inputHashValues, inputIndexVector, inputValues, outputHashValues,
-              outputIndexVector, outputValues, length, cudaStream);
+      REDUCE_INTERNAL(uint64_t, rolling_avg)
     default:
       throw std::invalid_argument("Unsupported aggregation function type");
   }
