@@ -114,7 +114,7 @@ void sort(DimensionColumnVector keys,
           void *cudaStream) {
   switch (valueBytes) {
 #define  SORT_INTERNAL(ValueType) \
-      sortInternal<ValueType>(keys,reinterpret_cast<ValueType>(values), \
+      sortInternal<ValueType>(keys, reinterpret_cast<ValueType>(values), \
                                length, cudaStream); \
       break;
 
