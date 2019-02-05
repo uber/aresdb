@@ -507,12 +507,7 @@ func (c *connector) getTableSchema(tableName string) (*tableSchema, error) {
 		return schema, nil
 	}
 
-	schema, err := c.fetchTableSchema(tableName)
-	if err != nil {
-		return nil, err
-	}
-
-	return schema, nil
+	return c.fetchTableSchema(tableName)
 }
 
 // fetchAllEnumDicts fetches all enum dictionaries for enum columns in current cached schemas,
