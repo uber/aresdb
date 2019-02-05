@@ -47,7 +47,6 @@ var _ = ginkgo.Describe("api request", func() {
 		err = ReadRequest(r, &aqlR)
 		Ω(err).Should(BeNil())
 		Ω(aqlR.Accept).Should(Equal(ContentTypeHyperLogLog))
-		Ω(aqlR.Verbose).Should(Equal(1))
 	})
 
 })
