@@ -41,7 +41,7 @@ type Options struct {
 	ServerLogger common.Logger
 	QueryLogger  common.Logger
 	Metrics      common.Metrics
-	HttpWrappers []utils.HTTPHandlerWrapper
+	HTTPWrappers []utils.HTTPHandlerWrapper
 }
 
 // Option is for setting option
@@ -78,7 +78,7 @@ func Execute(setters ...Option) {
 				options.ServerLogger,
 				options.QueryLogger,
 				options.Metrics,
-				options.HttpWrappers...,
+				options.HTTPWrappers...,
 			)
 		},
 	}
