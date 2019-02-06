@@ -24,7 +24,7 @@
 #include "query/functor.hpp"
 #include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
-#include "time_series_aggregate.h"
+#include "query/time_series_aggregate.h"
 
 namespace ares {
 
@@ -238,7 +238,7 @@ class InputVectorBinderBase {
                                                           nullsOffset, \
                                                           valuesOffset, \
                                                           length, \
-                                                          stepInBytes,\
+                                                          stepInBytes, \
                                                           startingIndex));
       case Bool:
         BIND_COLUMN_INPUT(bool)
@@ -317,7 +317,7 @@ class InputVectorBinderBase {
             indexVector, baseCounts, startCount, basePtr, nullsOffset, \
             valuesOffset, length, stepInBytes, startingIndex));
 
-      switch (dataType){
+      switch (dataType) {
         case GeoPoint:
           BIND_WIDER_COLUMN_INPUT(GeoPointT, defaultValue.Value.GeoPointVal)
         case UUID:
@@ -350,7 +350,7 @@ class InputVectorBinderBase {
           return res; \
           }
 
-      switch (dataType){
+      switch (dataType) {
         case UUID: BIND_WIDER_FOREIGN_COLUMN_INPUT(
             defaultValueStruct.Value.UUIDVal, UUIDT)
         case Int64: BIND_WIDER_FOREIGN_COLUMN_INPUT(
