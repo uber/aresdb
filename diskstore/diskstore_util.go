@@ -23,10 +23,12 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-const data string = "data"
-const redologs string = "redologs"
-const snapshots string = "snapshots"
-const archiveBatches string = "archiving_batches"
+const (
+	data           = "data"
+	redologs       = "redologs"
+	snapshots      = "snapshots"
+	archiveBatches = "archiving_batches"
+)
 
 // Utils for data hierarchy layout.
 // Following this wiki:
