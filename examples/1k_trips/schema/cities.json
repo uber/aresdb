@@ -1,0 +1,15 @@
+{
+  "name": "cities",
+  "columns": [
+    {
+      "name": "id",
+      "type": "Uint16"
+    },
+    {
+      "name": "name",
+      "type": "BigEnum"
+    }
+  ],
+  "primaryKeyColumns": [0],
+  "isFactTable": false
+}

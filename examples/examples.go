@@ -2,20 +2,23 @@ package main
 
 import (
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/common"
-	"go.uber.org/zap"
 	"encoding/csv"
 	"os"
 	"io"
 	"fmt"
 	"net/http"
 	"io/ioutil"
+	"math/rand"
+	"github.com/uber/aresdb/utils"
+	"go.uber.org/zap"
+	"github.com/uber-go/tally"
 )
 
 const (
 	hostPort = "localhost:19374"
 	schemaDir = "schema"
 	dataDir = "data"
+	randomTime = "{time}"
 )
 
 func panicIfErr(err error) {
@@ -25,11 +28,11 @@ func panicIfErr(err error) {
 }
 
 func createTablesForDataSet(dataSetName string) {
-	dataSetSchemaDir := fmt.Sprintf("%s/%s", schemaDir, dataSetName)
+	dataSetSchemaDir := fmt.Sprintf("%s/%s", dataSetName, schemaDir)
 	schemaDirInfo, err := ioutil.ReadDir(dataSetSchemaDir)
 	panicIfErr(err)
 	for _, schemaInfo := range schemaDirInfo {
-		tableSchemaPath := fmt.Sprintf("%s/%s/%s", schemaDir, dataSetName, schemaInfo.Name())
+		tableSchemaPath := fmt.Sprintf("%s/%s/%s", dataSetName, schemaDir, schemaInfo.Name())
 		createTable(tableSchemaPath)
 	}
 }
@@ -48,31 +51,23 @@ func createTable(tableSchemaPath string) {
 }
 
 func ingestDataForDataSet(dataSetName string) {
-	dataFileDir := fmt.Sprintf("%s/%s", dataDir, dataSetName)
+	dataFileDir := fmt.Sprintf("./%s/%s", dataSetName, dataDir)
 	dataFiles, err := ioutil.ReadDir(dataFileDir)
 	panicIfErr(err)
 
-	for _, dataFileInfo := range dataFiles {
-		dataFilePath := fmt.Sprintf("%s/%s/%s", dataDir, dataSetName, dataFileInfo.Name())
-		ingestDataForTable(dataFileInfo.Name(), dataFilePath)
-	}
-}
-
-func ingestDataForTable(tableName string, dataPath string) {
 	cfg := client.ConnectorConfig{
 		Address: hostPort,
 	}
-
-	logger := zap.NewExample().Sugar()
-	metrics := common.NewNoopMetrics()
-	scope, closer, err := metrics.NewRootScope()
+	connector, err := cfg.NewConnector(zap.NewExample().Sugar(), tally.NoopScope)
 	panicIfErr(err)
 
-	defer closer.Close()
+	for _, dataFileInfo := range dataFiles {
+		dataFilePath := fmt.Sprintf("./%s/%s/%s", dataSetName, dataDir, dataFileInfo.Name())
+		ingestDataForTable(connector, dataFileInfo.Name(), dataFilePath)
+	}
+}
 
-	connector, err := cfg.NewConnector(logger, scope)
-	panicIfErr(err)
-
+func ingestDataForTable(connector client.Connector, tableName string, dataPath string) {
 	file, err := os.Open(dataPath)
 	panicIfErr(err)
 	defer file.Close()
@@ -84,17 +79,27 @@ func ingestDataForTable(tableName string, dataPath string) {
 	rows := make([]client.Row, 0)
 	var record []string
 
+	now := utils.Now().Unix()
+	r := rand.New(rand.NewSource(0))
 	for record, err = csvReader.Read(); err != io.EOF; record, err = csvReader.Read() {
 		panicIfErr(err)
 		row := make(client.Row, 0, len(record))
 		for _, value := range record {
-			row = append(row, value)
+			if value == randomTime {
+				row = append(row, getRandomEpochSeconds(r, now - 86400, now))
+			} else {
+				row = append(row, value)
+			}
 		}
 		rows = append(rows, row)
 	}
 
 	rowsInserted, err := connector.Insert(tableName, columnNames, rows)
 	fmt.Printf("%d rows inserted into %s\n", rowsInserted, tableName)
+}
+
+func getRandomEpochSeconds(r *rand.Rand, start, end int64) uint32 {
+	return uint32(start + r.Int63n(end - start))
 }
 
 func main() {

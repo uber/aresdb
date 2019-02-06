@@ -2,7 +2,7 @@
   "name": "trips",
   "columns": [
     {
-      "name": "time",
+      "name": "request_at",
       "type": "Uint32"
     },
     {
@@ -10,7 +10,19 @@
       "type": "UUID"
     },
     {
-      "location": ""
+      "name": "city_id",
+      "type": "Uint16"
+    },
+    {
+      "name": "status",
+      "type": "SmallEnum"
+    },
+    {
+      "name": "fare",
+      "type": "Float32"
     }
-  ]
+  ],
+  "primaryKeyColumns": [1],
+  "archivingSortColumns": [2,3],
+  "isFactTable": true
 }
