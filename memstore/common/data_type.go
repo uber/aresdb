@@ -17,13 +17,14 @@ package common
 import (
 	"bytes"
 	"fmt"
-	"github.com/satori/go.uuid"
 	"math"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"unsafe"
+
+	uuid "github.com/satori/go.uuid"
 
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
@@ -150,23 +151,18 @@ func DataTypeBytes(dataType DataType) int {
 }
 
 // ConvertValueForType converts data value based on data type
-func ConvertValueForType(dataType DataType, value interface{}) (interface{}, error) {
+func ConvertValueForType(dataType DataType, value interface{}) (out interface{}, err error) {
 	ok := false
-	var out interface{}
 	switch dataType {
 	case Bool:
 		out, ok = ConvertToBool(value)
-	case SmallEnum:
-		fallthrough
-	case Uint8:
+	case Uint8, SmallEnum:
 		out, ok = ConvertToUint8(value)
 	case Int8:
 		out, ok = ConvertToInt8(value)
 	case Int16:
 		out, ok = ConvertToInt16(value)
-	case BigEnum:
-		fallthrough
-	case Uint16:
+	case Uint16, BigEnum:
 		out, ok = ConvertToUint16(value)
 	case Uint32:
 		out, ok = ConvertToUint32(value)
@@ -184,9 +180,9 @@ func ConvertValueForType(dataType DataType, value interface{}) (interface{}, err
 		out, ok = ConvertToGeoShape(value)
 	}
 	if !ok {
-		return nil, utils.StackError(nil, "Invalid data value %v for data type %s", DataTypeName[dataType])
+		err = utils.StackError(nil, "Invalid data value %v for data type %s", value, DataTypeName[dataType])
 	}
-	return out, nil
+	return
 }
 
 // ConvertToBool convert input into bool at best effort
