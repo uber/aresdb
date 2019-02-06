@@ -126,8 +126,7 @@ func (l LocalDiskStore) DeleteLogFile(table string, shard int, creationTime int6
 // TruncateLogFile is used to truncate redolog to drop the last incomplete/corrupted upsert batch.
 func (l LocalDiskStore) TruncateLogFile(table string, shard int, creationTime int64, offset int64) error {
 	redologFilePath := GetPathForRedologFile(l.rootPath, table, shard, creationTime)
-	err := os.Truncate(redologFilePath, offset)
-	return err
+	return os.Truncate(redologFilePath, offset)
 }
 
 // Snapshot files.
@@ -414,8 +413,7 @@ func (l LocalDiskStore) DeleteColumn(table string, columnID int, shard int) erro
 
 func daysSinceEpochToTime(daysSinceEpoch int) time.Time {
 	secondsSinceEpoch := int64(daysSinceEpoch) * 86400
-	timeObj := time.Unix(secondsSinceEpoch, 0).UTC()
-	return timeObj
+	return time.Unix(secondsSinceEpoch, 0).UTC()
 }
 
 func daysSinceEpochToTimeStr(daysSinceEpoch int) string {
