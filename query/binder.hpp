@@ -312,7 +312,7 @@ class InputVectorBinderBase {
               thrust::make_tuple<dataType, bool>( \
                   defaultValue, hasDefault))); \
         } \
-        return nextBinder.bind(make_column_iterator<GeoPointT>( \
+        return nextBinder.bind(make_column_iterator<dataType>( \
             indexVector, baseCounts, startCount, basePtr, nullsOffset, \
             valuesOffset, length, stepInBytes, startingIndex));
 
