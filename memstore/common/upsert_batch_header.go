@@ -128,7 +128,7 @@ func (u UpsertBatchHeader) ReadColumnOffset(col int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int(result), err
+	return int(result), nil
 }
 
 // ReadColumnType returns the type for a column.
@@ -150,7 +150,7 @@ func (u UpsertBatchHeader) ReadColumnID(col int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int(result), err
+	return int(result), nil
 }
 
 // ReadColumnFlag returns the mode for a column.
