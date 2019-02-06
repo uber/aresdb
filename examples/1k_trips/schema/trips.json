@@ -1,0 +1,16 @@
+{
+  "name": "trips",
+  "columns": [
+    {
+      "name": "time",
+      "type": "Uint32"
+    },
+    {
+      "name": "uuid",
+      "type": "UUID"
+    },
+    {
+      "location": ""
+    }
+  ]
+}
