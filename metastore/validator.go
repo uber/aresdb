@@ -2,10 +2,11 @@ package metastore
 
 import (
 	"fmt"
+	"reflect"
+
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
-	"reflect"
 )
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
@@ -61,17 +62,15 @@ func validateColumnHLLConfig(c common.Column) error {
 //	primary key columns cannot have duplicate columnID
 //	column name cannot duplicate
 func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, creation bool) (err error) {
-	var colIdDedup []bool
+	var colIDDedup []bool
 
 	nonDeletedColumnsCount := 0
 	colNameDedup := make(map[string]bool)
 	for columnID, column := range table.Columns {
 		if !column.Deleted {
 			nonDeletedColumnsCount++
-		} else {
-			if creation {
-				return ErrNewColumnWithDeletion
-			}
+		} else if creation {
+			return ErrNewColumnWithDeletion
 		}
 		if colNameDedup[column.Name] {
 			return ErrDuplicatedColumnName
@@ -86,8 +85,8 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		}
 
 		// validate hll config
-		if err := validateColumnHLLConfig(column); err != nil {
-			return err
+		if err = validateColumnHLLConfig(column); err != nil {
+			return
 		}
 
 		// time column does not allow hll config
@@ -106,7 +105,7 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 
 			err = ValidateDefaultValue(*column.DefaultValue, column.Type)
 			if err != nil {
-				return err
+				return
 			}
 		}
 	}
@@ -118,35 +117,35 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		return ErrMissingPrimaryKey
 	}
 
-	colIdDedup = make([]bool, len(table.Columns))
-	for _, colId := range table.PrimaryKeyColumns {
-		if colId >= len(table.Columns) {
+	colIDDedup = make([]bool, len(table.Columns))
+	for _, colID := range table.PrimaryKeyColumns {
+		if colID >= len(table.Columns) {
 			return ErrColumnNonExist
 		}
-		if table.Columns[colId].Deleted {
+		if table.Columns[colID].Deleted {
 			return ErrColumnDeleted
 		}
-		if colIdDedup[colId] {
+		if colIDDedup[colID] {
 			return ErrDuplicatedColumn
 		}
-		colIdDedup[colId] = true
+		colIDDedup[colID] = true
 	}
 
 	// TODO: checks for config?
 
 	if table.IsFactTable {
-		colIdDedup = make([]bool, len(table.Columns))
-		for _, sortColumnId := range table.ArchivingSortColumns {
-			if sortColumnId >= len(table.Columns) {
+		colIDDedup = make([]bool, len(table.Columns))
+		for _, sortColumnID := range table.ArchivingSortColumns {
+			if sortColumnID >= len(table.Columns) {
 				return ErrColumnNonExist
 			}
-			if table.Columns[sortColumnId].Deleted {
+			if table.Columns[sortColumnID].Deleted {
 				return ErrColumnDeleted
 			}
-			if colIdDedup[sortColumnId] {
+			if colIDDedup[sortColumnID] {
 				return ErrDuplicatedColumn
 			}
-			colIdDedup[sortColumnId] = true
+			colIDDedup[sortColumnID] = true
 		}
 	}
 
@@ -159,8 +158,8 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 //	check no changes on immutable fields (table name, type, pk)
 //	check updates on columns and sort columns are valid
 func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *common.Table) (err error) {
-	if err := v.validateIndividualSchema(newTable, false); err != nil {
-		return err
+	if err = v.validateIndividualSchema(newTable, false); err != nil {
+		return
 	}
 
 	if newTable.Name != oldTable.Name {
@@ -219,16 +218,16 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 	if len(newTable.ArchivingSortColumns) < len(oldTable.ArchivingSortColumns) {
 		return ErrIllegalChangeSortColumn
 	}
-	for i, sortColumnId := range newTable.ArchivingSortColumns {
+	for i, sortColumnID := range newTable.ArchivingSortColumns {
 		if i < len(oldTable.ArchivingSortColumns) {
-			if oldTable.ArchivingSortColumns[i] != sortColumnId {
+			if oldTable.ArchivingSortColumns[i] != sortColumnID {
 				return ErrIllegalChangeSortColumn
 			}
 		}
-		if sortColumnId >= len(newTable.Columns) {
+		if sortColumnID >= len(newTable.Columns) {
 			return ErrColumnNonExist
 		}
-		if newTable.Columns[sortColumnId].Deleted {
+		if newTable.Columns[sortColumnID].Deleted {
 			return ErrColumnDeleted
 		}
 	}
@@ -242,12 +241,12 @@ func ValidateDefaultValue(valueStr, dataTypeStr string) (err error) {
 	switch dataType {
 	// BigEnum or Small Enum ares string values, no need to validate
 	case memCom.BigEnum, memCom.SmallEnum:
-		return nil
+		return
 	default:
 		value, err := memCom.ValueFromString(valueStr, dataType)
 		if err != nil || !value.Valid {
 			return utils.StackError(err, "invalid value %s for type %s", valueStr, dataTypeStr)
 		}
 	}
-	return err
+	return
 }
