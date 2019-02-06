@@ -65,6 +65,11 @@ func ReadRequest(r *http.Request, obj interface{}) error {
 		}
 
 		if paramName, isHeaderParam = field.Tag.Lookup("header"); isHeaderParam {
+			tagValues := strings.Split(paramName, ",")
+			paramName = tagValues[0]
+			if len(tagValues) == 2 && tagValues[1] == "optional" {
+				optional = true
+			}
 			paramValue = r.Header.Get(paramName)
 		} else if paramName, isPathParam = field.Tag.Lookup("path"); isPathParam {
 			vars := mux.Vars(r)
@@ -87,7 +92,7 @@ func ReadRequest(r *http.Request, obj interface{}) error {
 			paramValue = r.Form.Get(paramName)
 		}
 
-		if isPathParam || isQueryParam {
+		if isPathParam || isQueryParam || isHeaderParam {
 			if paramValue == "" {
 				if optional {
 					continue

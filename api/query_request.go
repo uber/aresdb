@@ -36,9 +36,9 @@ type AQLRequest struct {
 	// in: query
 	DeviceChoosingTimeout int `query:"timeout,optional" json:"timeout"`
 	// in: header
-	Accept string `header:"Accept" json:"accept"`
+	Accept string `header:"Accept,optional" json:"accept"`
 	// in: header
-	Origin string `header:"Rpc-Caller" json:"origin"`
+	Origin string `header:"Rpc-Caller,optional" json:"origin"`
 	// in: body
 	Body query.AQLRequest `body:""`
 }
