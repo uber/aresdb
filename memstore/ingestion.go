@@ -206,6 +206,9 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 				return nil, nil, nil, utils.StackError(err, "Event time for row %d is null", row)
 			}
 			primaryKeyEventTime = upsertBatch.ArrivalTime
+			if primaryKeyEventTime < shard.LiveStore.ArchivingCutoffHighWatermark {
+				continue
+			}
 		} else {
 			var nowInSeconds = uint32(utils.Now().Unix())
 			var oldestRecordDays int
