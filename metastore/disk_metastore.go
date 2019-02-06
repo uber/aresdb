@@ -242,7 +242,7 @@ func (dm *diskMetaStore) GetBackfillProgressInfo(table string, shard int) (int64
 // WatchTableListEvents register a watcher to table list change events,
 // should only be called once,
 // returns ErrWatcherAlreadyExist once watcher already exists
-func (dm *diskMetaStore) WatchTableListEvents() (events <-chan []string, done chan<- struct{}, err error) {
+func (dm *diskMetaStore) WatchTableListEvents() (<-chan []string, chan<- struct{}, error) {
 	dm.Lock()
 	defer dm.Unlock()
 	if dm.tableListWatcher != nil {
@@ -257,7 +257,7 @@ func (dm *diskMetaStore) WatchTableListEvents() (events <-chan []string, done ch
 // WatchTableSchemaEvents register a watcher to table schema change events,
 // should be only called once,
 // returns ErrWatcherAlreadyExist once watcher already exists
-func (dm *diskMetaStore) WatchTableSchemaEvents() (events <-chan *common.Table, done chan<- struct{}, err error) {
+func (dm *diskMetaStore) WatchTableSchemaEvents() (<-chan *common.Table, chan<- struct{}, error) {
 	dm.Lock()
 	defer dm.Unlock()
 	if dm.tableSchemaWatcher != nil {
@@ -274,11 +274,12 @@ func (dm *diskMetaStore) WatchTableSchemaEvents() (events <-chan *common.Table, 
 // 	ErrTableDoesNotExist, ErrColumnDoesNotExist, ErrNotEnumColumn, ErrWatcherAlreadyExist.
 // if startCase is larger than the number of current existing enum cases, it will be just as if receiving from
 // latest.
-func (dm *diskMetaStore) WatchEnumDictEvents(table, column string, startCase int) (events <-chan string, done chan<- struct{}, err error) {
+func (dm *diskMetaStore) WatchEnumDictEvents(table, column string, startCase int) (<-chan string, chan<- struct{}, error) {
 	dm.Lock()
 	defer dm.Unlock()
 
-	if err = dm.enumColumnExists(table, column); err != nil {
+	err := dm.enumColumnExists(table, column)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -314,7 +315,7 @@ func (dm *diskMetaStore) WatchEnumDictEvents(table, column string, startCase int
 // WatchTableSchemaEvents register a watcher to table schema change events,
 // should be only called once,
 // returns ErrWatcherAlreadyExist once watcher already exists
-func (dm *diskMetaStore) WatchShardOwnershipEvents() (events <-chan common.ShardOwnership, done chan<- struct{}, err error) {
+func (dm *diskMetaStore) WatchShardOwnershipEvents() (<-chan common.ShardOwnership, chan<- struct{}, error) {
 	dm.Lock()
 	defer dm.Unlock()
 	if dm.shardOwnershipWatcher != nil {
@@ -398,12 +399,12 @@ func (dm *diskMetaStore) UpdateTableConfig(tableName string, config common.Table
 	}()
 
 	if err = dm.tableExists(tableName); err != nil {
-		return err
+		return
 	}
 
 	table, err = dm.readSchemaFile(tableName)
 	if err != nil {
-		return err
+		return
 	}
 
 	table.Config = config
@@ -431,7 +432,7 @@ func (dm *diskMetaStore) UpdateTable(table common.Table) (err error) {
 	}
 
 	if err = dm.writeSchemaFile(&table); err != nil {
-		return err
+		return
 	}
 
 	// append enum case for enum column with default value for new columns
@@ -500,11 +501,11 @@ func (dm *diskMetaStore) AddColumn(tableName string, column common.Column, appen
 	}()
 
 	if err = dm.tableExists(tableName); err != nil {
-		return err
+		return
 	}
 
 	if table, err = dm.readSchemaFile(tableName); err != nil {
-		return err
+		return
 	}
 	return dm.addColumn(table, column, appendToArchivingSortOrder)
 }
@@ -527,11 +528,11 @@ func (dm *diskMetaStore) UpdateColumn(tableName string, columnName string, confi
 	}()
 
 	if err = dm.tableExists(tableName); err != nil {
-		return err
+		return
 	}
 
 	if table, err = dm.readSchemaFile(tableName); err != nil {
-		return err
+		return
 	}
 
 	return dm.updateColumn(table, columnName, config)
@@ -555,11 +556,11 @@ func (dm *diskMetaStore) DeleteColumn(tableName string, columnName string) (err 
 	}()
 
 	if err = dm.tableExists(tableName); err != nil {
-		return err
+		return
 	}
 
 	if table, err = dm.readSchemaFile(tableName); err != nil {
-		return err
+		return
 	}
 
 	return dm.removeColumn(table, columnName)
@@ -791,10 +792,10 @@ func (dm *diskMetaStore) GetArchiveBatchVersion(table string, shard, batchID int
 		}
 		version, err = strconv.ParseUint(versionSeqStr[0], 10, 32)
 	}
-
 	if err != nil {
 		return 0, 0, 0, utils.StackError(err, "Failed to parse batchVersion, %s", versionSizePair[0])
 	}
+
 	batchSize, err := strconv.ParseInt(versionSizePair[1], 10, 32)
 	if err != nil {
 		return 0, 0, 0, utils.StackError(err, "Failed to parse batchSize, %s", versionSizePair[1])
@@ -870,7 +871,7 @@ func (dm *diskMetaStore) addColumn(table *common.Table, column common.Column, ap
 		return err
 	}
 
-	if err := dm.writeSchemaFile(table); err != nil {
+	if err = dm.writeSchemaFile(table); err != nil {
 		return utils.StackError(err, "Failed to write schema file, table: %s", table.Name)
 	}
 
@@ -898,7 +899,7 @@ func (dm *diskMetaStore) updateColumn(table *common.Table, columnName string, co
 	return ErrColumnDoesNotExist
 }
 
-func (dm *diskMetaStore) removeColumn(table *common.Table, columnName string) error {
+func (dm *diskMetaStore) removeColumn(table *common.Table, columnName string) (err error) {
 	for id, column := range table.Columns {
 		if column.Name == columnName {
 			if column.Deleted {
@@ -918,15 +919,15 @@ func (dm *diskMetaStore) removeColumn(table *common.Table, columnName string) er
 
 			column.Deleted = true
 			table.Columns[id] = column
-			if err := dm.writeSchemaFile(table); err != nil {
-				return err
+			if err = dm.writeSchemaFile(table); err != nil {
+				return
 			}
 
 			if column.IsEnumColumn() {
 				dm.removeEnumColumn(table.Name, column.Name)
 			}
 
-			return nil
+			return
 		}
 	}
 	return ErrColumnDoesNotExist
