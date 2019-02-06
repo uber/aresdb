@@ -24,7 +24,6 @@
 #include "query/functor.hpp"
 #include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
-#include "query/time_series_aggregate.h"
 
 namespace ares {
 
