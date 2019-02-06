@@ -21,46 +21,31 @@ template<int NInput, typename FunctorType>
 int OutputVectorBinder<NInput, FunctorType>::transformDimensionOutput(
     DimensionOutputVector output) {
   switch (output.DataType) {
+    #define BIND_DIMENSION_OUTPUT(dataType) \
+    return transform( \
+          ares::make_dimension_output_iterator<dataType>( \
+              output.DimValues, output.DimNulls));
+
     case Bool:
-      return transform(
-          ares::make_dimension_output_iterator<bool>(
-              output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(bool)
     case Int8:
-      return transform(
-          ares::make_dimension_output_iterator<int8_t>(
-              output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(int8_t)
     case Int16:
-      return transform(
-          ares::make_dimension_output_iterator<int16_t>(
-              output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(int16_t)
     case Int32:
-      return transform(
-          ares::make_dimension_output_iterator<int32_t>(
-              output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(int32_t)
     case Uint8:
-      return transform(
-          ares::make_dimension_output_iterator<uint8_t>(
-              output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(uint8_t)
     case Uint16:
-      return transform(
-          ares::make_dimension_output_iterator<
-              uint16_t>(
-              output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(uint16_t)
     case Uint32:
-      return transform(
-          ares::make_dimension_output_iterator<
-              uint32_t>(
-              output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(uint32_t)
     case Int64:
-      return transform(ares::make_dimension_output_iterator<int64_t>(
-          output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(int64_t)
     case UUID:
-      return transform(ares::make_dimension_output_iterator<UUIDT>(
-          output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(UUIDT)
     case Float32:
-      return transform(
-          ares::make_dimension_output_iterator<float_t>(
-              output.DimValues, output.DimNulls));
+      BIND_DIMENSION_OUTPUT(float_t)
     default:
       throw std::invalid_argument(
           "Unsupported data type for DimensionOutput");

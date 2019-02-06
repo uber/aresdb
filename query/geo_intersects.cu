@@ -270,51 +270,21 @@ int GeoIntersectionContext::run(uint32_t *indexVector,
                              inOrOut, cudaStream);
 
   switch (numForeignTables) {
-    case 0: {
-      IndexZipIteratorMaker<0> maker;
-      return executeRemoveIf(maker.make(indexVector,
-                                        recordIDVectors));
+    #define EXECUTE_GEO_REMOVE_IF(NumTotalForeignTables) \
+    case NumTotalForeignTables: { \
+      IndexZipIteratorMaker<NumTotalForeignTables> maker; \
+      return executeRemoveIf(maker.make(indexVector, recordIDVectors)); \
     }
-    case 1: {
-      IndexZipIteratorMaker<1> maker;
-      return executeRemoveIf(maker.make(indexVector,
-                                        recordIDVectors));
-    }
-    case 2: {
-      IndexZipIteratorMaker<2> maker;
-      return executeRemoveIf(maker.make(indexVector,
-                                        recordIDVectors));
-    }
-    case 3: {
-      IndexZipIteratorMaker<3> maker;
-      return executeRemoveIf(maker.make(indexVector,
-                                        recordIDVectors));
-    }
-    case 4: {
-      IndexZipIteratorMaker<4> maker;
-      return executeRemoveIf(maker.make(indexVector,
-                                        recordIDVectors));
-    }
-    case 5: {
-      IndexZipIteratorMaker<5> maker;
-      return executeRemoveIf(maker.make(indexVector,
-                                        recordIDVectors));
-    }
-    case 6: {
-      IndexZipIteratorMaker<6> maker;
-      return executeRemoveIf(maker.make(indexVector,
-                                        recordIDVectors));
-    }
-    case 7: {
-      IndexZipIteratorMaker<7> maker;
-      return executeRemoveIf(maker.make(indexVector,
-                                        recordIDVectors));
-    }
-    case 8: {
-      IndexZipIteratorMaker<8> maker;
-      return executeRemoveIf(maker.make(indexVector,
-                                        recordIDVectors));
-    }
+
+    EXECUTE_GEO_REMOVE_IF(0)
+    EXECUTE_GEO_REMOVE_IF(1)
+    EXECUTE_GEO_REMOVE_IF(2)
+    EXECUTE_GEO_REMOVE_IF(3)
+    EXECUTE_GEO_REMOVE_IF(4)
+    EXECUTE_GEO_REMOVE_IF(5)
+    EXECUTE_GEO_REMOVE_IF(6)
+    EXECUTE_GEO_REMOVE_IF(7)
+    EXECUTE_GEO_REMOVE_IF(8)
     default:throw std::invalid_argument("only support up to 8 foreign tables");
   }
 }

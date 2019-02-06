@@ -24,6 +24,7 @@
 #include "query/functor.hpp"
 #include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
+#include "time_series_aggregate.h"
 
 namespace ares {
 
@@ -103,41 +104,38 @@ class InputVectorBinderBase {
         nextBinder(context, inputVectors, indexVector, baseCounts, startCount);
 
     InputVector input = inputVectors[NumVectors - NumUnboundIterators];
+
+    #define BIND_CONSTANT_INPUT(defaultValue, isValid) \
+      return nextBinder.bind( \
+            boundInputIterators..., \
+            make_constant_iterator( \
+                defaultValue, isValid));
+
     if (input.Type == ConstantInput) {
       ConstantVector constant = input.Vector.Constant;
       if (constant.DataType == ConstInt) {
-        return nextBinder.bind(
-            boundInputIterators...,
-            make_constant_iterator(
-                constant.Value.IntVal, constant.IsValid));
+        BIND_CONSTANT_INPUT(constant.Value.IntVal, constant.IsValid)
       } else if (constant.DataType == ConstFloat) {
-        return nextBinder.bind(
-            boundInputIterators...,
-            make_constant_iterator(constant.Value.FloatVal,
-                                   constant.IsValid));
+        BIND_CONSTANT_INPUT(constant.Value.FloatVal, constant.IsValid)
       }
     } else if (input.Type == ScratchSpaceInput) {
       ScratchSpaceVector scratchSpace = input.Vector.ScratchSpace;
       uint32_t nullsOffset = scratchSpace.NullsOffset;
+
+      #define BIND_SCRATCH_SPACE_INPUT(dataType) \
+      return nextBinder.bind( \
+              boundInputIterators..., \
+              make_scratch_space_input_iterator<dataType>( \
+                  scratchSpace.Values, \
+                  nullsOffset));
+
       switch (scratchSpace.DataType) {
         case Int32:
-          return nextBinder.bind(
-              boundInputIterators...,
-              make_scratch_space_input_iterator<int32_t>(
-                  scratchSpace.Values,
-                  nullsOffset));
+          BIND_SCRATCH_SPACE_INPUT(int32_t)
         case Uint32:
-          return nextBinder.bind(
-              boundInputIterators...,
-              make_scratch_space_input_iterator<uint32_t>(
-                  scratchSpace.Values,
-                  nullsOffset));
+          BIND_SCRATCH_SPACE_INPUT(uint32_t)
         case Float32:
-          return nextBinder.bind(
-              boundInputIterators...,
-              make_scratch_space_input_iterator<float_t>(
-                  scratchSpace.Values,
-                  nullsOffset));
+          BIND_SCRATCH_SPACE_INPUT(float_t)
         default:
           throw std::invalid_argument(
               "Unsupported data type for ScratchSpaceInput");
@@ -157,98 +155,44 @@ class InputVectorBinderBase {
       bool hasDefault = input.Vector.ForeignVP.DefaultValue.HasDefault;
       DefaultValue defaultValueStruct = input.Vector.ForeignVP.DefaultValue;
       uint8_t stepInBytes = getStepInBytes(dataType);
-      int res;
 
       switch (dataType) {
+        #define BIND_FOREIGN_COLUMN_INPUT(defaultValue, dataType) \
+          ForeignTableIterator<dataType> *vpIters = \
+            prepareForeignTableIterators(numBatches, vpSlices, stepInBytes, \
+              hasDefault, defaultValue, context.getStream()); \
+          int res = nextBinder.bind(boundInputIterators..., \
+                                RecordIDJoinIterator<dataType>( \
+                                    recordIDs, numBatches, baseBatchID, \
+                                    vpIters, numRecordsInLastBatch, \
+                                    timezoneLookup, timezoneLookupSize)); \
+          release(vpIters); \
+          return res;
+
         case Bool: {
-          ForeignTableIterator<bool> *vpIters = prepareForeignTableIterators(
-              numBatches,
-              vpSlices,
-              stepInBytes,
-              hasDefault,
-              defaultValueStruct.Value.BoolVal,
-              context.getStream());
-          res =
-              nextBinder.bind(boundInputIterators...,
-                              RecordIDJoinIterator<bool>(
-                                  recordIDs,
-                                  numBatches,
-                                  baseBatchID,
-                                  vpIters,
-                                  numRecordsInLastBatch,
-                                  timezoneLookup, timezoneLookupSize));
-          release(vpIters);
-          break;
+          BIND_FOREIGN_COLUMN_INPUT(defaultValueStruct.Value.BoolVal, bool)
         }
         case Int8:
         case Int16:
         case Int32: {
-          ForeignTableIterator<int32_t> *vpIters = prepareForeignTableIterators(
-              numBatches,
-              vpSlices,
-              stepInBytes,
-              hasDefault,
-              defaultValueStruct.Value.Int32Val,
-              context.getStream());
-          res = nextBinder.bind(boundInputIterators...,
-                                RecordIDJoinIterator<int32_t>(
-                                    recordIDs,
-                                    numBatches,
-                                    baseBatchID,
-                                    vpIters,
-                                    numRecordsInLastBatch,
-                                    timezoneLookup, timezoneLookupSize));
-          release(vpIters);
-          break;
+          BIND_FOREIGN_COLUMN_INPUT(
+              defaultValueStruct.Value.Int32Val, int32_t)
         }
         case Uint8:
         case Uint16:
         case Uint32: {
-          ForeignTableIterator<uint32_t>
-              *vpIters = prepareForeignTableIterators(
-              numBatches,
-              vpSlices,
-              stepInBytes,
-              hasDefault,
-              defaultValueStruct.Value.Uint32Val,
-              context.getStream());
-          res = nextBinder.bind(boundInputIterators...,
-                                RecordIDJoinIterator<uint32_t>(
-                                    recordIDs,
-                                    numBatches,
-                                    baseBatchID,
-                                    vpIters,
-                                    numRecordsInLastBatch,
-                                    timezoneLookup, timezoneLookupSize));
-          release(vpIters);
-          break;
+          BIND_FOREIGN_COLUMN_INPUT(
+              defaultValueStruct.Value.Uint32Val, uint32_t)
         }
         case Float32: {
-          ForeignTableIterator<float_t> *vpIters = prepareForeignTableIterators(
-              numBatches,
-              vpSlices,
-              stepInBytes,
-              hasDefault,
-              defaultValueStruct.Value.FloatVal,
-              context.getStream());
-          res = nextBinder.bind(
-              boundInputIterators...,
-              RecordIDJoinIterator<float_t>(recordIDs,
-                                            numBatches,
-                                            baseBatchID,
-                                            vpIters,
-                                            numRecordsInLastBatch,
-                                            timezoneLookup,
-                                            timezoneLookupSize));
-          release(vpIters);
-          break;
+          BIND_FOREIGN_COLUMN_INPUT(
+              defaultValueStruct.Value.FloatVal, float_t)
         }
         default:
           throw std::invalid_argument(
               "Unsupported data type for VectorPartyInput: " +
                   std::to_string(__LINE__));
       }
-      return res;
     }
 
     VectorPartySlice inputVP = input.Vector.VP;
@@ -259,21 +203,17 @@ class InputVectorBinderBase {
     if (isConstant) {
       switch (inputVP.DataType) {
         case Bool:
-          return nextBinder.bind(boundInputIterators..., make_constant_iterator(
-              defaultValue.Value.BoolVal, hasDefault));
+          BIND_CONSTANT_INPUT(defaultValue.Value.BoolVal, hasDefault)
         case Int8:
         case Int16:
         case Int32:
-          return nextBinder.bind(boundInputIterators..., make_constant_iterator(
-              defaultValue.Value.Int32Val, hasDefault));
+          BIND_CONSTANT_INPUT(defaultValue.Value.Int32Val, hasDefault)
         case Uint8:
         case Uint16:
         case Uint32:
-          return nextBinder.bind(boundInputIterators..., make_constant_iterator(
-              defaultValue.Value.Uint32Val, hasDefault));
+          BIND_CONSTANT_INPUT(defaultValue.Value.Uint32Val, hasDefault)
         case Float32:
-          return nextBinder.bind(boundInputIterators..., make_constant_iterator(
-              defaultValue.Value.FloatVal, hasDefault));
+          BIND_CONSTANT_INPUT(defaultValue.Value.FloatVal, hasDefault)
         default:
           throw std::invalid_argument(
               "Unsupported data type for VectorPartyInput: " +
@@ -289,54 +229,29 @@ class InputVectorBinderBase {
     uint8_t stepInBytes = getStepInBytes(inputVP.DataType);
     uint32_t length = inputVP.Length;
     switch (inputVP.DataType) {
-      case Bool:
-        return nextBinder.bind(boundInputIterators...,
-                               make_column_iterator<bool>(indexVector,
-                                                          baseCounts,
-                                                          startCount,
-                                                          basePtr,
-                                                          nullsOffset,
-                                                          valuesOffset,
-                                                          length,
-                                                          stepInBytes,
+      #define BIND_COLUMN_INPUT(dataType) \
+        return nextBinder.bind(boundInputIterators..., \
+                               make_column_iterator<dataType>(indexVector, \
+                                                          baseCounts, \
+                                                          startCount, \
+                                                          basePtr, \
+                                                          nullsOffset, \
+                                                          valuesOffset, \
+                                                          length, \
+                                                          stepInBytes,\
                                                           startingIndex));
+      case Bool:
+        BIND_COLUMN_INPUT(bool)
       case Int8:
       case Int16:
       case Int32:
-        return nextBinder.bind(boundInputIterators...,
-                               make_column_iterator<int32_t>(indexVector,
-                                                             baseCounts,
-                                                             startCount,
-                                                             basePtr,
-                                                             nullsOffset,
-                                                             valuesOffset,
-                                                             length,
-                                                             stepInBytes,
-                                                             startingIndex));
+        BIND_COLUMN_INPUT(int32_t)
       case Uint8:
       case Uint16:
       case Uint32:
-        return nextBinder.bind(boundInputIterators...,
-                               make_column_iterator<uint32_t>(indexVector,
-                                                              baseCounts,
-                                                              startCount,
-                                                              basePtr,
-                                                              nullsOffset,
-                                                              valuesOffset,
-                                                              length,
-                                                              stepInBytes,
-                                                              startingIndex));
+        BIND_COLUMN_INPUT(uint32_t)
       case Float32:
-        return nextBinder.bind(boundInputIterators...,
-                               make_column_iterator<float_t>(indexVector,
-                                                             baseCounts,
-                                                             startCount,
-                                                             basePtr,
-                                                             nullsOffset,
-                                                             valuesOffset,
-                                                             length,
-                                                             stepInBytes,
-                                                             startingIndex));
+        BIND_COLUMN_INPUT(float_t)
       default:
         throw std::invalid_argument(
             "Unsupported data type for VectorPartyInput: " +
@@ -388,34 +303,28 @@ class InputVectorBinderBase {
       uint8_t startingIndex = inputVP.StartingIndex;
       uint8_t stepInBytes = getStepInBytes(inputVP.DataType);
       uint32_t length = inputVP.Length;
-      if (dataType == GeoPoint) {
-        // Treat mode 0 as constant vector.
-        if (basePtr == nullptr) {
-          return nextBinder.bind(thrust::make_constant_iterator(
-              thrust::make_tuple<GeoPointT, bool>(
-                  defaultValue.Value.GeoPointVal, hasDefault)));
-        }
-        return nextBinder.bind(make_column_iterator<GeoPointT>(
-            indexVector, baseCounts, startCount, basePtr, nullsOffset,
+      // This macro will bind column type with width > 4 bytes (GeoPoint, UUID
+      // int64). Since our scratch space is always 4 bytes (int32, uint32,
+      // float), parent nodes for those wider types must be a root node.
+
+      #define BIND_WIDER_COLUMN_INPUT(dataType, defaultValue) \
+      if (basePtr == nullptr) { \
+          return nextBinder.bind(thrust::make_constant_iterator( \
+              thrust::make_tuple<dataType, bool>( \
+                  defaultValue, hasDefault))); \
+        } \
+        return nextBinder.bind(make_column_iterator<GeoPointT>( \
+            indexVector, baseCounts, startCount, basePtr, nullsOffset, \
             valuesOffset, length, stepInBytes, startingIndex));
-      } else if (dataType == UUID) {
-        if (basePtr == nullptr) {
-          return nextBinder.bind(
-              thrust::make_constant_iterator(thrust::make_tuple<UUIDT, bool>(
-                  defaultValue.Value.UUIDVal, hasDefault)));
-        }
-        return nextBinder.bind(make_column_iterator<UUIDT>(
-            indexVector, baseCounts, startCount, basePtr, nullsOffset,
-            valuesOffset, length, stepInBytes, startingIndex));
-      } else if (dataType == Int64) {
-        if (basePtr == nullptr) {
-          return nextBinder.bind(
-              thrust::make_constant_iterator(thrust::make_tuple<int64_t, bool>(
-                  defaultValue.Value.Int64Val, hasDefault)));
-        }
-        return nextBinder.bind(make_column_iterator<int64_t>(
-            indexVector, baseCounts, startCount, basePtr, nullsOffset,
-            valuesOffset, length, stepInBytes, startingIndex));
+
+      switch (dataType){
+        case GeoPoint:
+          BIND_WIDER_COLUMN_INPUT(GeoPointT, defaultValue.Value.GeoPointVal)
+        case UUID:
+          BIND_WIDER_COLUMN_INPUT(UUIDT, defaultValue.Value.UUIDVal)
+        case Int64:
+          BIND_WIDER_COLUMN_INPUT(int64_t, defaultValue.Value.Int64Val)
+        default: break;
       }
     } else if (input.Type == ForeignColumnInput) {
       RecordID *recordIDs = input.Vector.ForeignVP.RecordIDs;
@@ -428,24 +337,25 @@ class InputVectorBinderBase {
       bool hasDefault = input.Vector.ForeignVP.DefaultValue.HasDefault;
       DefaultValue defaultValueStruct = input.Vector.ForeignVP.DefaultValue;
       uint8_t stepInBytes = getStepInBytes(dataType);
-      if (dataType == UUID) {
-        ForeignTableIterator<UUIDT> *vpIters = prepareForeignTableIterators(
-            numBatches, vpSlices, stepInBytes, hasDefault,
-            defaultValueStruct.Value.UUIDVal, context.getStream());
-        int res = nextBinder.bind(RecordIDJoinIterator<UUIDT>(
-            recordIDs, numBatches, baseBatchID, vpIters, numRecordsInLastBatch,
-            nullptr, 0));
-        release(vpIters);
-        return res;
-      } else if (dataType == Int64) {
-        ForeignTableIterator<int64_t> *vpIters = prepareForeignTableIterators(
-            numBatches, vpSlices, stepInBytes, hasDefault,
-            defaultValueStruct.Value.Int64Val, context.getStream());
-        int res = nextBinder.bind(RecordIDJoinIterator<int64_t>(
-            recordIDs, numBatches, baseBatchID, vpIters, numRecordsInLastBatch,
-            nullptr, 0));
-        release(vpIters);
-        return res;
+
+      #define BIND_WIDER_FOREIGN_COLUMN_INPUT(defaultValue, dataType) { \
+          ForeignTableIterator<dataType> *vpIters = \
+            prepareForeignTableIterators(numBatches, vpSlices, stepInBytes, \
+              hasDefault, defaultValue, context.getStream()); \
+          int res = nextBinder.bind(RecordIDJoinIterator<dataType>( \
+                                    recordIDs, numBatches, baseBatchID, \
+                                    vpIters, numRecordsInLastBatch, \
+                                    nullptr, 0)); \
+          release(vpIters); \
+          return res; \
+          }
+
+      switch (dataType){
+        case UUID: BIND_WIDER_FOREIGN_COLUMN_INPUT(
+            defaultValueStruct.Value.UUIDVal, UUIDT)
+        case Int64: BIND_WIDER_FOREIGN_COLUMN_INPUT(
+            defaultValueStruct.Value.Int64Val, int64_t)
+        default: break;
       }
     }
     return bindGeneric();

@@ -182,60 +182,23 @@ template<typename InputIterator>
 int FilterContext<FunctorType>::run(uint32_t *indexVector,
                                     InputIterator inputIterator) {
   switch (numForeignTables) {
-    case 0: {
-      IndexZipIteratorMaker<0> maker;
-      return executeRemoveIf(inputIterator,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+    #define EXECUTE_UNARY_REMOVE_IF(NumTotalForeignTables) \
+    case NumTotalForeignTables: { \
+      IndexZipIteratorMaker<NumTotalForeignTables> maker; \
+      return executeRemoveIf(inputIterator, \
+                           maker.make(indexVector, \
+                                      foreignTableRecordIDVectors)); \
     }
-    case 1: {
-      IndexZipIteratorMaker<1> maker;
-      return executeRemoveIf(inputIterator,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 2: {
-      IndexZipIteratorMaker<2> maker;
-      return executeRemoveIf(inputIterator,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 3: {
-      IndexZipIteratorMaker<3> maker;
-      return executeRemoveIf(inputIterator,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 4: {
-      IndexZipIteratorMaker<4> maker;
-      return executeRemoveIf(inputIterator,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 5: {
-      IndexZipIteratorMaker<5> maker;
-      return executeRemoveIf(inputIterator,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 6: {
-      IndexZipIteratorMaker<6> maker;
-      return executeRemoveIf(inputIterator,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 7: {
-      IndexZipIteratorMaker<7> maker;
-      return executeRemoveIf(inputIterator,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 8: {
-      IndexZipIteratorMaker<8> maker;
-      return executeRemoveIf(inputIterator,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
+
+    EXECUTE_UNARY_REMOVE_IF(0)
+    EXECUTE_UNARY_REMOVE_IF(1)
+    EXECUTE_UNARY_REMOVE_IF(2)
+    EXECUTE_UNARY_REMOVE_IF(3)
+    EXECUTE_UNARY_REMOVE_IF(4)
+    EXECUTE_UNARY_REMOVE_IF(5)
+    EXECUTE_UNARY_REMOVE_IF(6)
+    EXECUTE_UNARY_REMOVE_IF(7)
+    EXECUTE_UNARY_REMOVE_IF(8)
     default:throw std::invalid_argument("only support up to 8 foreign tables");
   }
 }
@@ -279,70 +242,22 @@ int FilterContext<FunctorType>::run(uint32_t *indexVector,
                                     LHSIterator lhsIter,
                                     RHSIterator rhsIter) {
   switch (numForeignTables) {
-    case 0: {
-      IndexZipIteratorMaker<0> maker;
-      return executeRemoveIf(lhsIter,
-                             rhsIter,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
+    #define EXECUTE_BINARY_REMOVE_IF(NumTotalForeignTables) \
+    case NumTotalForeignTables: { \
+      IndexZipIteratorMaker<NumTotalForeignTables> maker; \
+      return executeRemoveIf(lhsIter, rhsIter, maker.make(indexVector, \
+                               foreignTableRecordIDVectors)); \
     }
-    case 1: {
-      IndexZipIteratorMaker<1> maker;
-      return executeRemoveIf(lhsIter,
-                             rhsIter,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 2: {
-      IndexZipIteratorMaker<2> maker;
-      return executeRemoveIf(lhsIter,
-                             rhsIter,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 3: {
-      IndexZipIteratorMaker<3> maker;
-      return executeRemoveIf(lhsIter,
-                             rhsIter,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 4: {
-      IndexZipIteratorMaker<4>
-          maker;
-      return executeRemoveIf(lhsIter,
-                             rhsIter,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 5: {
-      IndexZipIteratorMaker<5> maker;
-      return executeRemoveIf(lhsIter,
-                             rhsIter,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 6: {
-      IndexZipIteratorMaker<6> maker;
-      return executeRemoveIf(lhsIter,
-                             rhsIter,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 7: {
-      IndexZipIteratorMaker<7> maker;
-      return executeRemoveIf(lhsIter,
-                             rhsIter,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
-    case 8: {
-      IndexZipIteratorMaker<8> maker;
-      return executeRemoveIf(lhsIter,
-                             rhsIter,
-                             maker.make(indexVector,
-                                        foreignTableRecordIDVectors));
-    }
+
+    EXECUTE_BINARY_REMOVE_IF(0)
+    EXECUTE_BINARY_REMOVE_IF(1)
+    EXECUTE_BINARY_REMOVE_IF(2)
+    EXECUTE_BINARY_REMOVE_IF(3)
+    EXECUTE_BINARY_REMOVE_IF(4)
+    EXECUTE_BINARY_REMOVE_IF(5)
+    EXECUTE_BINARY_REMOVE_IF(6)
+    EXECUTE_BINARY_REMOVE_IF(7)
+    EXECUTE_BINARY_REMOVE_IF(8)
     default:throw std::invalid_argument("only support up to 8 foreign tables");
   }
 }

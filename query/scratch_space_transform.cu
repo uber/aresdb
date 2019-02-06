@@ -21,20 +21,16 @@ template<int NInput, typename FunctorType>
 int OutputVectorBinder<NInput, FunctorType>::transformScratchSpaceOutput(
     ScratchSpaceVector output) {
   switch (output.DataType) {
-    case Int32:
-      return transform(ares::make_scratch_space_output_iterator(
-          reinterpret_cast<int32_t *>(output.Values),
+    #define BIND_SCRATCH__SPACE_OUTPUT(dataType) \
+    return transform(ares::make_scratch_space_output_iterator( \
+          reinterpret_cast<dataType *>(output.Values), \
           output.NullsOffset));
-    case Uint32:
-      return transform(ares::make_scratch_space_output_iterator(
-          reinterpret_cast<uint32_t *>(output.Values),
-          output.NullsOffset));
-    case Float32:
-      return transform(ares::make_scratch_space_output_iterator(
-          reinterpret_cast<float_t *>(output.Values),
-          output.NullsOffset));
-    default:
-      throw std::invalid_argument(
+
+    case Int32:BIND_SCRATCH__SPACE_OUTPUT(int32_t)
+    case Uint32:BIND_SCRATCH__SPACE_OUTPUT(uint32_t)
+    case Float32:BIND_SCRATCH__SPACE_OUTPUT(float_t)
+    default:throw
+      std::invalid_argument(
           "Unsupported data type for ScratchSpaceOutput");
   }
 }

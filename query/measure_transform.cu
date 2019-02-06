@@ -20,38 +20,20 @@ template<int NInput, typename FunctorType>
 int OutputVectorBinder<NInput, FunctorType>::transformMeasureOutput(
     MeasureOutputVector output) {
   switch (output.DataType) {
-    case Int32:
-      return transform(
-          ares::make_measure_output_iterator(
-              reinterpret_cast<int32_t *>(output.Values),
-              indexVector, baseCounts,
+    #define BIND_MEASURE_OUTPUT(dataType) \
+    return transform( \
+          ares::make_measure_output_iterator( \
+              reinterpret_cast<dataType *>(output.Values), \
+              indexVector, baseCounts, \
               output.AggFunc));
-    case Uint32:
-      return transform(
-          ares::make_measure_output_iterator(
-              reinterpret_cast<uint32_t *>(output.Values),
-              indexVector, baseCounts,
-              output.AggFunc));
-    case Float32:
-      return transform(
-          ares::make_measure_output_iterator(
-              reinterpret_cast<float_t *>(output.Values),
-              indexVector, baseCounts,
-              output.AggFunc));
-    case Int64:
-      return transform(
-          ares::make_measure_output_iterator(
-              reinterpret_cast<int64_t *>(output.Values),
-              indexVector, baseCounts,
-              output.AggFunc));
-    case Float64:
-      return transform(
-          ares::make_measure_output_iterator(
-              reinterpret_cast<double_t *>(output.Values),
-              indexVector, baseCounts,
-              output.AggFunc));
-    default:
-      throw std::invalid_argument(
+
+    case Int32:BIND_MEASURE_OUTPUT(int32_t)
+    case Uint32:BIND_MEASURE_OUTPUT(uint32_t)
+    case Float32:BIND_MEASURE_OUTPUT(float_t)
+    case Int64:BIND_MEASURE_OUTPUT(int64_t)
+    case Float64:BIND_MEASURE_OUTPUT(double_t)
+    default:throw
+      std::invalid_argument(
           "Unsupported data type for MeasureOutput");
   }
 }
