@@ -205,7 +205,11 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 			if isFactTable && !allowMissingEventTime {
 				return nil, nil, nil, utils.StackError(err, "Event time for row %d is null", row)
 			}
-			primaryKeyEventTime = upsertBatch.ArrivalTime
+			// event with invalid event time will be ignored
+			// once arrival time is older than archiving cutoff.
+			if primaryKeyEventTime = upsertBatch.ArrivalTime; primaryKeyEventTime < shard.LiveStore.ArchivingCutoffHighWatermark {
+				continue
+			}
 		} else {
 			var nowInSeconds = uint32(utils.Now().Unix())
 			var oldestRecordDays int
