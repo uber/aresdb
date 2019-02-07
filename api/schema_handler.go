@@ -128,6 +128,8 @@ func (handler *SchemaHandler) GetTable(w http.ResponseWriter, r *http.Request) {
 func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 
 	var addTableRequest AddTableRequest
+	// add default table configs first
+	addTableRequest.Body.Config = metastore.DefaultTableConfig
 	err := ReadRequest(r, &addTableRequest)
 	if err != nil {
 		RespondWithBadRequest(w, err)
