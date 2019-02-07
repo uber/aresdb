@@ -1,0 +1,29 @@
+{
+  "queries": [
+    {
+      "table": "trips",
+      "measures": [
+        {
+          "alias": "value",
+          "sqlExpression": "count(*)",
+          "rowFilters": [
+            "status='completed'"
+          ]
+        }
+      ],
+      "timeFilter": {
+        "column": "request_at",
+        "from": "24 hours ago",
+        "to": "this quarter-hour"
+      },
+      "dimensions": [
+        {
+          "alias": "ts",
+          "sqlExpression": "request_at",
+          "timeBucketizer": "hour"
+        }
+      ],
+      "joins": []
+    }
+  ]
+}

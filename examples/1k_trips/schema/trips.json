@@ -20,6 +20,10 @@
     {
       "name": "fare",
       "type": "Float32"
+    },
+    {
+      "name": "driver_uuid",
+      "type": "UUID"
     }
   ],
   "primaryKeyColumns": [1],
