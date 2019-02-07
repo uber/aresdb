@@ -24,5 +24,17 @@
   ],
   "primaryKeyColumns": [1],
   "archivingSortColumns": [2,3],
+  "config": {
+    "archivingDelayMinutes": 1440,
+    "archivingIntervalMinutes": 180,
+    "backfillIntervalMinutes": 60,
+    "backfillMaxBufferSize": 1048576,
+    "backfillStoreBatchSize": 20000,
+    "backfillThresholdInBytes": 20971520,
+    "batchSize": 2097152,
+    "maxRedoLogFileSize": 1073741824,
+    "recordRetentionInDays": 3,
+    "redoLogRotationInterval": 10800
+  },
   "isFactTable": true
 }
