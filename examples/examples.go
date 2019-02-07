@@ -119,7 +119,7 @@ func makeQuery(queryName, queryPath string) {
 	file, err := os.Open(queryPath)
 	panicIfErr(err)
 
-	fmt.Printf("making query %s\n ...", queryName)
+	fmt.Printf("making query %s ... \n", queryName)
 	resp, err := http.Post(fmt.Sprintf("http://%s:%d/query/aql", viper.GetString(hostKeyName), viper.GetInt(portKeyName)), "application/json", file)
 	panicIfErr(err)
 	if resp.StatusCode != http.StatusOK {
@@ -132,7 +132,7 @@ func makeQuery(queryName, queryPath string) {
 	prettJSON := &bytes.Buffer{}
 	panicIfErr(json.Indent(prettJSON, result, "", "\t"))
 
-	fmt.Println("Result: \n", prettJSON.String())
+	fmt.Println(prettJSON.String())
 }
 
 func createTable(tableName string, tableSchemaPath string) {
