@@ -50,7 +50,7 @@ var _ = ginkgo.Describe("archiving", func() {
 	shard := NewTableShard(&TableSchema{
 		Schema: metaCom.Table{
 			Name: table,
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				ArchivingDelayMinutes:    500,
 				ArchivingIntervalMinutes: 300,
 			},
@@ -127,7 +127,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardMap[shardID].LiveStore.RedoLogManager.MaxEventTimePerFile = make(map[int64]uint32)
 		shardMap[shardID].LiveStore.RedoLogManager.MaxEventTimePerFile[1] = 1
 		// make purge to pass
-		shardMap[shardID].LiveStore.BackfillManager = NewBackfillManager(table, shardID, metaCom.TableConfig{
+		shardMap[shardID].LiveStore.BackfillManager = NewBackfillManager(table, shardID, &metaCom.TableConfig{
 			BackfillMaxBufferSize:    1 << 32,
 			BackfillThresholdInBytes: 1 << 21,
 		})
@@ -347,7 +347,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		liveStore := &LiveStore{
 			tableSchema: &TableSchema{
 				Schema: metaCom.Table{
-					Config: metaCom.TableConfig{
+					Config: &metaCom.TableConfig{
 						AllowMissingEventTime: true,
 					},
 				},

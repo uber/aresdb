@@ -100,7 +100,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 			testColumn4,
 			testColumn5,
 		},
-		Config: common.TableConfig{
+		Config: &common.TableConfig{
 			InitialPrimaryKeyNumBuckets: 0,
 			BatchSize:                   2097152,
 			ArchivingDelayMinutes:       1440,
@@ -543,7 +543,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 			BatchSize:                10,
 			SnapshotThreshold:        10,
 		}
-		err := diskMetaStore.UpdateTableConfig(testTableA.Name, updateConfig)
+		err := diskMetaStore.UpdateTableConfig(testTableA.Name, &updateConfig)
 		Ω(err).Should(BeNil())
 
 		var newTable common.Table

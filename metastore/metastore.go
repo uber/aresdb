@@ -103,7 +103,7 @@ type TableSchemaMutator interface {
 	TableSchemaReader
 	CreateTable(table *common.Table) error
 	DeleteTable(name string) error
-	UpdateTableConfig(table string, config common.TableConfig) error
+	UpdateTableConfig(table string, config *common.TableConfig) error
 	UpdateTable(table common.Table) error
 
 	// A subset of newly added columns can be appended to the end of

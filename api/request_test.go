@@ -7,9 +7,9 @@ import (
 	"bytes"
 )
 
-var _ = ginkgo.Describe("api request", func() {
+var _ = ginkgo.Describe("ReadRequest function", func() {
 
-	ginkgo.It("ReadRequest should work", func() {
+	ginkgo.It("it should work for api request", func() {
 		query := `
 	{
       "queries":[
@@ -47,6 +47,41 @@ var _ = ginkgo.Describe("api request", func() {
 		err = ReadRequest(r, &aqlR)
 		Ω(err).Should(BeNil())
 		Ω(aqlR.Accept).Should(Equal(ContentTypeHyperLogLog))
+	})
+
+	ginkgo.It("it should work for schema requests", func() {
+		query := `
+	{
+        "name": "some_table",
+        "columns": [
+            {
+                "name": "event_time_field",
+                "type": "Uint32",
+                "config": {
+                    "preloadingDays": 52
+                }
+            },
+            {
+                "name": "uuid_field",
+                "type": "UUID",
+                "config": {}
+            }
+        ],
+        "primaryKeyColumns": [
+            1
+        ],
+        "isFactTable": true,
+        "archivingSortColumns": [],
+        "version": 0
+    }
+	`
+		bts := []byte(query)
+		r, err := http.NewRequest(http.MethodPost, "localhost:19374", bytes.NewBuffer(bts))
+		Ω(err).Should(BeNil())
+		var addTableRequest AddTableRequest
+		err = ReadRequest(r, &addTableRequest)
+		Ω(err).Should(BeNil())
+		Ω(addTableRequest.Body.Config).Should(BeNil())
 	})
 
 })

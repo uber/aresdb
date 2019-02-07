@@ -46,6 +46,7 @@ var _ = ginkgo.Describe("EnumHandler", func() {
 				Type: "Int32",
 			},
 		},
+		Config: &metaCom.TableConfig{},
 	}
 	var testTableSchema = memstore.TableSchema{
 		EnumDicts: map[string]memstore.EnumDict{

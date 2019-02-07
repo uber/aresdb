@@ -58,7 +58,7 @@ var _ = ginkgo.Describe("job manager", func() {
 	shard1 := NewTableShard(&TableSchema{
 		Schema: metaCom.Table{
 			Name: table1,
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				ArchivingDelayMinutes:    3 * 60, // 3 hours
 				ArchivingIntervalMinutes: 30,     // 30 minutes
 				BackfillIntervalMinutes:  10,     // 10 minutes
@@ -78,7 +78,7 @@ var _ = ginkgo.Describe("job manager", func() {
 	shard2 := NewTableShard(&TableSchema{
 		Schema: metaCom.Table{
 			Name: table1,
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				ArchivingDelayMinutes:    3 * 60, // 3 hours
 				ArchivingIntervalMinutes: 30,     // 30 minutes
 				BackfillIntervalMinutes:  30,     // 30 minutes
@@ -100,7 +100,7 @@ var _ = ginkgo.Describe("job manager", func() {
 	shard3 := NewTableShard(&TableSchema{
 		Schema: metaCom.Table{
 			Name: table2,
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				ArchivingDelayMinutes:    3 * 60, // 3 hours
 				ArchivingIntervalMinutes: 30,     // 30 minutes
 				BackfillIntervalMinutes:  30,     // 30 minutes
@@ -123,7 +123,7 @@ var _ = ginkgo.Describe("job manager", func() {
 	shard4 := NewTableShard(&TableSchema{
 		Schema: metaCom.Table{
 			Name: table3,
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				SnapshotThreshold:       100,
 				SnapshotIntervalMinutes: 5,
 			},

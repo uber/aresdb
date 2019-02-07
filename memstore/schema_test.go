@@ -100,6 +100,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 			testColumn3,
 		},
 		PrimaryKeyColumns: []int{1},
+		Config: &metaCom.TableConfig{},
 	}
 
 	testNewTable := metaCom.Table{
@@ -111,6 +112,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 			testColumn4,
 		},
 		PrimaryKeyColumns: []int{1},
+		Config: &metaCom.TableConfig{},
 	}
 
 	testModifiedTable := metaCom.Table{
@@ -122,6 +124,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 			testColumn4,
 		},
 		PrimaryKeyColumns: []int{1},
+		Config: &metaCom.TableConfig{},
 	}
 
 	testTableWithDefaultValue := metaCom.Table{
@@ -134,6 +137,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 			testColumn8,
 		},
 		PrimaryKeyColumns: []int{1},
+		Config: &metaCom.TableConfig{},
 	}
 
 	testColumn2EnumCases := []string{"a", "b", "c"}

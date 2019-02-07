@@ -416,7 +416,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{1},
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				BatchSize: 10,
 			},
 		}
@@ -570,7 +570,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 					},
 				},
 			},
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				BatchSize: 10,
 			},
 		}
@@ -719,7 +719,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 					Name: "c3",
 				},
 			},
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				BatchSize: 10,
 			},
 		}
@@ -828,7 +828,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 					},
 				},
 			},
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				BatchSize: 10,
 			},
 		}
@@ -916,7 +916,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				BatchSize:                   10,
 				InitialPrimaryKeyNumBuckets: 10,
 			},

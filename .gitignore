@@ -16,3 +16,5 @@ ares-root
 default.yaml
 bower_components
 node_modules
+bin/
+lib/

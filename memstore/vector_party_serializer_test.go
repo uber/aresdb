@@ -235,6 +235,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 					Type: "UUID",
 				},
 			},
+			Config: &metaCom.TableConfig{},
 		})
 		diskStore := &mocks.DiskStore{}
 

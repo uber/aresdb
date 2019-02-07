@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 
 	"github.com/gorilla/mux"
@@ -135,6 +136,23 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newTable := addTableRequest.Body
+
+	if newTable.Config == nil {
+		newTable.Config = &metaCom.TableConfig{
+			BatchSize:                metastore.DefaultBatchSize,
+			ArchivingIntervalMinutes: metastore.DefaultArchivingIntervalMinutes,
+			ArchivingDelayMinutes:    metastore.DefaultArchivingDelayMinutes,
+			BackfillMaxBufferSize:    metastore.DefaultBackfillMaxBufferSize,
+			BackfillIntervalMinutes:  metastore.DefaultBackfillIntervalMinutes,
+			BackfillThresholdInBytes: metastore.DefaultBackfillThresholdInBytes,
+			BackfillStoreBatchSize:   metastore.DefaultBackfillStoreBatchSize,
+			RecordRetentionInDays:    metastore.DefaultRecordRetentionInDays,
+			SnapshotIntervalMinutes:  metastore.DefaultSnapshotIntervalMinutes,
+			SnapshotThreshold:        metastore.DefaultSnapshotThreshold,
+			RedoLogRotationInterval:  metastore.DefaultRedologRotationInterval,
+			MaxRedoLogFileSize:       metastore.DefaultMaxRedoLogSize,
+		}
+	}
 	err = handler.metaStore.CreateTable(&newTable)
 	if err != nil {
 		RespondWithError(w, err)

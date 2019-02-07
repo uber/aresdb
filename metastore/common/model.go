@@ -136,7 +136,7 @@ type Table struct {
 	IsFactTable bool `json:"isFactTable"`
 
 	// table configurations
-	Config TableConfig `json:"config"`
+	Config *TableConfig `json:"config,omitempty"`
 
 	// Fact table only.
 	// IDs of columns to sort based upon.

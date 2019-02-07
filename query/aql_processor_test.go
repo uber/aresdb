@@ -108,7 +108,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		shard = memstore.NewTableShard(&memstore.TableSchema{
 			Schema: metaCom.Table{
 				Name: table,
-				Config: metaCom.TableConfig{
+				Config: &metaCom.TableConfig{
 					ArchivingDelayMinutes:    500,
 					ArchivingIntervalMinutes: 300,
 				},
@@ -1015,7 +1015,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		mainTableSchema := metaCom.Table{
 			Name: table,
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				ArchivingDelayMinutes:    500,
 				ArchivingIntervalMinutes: 300,
 			},
@@ -1027,7 +1027,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		timezoneTableSchema := metaCom.Table{
 			Name: timezoneTable,
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				ArchivingDelayMinutes:    500,
 				ArchivingIntervalMinutes: 300,
 			},
@@ -1311,7 +1311,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		geofenceSchema := &memstore.TableSchema{
 			Schema: metaCom.Table{
 				Name: "geofence",
-				Config: metaCom.TableConfig{
+				Config: &metaCom.TableConfig{
 					InitialPrimaryKeyNumBuckets: 1,
 				},
 			},
@@ -1578,7 +1578,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		geofenceSchema := &memstore.TableSchema{
 			Schema: metaCom.Table{
 				Name: "geofence",
-				Config: metaCom.TableConfig{
+				Config: &metaCom.TableConfig{
 					InitialPrimaryKeyNumBuckets: 1,
 				},
 			},

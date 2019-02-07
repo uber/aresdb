@@ -56,10 +56,11 @@ func validateColumnHLLConfig(c common.Column) error {
 //	table has at least 1 valid primary key column
 //  fact table must have a time column as first column
 //	fact table must have sort columns that are valid
-//	each column have valid data type and default value
+//	each column have valid data type, default value and valid hll config
 //	sort columns cannot have duplicate columnID
 //	primary key columns cannot have duplicate columnID
 //	column name cannot duplicate
+//  validate table config
 func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, creation bool) (err error) {
 	var colIdDedup []bool
 
@@ -132,8 +133,6 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		colIdDedup[colId] = true
 	}
 
-	// TODO: checks for config?
-
 	if table.IsFactTable {
 		colIdDedup = make([]bool, len(table.Columns))
 		for _, sortColumnId := range table.ArchivingSortColumns {
@@ -149,6 +148,8 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 			colIdDedup[sortColumnId] = true
 		}
 	}
+
+	err = validateTableConfig(table.Config)
 
 	return
 }
@@ -231,6 +232,22 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 		if newTable.Columns[sortColumnId].Deleted {
 			return ErrColumnDeleted
 		}
+	}
+
+	return
+}
+
+// validateTableConfig checks:
+//  batch size
+func validateTableConfig(config *common.TableConfig) (err error) {
+	if config == nil {
+		err = ErrInvalidTableConfig
+		return
+	}
+
+	if config.BatchSize < MinimumBatchSize {
+		err = ErrInvalidTableConfig
+		return
 	}
 
 	return

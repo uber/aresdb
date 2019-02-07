@@ -37,7 +37,7 @@ var _ = ginkgo.Describe("DataHandler", func() {
 	var testSchema = memstore.NewTableSchema(&metaCom.Table{
 		Name:        "abc",
 		IsFactTable: false,
-		Config: metaCom.TableConfig{
+		Config: &metaCom.TableConfig{
 			BatchSize: 10,
 		},
 	})

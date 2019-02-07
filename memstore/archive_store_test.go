@@ -69,6 +69,7 @@ var _ = ginkgo.Describe("archive store", func() {
 				Schema: &TableSchema{
 					Schema: metaCom.Table{
 						Name: table,
+						Config: &metaCom.TableConfig{},
 					},
 				},
 			},
@@ -99,6 +100,7 @@ var _ = ginkgo.Describe("archive store", func() {
 				Schema: &TableSchema{
 					Schema: metaCom.Table{
 						Name: table,
+						Config: &metaCom.TableConfig{},
 					},
 				},
 			},
@@ -158,6 +160,7 @@ var _ = ginkgo.Describe("archive store", func() {
 					{Deleted: false}, // sort col 2,
 					{Deleted: false}, // pk col2
 				},
+				Config: &metaCom.TableConfig{},
 			},
 			PrimaryKeyBytes:       2,
 			PrimaryKeyColumnTypes: []memCom.DataType{memCom.Uint32, memCom.Uint8, memCom.Uint8, memCom.Uint8},
@@ -204,6 +207,7 @@ var _ = ginkgo.Describe("archive store", func() {
 					{Deleted: false}, // all values null.
 					{Deleted: false}, // has null vector.
 				},
+				Config: &metaCom.TableConfig{},
 			},
 			PrimaryKeyColumnTypes: []memCom.DataType{memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.Uint32},
 			DefaultValues:         []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
@@ -255,6 +259,7 @@ var _ = ginkgo.Describe("archive store", func() {
 					{Deleted: false}, // all values null.
 					{Deleted: false}, // has null vector.
 				},
+				Config: &metaCom.TableConfig{},
 			},
 			PrimaryKeyColumnTypes: []memCom.DataType{memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.Uint32},
 		}

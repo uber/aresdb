@@ -49,6 +49,7 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 			},
 		},
 		PrimaryKeyColumns: []int{0},
+		Config: &metaCom.TableConfig{},
 	}
 	var testTableSchema = memstore.TableSchema{
 		EnumDicts: map[string]memstore.EnumDict{
@@ -117,8 +118,30 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 
 		tableSchemaBytes, _ := json.Marshal(testTableSchema.Schema)
 
-		testMetaStore.On("CreateTable", mock.Anything).Return(nil).Once()
+		testMetaStore.On("CreateTable", &testTable).Return(nil).Once()
 		resp, _ := http.Post(fmt.Sprintf("http://%s/schema/tables", hostPort), "application/json", bytes.NewBuffer(tableSchemaBytes))
+		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
+
+		testTableWithoutConfig := testTable
+		testTableWithoutConfig.Config = nil
+		tableSchemaBytes, _ = json.Marshal(testTableWithoutConfig)
+		testTableWithDefaultConfig := testTable
+		testTableWithDefaultConfig.Config = &metaCom.TableConfig{
+			BatchSize:                metastore.DefaultBatchSize,
+			ArchivingIntervalMinutes: metastore.DefaultArchivingIntervalMinutes,
+			ArchivingDelayMinutes:    metastore.DefaultArchivingDelayMinutes,
+			BackfillMaxBufferSize:    metastore.DefaultBackfillMaxBufferSize,
+			BackfillIntervalMinutes:  metastore.DefaultBackfillIntervalMinutes,
+			BackfillThresholdInBytes: metastore.DefaultBackfillThresholdInBytes,
+			BackfillStoreBatchSize:   metastore.DefaultBackfillStoreBatchSize,
+			RecordRetentionInDays:    metastore.DefaultRecordRetentionInDays,
+			SnapshotIntervalMinutes:  metastore.DefaultSnapshotIntervalMinutes,
+			SnapshotThreshold:        metastore.DefaultSnapshotThreshold,
+			RedoLogRotationInterval:  metastore.DefaultRedologRotationInterval,
+			MaxRedoLogFileSize:       metastore.DefaultMaxRedoLogSize,
+		}
+		testMetaStore.On("CreateTable", &testTableWithDefaultConfig).Return(nil).Once()
+		resp, _ = http.Post(fmt.Sprintf("http://%s/schema/tables", hostPort), "application/json", bytes.NewBuffer(tableSchemaBytes))
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 
 		testMetaStore.On("CreateTable", mock.Anything).Return(errors.New("Failed to create table")).Once()

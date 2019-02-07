@@ -23,6 +23,7 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 				Type: "Int32",
 			},
 		},
+		Config: &common.TableConfig{},
 		Version: 1,
 	}
 
@@ -34,6 +35,7 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 				Type: "Int32",
 			},
 		},
+		Config: &common.TableConfig{},
 		Version: 2,
 	}
 
@@ -45,6 +47,7 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 				Type: "Int32",
 			},
 		},
+		Config: &common.TableConfig{},
 		Version: 3,
 	}
 
@@ -56,6 +59,7 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 				Type: "Int32",
 			},
 		},
+		Config: &common.TableConfig{},
 		Version: 2,
 	}
 

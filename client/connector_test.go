@@ -79,6 +79,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 			},
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
+			Config: &metaCom.TableConfig{},
 		},
 	}
 

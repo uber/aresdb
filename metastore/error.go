@@ -25,10 +25,6 @@ var (
 	ErrTableAlreadyExist = errors.New("Table already exists")
 	// ErrColumnDoesNotExist indicates Column does not exist error
 	ErrColumnDoesNotExist = errors.New("Column does not exist")
-	// ErrColumnAlreadyExist indicates Column already exists
-	ErrColumnAlreadyExist = errors.New("Column already exists")
-	// ErrColumnAlreadyDeleted indicates Column already deleted
-	ErrColumnAlreadyDeleted = errors.New("Column already deleted")
 	// ErrNotEnumColumn indicates Column is not enum type
 	ErrNotEnumColumn = errors.New("Column is not enum type")
 	// ErrShardDoesNotExist indicates Shard does not exist
@@ -55,8 +51,6 @@ var (
 	ErrColumnDeleted = errors.New("Column already deleted")
 	// ErrInvalidDataType indicates invalid data type
 	ErrInvalidDataType = errors.New("Invalid data type")
-	// ErrIllegalSchemaVersion indicates new schema is not greater than old one
-	ErrIllegalSchemaVersion = errors.New("New schema version not greater than old")
 	// ErrSchemaUpdateNotAllowed indicates changes attemped on immutable fields
 	ErrSchemaUpdateNotAllowed = errors.New("Illegal schame update on immutable field")
 	// ErrInsufficientColumnCount indicates no column in a schame
@@ -76,5 +70,8 @@ var (
 	ErrDisallowMissingEventTime      = errors.New("Can not disallow missing event time")
 	// ErrTimeColumnDoesNotAllowHLLConfig indicates hll configured for time column
 	ErrTimeColumnDoesNotAllowHLLConfig   = errors.New("HLLConfig not allowed for time column")
-	ErrHLLColumnDoesNotAllowDefaultValue = errors.New("hll column does not allow default value")
+	// ErrHLLColumnDoesNotAllowDefaultValue indicates hll columns do not allow default value
+	ErrHLLColumnDoesNotAllowDefaultValue = errors.New("Hll column does not allow default value")
+	// ErrInvalidTableConfig indicates table config is not valid
+	ErrInvalidTableConfig = errors.New("Table config is not valid")
 )

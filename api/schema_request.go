@@ -29,7 +29,7 @@ type GetTableRequest struct {
 // swagger:parameters addTable
 type AddTableRequest struct {
 	// in: body
-	Body metaCom.Table `body:""`
+	Body metaCom.Table `body:"",omitempty`
 }
 
 // AddColumnRequest represents AddColumn request.
@@ -51,7 +51,7 @@ type UpdateTableConfigRequest struct {
 	// in: path
 	TableName string `path:"table" json:"table"`
 	// in: body
-	Body metaCom.TableConfig `body:""`
+	Body *metaCom.TableConfig `body:"",omitempty`
 }
 
 // DeleteTableRequest represents DeleteTable request.

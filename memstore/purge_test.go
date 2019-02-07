@@ -52,7 +52,7 @@ var _ = ginkgo.Describe("Purge", func() {
 					Type: metaCom.Uint32,
 				},
 			},
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				RecordRetentionInDays: 1,
 			},
 		})

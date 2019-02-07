@@ -52,6 +52,7 @@ var _ = ginkgo.Describe("table Shard", func() {
 					Type: "uint16",
 				},
 			},
+			Config: &metaCom.TableConfig{},
 		})
 
 		for columnID := range schema.Schema.Columns {

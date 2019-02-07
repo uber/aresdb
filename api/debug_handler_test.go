@@ -97,7 +97,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 				Type: metaCom.SmallEnum,
 			},
 		},
-		Config: metaCom.TableConfig{
+		Config: &metaCom.TableConfig{
 			BatchSize:                10,
 			BackfillMaxBufferSize:    1 << 32,
 			BackfillThresholdInBytes: 1 << 21,

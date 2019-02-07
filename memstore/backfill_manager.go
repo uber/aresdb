@@ -68,7 +68,7 @@ type BackfillManager struct {
 }
 
 // NewBackfillManager creates a new BackfillManager instance.
-func NewBackfillManager(tableName string, shard int, tableConfig metaCom.TableConfig) *BackfillManager {
+func NewBackfillManager(tableName string, shard int, tableConfig *metaCom.TableConfig) *BackfillManager {
 	backfillManager := BackfillManager{
 		TableName:                tableName,
 		Shard:                    shard,

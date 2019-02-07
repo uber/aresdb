@@ -42,7 +42,7 @@ func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType
 		Name:              tableName,
 		Columns:           make([]metaCom.Column, len(columnTypes)),
 		PrimaryKeyColumns: primaryKeyColumns,
-		Config: metaCom.TableConfig{
+		Config: &metaCom.TableConfig{
 			BatchSize:                batchSize,
 			BackfillMaxBufferSize:    1 << 32,
 			BackfillThresholdInBytes: 1 << 21,

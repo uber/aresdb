@@ -57,7 +57,7 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 				Type: "SmallEnum",
 			},
 		},
-		Config: metaCom.TableConfig{
+		Config: &metaCom.TableConfig{
 			BatchSize: 10,
 		},
 	})

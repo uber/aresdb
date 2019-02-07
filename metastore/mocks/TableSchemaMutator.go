@@ -141,11 +141,11 @@ func (_m *TableSchemaMutator) UpdateTable(table common.Table) error {
 }
 
 // UpdateTableConfig provides a mock function with given fields: table, config
-func (_m *TableSchemaMutator) UpdateTableConfig(table string, config common.TableConfig) error {
+func (_m *TableSchemaMutator) UpdateTableConfig(table string, config *common.TableConfig) error {
 	ret := _m.Called(table, config)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, common.TableConfig) error); ok {
+	if rf, ok := ret.Get(0).(func(string, *common.TableConfig) error); ok {
 		r0 = rf(table, config)
 	} else {
 		r0 = ret.Error(0)

@@ -45,7 +45,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		tableSchema = &TableSchema{
 			Schema: metaCom.Table{
 				Name: table,
-				Config: metaCom.TableConfig{
+				Config: &metaCom.TableConfig{
 					ArchivingDelayMinutes:    500,
 					ArchivingIntervalMinutes: 300,
 					BackfillStoreBatchSize:   20000,
@@ -209,7 +209,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		tableSchema := &TableSchema{
 			Schema: metaCom.Table{
 				Name: "test",
-				Config: metaCom.TableConfig{
+				Config: &metaCom.TableConfig{
 					ArchivingDelayMinutes:    500,
 					ArchivingIntervalMinutes: 300,
 					BackfillStoreBatchSize:   20000,
@@ -234,7 +234,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		tableSchema := &TableSchema{
 			Schema: metaCom.Table{
 				Name: "test",
-				Config: metaCom.TableConfig{
+				Config: &metaCom.TableConfig{
 					ArchivingDelayMinutes:    500,
 					ArchivingIntervalMinutes: 300,
 				},

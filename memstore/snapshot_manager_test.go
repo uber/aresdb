@@ -35,7 +35,7 @@ var _ = ginkgo.Describe("snapshot manager", func() {
 	shard := NewTableShard(&TableSchema{
 		Schema: metaCom.Table{
 			Name: table,
-			Config: metaCom.TableConfig{
+			Config: &metaCom.TableConfig{
 				SnapshotThreshold:       100,
 				SnapshotIntervalMinutes: 5,
 			},
