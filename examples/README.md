@@ -5,7 +5,7 @@ AresDB Examples provide examples code and dataset including table schema, data a
 ### Prerequisites
 
 Before running the examples code, a running aresdb server is needed.
-Please refer to how to use [aresdb docker](https://github.com/uber/aresdb/docker/README.md) to quickly start a aresdb server instance
+Please refer to how to use [aresdb docker](../docker/README.md) to quickly start a aresdb server instance
 
 ### How To Use
 
