@@ -121,6 +121,16 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 		resp, _ := http.Post(fmt.Sprintf("http://%s/schema/tables", hostPort), "application/json", bytes.NewBuffer(tableSchemaBytes))
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 
+
+		var createdTableSchema *metaCom.Table
+		testMetaStore.On("CreateTable", mock.Anything).Run(func(args mock.Arguments) {
+			createdTableSchema = args.Get(0).(*metaCom.Table)
+		}).Return(nil).Once()
+		resp, _ = http.Post(fmt.Sprintf("http://%s/schema/tables", hostPort), "application/json", bytes.NewBuffer(tableSchemaBytes))
+		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
+		Ω(createdTableSchema).ShouldNot(BeNil())
+		Ω(createdTableSchema.Config).Should(Equal(metastore.DefaultTableConfig))
+
 		testMetaStore.On("CreateTable", mock.Anything).Return(errors.New("Failed to create table")).Once()
 		resp, _ = http.Post(fmt.Sprintf("http://%s/schema/tables", hostPort), "application/json", bytes.NewBuffer(tableSchemaBytes))
 		Ω(resp.StatusCode).Should(Equal(http.StatusInternalServerError))

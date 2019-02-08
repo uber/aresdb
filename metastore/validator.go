@@ -6,6 +6,7 @@ import (
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"reflect"
+	"gopkg.in/validator.v2"
 )
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
@@ -132,7 +133,9 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		colIdDedup[colId] = true
 	}
 
-	// TODO: checks for config?
+	if err := validator.Validate(table.Config); err != nil {
+		return utils.StackError(err, "invalid table config")
+	}
 
 	if table.IsFactTable {
 		colIdDedup = make([]bool, len(table.Columns))

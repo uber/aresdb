@@ -1,5 +1,5 @@
-hash: 03bab46cdeefbea42ab079458e263d3311fedf4e8df566dbc5bc5fb4699552c1
-updated: 2019-01-29T14:28:08.084001-08:00
+hash: ef1379ff2edfdb007daa69f609bf61b685b32d145008f9ae7cf6bfd36f8982f2
+updated: 2019-02-07T17:50:49.217454-08:00
 imports:
 - name: github.com/davecgh/go-spew
   version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
@@ -151,6 +151,8 @@ imports:
   - runes
   - transform
   - unicode/norm
+- name: gopkg.in/validator.v2
+  version: 135c24b11c19e52befcae2ec3fca5d9b78c4e98e
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 testImports:

@@ -34,7 +34,6 @@ const (
 	enumDelimiter = "\u0000\n"
 )
 
-
 // meaningful defaults of table configurations.
 const (
 	DefaultBatchSize                      = 2097152
