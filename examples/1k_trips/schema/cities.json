@@ -1,0 +1,23 @@
+{
+  "name": "cities",
+  "columns": [
+    {
+      "name": "id",
+      "type": "Uint16"
+    },
+    {
+      "name": "name",
+      "type": "BigEnum"
+    }
+  ],
+  "primaryKeyColumns": [0],
+  "isFactTable": false,
+  "config": {
+    "batchSize": 2097152,
+    "initPrimaryKeyNumBuckets": 8192,
+    "maxRedoLogFileSize": 1073741824,
+    "redoLogRotationInterval": 10800,
+    "snapshotIntervalMinutes": 360,
+    "snapshotThreshold": 6291456
+  }
+}

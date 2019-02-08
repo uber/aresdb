@@ -1,0 +1,44 @@
+{
+  "name": "trips",
+  "columns": [
+    {
+      "name": "request_at",
+      "type": "Uint32"
+    },
+    {
+      "name": "uuid",
+      "type": "UUID"
+    },
+    {
+      "name": "city_id",
+      "type": "Uint16"
+    },
+    {
+      "name": "status",
+      "type": "SmallEnum"
+    },
+    {
+      "name": "fare",
+      "type": "Float32"
+    },
+    {
+      "name": "driver_uuid",
+      "type": "UUID"
+    }
+  ],
+  "primaryKeyColumns": [1],
+  "archivingSortColumns": [2,3],
+  "config": {
+    "archivingDelayMinutes": 1440,
+    "archivingIntervalMinutes": 180,
+    "backfillIntervalMinutes": 60,
+    "backfillMaxBufferSize": 1048576,
+    "backfillStoreBatchSize": 20000,
+    "backfillThresholdInBytes": 20971520,
+    "batchSize": 2097152,
+    "maxRedoLogFileSize": 1073741824,
+    "recordRetentionInDays": 3,
+    "redoLogRotationInterval": 10800
+  },
+  "isFactTable": true
+}
