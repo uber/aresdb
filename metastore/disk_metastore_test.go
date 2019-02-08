@@ -133,6 +133,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		},
 		IsFactTable:       false,
 		PrimaryKeyColumns: []int{0},
+		Config: DefaultTableConfig,
 	}
 
 	mockTableBDir := &mocks.FileInfo{}
@@ -149,6 +150,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		},
 		IsFactTable:       true,
 		PrimaryKeyColumns: []int{1},
+		Config: DefaultTableConfig,
 	}
 	testTableCBytes, _ := json.MarshalIndent(testTableC, "", "  ")
 

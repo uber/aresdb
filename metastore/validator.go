@@ -6,6 +6,7 @@ import (
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"reflect"
+	"gopkg.in/validator.v2"
 )
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
@@ -60,6 +61,8 @@ func validateColumnHLLConfig(c common.Column) error {
 //	sort columns cannot have duplicate columnID
 //	primary key columns cannot have duplicate columnID
 //	column name cannot duplicate
+//  check hll cannot be enabled on time column
+//  check column configs
 func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, creation bool) (err error) {
 	var colIdDedup []bool
 
@@ -132,7 +135,9 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		colIdDedup[colId] = true
 	}
 
-	// TODO: checks for config?
+	if err := validator.Validate(table.Config); err != nil {
+		return utils.StackError(err, "invalid table config")
+	}
 
 	if table.IsFactTable {
 		colIdDedup = make([]bool, len(table.Columns))
@@ -158,6 +163,8 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 //	check new table has larger version number
 //	check no changes on immutable fields (table name, type, pk)
 //	check updates on columns and sort columns are valid
+//  check allowMissingEventTime cannot be changed from true to false
+//  check hllConfig cannot be changed
 func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *common.Table) (err error) {
 	if err := v.validateIndividualSchema(newTable, false); err != nil {
 		return err

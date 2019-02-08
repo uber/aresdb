@@ -416,10 +416,9 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{1},
-			Config: metaCom.TableConfig{
-				BatchSize: 10,
-			},
 		}
+		testTable.Config = metastore.DefaultTableConfig
+		testTable.Config.BatchSize = 10
 		testMetaStore, err := metastore.NewDiskMetaStore(testBasePath)
 		Ω(err).Should(BeNil())
 		testMemStore = NewMemStore(testMetaStore, testDiskStore).(*memStoreImpl)

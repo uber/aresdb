@@ -50,6 +50,22 @@ const (
 	DefaultMaxRedoLogSize                 = 1 << 30              // 1 GB
 )
 
+// DefaultTableConfig represents default table config
+var DefaultTableConfig = common.TableConfig{
+	BatchSize:                DefaultBatchSize,
+	ArchivingIntervalMinutes: DefaultArchivingIntervalMinutes,
+	ArchivingDelayMinutes:    DefaultArchivingDelayMinutes,
+	BackfillMaxBufferSize:    DefaultBackfillMaxBufferSize,
+	BackfillIntervalMinutes:  DefaultBackfillIntervalMinutes,
+	BackfillThresholdInBytes: DefaultBackfillThresholdInBytes,
+	BackfillStoreBatchSize:   DefaultBackfillStoreBatchSize,
+	RecordRetentionInDays:    DefaultRecordRetentionInDays,
+	SnapshotIntervalMinutes:  DefaultSnapshotIntervalMinutes,
+	SnapshotThreshold:        DefaultSnapshotThreshold,
+	RedoLogRotationInterval:  DefaultRedologRotationInterval,
+	MaxRedoLogFileSize:       DefaultMaxRedoLogSize,
+}
+
 // disk-based metastore implementation.
 // all validation of user input (eg. table/column name and table/column struct) will be pushed to api layer,
 // which is the earliest point of user input, all schemas inside system will be already valid,
@@ -1032,20 +1048,7 @@ func (dm *diskMetaStore) readSchemaFile(tableName string) (*common.Table, error)
 		)
 	}
 	var table common.Table
-	table.Config = common.TableConfig{
-		BatchSize:                DefaultBatchSize,
-		ArchivingIntervalMinutes: DefaultArchivingIntervalMinutes,
-		ArchivingDelayMinutes:    DefaultArchivingDelayMinutes,
-		BackfillMaxBufferSize:    DefaultBackfillMaxBufferSize,
-		BackfillIntervalMinutes:  DefaultBackfillIntervalMinutes,
-		BackfillThresholdInBytes: DefaultBackfillThresholdInBytes,
-		BackfillStoreBatchSize:   DefaultBackfillStoreBatchSize,
-		RecordRetentionInDays:    DefaultRecordRetentionInDays,
-		SnapshotIntervalMinutes:  DefaultSnapshotIntervalMinutes,
-		SnapshotThreshold:        DefaultSnapshotThreshold,
-		RedoLogRotationInterval:  DefaultRedologRotationInterval,
-		MaxRedoLogFileSize:       DefaultMaxRedoLogSize,
-	}
+	table.Config = DefaultTableConfig
 
 	err = json.Unmarshal(jsonBytes, &table)
 	if err != nil {
