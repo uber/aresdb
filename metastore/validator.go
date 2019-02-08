@@ -236,17 +236,16 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 }
 
 // ValidateDefaultValue validates default value against data type
-func ValidateDefaultValue(valueStr, dataTypeStr string) (err error) {
+func ValidateDefaultValue(valueStr, dataTypeStr string) error {
 	dataType := memCom.DataTypeFromString(dataTypeStr)
 	switch dataType {
 	// BigEnum or Small Enum ares string values, no need to validate
 	case memCom.BigEnum, memCom.SmallEnum:
-		return
 	default:
 		value, err := memCom.ValueFromString(valueStr, dataType)
 		if err != nil || !value.Valid {
 			return utils.StackError(err, "invalid value %s for type %s", valueStr, dataTypeStr)
 		}
 	}
-	return
+	return nil
 }
