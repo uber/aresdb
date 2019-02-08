@@ -99,62 +99,62 @@ type ZapLogger struct {
 
 // Debug is log at debug level
 func (z *ZapLogger) Debug(args ...interface{}) {
-	z.sugaredLogger.Debug(args)
+	z.sugaredLogger.Debug(args...)
 }
 
 // Debugf is log at debug level with fmt.Printf-like formatting
 func (z *ZapLogger) Debugf(format string, args ...interface{}) {
-	z.sugaredLogger.Debugf(format, args)
+	z.sugaredLogger.Debugf(format, args...)
 }
 
 // Info is log at info level
 func (z *ZapLogger) Info(args ...interface{}) {
-	z.sugaredLogger.Info(args)
+	z.sugaredLogger.Info(args...)
 }
 
 // Infof is log at info level with fmt.Printf-like formatting
 func (z *ZapLogger) Infof(format string, args ...interface{}) {
-	z.sugaredLogger.Infof(format, args)
+	z.sugaredLogger.Infof(format, args...)
 }
 
 // Warn is log at warning level
 func (z *ZapLogger) Warn(args ...interface{}) {
-	z.sugaredLogger.Warn(args)
+	z.sugaredLogger.Warn(args...)
 }
 
 // Warnf is log at warning level with fmt.Printf-like formatting
 func (z *ZapLogger) Warnf(format string, args ...interface{}) {
-	z.sugaredLogger.Warnf(format, args)
+	z.sugaredLogger.Warnf(format, args...)
 }
 
 // Error is log at error level
 func (z *ZapLogger) Error(args ...interface{}) {
-	z.sugaredLogger.Error(args)
+	z.sugaredLogger.Error(args...)
 }
 
 // Errorf is log at error level with fmt.Printf-like formatting
 func (z *ZapLogger) Errorf(format string, args ...interface{}) {
-	z.sugaredLogger.Errorf(format, args)
+	z.sugaredLogger.Errorf(format, args...)
 }
 
 // Fatal is log at fatal level, then terminate process (irrecoverable)
 func (z *ZapLogger) Fatal(args ...interface{}) {
-	z.sugaredLogger.Fatal(args)
+	z.sugaredLogger.Fatal(args...)
 }
 
 // Fatalf is log at fatal level with fmt.Printf-like formatting, then terminate process (irrecoverable)
 func (z *ZapLogger) Fatalf(format string, args ...interface{}) {
-	z.sugaredLogger.Fatalf(format, args)
+	z.sugaredLogger.Fatalf(format, args...)
 }
 
 // Panic is log at panic level, then panic (recoverable)
 func (z *ZapLogger) Panic(args ...interface{}) {
-	z.sugaredLogger.Panic(args)
+	z.sugaredLogger.Panic(args...)
 }
 
 // Panicf is log at panic level with fmt.Printf-like formatting, then panic (recoverable)
 func (z *ZapLogger) Panicf(format string, args ...interface{}) {
-	z.sugaredLogger.Panicf(format, args)
+	z.sugaredLogger.Panicf(format, args...)
 }
 
 // With returns a logger with the specified key-value pair set, to be logged in a subsequent normal logging call
