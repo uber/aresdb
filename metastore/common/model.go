@@ -81,7 +81,7 @@ type TableConfig struct {
 	InitialPrimaryKeyNumBuckets int `json:"initPrimaryKeyNumBuckets,omitempty"`
 
 	// Size of each live batch, should be sufficiently large.
-	BatchSize int `json:"batchSize,omitempty",validate:"gt=0"`
+	BatchSize int `json:"batchSize,omitempty",validate:"min=1"`
 
 	// Specifies how often to create a new redo log file.
 	RedoLogRotationInterval int `json:"redoLogRotationInterval,omitempty" validate:"min=1"`
