@@ -175,6 +175,8 @@ func ingestDataForTable(connector client.Connector, tableName string, dataPath s
 	}
 
 	rowsInserted, err := connector.Insert(tableName, columnNames, rows)
+	panicIfErr(err)
+
 	fmt.Printf("%d rows inserted into %s\n", rowsInserted, tableName)
 }
 
@@ -183,7 +185,7 @@ func main() {
 		Use:     "examples",
 		Short:   "AresDB Examples",
 		Long:    `AresDB Examples Contains examples for interact with aresdb`,
-		Example: `./examples`,
+		Example: `./examples help tables`,
 	}
 	rootCmd.PersistentFlags().String(dataSetKeyName, "1k_trips", "name for data set")
 	rootCmd.PersistentFlags().String(hostKeyName, "localhost", "host of aresdb server")
@@ -195,6 +197,9 @@ func main() {
 
 	dataCmd := &cobra.Command{
 		Use: "data",
+		Short:   "Ingest data for example dataset",
+		Long:    `Ingest data for example dataset`,
+		Example: `./examples data --dataset 1k_trips`,
 		Run: func(cmd *cobra.Command, args []string) {
 			ingestDataForDataSet()
 		},
@@ -202,6 +207,9 @@ func main() {
 
 	tableCmd := &cobra.Command{
 		Use: "tables",
+		Short:   `Create tables for example dataset`,
+		Long:    `Create tables for example dataset`,
+		Example: `./examples tables --dataset 1k_trips`,
 		Run: func(cmd *cobra.Command, args []string) {
 			createTablesForDataSet()
 		},
@@ -209,6 +217,9 @@ func main() {
 
 	queryCmd := &cobra.Command{
 		Use: "query",
+		Short:    `Run sample queries against example dataset`,
+		Long:    `Run sample queries against example dataset`,
+		Example: `./examples query --dataset 1k_trips`,
 		Run: func(cmd *cobra.Command, args []string) {
 			queryDataSet()
 		},
