@@ -61,6 +61,8 @@ func validateColumnHLLConfig(c common.Column) error {
 //	sort columns cannot have duplicate columnID
 //	primary key columns cannot have duplicate columnID
 //	column name cannot duplicate
+//  check hll cannot be enabled on time column
+//  check column configs
 func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, creation bool) (err error) {
 	var colIdDedup []bool
 
@@ -161,6 +163,8 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 //	check new table has larger version number
 //	check no changes on immutable fields (table name, type, pk)
 //	check updates on columns and sort columns are valid
+//  check allowMissingEventTime cannot be changed from true to false
+//  check hllConfig cannot be changed
 func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *common.Table) (err error) {
 	if err := v.validateIndividualSchema(newTable, false); err != nil {
 		return err

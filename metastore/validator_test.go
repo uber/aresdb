@@ -775,9 +775,6 @@ var _ = ginkgo.Describe("Validator", func() {
 				{
 					Name: "col2",
 					Type: "SmallEnum",
-					HLLConfig: common.HLLConfig{
-						IsHLLColumn: true,
-					},
 				},
 			},
 			PrimaryKeyColumns: []int{1},
@@ -789,6 +786,5 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(table1)
 		err := validator.Validate()
 		Ω(err).ShouldNot(BeNil())
-		Ω(err.Error()).Should(ContainSubstring(`data Type SmallEnum not allowed for fast hll aggregation, valid options: [Uint32|Int32|Int64|UUID]`))
 	})
 })
