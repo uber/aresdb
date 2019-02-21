@@ -98,7 +98,7 @@ execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
         OUTPUT_VARIABLE ALL_GO_SRC)
 
 execute_process(
-        COMMAND bash -c "git diff origin/master HEAD --name-only --diff-filter=AMR"
+        COMMAND bash -c "git diff origin/master HEAD --name-only --diff-filter=AMR | grep -e \".*\\.go\""
         OUTPUT_VARIABLE CHANGED_GO_SRC
         )
 
@@ -112,7 +112,12 @@ execute_process(COMMAND bash -c "find .  -type f \
   -e '.*/mocks.*'"
         OUTPUT_VARIABLE ALL_C_SRC)
 
-message(CHANGED_GssO_SRC is  ${CHANGED_GO_SRC})
+execute_process(
+        COMMAND bash -c "git diff HEAD origin/master --name-only | grep -e \".*\\.\\(cu\\|c\\|h\\|hpp\\)\""
+        OUTPUT_VARIABLE CHANGED_C_SRC
+        )
+
+message(${CHANGED_C_SRC} CHANGED_C_SRC)
 
 add_custom_target("golang-dep" DEPENDS vendor/glide.updated)
 add_custom_command(
