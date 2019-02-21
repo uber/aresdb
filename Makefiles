@@ -1,7 +1,13 @@
 .PHONY: test-cuda lint travis swagger-gen run_server npm-install clean clean-cuda-test test
 
+include build/makefile
+build/makefile: CMakeLists.txt
+	mkdir -p build && cd build
+	cmake ..
+
 # all .go files that don't exist in hidden directories
-ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e go-build \
+ALL_GO_SRC := $(shell find . -name "*.go" | grep -v -e Go
+ .-e vendor -e go-build \
   -e build \
   -e ".*/\..*" \
   -e ".*/_.*" \
@@ -22,40 +28,8 @@ CHANGED_C_SRC := $(shell git diff HEAD origin/master --name-only | grep -e ".*\.
 C_SRC := $(CHANGED_C_SRC)
 
 
-CUDA_DRIVER_ENABLED := $(shell which nvidia-smi && nvidia-smi | grep "Driver Version:")
-
-QUERY_MODE := ${QUERY_MODE}
-
 default: bin/aresd
 
-vendor/glide.updated: glide.lock glide.yaml
-	glide install
-	touch vendor/glide.updated
-
-pwd := $(shell pwd)
-
-swagger-gen:
-	swagger generate spec -o api/ui/swagger/swagger.json
-
-npm-install:
-	cd api/ui/ && npm install
-
-ifndef QUERY_MODE
-    QUERY_MODE := $(if $(CUDA_DRIVER_ENABLED),DEVICE,HOST)
-endif
-
-
-# specify dependencies for memory allocation library based on whether cuda driver is available.
-ifeq "$(QUERY_MODE)" "DEVICE"
-lib/libmem.so:
-	@make cuda_malloc
-else
-lib/libmem.so:
-	@make malloc
-endif
-
-lib/lib.updated: lib/libmem.so lib/libalgorithm.so
-	touch lib/lib.updated
 
 clang-lint:
 ifneq ($(C_SRC),)
@@ -138,57 +112,6 @@ ALGO_OBJECT_FILES = $(patsubst %.cu,$(ALGO_OBJECT_DIR)/%.o,$(ALGO_SOURCE_FILES))
 
 CXX_SRC_DIR = .
 GTEST_OUT_DIR = gtest
-
-lib/algorithm:
-	mkdir -p $@
-
-lib:
-	mkdir -p $@
-
-# header files dependencies.
-query/algorithm.hpp: query/utils.hpp query/iterator.hpp query/functor.hpp query/binder.hpp query/time_series_aggregate.h
-
-query/transform.hpp: query/algorithm.hpp
-
-# cuda source files dependencies.
-query/algorithm.cu: query/algorithm.hpp
-
-query/transform.cu: query/transform.hpp
-
-query/scracth_space_transform.cu: query/transform.hpp
-
-query/measure_transform.cu: query/transform.hpp
-
-query/dimension_transform.cu: query/transform.hpp
-
-query/hash_lookup.cu: query/transform.hpp
-
-query/filter.cu: query/transform.hpp
-
-query/sort_reduce.cu: query/algorithm.hpp
-
-query/hll.cu: query/algorithm.hpp
-
-query/geo_intersects.cu: query/algorithm.hpp
-
-query/utils.cu: query/utils.hpp
-
-query/functor.cu: query/functor.hpp
-
-lib/algorithm/%.o: query/%.cu
-	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(MARCROS) -dc -o $@ -c $^
-
-lib/libalgorithm.so: lib/algorithm $(ALGO_OBJECT_FILES)
-	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ $(ALGO_OBJECT_FILES) -shared -cudart=shared
-
-malloc: lib
-	gcc $(CCFLAGS) -o lib/malloc.o -c memutils/memory/malloc.c
-	gcc -shared -o lib/libmem.so lib/malloc.o
-
-cuda_malloc: lib
-	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o lib/cuda_malloc.o -c memutils/memory/cuda_malloc.cu
-	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o lib/libmem.so lib/cuda_malloc.o -shared -cudart=shared
-
 #####################################
 # Cuda library test related targets#
 #####################################
