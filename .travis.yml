@@ -9,7 +9,7 @@ env:
     - CUDA_PKG=cuda-repo-ubuntu1404_${CUDA_VERSION}.${CUDA_PKG_VERSION}_amd64.deb
     - CUDA_LIB_LOCAL=${HOME}/cuda_lib_${CUDA_VERSION}
     - CUDA_HOME=${CUDA_LIB_LOCAL}
-    - PATH=${CUDA_HOME}/bin:${GOPATH}/bin:${CUDA_HOME}/nvvm/bin:${TRAVIS_BUILD_DIR}/build/cmake/bin:${PATH}
+    - PATH=${CUDA_HOME}/bin:${GOPATH}/bin:${CUDA_HOME}/nvvm/bin:${PATH}
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
     - NVCCFLAGS="-ldir ${CUDA_HOME}/nvvm/libdevice -noprof -I ${CUDA_HOME}/include/ -L ${CUDA_HOME}/lib64"
     - GTEST_ROOT=./build/googletest
@@ -24,10 +24,11 @@ branches:
   only:
     - master
 install:
+  - rm -rf ./build && mkdir -p build
   - .travis/install_clang_tools.sh
+  - ./build/cmake/bin/cmake .
   - .travis/install_cuda.sh
   - .travis/install_golang_tools.sh
-  - ./build/cmake/bin/cmake .
 script:
   - make lint
   - make travis
