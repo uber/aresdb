@@ -27,7 +27,7 @@ install:
   - .travis/install_clang_tools.sh
   - .travis/install_cuda.sh
   - .travis/install_golang_tools.sh
-  - cmake .
+  - ./build/cmake/bin/cmake .
 script:
   - make lint
   - make travis
