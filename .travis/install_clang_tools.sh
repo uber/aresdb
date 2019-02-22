@@ -29,3 +29,5 @@ wget https://github.com/Kitware/CMake/releases/download/v${cmake_version}/cmake-
 tar xzf cmake-${cmake_version}-Linux-x86_64.tar.gz
 popd
 mv /tmp/cmake-${cmake_version}-Linux-x86_64 ./build/cmake
+which cmake
+./build/cmake/bin/cmake --version
