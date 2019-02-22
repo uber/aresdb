@@ -16,7 +16,7 @@ set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,
 
 if (NOT QUERY_MODE)
     execute_process(COMMAND which nvidia-smi && nvidia-smi | grep "Driver Version:" RESULT_VARIABLE ret)
-    if (NOT ret)
+    if (NOT ${ret})
         SET(QUERY_MODE DEVICE)
     else ()
         SET(QUERY_MODE HOST)
@@ -70,7 +70,7 @@ cuda_add_library(algorithm SHARED
 # GTest
 ################################
 set(GTEST_ROOT $ENV{GTEST_ROOT})
-set(GTEST_OUT_DIR gtest)
+link_directories(${GTEST_ROOT})
 enable_testing()
 ################################
 # Unit Tests
@@ -78,11 +78,9 @@ enable_testing()
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 cuda_add_executable(all_unittest ${QUERY_UNITTEST_FILES})
 target_include_directories(all_unittest PRIVATE ${GTEST_ROOT}/include ${gtest_SOURCE_DIR})
-link_directories(${GTEST_ROOT})
-
 #add_dependencies(all_unittest algorithm)
 # Link test executable against gtest & gtest_main
-target_link_libraries(all_unittest gtest gtest_main algorithm)
+target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
 add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
 
 ###############################
@@ -96,11 +94,14 @@ execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
   -e '.*/_.*' \
   -e '.*/mocks.*'"
         OUTPUT_VARIABLE ALL_GO_SRC)
+string(REPLACE "\n" " " ALL_GO_SRC ${ALL_GO_SRC})
 
 execute_process(
         COMMAND bash -c "git diff origin/master HEAD --name-only --diff-filter=AMR | grep -e \".*\\.go\""
         OUTPUT_VARIABLE CHANGED_GO_SRC
         )
+string(REPLACE "\n" " " CHANGED_GO_SRC ${CHANGED_GO_SRC})
+
 
 execute_process(COMMAND bash -c "find .  -type f \
     \\( -iname \\*.cu -o -iname \\*.h -o -iname \\*.hpp -o -iname \\*.c \\) \
@@ -111,32 +112,63 @@ execute_process(COMMAND bash -c "find .  -type f \
   -e '.*/_.*' \
   -e '.*/mocks.*'"
         OUTPUT_VARIABLE ALL_C_SRC)
+string(REPLACE "\n" " " ALL_C_SRC ${ALL_C_SRC})
 
 execute_process(
         COMMAND bash -c "git diff HEAD origin/master --name-only | grep -e \".*\\.\\(cu\\|c\\|h\\|hpp\\)\""
         OUTPUT_VARIABLE CHANGED_C_SRC
         )
+string(REPLACE "\n" " " CHANGED_C_SRC ${CHANGED_C_SRC})
 
-message(${CHANGED_C_SRC} CHANGED_C_SRC)
+add_custom_target(lint-all
+        COMMAND ./scripts/clang-lint.sh ${ALL_C_SRC}
+        COMMAND ./scripts/golang-lint.sh ${ALL_GO_SRC}
+        VERBATIM)
 
-add_custom_target("golang-dep" DEPENDS vendor/glide.updated)
+add_custom_target(lint
+        COMMAND ./scripts/clang-lint.sh ${CHANGED_C_SRC}
+        COMMAND ./scripts/golang-lint.sh ${CHANGED_GO_SRC}
+        VERBATIM)
+
+add_custom_target(golang-dep DEPENDS vendor/glide.updated)
 add_custom_command(
         OUTPUT vendor/glide.updated
         COMMAND glide install && touch vendor/glide.updated
         DEPENDS glide.lock glide.yaml
+        VERBATIM
 )
 
-add_custom_target("swagger-gen")
-add_custom_command(
-        TARGET swagger-gen
+add_custom_target(swagger-gen
         COMMAND swagger generate spec -o api/ui/swagger/swagger.json
-)
+        VERBATIM)
 
-
-add_custom_target("npm-install" DEPENDS api/ui/npm.updated)
+add_custom_target(npm-install DEPENDS api/ui/npm.updated)
 add_custom_command(
         OUTPUT api/ui/npm.updated
         COMMAND cd api/ui/ && npm install && touch npm.updated
         DEPENDS api/ui/package.json
+        VERBATIM
 )
 
+add_custom_target(lib DEPENDS algorithm mem)
+
+add_custom_target(aresd DEPENDS golang-dep lib
+        COMMAND go build -o bin/aresd
+        )
+
+add_custom_target(run_server DEPENDS aresd
+        COMMAND bash -c 'DYLD_LIBRARY_PATH=$$LIBRARY_PATH ./bin/aresd'
+        )
+
+add_custom_target(test-golang DEPENDS aresd
+        COMMAND bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
+        )
+
+add_custom_target(travis
+        COMMAND bash -c 'ARES_ENV=test .travis/run_unittest.sh'
+        )
+
+add_custom_target(
+        test-cuda DEPENDS all_unittest
+        COMMAND bash -c "DYLD_LIBRARY_PATH=$$LIBRARY_PATH ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest --gtest_output=xml:junit.xml"
+)

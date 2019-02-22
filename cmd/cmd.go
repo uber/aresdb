@@ -33,10 +33,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/uber/aresdb/clients"
 	"github.com/uber/aresdb/memutils"
-
-
-
-
 )
 
 // Options represents options for executing command

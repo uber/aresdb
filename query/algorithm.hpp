@@ -27,6 +27,7 @@
 #include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
 #include "query/utils.hpp"
+
 void CheckCUDAError(const char *message);
 
 namespace ares {

@@ -39,6 +39,7 @@ Language Requirements
 Building and running AresDB requires:
 * [golang](https://golang.org/) 1.9+
 * C++ compiler that support c++11
+* [cmake](https://cmake.org/download/) 3.12+
 * [nvcc](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html) version 9.1
 
 Build
@@ -57,7 +58,7 @@ AresDB is written in C++ (query engine) and Golang (mem store, disk store and ot
 #### Ginkgo
 We use [Ginkgo](https://github.com/onsi/ginkgo) as the test framework for running the Golang unit test and coverage. Install Ginkgo first and run
 ```
-make test
+make test-golang
 ```
 
 ### Test C++ Code

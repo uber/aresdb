@@ -86,7 +86,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		diskStore.On("OpenLogFileForReplay", "abc", 1, int64(1)).Return(file2, nil)
 		metaStore.On("GetArchivingCutoff", "abc", 1).Return(uint32(0), nil)
 
-		events <- metaCom.ShardOwnership{"abc", 1, true}
+		events <- metaCom.ShardOwnership{TableName: "abc", Shard: 1, ShouldOwn: true}
 		<-done
 
 		shard = memstore.TableShards["abc"][1]

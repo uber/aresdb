@@ -121,7 +121,6 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 		resp, _ := http.Post(fmt.Sprintf("http://%s/schema/tables", hostPort), "application/json", bytes.NewBuffer(tableSchemaBytes))
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 
-
 		var createdTableSchema *metaCom.Table
 		testMetaStore.On("CreateTable", mock.Anything).Run(func(args mock.Arguments) {
 			createdTableSchema = args.Get(0).(*metaCom.Table)

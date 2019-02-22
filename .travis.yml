@@ -24,6 +24,7 @@ branches:
   only:
     - master
 install:
+  - cmake .
   - .travis/install_cuda.sh
   - .travis/install_golang_tools.sh
   - .travis/install_clang_tools.sh

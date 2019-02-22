@@ -196,7 +196,7 @@ func main() {
 	viper.BindPFlags(rootCmd.PersistentFlags())
 
 	dataCmd := &cobra.Command{
-		Use: "data",
+		Use:     "data",
 		Short:   "Ingest data for example dataset",
 		Long:    `Ingest data for example dataset`,
 		Example: `./examples data --dataset 1k_trips`,
@@ -206,7 +206,7 @@ func main() {
 	}
 
 	tableCmd := &cobra.Command{
-		Use: "tables",
+		Use:     "tables",
 		Short:   `Create tables for example dataset`,
 		Long:    `Create tables for example dataset`,
 		Example: `./examples tables --dataset 1k_trips`,
@@ -216,8 +216,8 @@ func main() {
 	}
 
 	queryCmd := &cobra.Command{
-		Use: "query",
-		Short:    `Run sample queries against example dataset`,
+		Use:     "query",
+		Short:   `Run sample queries against example dataset`,
 		Long:    `Run sample queries against example dataset`,
 		Example: `./examples query --dataset 1k_trips`,
 		Run: func(cmd *cobra.Command, args []string) {

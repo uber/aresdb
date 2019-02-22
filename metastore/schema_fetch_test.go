@@ -1,12 +1,12 @@
 package metastore
 
 import (
+	"errors"
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/mock"
 	clientsMocks "github.com/uber/aresdb/clients/mocks"
 	"github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
-	"errors"
 )
 
 var _ = ginkgo.Describe("schema fetch job", func() {

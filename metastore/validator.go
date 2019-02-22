@@ -5,8 +5,8 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
-	"reflect"
 	"gopkg.in/validator.v2"
+	"reflect"
 )
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
