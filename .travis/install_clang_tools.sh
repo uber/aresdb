@@ -7,7 +7,7 @@ rm -rf /tmp/googletest
 
 git clone -b release-1.8.1 --single-branch https://github.com/google/googletest.git /tmp/googletest
 pushd .
-cd /tmp/googletest
+cd /tmp/googletest/googletest
 # build makefile
 cmake CMakeLists.txt
 make
