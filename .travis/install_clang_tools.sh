@@ -13,7 +13,6 @@ cmake CMakeLists.txt
 make
 popd
 mv /tmp/googletest/googletest ${output_dir}
-ls -l ${output_dir}/googletest
 
 # install cppcheck
 sudo apt-get update

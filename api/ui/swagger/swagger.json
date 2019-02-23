@@ -534,10 +534,11 @@
       "x-go-package": "github.com/uber/aresdb/query"
     },
     "AQLQueryContext": {
-      "description": "line /Users/lucafuji/Uber/sync/ares-dev/home/zewang/workplace/gocode/src/github.com/uber/aresdb/query/aql_context.go:330",
       "type": "object",
+      "title": "AQLQueryContext stores all contextual data for handling an AQL query.",
       "properties": {
         "ReturnHLLData": {
+          "description": "whether to serialize the query result as HLLData. If ReturnHLLData is true, we will not release dimension\nvector and measure vector until serialization is done.",
           "type": "boolean"
         },
         "debug": {
@@ -557,6 +558,7 @@
           "$ref": "#/definitions/OOPKContext"
         },
         "prefilters": {
+          "description": "Index to filters in Query.Filters that are identified as prefilters.",
           "type": "array",
           "items": {
             "type": "integer",
@@ -572,6 +574,7 @@
           "$ref": "#/definitions/AQLQuery"
         },
         "scanners": {
+          "description": "Scanner for all tables. [0] for the main table; [1:] for tables in joins.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/TableScanner"
@@ -579,6 +582,7 @@
           "x-go-name": "TableScanners"
         },
         "tableIDs": {
+          "description": "Map from table alias to ID (index to TableScanners).",
           "type": "object",
           "additionalProperties": {
             "type": "integer",
@@ -766,6 +770,7 @@
       "x-go-package": "github.com/uber/aresdb/query"
     },
     "OOPKContext": {
+      "description": "OOPKContext defines additional query context for one-operator-per-kernel\nexecution.",
       "type": "object",
       "properties": {
         "aggregate": {
@@ -777,19 +782,19 @@
           "$ref": "#/definitions/oopkQueryStats"
         },
         "deviceMem": {
-          "description": "line /Users/lucafuji/Uber/sync/ares-dev/home/zewang/workplace/gocode/src/github.com/uber/aresdb/query/aql_context.go:286",
+          "description": "For reporting purpose only.",
           "type": "integer",
           "format": "int64",
           "x-go-name": "DeviceMemoryRequirement"
         },
         "dimRowBytes": {
-          "description": "line /Users/lucafuji/Uber/sync/ares-dev/home/zewang/workplace/gocode/src/github.com/uber/aresdb/query/aql_context.go:255",
+          "description": "Dim row bytes is the sum number of bytes of all dimension values\nplus validity bytes, for memory allocation convenience",
           "type": "integer",
           "format": "int64",
           "x-go-name": "DimRowBytes"
         },
         "dimensionVectorIndex": {
-          "description": "line /Users/lucafuji/Uber/sync/ares-dev/home/zewang/workplace/gocode/src/github.com/uber/aresdb/query/aql_context.go:250",
+          "description": "Index of single dimension vector in global dimension vector\nFollowing sorted order based on bytes",
           "type": "array",
           "items": {
             "type": "integer",
@@ -798,7 +803,7 @@
           "x-go-name": "DimensionVectorIndex"
         },
         "dimensions": {
-          "description": "line /Users/lucafuji/Uber/sync/ares-dev/home/zewang/workplace/gocode/src/github.com/uber/aresdb/query/aql_context.go:247",
+          "description": "Compiled and annotated ASTs for dimensions and measure.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Expr"
@@ -809,6 +814,7 @@
           "$ref": "#/definitions/Duration"
         },
         "foreignTableCommonFilters": {
+          "description": "ForeignTableCommonFilters match filters with foreign table columns involved",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Expr"
@@ -819,6 +825,7 @@
           "$ref": "#/definitions/oopkQueryStats"
         },
         "mainTableCommonFilters": {
+          "description": "Filters that apply to all archive and live batches.\nMainTableCommonFilters match filters with only main table columns involved",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Expr"
@@ -837,6 +844,7 @@
           "$ref": "#/definitions/DimCountsPerDimWidth"
         },
         "prefilters": {
+          "description": "Prefilters that only apply to live batches.\nArchiving cutoff filtering is processed directly by the query engine and not\nincluded here (different shards may have different cutoffs).",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Expr"
@@ -849,6 +857,7 @@
           "x-go-name": "ResultSize"
         },
         "timeFilters": {
+          "description": "Lower bound [0] and upper bound [1] time filter. nil if not applicable.\n[0] should be applied to the first archive batch and all live batches.\n[1] should be applied to the last archive batch and all live batches.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Expr"
@@ -859,6 +868,7 @@
       "x-go-package": "github.com/uber/aresdb/query"
     },
     "TableScanner": {
+      "description": "TableScanner defines how data for a table should be fed to device memory for\nprocessing (scanner in a traditional terminology).",
       "type": "object",
       "properties": {
         "archiveBatchIDEnd": {
@@ -867,15 +877,17 @@
           "x-go-name": "ArchiveBatchIDEnd"
         },
         "archiveBatchIDStart": {
+          "description": "Range of archive batches to process: [Start, end).\nDepending on the archiving progress of each shard, live batches may be\nskipped for processing if the archiving cutoff is after the time of\nArchiveBatchIDEnd.",
           "type": "integer",
           "format": "int64",
           "x-go-name": "ArchiveBatchIDStart"
         },
         "columnUsage": {
-          "description": "line /Users/lucafuji/Uber/sync/ares-dev/home/zewang/workplace/gocode/src/github.com/uber/aresdb/query/aql_context.go:89",
+          "description": "Map from column ID to its usage by the query.",
           "x-go-name": "ColumnUsages"
         },
         "columns": {
+          "description": "IDs of columns to be used in this query, in the following order:\n1. Columns not from ArchivingSortColumns.\n2. Columns from ArchivingSortColumns in reverse order.",
           "type": "array",
           "items": {
             "type": "integer",
@@ -884,6 +896,7 @@
           "x-go-name": "Columns"
         },
         "equalityPrefilterValues": {
+          "description": "Values of equality prefilters in order. Each 4 bytes of the uint32 is used\nto store any data type other than UUID (not supported).",
           "type": "array",
           "items": {
             "type": "integer",
@@ -892,6 +905,7 @@
           "x-go-name": "EqualityPrefilterValues"
         },
         "rangePrefilterBoundaries": {
+          "description": "Boundary types and values of the final range prefilter.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/boundaryType"
@@ -907,6 +921,7 @@
           "x-go-name": "RangePrefilterValues"
         },
         "shards": {
+          "description": "IDS of all table shards to be scanned on this instance.",
           "type": "array",
           "items": {
             "type": "integer",
@@ -978,9 +993,6 @@
           "type": "boolean",
           "x-go-name": "DisableAutoExpand"
         },
-        "hllConfig": {
-          "$ref": "#/definitions/hllConfig"
-        },
         "name": {
           "description": "Immutable, columns cannot be renamed.",
           "type": "string",
@@ -1012,18 +1024,6 @@
         }
       },
       "x-go-name": "ColumnConfig",
-      "x-go-package": "github.com/uber/aresdb/metastore/common"
-    },
-    "hllConfig": {
-      "description": "HLLConfig defines hll configuration",
-      "type": "object",
-      "properties": {
-        "isHLLColumn": {
-          "type": "boolean",
-          "x-go-name": "IsHLLColumn"
-        }
-      },
-      "x-go-name": "HLLConfig",
       "x-go-package": "github.com/uber/aresdb/metastore/common"
     },
     "oopkQueryStats": {
@@ -1128,10 +1128,6 @@
       "description": "TableConfig defines the table configurations that can be changed",
       "type": "object",
       "properties": {
-        "allowMissingEventTime": {
-          "type": "boolean",
-          "x-go-name": "AllowMissingEventTime"
-        },
         "archivingDelayMinutes": {
           "description": "Number of minutes after event time before a record can be archived.",
           "type": "integer",
