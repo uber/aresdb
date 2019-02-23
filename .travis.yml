@@ -12,7 +12,7 @@ env:
     - PATH=${CUDA_HOME}/bin:${GOPATH}/bin:${CUDA_HOME}/nvvm/bin:${PATH}
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
     - NVCCFLAGS="-ldir ${CUDA_HOME}/nvvm/libdevice -noprof -I ${CUDA_HOME}/include/ -L ${CUDA_HOME}/lib64"
-    - GTEST_ROOT=./build/googletest
+    - GTEST_ROOT=${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/build/googletest
 cache: 
   directories:
     - lib
