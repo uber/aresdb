@@ -12,9 +12,7 @@ cd /tmp/googletest
 cmake CMakeLists.txt
 make
 popd
-mv /tmp/googletest ${output_dir}
-cd ./build/googletest
-ls -R
+mv /tmp/googletest/googletest ${output_dir}
 
 # install cppcheck
 sudo apt-get update
