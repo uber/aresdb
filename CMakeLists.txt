@@ -100,7 +100,9 @@ execute_process(
         COMMAND bash -c "git diff origin/master HEAD --name-only --diff-filter=AMR | grep -e \".*\\.go\""
         OUTPUT_VARIABLE CHANGED_GO_SRC
         )
-string(REPLACE "\n" " " CHANGED_GO_SRC ${CHANGED_GO_SRC})
+if (CHANGED_GO_SRC)
+    string(REPLACE "\n" " " CHANGED_GO_SRC ${CHANGED_GO_SRC})
+endif()
 
 
 execute_process(COMMAND bash -c "find .  -type f \
@@ -118,7 +120,9 @@ execute_process(
         COMMAND bash -c "git diff HEAD origin/master --name-only | grep -e \".*\\.\\(cu\\|c\\|h\\|hpp\\)\""
         OUTPUT_VARIABLE CHANGED_C_SRC
         )
-string(REPLACE "\n" " " CHANGED_C_SRC ${CHANGED_C_SRC})
+if (CHANGED_C_SRC)
+    string(REPLACE "\n" " " CHANGED_C_SRC ${CHANGED_C_SRC})
+endif()
 
 add_custom_target(lint-all
         COMMAND ./scripts/clang-lint.sh ${ALL_C_SRC}
