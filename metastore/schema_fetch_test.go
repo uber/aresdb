@@ -3,7 +3,7 @@ package metastore
 import (
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/mock"
-	gatewaysMocks "github.com/uber/aresdb/gateways/mocks"
+	gatewaysMocks "github.com/uber/aresdb/gateway/mocks"
 	"github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"errors"

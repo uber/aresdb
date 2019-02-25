@@ -31,7 +31,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
-	"github.com/uber/aresdb/gateways"
+	"github.com/uber/aresdb/gateway"
 	"github.com/uber/aresdb/memutils"
 )
 
