@@ -1,10 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"net/http"
-	"bytes"
 )
 
 var _ = ginkgo.Describe("api request", func() {

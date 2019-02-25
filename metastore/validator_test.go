@@ -17,7 +17,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0},
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
@@ -35,7 +35,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			IsFactTable: true,
-			Config: DefaultTableConfig,
+			Config:      DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
@@ -90,7 +90,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			PrimaryKeyColumns: []int{0, 0},
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
@@ -110,7 +110,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns:    []int{0},
 			IsFactTable:          true,
 			ArchivingSortColumns: []int{0, 0},
-			Config: DefaultTableConfig,
+			Config:               DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
@@ -122,7 +122,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		table := common.Table{
 			Name:    "testTable",
 			Columns: []common.Column{},
-			Config: DefaultTableConfig,
+			Config:  DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
@@ -151,7 +151,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			IsFactTable:          true,
 			ArchivingSortColumns: []int{1},
 			Version:              0,
-			Config: DefaultTableConfig,
+			Config:               DefaultTableConfig,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -174,7 +174,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			IsFactTable:          true,
 			ArchivingSortColumns: []int{1},
 			Version:              1,
-			Config: DefaultTableConfig,
+			Config:               DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -196,7 +196,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			IsFactTable:          true,
 			ArchivingSortColumns: []int{0},
 			Version:              0,
-			Config: DefaultTableConfig,
+			Config:               DefaultTableConfig,
 		}
 		newTable := common.Table{
 			Name: "testTable123",
@@ -210,7 +210,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			IsFactTable:          true,
 			ArchivingSortColumns: []int{0},
 			Version:              1,
-			Config: DefaultTableConfig,
+			Config:               DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -232,7 +232,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			IsFactTable:          true,
 			ArchivingSortColumns: []int{1},
 			Version:              0,
-			Config: DefaultTableConfig,
+			Config:               DefaultTableConfig,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -245,7 +245,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns:    []int{0},
 			ArchivingSortColumns: []int{1},
 			Version:              1,
-			Config: DefaultTableConfig,
+			Config:               DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -269,7 +269,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -281,7 +281,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           1,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -306,7 +306,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -322,7 +322,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           1,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -346,7 +346,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -362,7 +362,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           1,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -385,7 +385,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		newTable = common.Table{
 			Name: "testTable",
@@ -404,7 +404,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           1,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
@@ -423,7 +423,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -440,7 +440,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           1,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -460,7 +460,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -476,7 +476,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			},
 			PrimaryKeyColumns: []int{0, 1},
 			Version:           1,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
@@ -506,7 +506,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns:    []int{0},
 			ArchivingSortColumns: []int{1, 2},
 			Version:              0,
-			Config: DefaultTableConfig,
+			Config:               DefaultTableConfig,
 		}
 		newTable := common.Table{
 			Name: "testTable",
@@ -528,7 +528,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns:    []int{0},
 			ArchivingSortColumns: []int{1},
 			Version:              1,
-			Config: DefaultTableConfig,
+			Config:               DefaultTableConfig,
 		}
 		// removing sort columns is not allowed
 		validator := NewTableSchameValidator()
@@ -600,7 +600,7 @@ var _ = ginkgo.Describe("Validator", func() {
 				},
 			},
 			IsFactTable: true,
-			Config: DefaultTableConfig,
+			Config:      DefaultTableConfig,
 		}
 		// removing sort columns is not allowed
 		validator := NewTableSchameValidator()
@@ -629,7 +629,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		oldTable.Config.AllowMissingEventTime = true
 
@@ -652,7 +652,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			IsFactTable:       true,
 			PrimaryKeyColumns: []int{1},
 			Version:           1,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		newTable.Config.AllowMissingEventTime = false
 
@@ -681,7 +681,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 
 		newTable = common.Table{
@@ -703,7 +703,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			IsFactTable:       true,
 			PrimaryKeyColumns: []int{1},
 			Version:           1,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 		newTable.Config.AllowMissingEventTime = true
 
@@ -732,7 +732,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 
 		validator := NewTableSchameValidator()
@@ -755,7 +755,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
 			Version:           0,
-			Config: DefaultTableConfig,
+			Config:            DefaultTableConfig,
 		}
 
 		validator = NewTableSchameValidator()

@@ -386,7 +386,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		inputVector = makeConstantInput(int(1), false)
 		Ω(inputVector.Type).Should(Equal(uint32(2)))
 
-		v := &expr.GeopointLiteral{[2]float32{1.1, 2.2}}
+		v := &expr.GeopointLiteral{Val: [2]float32{1.1, 2.2}}
 		inputVector = makeConstantInput(v, false)
 		Ω(inputVector.Type).Should(Equal(uint32(2)))
 	})
