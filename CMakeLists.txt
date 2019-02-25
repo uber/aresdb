@@ -78,7 +78,7 @@ enable_testing()
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 cuda_add_executable(all_unittest ${QUERY_UNITTEST_FILES})
 target_include_directories(all_unittest PRIVATE ${GTEST_ROOT}/include ${gtest_SOURCE_DIR})
-#add_dependencies(all_unittest algorithm)
+add_dependencies(all_unittest algorithm)
 # Link test executable against gtest & gtest_main
 target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
 add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
