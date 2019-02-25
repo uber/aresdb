@@ -48,8 +48,13 @@ The following dependencies need to be installed before building the binary.
 
 ### glide
 We use [glide](https://glide.sh) to manage Go dependencies. Please make sure `glide` is in your PATH before you attempt to build.
-
 ###
+
+Run following commands to generate makefile:
+```
+cmake .
+```
+
 
 Local Test
 ----------

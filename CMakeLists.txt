@@ -92,18 +92,13 @@ execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
   -e build \
   -e '.*/\\..*' \
   -e '.*/_.*' \
-  -e '.*/mocks.*'"
+  -e '.*/mocks.*' | tr \"\n\" \" \""
         OUTPUT_VARIABLE ALL_GO_SRC)
-string(REPLACE "\n" " " ALL_GO_SRC ${ALL_GO_SRC})
 
 execute_process(
-        COMMAND bash -c "git diff origin/master HEAD --name-only --diff-filter=AMR | grep -e \".*\\.go\""
+        COMMAND bash -c "git diff origin/master HEAD --name-only --diff-filter=AMR | grep -e \".*\\.go\" | tr \"\n\" \" \""
         OUTPUT_VARIABLE CHANGED_GO_SRC
-        )
-if (CHANGED_GO_SRC)
-    string(REPLACE "\n" " " CHANGED_GO_SRC ${CHANGED_GO_SRC})
-endif()
-
+)
 
 execute_process(COMMAND bash -c "find .  -type f \
     \\( -iname \\*.cu -o -iname \\*.h -o -iname \\*.hpp -o -iname \\*.c \\) \
@@ -112,17 +107,13 @@ execute_process(COMMAND bash -c "find .  -type f \
   -e build \
   -e '.*/\\..*' \
   -e '.*/_.*' \
-  -e '.*/mocks.*'"
+  -e '.*/mocks.*' | tr \"\n\" \" \""
         OUTPUT_VARIABLE ALL_C_SRC)
-string(REPLACE "\n" " " ALL_C_SRC ${ALL_C_SRC})
 
 execute_process(
-        COMMAND bash -c "git diff HEAD origin/master --name-only | grep -e \".*\\.\\(cu\\|c\\|h\\|hpp\\)\""
+        COMMAND bash -c "git diff HEAD origin/master --name-only | grep -e \".*\\.\\(cu\\|c\\|h\\|hpp\\)\" | tr \"\n\" \" \""
         OUTPUT_VARIABLE CHANGED_C_SRC
-        )
-if (CHANGED_C_SRC)
-    string(REPLACE "\n" " " CHANGED_C_SRC ${CHANGED_C_SRC})
-endif()
+)
 
 add_custom_target(lint-all
         COMMAND ./scripts/clang-lint.sh ${ALL_C_SRC}
@@ -155,9 +146,10 @@ add_custom_command(
 )
 
 add_custom_target(lib DEPENDS algorithm mem)
-
-add_custom_target(aresd DEPENDS golang-dep lib
+string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
+add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
         COMMAND go build -o bin/aresd
+        VERBATIM
         )
 
 add_custom_target(run_server DEPENDS aresd
