@@ -1,4 +1,4 @@
-package clients_test
+package gateways_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestClients(t *testing.T) {
+func TestGateways(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Clients Suite")
+	RunSpecs(t, "Gateways Suite")
 }

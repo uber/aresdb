@@ -1,4 +1,4 @@
-package clients
+package gateways
 
 import (
 	"encoding/json"
