@@ -120,14 +120,14 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 		if cfg.Cluster.ClusterName == "" {
 			logger.Fatal("Missing cluster name")
 		}
-		controllerClientCfg := cfg.Gateways.Controller
+		controllerClientCfg := cfg.Gateway.Controller
 		if controllerClientCfg == nil {
 			logger.Fatal("Missing controller client config", err)
 		}
 		if cfg.Cluster.InstanceName != "" {
-			controllerClientCfg.Headers.Add(gateways.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
+			controllerClientCfg.Headers.Add(gateway.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
 		}
-		controllerClient := gateways.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
+		controllerClient := gateway.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
 		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.ClusterName, "")
 		// immediate initial fetch
 		schemaFetchJob.FetchSchema()
