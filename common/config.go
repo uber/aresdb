@@ -52,8 +52,8 @@ type ControllerConfig struct {
 	Headers http.Header `yaml:"headers"`
 }
 
-// ClientsConfig is the config for all clients
-type ClientsConfig struct {
+// GatewayConfig is the config for all gateway
+type GatewayConfig struct {
 	Controller *ControllerConfig `yaml:"controller,omitempty"`
 }
 
@@ -95,5 +95,5 @@ type AresServerConfig struct {
 	DiskStore DiskStoreConfig `yaml:"disk_store"`
 	HTTP      HTTPConfig      `yaml:"http"`
 	Cluster   ClusterConfig   `yaml:"cluster"`
-	Clients   ClientsConfig   `yaml:"clients"`
+	Gateway   GatewayConfig   `yaml:"gateway"`
 }
