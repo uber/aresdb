@@ -69,7 +69,7 @@ type Measure struct {
 	expr expr.Expr
 
 	// Row level filters to apply for this measure.
-	// The filters are ANDed togther.
+	// The filters are ANDed together.
 	Filters []string `json:"rowFilters,omitempty"`
 	filters []expr.Expr
 }

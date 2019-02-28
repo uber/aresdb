@@ -254,10 +254,9 @@ type OOPKContext struct {
 	// plus validity bytes, for memory allocation convenience
 	DimRowBytes int `json:"dimRowBytes"`
 
-	// For one-operator-per-kernel we only support one measure per query.
-	Measure       expr.Expr                `json:"measure"`
-	MeasureBytes  int                      `json:"measureBytes"`
-	AggregateType C.enum_AggregateFunction `json:"aggregate"`
+	Measures       []expr.Expr                `json:"measures"`
+	MeasureBytes  []int                      `json:"measureBytes"`
+	AggregateTypes []C.enum_AggregateFunction `json:"aggregates"`
 
 	// Storage for current batch.
 	currentBatch oopkBatchContext
@@ -273,7 +272,7 @@ type OOPKContext struct {
 	// Result storage in host memory. The format is the same as the dimension and
 	// measure vector in oopkBatchContext.
 	dimensionVectorH unsafe.Pointer
-	measureVectorH   unsafe.Pointer
+	measureVectorH   []unsafe.Pointer
 	// hllVectorD stores hll dense or sparse vector in device memory.
 	hllVectorD devicePointer
 	// size of hll vector
@@ -375,8 +374,10 @@ type AQLQueryContext struct {
 
 	// timezone column and time filter related
 	timezoneTable timezoneTableContext
+
+	isNonAggQuery bool
 }
 
 func (ctx *OOPKContext) IsHLL() bool {
-	return ctx.AggregateType == C.AGGR_HLL
+	return len(ctx.AggregateTypes) == 1 && ctx.AggregateTypes[0] == C.AGGR_HLL
 }

@@ -1326,47 +1326,16 @@ func (qc *AQLQueryContext) matchPrefilters() {
 	sort.Ints(qc.Prefilters)
 }
 
-// columnUsageCollector is the visitor used to traverses an AST, finds VarRef columns
-// and sets the usage bits in tableScanners. The VarRef nodes must have already
-// been resolved and annotated with TableID and ColumnID.
-type columnUsageCollector struct {
-	tableScanners []*TableScanner
-	usages        columnUsage
-}
 
-func (c columnUsageCollector) Visit(expression expr.Expr) expr.Visitor {
-	switch e := expression.(type) {
-	case *expr.VarRef:
-		c.tableScanners[e.TableID].ColumnUsages[e.ColumnID] |= c.usages
-	}
-	return c
-}
-
-// foreignTableColumnDetector detects foreign table columns involved in AST
-type foreignTableColumnDetector struct {
-	hasForeignTableColumn bool
-}
-
-func (c *foreignTableColumnDetector) Visit(expression expr.Expr) expr.Visitor {
-	switch e := expression.(type) {
-	case *expr.VarRef:
-		c.hasForeignTableColumn = c.hasForeignTableColumn || (e.TableID > 0)
-	}
-	return c
-}
 
 // processFilters processes all filters and categorize them into common filters,
 // prefilters, and time filters. It also collect column usages from the filters.
 func (qc *AQLQueryContext) processFilters() {
-	// OOPK engine only supports one measure per query.
-	if len(qc.Query.Measures) != 1 {
-		qc.Error = utils.StackError(nil, "expect one measure per query, but got %d",
-			len(qc.Query.Measures))
-		return
-	}
-
 	// Categorize common filters and prefilters based on matched prefilters.
-	commonFilters := qc.Query.Measures[0].filters
+	commonFilters := []expr.Expr{}
+	for _, measure := range qc.Query.Measures {
+		commonFilters = append(commonFilters, measure.filters...)
+	}
 	prefilters := qc.Prefilters
 	for index, filter := range qc.Query.filters {
 		if len(prefilters) == 0 || prefilters[0] > index {
@@ -1668,112 +1637,36 @@ func (qc *AQLQueryContext) matchAndRewriteGeoDimension(dimExpr expr.Expr) (expr.
 	return nil, utils.StackError(nil, "Only hex(uuid) or uuid supported, got %s", dimExpr.String())
 }
 
-// geoTableUsageCollector traverses an AST expression tree, finds VarRef columns
-// and check whether it uses any geo table columns.
-type geoTableUsageCollector struct {
-	geoIntersection geoIntersection
-	useGeoTable     bool
-}
 
-func (g *geoTableUsageCollector) Visit(expression expr.Expr) expr.Visitor {
-	switch e := expression.(type) {
-	case *expr.VarRef:
-		g.useGeoTable = g.useGeoTable || e.TableID == g.geoIntersection.shapeTableID
-	}
-	return g
-}
 
 func (qc *AQLQueryContext) processMeasureAndDimensions() {
-	// OOPK engine only supports one measure per query.
-	if len(qc.Query.Measures) != 1 {
-		qc.Error = utils.StackError(nil, "expect one measure per query, but got %d",
-			len(qc.Query.Measures))
-		return
-	}
-
 	// Match and strip the aggregate function.
-	aggregate, ok := qc.Query.Measures[0].expr.(*expr.Call)
-	if !ok {
-		qc.Error = utils.StackError(nil, "expect aggregate function, but got %s",
-			qc.Query.Measures[0].Expr)
-		return
-	}
-
-	if qc.ReturnHLLData && aggregate.Name != hllCallName {
-		qc.Error = utils.StackError(nil, "expect hll aggregate function as client specify 'Accept' as "+
-			"'application/hll', but got %s",
-			qc.Query.Measures[0].Expr)
-		return
-	}
-
-	if len(aggregate.Args) != 1 {
-		qc.Error = utils.StackError(nil,
-			"expect one parameter for aggregate function %s, but got %u",
-			aggregate.Name, len(aggregate.Args))
-		return
-	}
-	qc.OOPK.Measure = aggregate.Args[0]
-	// default is 4 bytes
-	qc.OOPK.MeasureBytes = 4
-	switch strings.ToLower(aggregate.Name) {
-	case countCallName:
-		qc.OOPK.Measure = &expr.NumberLiteral{
-			Int:      1,
-			Expr:     "1",
-			ExprType: expr.Unsigned,
+	for index, measure := range qc.Query.Measures {
+		aggregate, ok := measure.expr.(*expr.Call)
+		if index == 0 {
+			qc.isNonAggQuery = !ok
 		}
-		qc.OOPK.AggregateType = C.AGGR_SUM_UNSIGNED
-	case sumCallName:
-		qc.OOPK.MeasureBytes = 8
-		switch qc.OOPK.Measure.Type() {
-		case expr.Float:
-			qc.OOPK.AggregateType = C.AGGR_SUM_FLOAT
-		case expr.Signed:
-			qc.OOPK.AggregateType = C.AGGR_SUM_SIGNED
-		case expr.Unsigned:
-			qc.OOPK.AggregateType = C.AGGR_SUM_UNSIGNED
-		default:
-			qc.Error = utils.StackError(nil,
-				unsupportedInputType, sumCallName, qc.OOPK.Measure.String())
-			return
+		if qc.isNonAggQuery {
+			if ok {
+				qc.Error = utils.StackError(nil, "expect non aggregate measure, but got %s",
+					measure.Expr)
+				return
+			}
+			qc.processNonAggregateMeasure(measure.expr)
+			if qc.Error != nil {
+				return
+			}
+		} else {
+			if !ok {
+				qc.Error = utils.StackError(nil, "expect aggregate function, but got %s",
+					measure.Expr)
+				return
+			}
+			qc.processAggregateMeasure(aggregate)
+			if qc.Error != nil {
+				return
+			}
 		}
-	case avgCallName:
-		// 4 bytes for storing average result and another 4 byte for count
-		qc.OOPK.MeasureBytes = 8
-		// for average, we should always use float type as the agg type.
-		qc.OOPK.AggregateType = C.AGGR_AVG_FLOAT
-	case minCallName:
-		switch qc.OOPK.Measure.Type() {
-		case expr.Float:
-			qc.OOPK.AggregateType = C.AGGR_MIN_FLOAT
-		case expr.Signed:
-			qc.OOPK.AggregateType = C.AGGR_MIN_SIGNED
-		case expr.Unsigned:
-			qc.OOPK.AggregateType = C.AGGR_MIN_UNSIGNED
-		default:
-			qc.Error = utils.StackError(nil,
-				unsupportedInputType, minCallName, qc.OOPK.Measure.String())
-			return
-		}
-	case maxCallName:
-		switch qc.OOPK.Measure.Type() {
-		case expr.Float:
-			qc.OOPK.AggregateType = C.AGGR_MAX_FLOAT
-		case expr.Signed:
-			qc.OOPK.AggregateType = C.AGGR_MAX_SIGNED
-		case expr.Unsigned:
-			qc.OOPK.AggregateType = C.AGGR_MAX_UNSIGNED
-		default:
-			qc.Error = utils.StackError(nil,
-				unsupportedInputType, maxCallName, qc.OOPK.Measure.String())
-			return
-		}
-	case hllCallName:
-		qc.OOPK.AggregateType = C.AGGR_HLL
-	default:
-		qc.Error = utils.StackError(nil,
-			"unsupported aggregate function: %s", aggregate.Name)
-		return
 	}
 
 	// Copy dimension ASTs.
@@ -1788,12 +1681,13 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 			geoIntersection: *qc.OOPK.geoIntersection,
 		}
 		// Check whether measure and dimensions are referencing any geo table columns.
-		expr.Walk(gc, qc.OOPK.Measure)
-
-		if gc.useGeoTable {
-			qc.Error = utils.StackError(nil,
-				"Geo table column is not allowed to be used in measure: %s", qc.OOPK.Measure.String())
-			return
+		for _, measure := range qc.OOPK.Measures {
+			expr.Walk(gc, measure)
+			if gc.useGeoTable {
+				qc.Error = utils.StackError(nil,
+					"Geo table column is not allowed to be used in measure: %s", measure.String())
+				return
+			}
 		}
 
 		foundGeoJoin := false
@@ -1817,11 +1711,13 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 		}
 	}
 
-	// Collect column usage from measure and dimensions
-	expr.Walk(columnUsageCollector{
-		tableScanners: qc.TableScanners,
-		usages:        columnUsedByAllBatches,
-	}, qc.OOPK.Measure)
+	// Collect column usage from measures and dimensions
+	for _, measure := range qc.OOPK.Measures {
+		expr.Walk(columnUsageCollector{
+			tableScanners: qc.TableScanners,
+			usages:        columnUsedByAllBatches,
+		}, measure)
+	}
 
 	for _, dim := range qc.OOPK.Dimensions {
 		expr.Walk(columnUsageCollector{
@@ -1829,6 +1725,124 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 			usages:        columnUsedByAllBatches,
 		}, dim)
 	}
+}
+
+func (qc *AQLQueryContext) processNonAggregateMeasure(nonAgg expr.Expr) {
+	var measure expr.Expr
+	// default is 4 bytes
+	measureBytes := 4
+	switch nonAgg.(type) {
+	case *expr.VarRef:
+		measure = nonAgg
+		measureBytes = memCom.DataTypeBits(nonAgg.(*expr.VarRef).DataType)
+	case *expr.NumberLiteral, *expr.StringLiteral:
+		// no need to transform literals to oopk, post processing will fill values
+		// note order of measures matters here
+	default:
+		slc := stringOperandCollector{}
+		expr.Walk(slc, nonAgg)
+		if slc.stringOperandSeen {
+			qc.Error = utils.StackError(nil, "string operations not supported in measures")
+		}
+		// determine bytes base on expr type, which should already be resolved in Rewrite step
+		switch nonAgg.Type() {
+		case expr.Boolean:
+			measureBytes = 1
+		}
+		measure = nonAgg
+	}
+	qc.OOPK.Measures = append(qc.OOPK.Measures, measure)
+	qc.OOPK.MeasureBytes = append(qc.OOPK.MeasureBytes, measureBytes)
+}
+
+func (qc *AQLQueryContext) processAggregateMeasure(aggregate *expr.Call) {
+	if qc.ReturnHLLData && aggregate.Name != hllCallName {
+		qc.Error = utils.StackError(nil, "expect hll aggregate function as client specify 'Accept' as "+
+			"'application/hll', but got %s",
+			qc.Query.Measures[0].Expr)
+		return
+	}
+
+	if len(aggregate.Args) != 1 {
+		qc.Error = utils.StackError(nil,
+			"expect one parameter for aggregate function %s, but got %u",
+			aggregate.Name, len(aggregate.Args))
+		return
+	}
+
+	var measure expr.Expr
+	var aggregateType C.enum_AggregateFunction
+	// default is 4 bytes
+	measureBytes := 4
+
+	switch strings.ToLower(aggregate.Name) {
+	case countCallName:
+		measure = &expr.NumberLiteral{
+			Int:       1,
+			Expr:     "1",
+			ExprType: expr.Unsigned,
+		}
+		aggregateType = C.AGGR_SUM_UNSIGNED
+	case sumCallName:
+		measureBytes = 8
+		switch measure.Type() {
+		case expr.Float:
+			aggregateType = C.AGGR_SUM_FLOAT
+		case expr.Signed:
+			aggregateType = C.AGGR_SUM_SIGNED
+		case expr.Unsigned:
+			aggregateType = C.AGGR_SUM_UNSIGNED
+		default:
+			qc.Error = utils.StackError(nil,
+				unsupportedInputType, sumCallName, measure.String())
+			return
+		}
+	case avgCallName:
+		// 4 bytes for storing average result and another 4 byte for count
+		measureBytes = 8
+		// for average, we should always use float type as the agg type.
+		aggregateType = C.AGGR_AVG_FLOAT
+	case minCallName:
+		switch measure.Type() {
+		case expr.Float:
+			aggregateType = C.AGGR_MIN_FLOAT
+		case expr.Signed:
+			aggregateType = C.AGGR_MIN_SIGNED
+		case expr.Unsigned:
+			aggregateType = C.AGGR_MIN_UNSIGNED
+		default:
+			qc.Error = utils.StackError(nil,
+				unsupportedInputType, minCallName, measure.String())
+			return
+		}
+	case maxCallName:
+		switch measure.Type() {
+		case expr.Float:
+			aggregateType = C.AGGR_MAX_FLOAT
+		case expr.Signed:
+			aggregateType = C.AGGR_MAX_SIGNED
+		case expr.Unsigned:
+			aggregateType = C.AGGR_MAX_UNSIGNED
+		default:
+			qc.Error = utils.StackError(nil,
+				unsupportedInputType, maxCallName, measure.String())
+			return
+		}
+	case hllCallName:
+		aggregateType = C.AGGR_HLL
+		if len(qc.OOPK.AggregateTypes) > 0 {
+			qc.Error = utils.StackError(nil,
+				"hll aggregation must be in separate query")
+		}
+		return
+	default:
+		qc.Error = utils.StackError(nil,
+			"unsupported aggregate function: %s", aggregate.Name)
+		return
+	}
+	qc.OOPK.Measures = append(qc.OOPK.Measures, aggregate.Args[0])
+	qc.OOPK.AggregateTypes = append(qc.OOPK.AggregateTypes, aggregateType)
+	qc.OOPK.MeasureBytes = append(qc.OOPK.MeasureBytes, measureBytes)
 }
 
 func getDimensionDataType(expression expr.Expr) memCom.DataType {

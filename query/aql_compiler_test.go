@@ -1351,7 +1351,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 	})
 
-	ginkgo.It("processes measure and dimensions", func() {
+	ginkgo.It("processes measures and dimensions", func() {
 
 		table := metaCom.Table{
 			Columns: []metaCom.Column{
@@ -1376,6 +1376,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Table: "trips",
 			Measures: []Measure{
 				{Expr: "sum(fare)"},
+				{Expr: "count(*)"},
 			},
 			Dimensions: []Dimension{
 				{Expr: "city_id"},
@@ -1389,11 +1390,18 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.processMeasureAndDimensions()
 		Ω(qc.Error).Should(BeNil())
 
-		Ω(qc.OOPK.Measure).Should(Equal(&expr.VarRef{
+		Ω(qc.OOPK.Measures).Should(HaveLen(2))
+		Ω(qc.OOPK.Measures[0]).Should(Equal(&expr.VarRef{
 			Val:      "fare",
 			ColumnID: 3,
 			ExprType: expr.Float,
 			DataType: memCom.Float32,
+		}))
+		Ω(qc.OOPK.Measures[1]).Should(Equal(&expr.NumberLiteral{
+			Int: 1,
+			Expr: "1",
+			ExprType: expr.Unsigned,
+
 		}))
 		Ω(qc.OOPK.Dimensions).Should(Equal([]expr.Expr{
 			&expr.VarRef{
