@@ -46,16 +46,19 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					DataType: memCom.Uint32,
 				},
 			},
-			Measure: &expr.NumberLiteral{
-				ExprType: expr.Float,
+			Measures: []expr.Expr{
+				&expr.NumberLiteral{
+					ExprType: expr.Float,
+				},
 			},
-			MeasureBytes:         4,
+			MeasureBytes:         []int{4},
+			AggregateTypes:       []uint32{1},
 			DimRowBytes:          5,
 			DimensionVectorIndex: []int{0},
 			NumDimsPerDimWidth:   queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0},
 			ResultSize:           1,
 			dimensionVectorH:     unsafe.Pointer(&[]uint8{12, 0, 0, 0, 1}[0]),
-			measureVectorH:       unsafe.Pointer(&[]float32{3.2}[0]),
+			measureVectorHs:      []unsafe.Pointer{unsafe.Pointer(&[]float32{3.2}[0])},
 		}
 
 		ctx.OOPK = oopkContext
@@ -85,10 +88,10 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.NumberLiteral{
+			Measures: []expr.Expr{&expr.NumberLiteral{
 				ExprType: expr.Float,
-			},
-			MeasureBytes:       4,
+			}},
+			MeasureBytes:       []int{4},
 			DimRowBytes:        8,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 0},
 			DimensionVectorIndex: []int{
@@ -97,7 +100,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 			},
 			ResultSize:       2,
 			dimensionVectorH: unsafe.Pointer(&[]uint8{12, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 1, 0, 1, 1}[0]),
-			measureVectorH:   unsafe.Pointer(&[]float32{3.2, 6.4}[0]),
+			measureVectorHs:  []unsafe.Pointer{unsafe.Pointer(&[]float32{3.2, 6.4}[0])},
 		}
 
 		ctx.OOPK = oopkContext
@@ -124,9 +127,9 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					DataType: memCom.Float32,
 				},
 			},
-			Measure: &expr.NumberLiteral{
+			Measures: []expr.Expr{&expr.NumberLiteral{
 				ExprType: expr.UnknownType,
-			},
+			}},
 			DimRowBytes:        5,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0},
 			DimensionVectorIndex: []int{
@@ -134,7 +137,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 			},
 			ResultSize:       1,
 			dimensionVectorH: unsafe.Pointer(&[]uint8{0, 0, 0, 0, 0}[0]),
-			measureVectorH:   unsafe.Pointer(&[]float32{3.2}[0]),
+			measureVectorHs:  []unsafe.Pointer{unsafe.Pointer(&[]float32{3.2}[0])},
 		}
 
 		ctx.OOPK = oopkContext
@@ -170,10 +173,10 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.NumberLiteral{
+			Measures: []expr.Expr{&expr.NumberLiteral{
 				ExprType: expr.Float,
-			},
-			MeasureBytes:       4,
+			}},
+			MeasureBytes:       []int{4},
 			DimRowBytes:        10,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 2, 0, 0},
 			DimensionVectorIndex: []int{
@@ -182,7 +185,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 			},
 			ResultSize:       2,
 			dimensionVectorH: unsafe.Pointer(&[]uint8{190, 0, 0, 0, 250, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1}[0]),
-			measureVectorH:   unsafe.Pointer(&[]float32{3.2, 6.4}[0]),
+			measureVectorHs:  []unsafe.Pointer{unsafe.Pointer(&[]float32{3.2, 6.4}[0])},
 		}
 
 		ctx.OOPK = oopkContext
@@ -298,10 +301,10 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					ExprType: expr.Signed,
 				},
 			},
-			Measure: &expr.NumberLiteral{
+			Measures: []expr.Expr{&expr.NumberLiteral{
 				ExprType: expr.Float,
-			},
-			MeasureBytes:       4,
+			}},
+			MeasureBytes:       []int{4},
 			DimRowBytes:        10,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 2, 0, 0},
 			DimensionVectorIndex: []int{
@@ -310,7 +313,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 			},
 			ResultSize:       2,
 			dimensionVectorH: unsafe.Pointer(&[]uint8{12, 100, 0, 0, 13, 100, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1}[0]),
-			measureVectorH:   unsafe.Pointer(&[]float32{3.2, 6.4}[0]),
+			measureVectorHs:  []unsafe.Pointer{unsafe.Pointer(&[]float32{3.2, 6.4}[0])},
 		}
 
 		ctx.OOPK = oopkContext

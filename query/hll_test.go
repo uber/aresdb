@@ -69,7 +69,7 @@ var _ = ginkgo.Describe("hll", func() {
 			currentBatch: oopkBatchContext{
 				resultCapacity:   6,
 				dimensionVectorD: [2]devicePointer{{pointer: unsafe.Pointer(&dimensionData[0])}, nullDevicePointer},
-				measureVectorD:   [2]devicePointer{{pointer: unsafe.Pointer(&measureData[0])}, nullDevicePointer},
+				measureVectorDs:   [][2]devicePointer{{{pointer: unsafe.Pointer(&measureData[0])}, nullDevicePointer}},
 			},
 			hllVectorD:           devicePointer{pointer: unsafe.Pointer(&hllData[0])},
 			hllVectorSize:        queryCom.DenseDataLength + 28,
@@ -147,7 +147,7 @@ var _ = ginkgo.Describe("hll", func() {
 				currentBatch: oopkBatchContext{
 					resultCapacity:   6,
 					dimensionVectorD: [2]devicePointer{{pointer: unsafe.Pointer(&timeDimensionData[0])}, nullDevicePointer},
-					measureVectorD:   [2]devicePointer{{pointer: unsafe.Pointer(&measureData[0])}, nullDevicePointer},
+					measureVectorDs:   [][2]devicePointer{{{pointer: unsafe.Pointer(&measureData[0])}, nullDevicePointer}},
 				},
 				hllVectorD:           devicePointer{pointer: unsafe.Pointer(&hllData[0])},
 				hllVectorSize:        queryCom.DenseDataLength + 28,

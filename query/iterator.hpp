@@ -599,7 +599,7 @@ class MeasureOutputIterator : public thrust::iterator_adaptor<
       : super_t(base),
         baseCounts(baseCounts),
         indexVector(indexVector) {
-    // We don't need to do anything for this value if it's not sum.
+    // We don't need to do anything for this value if it's not sum or avg.
     if (!((aggFunc >= AGGR_SUM_UNSIGNED && aggFunc <= AGGR_SUM_FLOAT)
         || (aggFunc == AGGR_AVG_FLOAT))) {
       skipCount = true;

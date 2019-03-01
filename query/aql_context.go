@@ -191,7 +191,7 @@ type oopkBatchContext struct {
 	// Because reduce_by_key outputs to separate buffers, we need to alternate two
 	// sets of dimension and measure buffers for input and output.
 	// We store the input buffer in [0], and the output buffer in [1] for the
-	// following dimensionVectorH and measureVectorH.
+	// following dimensionVectorH and measureVectorHs.
 
 	// one giant dimension vector
 	// that contains each dimension columnar vector
@@ -207,9 +207,10 @@ type oopkBatchContext struct {
 	// its length is the resultSize from previous batches + size of current batch
 	dimIndexVectorD [2]devicePointer
 
+	// 2 device vectors for each measure
 	// Each element stores a 4 byte measure value.
 	// Except SUM that uses 8 bytes
-	measureVectorD [2]devicePointer
+	measureVectorDs [][2]devicePointer
 
 	// Size of the results from prior batches.
 	resultSize int
@@ -272,7 +273,7 @@ type OOPKContext struct {
 	// Result storage in host memory. The format is the same as the dimension and
 	// measure vector in oopkBatchContext.
 	dimensionVectorH unsafe.Pointer
-	measureVectorH   []unsafe.Pointer
+	measureVectorHs  []unsafe.Pointer
 	// hllVectorD stores hll dense or sparse vector in device memory.
 	hllVectorD devicePointer
 	// size of hll vector

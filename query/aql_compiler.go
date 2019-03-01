@@ -1770,7 +1770,7 @@ func (qc *AQLQueryContext) processAggregateMeasure(aggregate *expr.Call) {
 		return
 	}
 
-	var measure expr.Expr
+	measure := aggregate.Args[0]
 	var aggregateType C.enum_AggregateFunction
 	// default is 4 bytes
 	measureBytes := 4
@@ -1840,7 +1840,7 @@ func (qc *AQLQueryContext) processAggregateMeasure(aggregate *expr.Call) {
 			"unsupported aggregate function: %s", aggregate.Name)
 		return
 	}
-	qc.OOPK.Measures = append(qc.OOPK.Measures, aggregate.Args[0])
+	qc.OOPK.Measures = append(qc.OOPK.Measures, measure)
 	qc.OOPK.AggregateTypes = append(qc.OOPK.AggregateTypes, aggregateType)
 	qc.OOPK.MeasureBytes = append(qc.OOPK.MeasureBytes, measureBytes)
 }

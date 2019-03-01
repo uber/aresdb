@@ -230,7 +230,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 			OOPK: OOPKContext{
 				NumDimsPerDimWidth: common.DimCountsPerDimWidth{0, 0, 1, 0, 0},
 				DimRowBytes:        5,
-				MeasureBytes:       4,
+				MeasureBytes:       []int{4},
 				foreignTables:      []*foreignTable{{}},
 				MainTableCommonFilters: []expr.Expr{
 					&expr.BinaryExpr{
@@ -280,7 +280,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 						ExprType: expr.Signed,
 					},
 				},
-				Measure: &expr.BinaryExpr{
+				Measures: []expr.Expr{&expr.BinaryExpr{
 					Op: expr.DIV,
 					LHS: &expr.VarRef{
 						Val:      "vp2",
@@ -292,7 +292,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 						Expr:     "2",
 						ExprType: expr.Signed,
 					},
-				},
+				}},
 			},
 		}
 

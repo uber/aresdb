@@ -90,18 +90,20 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLTimeSeriesResult {
 				timeDimensionMeta, dimensionValueCache[dimIndex])
 		}
 
-		measureBytes := oopkContext.MeasureBytes
+		for measureIndex, measure := range oopkContext.Measures {
+			measureBytes := oopkContext.MeasureBytes[measureIndex]
 
-		// For avg aggregation function, we only need to read first 4 bytes which is the average.
-		if qc.OOPK.AggregateType == C.AGGR_AVG_FLOAT {
-			measureBytes = 4
+			// For avg aggregation function, we only need to read first 4 bytes which is the average.
+			if qc.OOPK.AggregateTypes[measureIndex] == C.AGGR_AVG_FLOAT {
+				measureBytes = 4
+			}
+
+			measureValue := readMeasure(
+				memutils.MemAccess(oopkContext.measureVectorHs[measureIndex], i*oopkContext.MeasureBytes[measureIndex]), measure,
+				measureBytes)
+			//fmt.Println("measureValue", measureValue)
+			result.AppendAggMeasure(dimValues, measureValue)
 		}
-
-		measureValue := readMeasure(
-			memutils.MemAccess(oopkContext.measureVectorH, i*oopkContext.MeasureBytes), oopkContext.Measure,
-			measureBytes)
-
-		result.Set(dimValues, measureValue)
 	}
 	return result
 }
@@ -149,8 +151,10 @@ func (qc *AQLQueryContext) ReleaseHostResultsBuffers() {
 	ctx := &qc.OOPK
 	memutils.HostFree(ctx.dimensionVectorH)
 	ctx.dimensionVectorH = nil
-	memutils.HostFree(ctx.measureVectorH)
-	ctx.measureVectorH = nil
+	for _, vector := range ctx.measureVectorHs {
+		memutils.HostFree(vector)
+	}
+	ctx.measureVectorHs = nil
 
 	// hllVectorD and hllDimRegIDCountD used for hll query only
 	deviceFreeAndSetNil(&ctx.hllVectorD)

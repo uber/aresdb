@@ -133,15 +133,18 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 			qc.HLLQueryResult, qc.Error = qc.PostprocessAsHLLData()
 		} else {
 			qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
-			qc.OOPK.measureVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.MeasureBytes)
 			// copy dimensions
 			asyncCopyDimensionVector(qc.OOPK.dimensionVectorH, qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), qc.OOPK.ResultSize,
 				qc.OOPK.NumDimsPerDimWidth, qc.OOPK.ResultSize, qc.OOPK.currentBatch.resultCapacity,
 				memutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
-			// copy measures
-			memutils.AsyncCopyDeviceToHost(
-				qc.OOPK.measureVectorH, qc.OOPK.currentBatch.measureVectorD[0].getPointer(),
-				qc.OOPK.ResultSize*qc.OOPK.MeasureBytes, qc.cudaStreams[0], qc.Device)
+			for measureIndex, measureBytes := range qc.OOPK.MeasureBytes {
+				currentMeasureVectorH := memutils.HostAlloc(qc.OOPK.ResultSize * measureBytes)
+				// copy measures
+				memutils.AsyncCopyDeviceToHost(
+					currentMeasureVectorH , qc.OOPK.currentBatch.measureVectorDs[measureIndex][0].getPointer(),
+					qc.OOPK.ResultSize*measureBytes, qc.cudaStreams[0], qc.Device)
+				qc.OOPK.measureVectorHs = append(qc.OOPK.measureVectorHs, currentMeasureVectorH)
+			}
 			memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 		}
 	}
@@ -670,8 +673,10 @@ func (bc *oopkBatchContext) cleanupDeviceResultBuffers() {
 	deviceFreeAndSetNil(&bc.hashVectorD[0])
 	deviceFreeAndSetNil(&bc.hashVectorD[1])
 
-	deviceFreeAndSetNil(&bc.measureVectorD[0])
-	deviceFreeAndSetNil(&bc.measureVectorD[1])
+	for _, measureVectorDPairs := range bc.measureVectorDs {
+		deviceFreeAndSetNil(&measureVectorDPairs[0])
+		deviceFreeAndSetNil(&measureVectorDPairs[1])
+	}
 
 	bc.resultSize = 0
 	bc.resultCapacity = 0
@@ -705,7 +710,10 @@ func (bc *oopkBatchContext) cleanupBeforeAggregation() {
 func (bc *oopkBatchContext) swapResultBufferForNextBatch() {
 	bc.size = 0
 	bc.dimensionVectorD[0], bc.dimensionVectorD[1] = bc.dimensionVectorD[1], bc.dimensionVectorD[0]
-	bc.measureVectorD[0], bc.measureVectorD[1] = bc.measureVectorD[1], bc.measureVectorD[0]
+
+	for _, measureVectorDPair := range bc.measureVectorDs {
+		measureVectorDPair[0], measureVectorDPair[1] = measureVectorDPair[1], measureVectorDPair[0]
+	}
 	bc.hashVectorD[0], bc.hashVectorD[1] = bc.hashVectorD[1], bc.hashVectorD[0]
 }
 
@@ -725,7 +733,7 @@ func (bc *oopkBatchContext) prepareForFiltering(
 // prepareForDimAndMeasureEval ensures that dim/measure vectors have enough
 // capacity for bc.resultSize+bc.size.
 func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
-	dimRowBytes int, measureBytes int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth, isHLL bool, stream unsafe.Pointer) {
+	dimRowBytes int, measureBytes []int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth, isHLL bool, stream unsafe.Pointer) {
 	if bc.resultSize+bc.size > bc.resultCapacity {
 		oldCapacity := bc.resultCapacity
 
@@ -751,9 +759,16 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, nil)
 		}
 
-		bc.measureVectorD = bc.reallocateResultBuffers(bc.measureVectorD, measureBytes, stream, func(to, from unsafe.Pointer) {
-			memutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*measureBytes, stream, bc.device)
-		})
+		bc.measureVectorDs = make([][2]devicePointer, len(measureBytes))
+		for i := range bc.measureVectorDs {
+			bc.measureVectorDs[i] = [2]devicePointer{}
+		}
+		for i, singleMeasureBytes := range measureBytes {
+			fmt.Println("resultSize", bc.resultSize)
+			bc.measureVectorDs[i] = bc.reallocateResultBuffers(bc.measureVectorDs[i], singleMeasureBytes, stream, func(to, from unsafe.Pointer) {
+				memutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*singleMeasureBytes, stream, bc.device)
+			})
+		}
 	}
 }
 
@@ -975,11 +990,14 @@ func (qc *AQLQueryContext) processBatch(
 		qc.reportTimingForCurrentBatch(stream, &start, dimEvalTiming)
 
 		// measure evaluation.
-		qc.doProfile(func() {
-			measureExprRootAction := qc.OOPK.currentBatch.makeWriteToMeasureVectorAction(qc.OOPK.AggregateType, qc.OOPK.MeasureBytes)
-			qc.OOPK.currentBatch.processExpression(qc.OOPK.Measure, nil, qc.TableScanners, qc.OOPK.foreignTables, stream, qc.Device, measureExprRootAction)
-			qc.reportTimingForCurrentBatch(stream, &start, measureEvalTiming)
-		}, "measure", stream)
+		for measureIndex, measure := range qc.OOPK.Measures {
+			qc.doProfile(func() {
+				// TODO: support non-agg query measure evaluation
+				measureExprRootAction := qc.OOPK.currentBatch.makeWriteToMeasureVectorAction(measureIndex, qc.OOPK.AggregateTypes[measureIndex], qc.OOPK.MeasureBytes[measureIndex])
+				qc.OOPK.currentBatch.processExpression(measure, nil, qc.TableScanners, qc.OOPK.foreignTables, stream, qc.Device, measureExprRootAction)
+				qc.reportTimingForCurrentBatch(stream, &start, measureEvalTiming)
+			}, fmt.Sprintf( "measure%d", measureIndex), stream)
+		}
 
 		// wait for stream to clean up non used buffer before final aggregation
 		memutils.WaitForCudaStream(stream, qc.Device)
@@ -1008,7 +1026,7 @@ func (qc *AQLQueryContext) processBatch(
 
 			// reduce by key.
 			qc.doProfile(func() {
-				qc.OOPK.currentBatch.reduceByKey(qc.OOPK.NumDimsPerDimWidth, qc.OOPK.MeasureBytes, qc.OOPK.AggregateType, stream, qc.Device)
+				qc.OOPK.currentBatch.reduceByKey(qc.OOPK.NumDimsPerDimWidth, qc.OOPK.MeasureBytes, qc.OOPK.AggregateTypes, stream, qc.Device)
 				qc.reportTimingForCurrentBatch(stream, &start, reduceEvalTiming)
 			}, "reduce", stream)
 		}
@@ -1244,7 +1262,9 @@ func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize int, columnM
 	memUsage += firstColumnSize * qc.OOPK.DimRowBytes * 2
 
 	// 9. Measure vector memory usage (input + output)
-	memUsage += firstColumnSize * qc.OOPK.MeasureBytes * 2
+	for _, measureBytes := range qc.OOPK.MeasureBytes {
+		memUsage += firstColumnSize * measureBytes * 2
+	}
 
 	return
 }
@@ -1272,9 +1292,11 @@ func (qc *AQLQueryContext) estimateExpressionEvaluationMemUsage(inputSize int) (
 	}
 
 	// measure expression evaluation
-	_, maxExpMemUsage := estimateScratchSpaceMemUsage(qc.OOPK.Measure, inputSize, true)
-	utils.GetQueryLogger().Debugf("Measure %+v: maxExpMemUsage=%d", qc.OOPK.Measure, maxExpMemUsage)
-	memUsage = int(math.Max(float64(memUsage), float64(maxExpMemUsage)))
+	for _, measure := range qc.OOPK.Measures {
+		_, maxExpMemUsage := estimateScratchSpaceMemUsage(measure, inputSize, true)
+		utils.GetQueryLogger().Debugf("Measure %+v: maxExpMemUsage=%d", measure, maxExpMemUsage)
+		memUsage = int(math.Max(float64(memUsage), float64(maxExpMemUsage)))
+	}
 
 	return memUsage
 }

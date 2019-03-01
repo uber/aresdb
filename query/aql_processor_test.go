@@ -579,7 +579,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		// test boolean dimension value
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
-		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false, stream)
+		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, []int{4}, oopkContext.NumDimsPerDimWidth, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
 		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset)
 		// vp2
@@ -630,7 +630,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
-		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false, stream)
+		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, []int{4}, oopkContext.NumDimsPerDimWidth, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
 		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset)
 		// vp2 == 2
@@ -711,7 +711,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
-		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false, stream)
+		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, []int{4}, oopkContext.NumDimsPerDimWidth, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
 		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset)
 		ctx.processExpression(exp, nil, tableScanners, foreignTables, stream, 0, dimensionExprRootAction)
@@ -776,16 +776,16 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
 
-		ctx.prepareForDimAndMeasureEval(dimRowBytes, 4, queryCom.DimCountsPerDimWidth{}, false, stream)
-		measureExprRootAction := ctx.makeWriteToMeasureVectorAction(uint32(1), 4)
+		ctx.prepareForDimAndMeasureEval(dimRowBytes, []int{4}, queryCom.DimCountsPerDimWidth{}, false, stream)
+		measureExprRootAction := ctx.makeWriteToMeasureVectorAction(0, uint32(1), 4)
 		ctx.processExpression(exp, nil, tableScanners, foreignTables, stream, 0, measureExprRootAction)
 
-		Ω(*(*uint32)(ctx.measureVectorD[0].getPointer())).Should(Equal(uint32(0)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 4))).Should(Equal(uint32(1)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 8))).Should(Equal(uint32(1)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 12))).Should(Equal(uint32(1)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 16))).Should(Equal(uint32(0)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 20))).Should(Equal(uint32(10)))
+		Ω(*(*uint32)(ctx.measureVectorDs[0][0].getPointer())).Should(Equal(uint32(0)))
+		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorDs[0][0].getPointer(), 4))).Should(Equal(uint32(1)))
+		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorDs[0][0].getPointer(), 8))).Should(Equal(uint32(1)))
+		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorDs[0][0].getPointer(), 12))).Should(Equal(uint32(1)))
+		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorDs[0][0].getPointer(), 16))).Should(Equal(uint32(0)))
+		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorDs[0][0].getPointer(), 20))).Should(Equal(uint32(10)))
 		ctx.cleanupBeforeAggregation()
 		ctx.swapResultBufferForNextBatch()
 		ctx.cleanupDeviceResultBuffers()
@@ -812,13 +812,13 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			dimensionVectorD: [2]devicePointer{dimensionVectorD, nullDevicePointer},
 			hashVectorD:      [2]devicePointer{hashVectorD, nullDevicePointer},
 			dimIndexVectorD:  [2]devicePointer{dimIndexVectorD, nullDevicePointer},
-			measureVectorD:   [2]devicePointer{measureVectorD, nullDevicePointer},
+			measureVectorDs:   [][2]devicePointer{{measureVectorD, nullDevicePointer}},
 			size:             3,
 			resultSize:       0,
 			resultCapacity:   3,
 		}
 
-		batchCtx.sortByKey(numDims, 4, stream, 0)
+		batchCtx.sortByKey(numDims, []int{4}, stream, 0)
 		memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&measureVectorH), measureVectorD.getPointer(), 12, stream, 0)
 		memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&dimIndexVectorH), dimIndexVectorD.getPointer(), 12, stream, 0)
 
@@ -849,14 +849,14 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			dimensionVectorD: [2]devicePointer{{pointer: unsafe.Pointer(&dimensionInputVector)}, {pointer: unsafe.Pointer(&dimensionOutputVector)}},
 			hashVectorD:      [2]devicePointer{{pointer: unsafe.Pointer(&hashInputVector)}, {pointer: unsafe.Pointer(&hashOutputVector)}},
 			dimIndexVectorD:  [2]devicePointer{{pointer: unsafe.Pointer(&dimIndexInputVector)}, {pointer: unsafe.Pointer(&dimIndexOutputVector)}},
-			measureVectorD:   [2]devicePointer{{pointer: unsafe.Pointer(&measureInputVector)}, {pointer: unsafe.Pointer(&measureOutputVector)}},
+			measureVectorDs:   [][2]devicePointer{{{pointer: unsafe.Pointer(&measureInputVector)}, {pointer: unsafe.Pointer(&measureOutputVector)}}},
 			size:             4,
 			resultSize:       0,
 			resultCapacity:   4,
 		}
 
 		// 1 is AGGR_SUM_UNSIGNED
-		batchCtx.reduceByKey(numDims, 4, uint32(1), stream, 0)
+		batchCtx.reduceByKey(numDims, []int{4}, []uint32{uint32(1)}, stream, 0)
 		Ω(dimensionOutputVector).Should(Equal([5]uint32{1, 2, 0, 0, 0x0101}))
 		Ω(measureOutputVector).Should(Equal([4]uint32{6, 4, 0, 0}))
 	})
@@ -986,8 +986,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(bc.hashVectorD[0]).Should(BeZero())
 		Ω(bc.hashVectorD[1]).Should(BeZero())
 
-		Ω(bc.measureVectorD[0]).Should(BeZero())
-		Ω(bc.measureVectorD[1]).Should(BeZero())
+		Ω(bc.measureVectorDs[0][0]).Should(BeZero())
+		Ω(bc.measureVectorDs[0][1]).Should(BeZero())
 
 		Ω(bc.resultSize).Should(BeZero())
 		Ω(bc.resultCapacity).Should(BeZero())
@@ -1002,7 +1002,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(len(bc.foreignTableRecordIDsD)).Should(BeZero())
 		Ω(len(bc.exprStackD)).Should(BeZero())
 
-		Ω(qc.OOPK.measureVectorH).Should(BeZero())
+		Ω(qc.OOPK.measureVectorHs).Should(BeZero())
 		Ω(qc.OOPK.dimensionVectorH).Should(BeZero())
 
 		Ω(qc.OOPK.hllVectorD).Should(BeZero())
@@ -1197,7 +1197,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					err, _ = r.(error)
 				}
 			}()
-			batchCtx.sortByKey(queryCom.DimCountsPerDimWidth{}, 20, unsafe.Pointer(nil), 0)
+			batchCtx.sortByKey(queryCom.DimCountsPerDimWidth{}, []int{20}, unsafe.Pointer(nil), 0)
 			return
 		}()
 		Ω(err).ShouldNot(BeNil())
@@ -1486,14 +1486,14 @@ var _ = ginkgo.Describe("aql_processor", func() {
 						DataType: memCom.Uint32,
 					},
 				},
-				AggregateType: 1,
-				MeasureBytes:  4,
-				Measure: &expr.NumberLiteral{
+				AggregateTypes: []uint32{1},
+				MeasureBytes:  []int{4},
+				Measures: []expr.Expr{&expr.NumberLiteral{
 					Val:      1,
 					Int:      1,
 					Expr:     "1",
 					ExprType: expr.Unsigned,
-				},
+				}},
 				geoIntersection: &geoIntersection{
 					shapeTableID:  1,
 					shapeColumnID: 1,
@@ -1761,14 +1761,14 @@ var _ = ginkgo.Describe("aql_processor", func() {
 						DataType: memCom.Uint8,
 					},
 				},
-				AggregateType: 1,
-				MeasureBytes:  4,
-				Measure: &expr.NumberLiteral{
+				AggregateTypes: []uint32{1},
+				MeasureBytes:  []int{4},
+				Measures: []expr.Expr{&expr.NumberLiteral{
 					Val:      1,
 					Int:      1,
 					Expr:     "1",
 					ExprType: expr.Unsigned,
-				},
+				}},
 				geoIntersection: &geoIntersection{
 					shapeTableID:  1,
 					shapeColumnID: 1,
@@ -2020,14 +2020,14 @@ var _ = ginkgo.Describe("aql_processor", func() {
 						DataType: memCom.Uint32,
 					},
 				},
-				AggregateType: 1,
-				MeasureBytes:  4,
-				Measure: &expr.NumberLiteral{
+				AggregateTypes: []uint32{1},
+				MeasureBytes:  []int{4},
+				Measures: []expr.Expr{&expr.NumberLiteral{
 					Val:      1,
 					Int:      1,
 					Expr:     "1",
 					ExprType: expr.Unsigned,
-				},
+				}},
 			},
 		}
 
