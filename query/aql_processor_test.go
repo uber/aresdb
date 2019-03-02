@@ -579,6 +579,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		// test boolean dimension value
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
+		ctx.measureVectorDs = make([][2]devicePointer, 1)
 		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, []int{4}, oopkContext.NumDimsPerDimWidth, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
 		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset)
@@ -630,6 +631,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
+		ctx.measureVectorDs = make([][2]devicePointer, 1)
 		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, []int{4}, oopkContext.NumDimsPerDimWidth, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
 		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset)
@@ -711,6 +713,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
+		ctx.measureVectorDs = make([][2]devicePointer, 1)
 		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, []int{4}, oopkContext.NumDimsPerDimWidth, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
 		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset)
@@ -775,7 +778,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		dimRowBytes := 8
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
-
+		ctx.measureVectorDs = make([][2]devicePointer, 1)
 		ctx.prepareForDimAndMeasureEval(dimRowBytes, []int{4}, queryCom.DimCountsPerDimWidth{}, false, stream)
 		measureExprRootAction := ctx.makeWriteToMeasureVectorAction(0, uint32(1), 4)
 		ctx.processExpression(exp, nil, tableScanners, foreignTables, stream, 0, measureExprRootAction)
@@ -824,10 +827,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		Ω(dimIndexVectorH).Should(Or(Equal([3]uint32{0, 2, 1}), Equal([3]uint32{1, 0, 2}), Equal([3]uint32{1, 2, 0}), Equal([3]uint32{2, 0, 1})))
 
-		deviceFreeAndSetNil(&dimensionVectorD)
-		deviceFreeAndSetNil(&dimIndexVectorD)
-		deviceFreeAndSetNil(&hashVectorD)
-		deviceFreeAndSetNil(&measureVectorD)
+		batchCtx.cleanupDeviceResultBuffers()
 	})
 
 	ginkgo.It("reduce", func() {
@@ -966,9 +966,9 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
 		Ω(bs).Should(MatchJSON(` {
-			"0": 5,
-			"60000": 4,
-			"120000": 3
+			"0": [[5]],
+			"60000": [[4]],
+			"120000": [[3]]
 		  }`))
 
 		bc := qc.OOPK.currentBatch
@@ -986,8 +986,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(bc.hashVectorD[0]).Should(BeZero())
 		Ω(bc.hashVectorD[1]).Should(BeZero())
 
-		Ω(bc.measureVectorDs[0][0]).Should(BeZero())
-		Ω(bc.measureVectorDs[0][1]).Should(BeZero())
+		Ω(bc.measureVectorDs).Should(BeNil())
 
 		Ω(bc.resultSize).Should(BeZero())
 		Ω(bc.resultCapacity).Should(BeZero())
@@ -1167,8 +1166,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
 		Ω(bs).Should(MatchJSON(` {
-			"0": 4,
-			"3600": 1
+			"0": [[4]],
+			"3600": [[1]]
 		}`))
 
 		bc := qc.OOPK.currentBatch
@@ -1197,6 +1196,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					err, _ = r.(error)
 				}
 			}()
+			batchCtx.measureVectorDs = make([][2]devicePointer, 1)
 			batchCtx.sortByKey(queryCom.DimCountsPerDimWidth{}, []int{20}, unsafe.Pointer(nil), 0)
 			return
 		}()
@@ -1513,7 +1513,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(err).Should(BeNil())
 		Ω(bs).Should(MatchJSON(
 			`{
-				"0": 1
+				"0": [[1]]
 			}`,
 		))
 		qc.ReleaseHostResultsBuffers()
@@ -1789,9 +1789,9 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(bs).Should(MatchJSON(
 			`{
 				"0": {
-					"00000192F23D460DBE60400C32EA0667": 1,
-					"00001A3F088047D79343894698F221AB": 1,
-					"0000334BB6B0420986175F20F3FBF90D": 1
+					"00000192F23D460DBE60400C32EA0667": [[1]],
+					"00001A3F088047D79343894698F221AB": [[1]],
+					"0000334BB6B0420986175F20F3FBF90D": [[1]]
 				}
 			}`,
 		))
@@ -2039,7 +2039,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(err).Should(BeNil())
 		Ω(bs).Should(MatchJSON(
 			`{
-				"0": 2
+				"0": [[2]]
 			}`,
 		))
 		qc.ReleaseHostResultsBuffers()

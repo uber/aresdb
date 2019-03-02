@@ -662,7 +662,7 @@ func (bc *oopkBatchContext) sortByKey(numDims common.DimCountsPerDimWidth, value
 	}
 }
 
-func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, valueWidths []int, aggFunc []C.enum_AggregateFunction, stream unsafe.Pointer,
+func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, valueWidths []int, aggFuncs []C.enum_AggregateFunction, stream unsafe.Pointer,
 	device int) {
 	inputKeys := makeDimensionColumnVector(
 		bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(), bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
@@ -671,7 +671,7 @@ func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, val
 			bc.dimensionVectorD[1].getPointer(), bc.hashVectorD[1].getPointer(), bc.dimIndexVectorD[1].getPointer(), numDims, bc.resultCapacity)
 		inputValues, outputValues := (*C.uint8_t)(bc.measureVectorDs[measureIndex][0].getPointer()), (*C.uint8_t)(bc.measureVectorDs[measureIndex][1].getPointer())
 		bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {
-			return C.Reduce(inputKeys, inputValues, outputKeys, outputValues, (C.int)(valueWidth), (C.int)(bc.resultSize+bc.size), aggFunc[measureIndex],
+			return C.Reduce(inputKeys, inputValues, outputKeys, outputValues, (C.int)(valueWidth), (C.int)(bc.resultSize+bc.size), aggFuncs[measureIndex],
 				stream, C.int(device))
 		}))
 	}

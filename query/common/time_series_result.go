@@ -14,7 +14,9 @@
 
 package common
 
-import "github.com/uber/aresdb/utils"
+import (
+	"github.com/uber/aresdb/utils"
+)
 
 // AQLTimeSeriesResult
 //
@@ -39,14 +41,13 @@ func (r AQLTimeSeriesResult) AppendAggMeasure(dimValues []*string, measureValue 
 		if i == len(dimValues)-1 {
 			// leaf
 			if current[*dimValue] == nil {
-				current[*dimValue] = [][]*float64{{}}
+				current[*dimValue] = [][]float64{{}}
 			}
-			measures := current[*dimValue].([][]*float64)[0]
-			if measureValue == nil {
-				measures = append(measures, nil)
-			} else {
-				measures = append(measures, measureValue)
+			measures := current[*dimValue].([][]float64)[0]
+			if measureValue != nil {
+				measures = append(measures, *measureValue)
 			}
+			current[*dimValue].([][]float64)[0] = measures
 		} else {
 			child := current[*dimValue]
 			if child == nil {

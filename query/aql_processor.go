@@ -65,6 +65,7 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 	qc.cudaStreams[0] = memutils.CreateCudaStream(qc.Device)
 	qc.cudaStreams[1] = memutils.CreateCudaStream(qc.Device)
 	qc.OOPK.currentBatch.device = qc.Device
+	qc.OOPK.currentBatch.measureVectorDs = make([][2]devicePointer, len(qc.OOPK.Measures))
 	qc.OOPK.LiveBatchStats = oopkQueryStats{
 		Name2Stage: make(map[stageName]*oopkStageSummaryStats),
 	}
@@ -673,10 +674,11 @@ func (bc *oopkBatchContext) cleanupDeviceResultBuffers() {
 	deviceFreeAndSetNil(&bc.hashVectorD[0])
 	deviceFreeAndSetNil(&bc.hashVectorD[1])
 
-	for _, measureVectorDPairs := range bc.measureVectorDs {
-		deviceFreeAndSetNil(&measureVectorDPairs[0])
-		deviceFreeAndSetNil(&measureVectorDPairs[1])
+	for i := range bc.measureVectorDs {
+		deviceFreeAndSetNil(&bc.measureVectorDs[i][0])
+		deviceFreeAndSetNil(&bc.measureVectorDs[i][1])
 	}
+	bc.measureVectorDs = nil
 
 	bc.resultSize = 0
 	bc.resultCapacity = 0
@@ -711,8 +713,8 @@ func (bc *oopkBatchContext) swapResultBufferForNextBatch() {
 	bc.size = 0
 	bc.dimensionVectorD[0], bc.dimensionVectorD[1] = bc.dimensionVectorD[1], bc.dimensionVectorD[0]
 
-	for _, measureVectorDPair := range bc.measureVectorDs {
-		measureVectorDPair[0], measureVectorDPair[1] = measureVectorDPair[1], measureVectorDPair[0]
+	for i := range bc.measureVectorDs {
+		bc.measureVectorDs[i][0], bc.measureVectorDs[i][1] = bc.measureVectorDs[i][1], bc.measureVectorDs[i][0]
 	}
 	bc.hashVectorD[0], bc.hashVectorD[1] = bc.hashVectorD[1], bc.hashVectorD[0]
 }
@@ -759,12 +761,7 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, nil)
 		}
 
-		bc.measureVectorDs = make([][2]devicePointer, len(measureBytes))
-		for i := range bc.measureVectorDs {
-			bc.measureVectorDs[i] = [2]devicePointer{}
-		}
 		for i, singleMeasureBytes := range measureBytes {
-			fmt.Println("resultSize", bc.resultSize)
 			bc.measureVectorDs[i] = bc.reallocateResultBuffers(bc.measureVectorDs[i], singleMeasureBytes, stream, func(to, from unsafe.Pointer) {
 				memutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*singleMeasureBytes, stream, bc.device)
 			})

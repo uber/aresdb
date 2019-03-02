@@ -64,7 +64,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		ctx.OOPK = oopkContext
 
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
-			"12": float64(float32(3.2)),
+			"12": [][]float64{{float64(float32(3.2))}},
 		}))
 	})
 
@@ -92,6 +92,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 				ExprType: expr.Float,
 			}},
 			MeasureBytes:       []int{4},
+			AggregateTypes:     []uint32{1},
 			DimRowBytes:        8,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 0},
 			DimensionVectorIndex: []int{
@@ -106,8 +107,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		ctx.OOPK = oopkContext
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"two": map[string]interface{}{
-				"12":   float64(float32(3.2)),
-				"NULL": float64(float32(6.4)),
+				"12":   [][]float64{{float64(float32(3.2))}},
+				"NULL": [][]float64{{float64(float32(6.4))}},
 			},
 		}))
 	})
@@ -130,6 +131,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 			Measures: []expr.Expr{&expr.NumberLiteral{
 				ExprType: expr.UnknownType,
 			}},
+			MeasureBytes: []int{4},
+			AggregateTypes:     []uint32{1},
 			DimRowBytes:        5,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0},
 			DimensionVectorIndex: []int{
@@ -145,7 +148,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		*(*uint8)(memutils.MemAccess(oopkContext.dimensionVectorH, 4)) = 1
 
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
-			"3.2": nil,
+			"3.2": [][]float64{{}},
 		}))
 	})
 
@@ -177,75 +180,83 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 				ExprType: expr.Float,
 			}},
 			MeasureBytes:       []int{4},
+			AggregateTypes:     []uint32{1},
 			DimRowBytes:        10,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 2, 0, 0},
 			DimensionVectorIndex: []int{
 				0,
 				1,
 			},
-			ResultSize:       2,
-			dimensionVectorH: unsafe.Pointer(&[]uint8{190, 0, 0, 0, 250, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1}[0]),
+			ResultSize:       1,
+			dimensionVectorH: unsafe.Pointer(&[]uint8{250, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1}[0]),
 			measureVectorHs:  []unsafe.Pointer{unsafe.Pointer(&[]float32{3.2, 6.4}[0])},
 		}
 
+		// result size 1 tests
 		ctx.OOPK = oopkContext
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"1970-01-01 00:00": map[string]interface{}{
-				"2": 6.400000095367432,
-			},
-		}))
-
-		ctx.Query.Dimensions[0].TimeBucketizer = "time of day"
-		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
-			"00:03": map[string]interface{}{
-				"2": float64(float32(3.2)),
-			},
-			"00:04": map[string]interface{}{
-				"2": 6.400000095367432,
+				"2": [][]float64{{3.200000047683716}},
 			},
 		}))
 
 		ctx.Query.Dimensions[0].TimeBucketizer = "hour of day"
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"00:00": map[string]interface{}{
-				"2": 6.400000095367432,
-			},
-		}))
-
-		ctx.Query.Dimensions[0].TimeBucketizer = "hour of week"
-		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
-			"Monday 00:03": map[string]interface{}{
-				"2": float64(float32(3.2)),
-			},
-			"Monday 00:04": map[string]interface{}{
-				"2": 6.400000095367432,
-			},
-		}))
-
-		ctx.Query.Dimensions[0].TimeBucketizer = "minute"
-		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
-			"1970-01-01 00:03": map[string]interface{}{
-				"2": float64(float32(3.2)),
-			},
-			"1970-01-01 00:04": map[string]interface{}{
-				"2": 6.400000095367432,
+				"2": [][]float64{{3.200000047683716}},
 			},
 		}))
 
 		ctx.Query.Dimensions[0].TimeBucketizer = "hour"
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"1970-01-01 00:00": map[string]interface{}{
-				"2": 6.400000095367432,
+				"2": [][]float64{{3.200000047683716}},
+			},
+		}))
+
+		// result size 2 tests
+		ctx.OOPK.ResultSize = 2
+		ctx.OOPK.dimensionVectorH = unsafe.Pointer(&[]uint8{190, 0, 0, 0, 250, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1}[0])
+
+		ctx.Query.Dimensions[0].TimeBucketizer = "time of day"
+		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
+			"00:03": map[string]interface{}{
+				"2": [][]float64{{float64(float32(3.2))}},
+			},
+			"00:04": map[string]interface{}{
+				"2": [][]float64{{6.400000095367432}},
+			},
+		}))
+
+
+
+		ctx.Query.Dimensions[0].TimeBucketizer = "hour of week"
+		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
+			"Monday 00:03": map[string]interface{}{
+				"2": [][]float64{{float64(float32(3.2))}},
+			},
+			"Monday 00:04": map[string]interface{}{
+				"2": [][]float64{{6.400000095367432}},
+			},
+		}))
+
+		ctx.Query.Dimensions[0].TimeBucketizer = "minute"
+		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
+			"1970-01-01 00:03": map[string]interface{}{
+				"2": [][]float64{{float64(float32(3.2))}},
+			},
+			"1970-01-01 00:04": map[string]interface{}{
+				"2": [][]float64{{6.400000095367432}},
 			},
 		}))
 
 		ctx.Query.Dimensions[0].TimeBucketizer = "some invalid bucketizer"
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"190": map[string]interface{}{
-				"2": float64(float32(3.2)),
+				"2": [][]float64{{float64(float32(3.2))}},
 			},
 			"250": map[string]interface{}{
-				"2": 6.400000095367432,
+				"2": [][]float64{{6.400000095367432}},
 			},
 		}))
 
@@ -253,10 +264,10 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		ctx.Query.Dimensions[0].TimeBucketizer = "day of week"
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"Tuesday": map[string]interface{}{
-				"2": float64(float32(3.2)),
+				"2": [][]float64{{float64(float32(3.2))}},
 			},
 			"Wednesday": map[string]interface{}{
-				"2": 6.400000095367432,
+				"2": [][]float64{{6.400000095367432}},
 			},
 		}))
 
@@ -305,6 +316,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 				ExprType: expr.Float,
 			}},
 			MeasureBytes:       []int{4},
+			AggregateTypes:     []uint32{1},
 			DimRowBytes:        10,
 			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 2, 0, 0},
 			DimensionVectorIndex: []int{
@@ -319,20 +331,20 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		ctx.OOPK = oopkContext
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"25612": map[string]interface{}{
-				"2": float64(float32(3.2)),
+				"2": [][]float64{{float64(float32(3.2))}},
 			},
 			"25613": map[string]interface{}{
-				"2": 6.400000095367432,
+				"2": [][]float64{{6.400000095367432}},
 			},
 		}))
 
 		ctx1.OOPK = oopkContext
 		Ω(ctx1.Postprocess()).Should(Equal(queryCom.AQLTimeSeriesResult{
 			"22012": map[string]interface{}{
-				"2": float64(float32(3.2)),
+				"2": [][]float64{{float64(float32(3.2))}},
 			},
 			"22013": map[string]interface{}{
-				"2": 6.400000095367432,
+				"2": [][]float64{{6.400000095367432}},
 			},
 		}))
 	})

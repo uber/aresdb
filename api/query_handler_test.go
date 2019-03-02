@@ -208,7 +208,7 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 
 		oopk := query.OOPKContext{
 			// C.AGGR_HLL
-			AggregateType: 10,
+			AggregateTypes: []uint32{10},
 		}
 
 		data, err := ioutil.ReadFile("../testing/data/query/hll")

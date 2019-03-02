@@ -94,14 +94,13 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLTimeSeriesResult {
 			measureBytes := oopkContext.MeasureBytes[measureIndex]
 
 			// For avg aggregation function, we only need to read first 4 bytes which is the average.
-			if qc.OOPK.AggregateTypes[measureIndex] == C.AGGR_AVG_FLOAT {
+			if oopkContext.AggregateTypes[measureIndex] == C.AGGR_AVG_FLOAT {
 				measureBytes = 4
 			}
 
 			measureValue := readMeasure(
 				memutils.MemAccess(oopkContext.measureVectorHs[measureIndex], i*oopkContext.MeasureBytes[measureIndex]), measure,
 				measureBytes)
-			//fmt.Println("measureValue", measureValue)
 			result.AppendAggMeasure(dimValues, measureValue)
 		}
 	}

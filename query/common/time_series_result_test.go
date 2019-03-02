@@ -39,11 +39,11 @@ var _ = ginkgo.Describe("time series result", func() {
 		dim0 := "dim0"
 		dim1 := "dim1"
 		v := 0.01
-		res.Set([]*string{&dim0, &dim1, nil}, &v)
+		res.AppendAggMeasure([]*string{&dim0, &dim1, nil}, &v)
 		Ω(res).Should(Equal(AQLTimeSeriesResult{
 			"dim0": map[string]interface{}{
 				"dim1": map[string]interface{}{
-					"NULL": 0.01,
+					"NULL": [][]float64{{0.01}},
 				},
 			},
 		}))
