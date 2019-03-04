@@ -1,0 +1,76 @@
+graphite:
+  address: "localhost:4756"
+
+ares:
+  # A list of namespaces. Each namespace includes a list of ares clusters
+  namespaces:
+    dev01-sjc1:
+      #- gfdba01-sjc1
+      - gfdba02-sjc1
+
+    dev01-phx2:
+      - gfdbb01-phx2
+
+    ares-sjc1:
+      #- gfdba01-sjc1
+      - gfdba02-sjc1
+
+    summarystaging-phx2:
+      - gfdba01-phx2
+
+  # A list of ares clusters. Each cluster includes master node address and timeout in seconds.
+  clusters:
+    gfdba01-sjc1:
+      address: "gfdba01-sjc1:9374"
+      timeout: 20
+    gfdba02-sjc1:
+      address: "gfdba02-sjc1:9374"
+      timeout: 20
+    gfdbb01-phx2:
+      address: "gfdbb01-phx2:9374"
+      timeout: 20
+    gfdba01-phx2:
+      address: "gfdba01-phx2:9374"
+      timeout: 20
+
+
+# A list of jobs which are defined in config/jobs
+jobs:
+  # A list of namespaces. Each namespace includes a list of jobs.
+  namespaces:
+    job-test:
+      - client_info
+      - driver_info
+      - driver_activations
+      - supply_summary
+      - trips
+      - trips_rating
+
+    summary:
+      - client_info
+      - driver_info
+      - driver_activations
+      - supply_summary
+      - trips
+      - trips_rating
+
+    periscope:
+      - eats_supply_utilization
+      - order_state_changes
+      - eats_live_orders
+
+    eats-surge:
+      - eats_order
+      - eats_restaurant
+      - eats_user_event
+      - eats_workflow
+
+controller:
+  # enable sync up with aresDB controller
+  enable: true
+  address: "localhost:5436"
+  refreshInterval: 10
+  serviceName: "ares-controller-staging"
+
+zookeeper:
+  server: "streampinot-stgzk01-sjc1:2181,streampinot-stgzk02-sjc1:2181,streampinot-stgzk03-sjc1:2181"

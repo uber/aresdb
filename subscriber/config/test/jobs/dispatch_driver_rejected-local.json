@@ -1,0 +1,250 @@
+{
+  "job": "dispatch_driver_rejected",
+  "streamConfig": {
+    "kafkaClusterName": "kloak-sjc1-agg1",
+    "kafkaClusterFile": "/etc/uber/kafka8/clusters.yaml",
+    "topic": "hp_demand_job-offer-expired",
+    "topicType": "heatpipe",
+    "latestOffset": true,
+    "errorThreshold": 10,
+    "statusCheckInterval": 60,
+    "autoRecoveryThreshold": 8,
+    "processorCount": 0,
+    "batchSize": 32768,
+    "maxBatchDelayMS": 10000,
+    "megaBytePerSec": 600,
+    "restartOnFailure": true,
+    "restartInterval": 300,
+    "failureHandler": {
+      "type": "retry",
+      "config": {
+        "initRetryIntervalInSeconds": 60,
+        "multiplier": 1,
+        "maxRetryMinutes": 525600
+      }
+    }
+  },
+  "aresTableConfig": {
+    "cluster": "",
+    "schema": {
+      "name": "trips",
+      "columns": [
+        {
+          "name": "request_at",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "uuid",
+          "type": "UUID",
+          "config": {}
+        },
+        {
+          "name": "city_id",
+          "type": "Uint16",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "marketplace",
+          "type": "SmallEnum",
+          "caseInsensitive": true,
+          "disableAutoExpand": true,
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "status",
+          "type": "SmallEnum",
+          "defaultValue": "ACTIVE",
+          "caseInsensitive": true,
+          "disableAutoExpand": true,
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "dispatch_accepted",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "dispatch_canceled",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "dispatch_rejected",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "flow_type",
+          "type": "SmallEnum",
+          "defaultValue": "NULL_SENTINEL",
+          "caseInsensitive": true,
+          "disableAutoExpand": true,
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "surge_multiplier",
+          "type": "Float32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "request_vehicle_view_id",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "usd_fx_rate",
+          "type": "Float32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "fare_total",
+          "type": "Float32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "predicted_eta",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "actual_eta",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "client_uuid",
+          "type": "UUID",
+          "deleted": true,
+          "config": {}
+        },
+        {
+          "name": "driver_uuid",
+          "type": "UUID",
+          "deleted": true,
+          "config": {}
+        },
+        {
+          "name": "client_uuid_hll",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "driver_uuid_hll",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "is_first_client_trip",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "is_first_driver_trip",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "is_first_vehicle_trip",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "is_first_partner_trip",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "request_point",
+          "type": "GeoPoint",
+          "config": {}
+        },
+        {
+          "name": "num_rejections",
+          "type": "Uint8",
+          "defaultValue": "0",
+          "config": {
+            "preloadingDays": 52
+          }
+        }
+      ],
+      "primaryKeyColumns": [
+        1
+      ],
+      "isFactTable": true,
+      "config": {
+        "batchSize": 2097152,
+        "archivingDelayMinutes": 1440,
+        "archivingIntervalMinutes": 180,
+        "backfillIntervalMinutes": 60,
+        "backfillMaxBufferSize": 4294967296,
+        "backfillThresholdInBytes": 20971520,
+        "backfillStoreBatchSize": 20000,
+        "recordRetentionInDays": 52,
+        "snapshotThreshold": 6291456,
+        "snapshotIntervalMinutes": 360,
+        "redoLogRotationInterval": 10800,
+        "maxRedoLogFileSize": 1073741824
+      },
+      "archivingSortColumns": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        19,
+        20,
+        21,
+        22
+      ]
+    },
+    "updateMode": {
+      "num_rejections": "addition"
+    }
+  }
+}

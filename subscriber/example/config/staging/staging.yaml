@@ -1,0 +1,32 @@
+service:
+  name: ares-subscriber
+
+ares:
+  # A list of namespaces. Each namespace includes a list of ares clusters
+  namespaces:
+    summarystaging:
+      - gfdba01-sjc1
+
+  # A list of ares clusters. Each cluster includes master node address and timeout in seconds.
+  clusters:
+    gfdba01-sjc1:
+      address: "gfdba01-sjc1:9374"
+      timeout: 20
+
+
+# A list of jobs which are defined in config/jobs
+jobs:
+  # A list of namespaces. Each namespace includes a list of jobs.
+  namespaces:
+    summary:
+      - client_info
+
+controller:
+  # enable sync up with aresDB controller
+  enable: true
+  address: "localhost:5436"
+  refreshInterval: 10
+  serviceName: "ares-controller-staging"
+
+zookeeper:
+  server: "streampinot-stgzk01-sjc1:2181,streampinot-stgzk02-sjc1:2181,streampinot-stgzk03-sjc1:2181"

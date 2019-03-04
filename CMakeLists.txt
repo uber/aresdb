@@ -64,6 +64,11 @@ cuda_add_library(algorithm SHARED
         query/utils.cu
         query/utils.hpp)
 
+################################
+# rdkafka 
+################################
+set(ENV{PKG_CONFIG_PATH} "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+include(rdkafka.cmake)
 
 ################################
 # GTest
@@ -144,10 +149,10 @@ add_custom_command(
         VERBATIM
 )
 
-add_custom_target(lib DEPENDS algorithm mem)
+add_custom_target(lib DEPENDS algorithm mem rdkafka::rdkafka)
 string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
 add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
-        COMMAND go build -o bin/aresd
+        COMMAND go build -tags static -o bin/aresd
         VERBATIM
         )
 

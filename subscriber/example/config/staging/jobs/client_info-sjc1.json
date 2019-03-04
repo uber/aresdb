@@ -1,0 +1,86 @@
+{
+  "job": "client_info",
+  "version": 0,
+  "streamConfig": {
+    "kafkaClusterName": "kloak-sjc1f",
+    "kafkaClusterFile": "/etc/uber/kafka8/clusters.yaml",
+    "topic": "hp-styx-rta-client_info-staging",
+    "topicType": "heatpipe",
+    "latestOffset": true,
+    "errorThreshold": 10,
+    "statusCheckInterval": 60,
+    "autoRecoveryThreshold": 8,
+    "processorCount": 1,
+    "batchSize": 32768,
+    "maxBatchDelayMS": 10000,
+    "megaBytePerSec": 600,
+    "restartOnFailure": true,
+    "restartInterval": 300,
+    "failureHandler": {
+      "type": "retry",
+      "config": {
+        "initRetryIntervalInSeconds": 60,
+        "multiplier": 1,
+        "maxRetryMinutes": 525600
+      }
+    }
+  },
+  "aresTableConfig": {
+    "cluster": "",
+    "schema": {
+      "name": "client_info_test",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "client_uuid",
+          "type": "UUID",
+          "config": {}
+        },
+        {
+          "name": "signup_city_id",
+          "type": "Uint16",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "promo_code",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        }
+      ],
+      "primaryKeyColumns": [
+        0,
+        1
+      ],
+      "isFactTable": true,
+      "config": {
+        "batchSize": 2097152,
+        "archivingDelayMinutes": 1440,
+        "archivingIntervalMinutes": 180,
+        "backfillIntervalMinutes": 60,
+        "backfillMaxBufferSize": 536870912,
+        "backfillThresholdInBytes": 20971520,
+        "backfillStoreBatchSize": 20000,
+        "recordRetentionInDays": 52,
+        "snapshotThreshold": 6291456,
+        "snapshotIntervalMinutes": 360,
+        "redoLogRotationInterval": 10800,
+        "maxRedoLogFileSize": 1073741824
+      },
+      "archivingSortColumns": [
+        2,
+        3
+      ],
+      "version": 0
+    }
+  }
+}

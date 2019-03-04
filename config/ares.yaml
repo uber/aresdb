@@ -20,8 +20,7 @@ http:
 gateways:
   # example controller client configs
   controller:
-    host: localhost
-    port: 6708
+    address: localhost:6708
     headers:
       RPC-Caller:
         - aresdb

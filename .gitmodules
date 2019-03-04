@@ -1,0 +1,3 @@
+[submodule "thirdparty/librdkafka"]
+	path = thirdparty/librdkafka
+	url = https://github.com/edenhill/librdkafka.git

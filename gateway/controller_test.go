@@ -2,20 +2,19 @@ package gateway
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+        "time"
+
 	mux "github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/metastore/common"
-	"net/http"
-	"net/http/httptest"
-	"strconv"
-	"strings"
 )
 
 var _ = ginkgo.Describe("Controller", func() {
 	var testServer *httptest.Server
-	var host string
-	var port int
+	var hostPort string
 
 	headers := http.Header{
 		"Foo": []string{"bar"},
@@ -48,10 +47,7 @@ var _ = ginkgo.Describe("Controller", func() {
 			w.Write([]byte("123"))
 		})
 		testServer.Start()
-		hostPort := testServer.Listener.Addr().String()
-		comps := strings.SplitN(hostPort, ":", 2)
-		host = comps[0]
-		port, _ = strconv.Atoi(comps[1])
+		hostPort = testServer.Listener.Addr().String()
 	})
 
 	ginkgo.AfterEach(func() {
@@ -59,9 +55,8 @@ var _ = ginkgo.Describe("Controller", func() {
 	})
 
 	ginkgo.It("NewControllerHTTPClient should work", func() {
-		c := NewControllerHTTPClient(host, port, headers)
-		Ω(c.controllerPort).Should(Equal(port))
-		Ω(c.controllerHost).Should(Equal(host))
+		c := NewControllerHTTPClient(hostPort, 20 * time.Second, headers)
+		Ω(c.address).Should(Equal(hostPort))
 		Ω(c.headers).Should(Equal(headers))
 
 		hash, err := c.GetSchemaHash("ns1")
@@ -74,7 +69,7 @@ var _ = ginkgo.Describe("Controller", func() {
 	})
 
 	ginkgo.It("should fail with errors", func() {
-		c := NewControllerHTTPClient(host, port, headers)
+		c := NewControllerHTTPClient(hostPort, 2 * time.Second, headers)
 		_, err := c.GetSchemaHash("bad_ns")
 		Ω(err).ShouldNot(BeNil())
 		tablesGot, err := c.GetAllSchema("bad_ns")
