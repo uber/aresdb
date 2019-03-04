@@ -1638,13 +1638,20 @@ func (qc *AQLQueryContext) matchAndRewriteGeoDimension(dimExpr expr.Expr) (expr.
 }
 
 
-
 func (qc *AQLQueryContext) processMeasureAndDimensions() {
-	// Match and strip the aggregate function.
 	for index, measure := range qc.Query.Measures {
 		aggregate, ok := measure.expr.(*expr.Call)
 		if index == 0 {
 			qc.isNonAggQuery = !ok
+			fmt.Println("qc.isNonAggQuery", qc.isNonAggQuery)
+			if qc.isNonAggQuery && len(qc.OOPK.Dimensions) > 0 {
+				qc.Error = utils.StackError(nil, "non aggregate queries can not have dimensions")
+				return
+			}
+			if !qc.isNonAggQuery && len(qc.OOPK.Dimensions) == 0 {
+				qc.Error = utils.StackError(nil, "aggregate queries must have dimensions")
+				return
+			}
 		}
 		if qc.isNonAggQuery {
 			if ok {

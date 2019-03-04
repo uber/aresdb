@@ -948,6 +948,10 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 			Measures: []Measure{
 				{Expr: "count(c1)"},
+				{Expr: "max(c2)"},
+				{Expr: "min(c2)"},
+				{Expr: "avg(c2)"},
+				{Expr: "sum(c2)"},
 			},
 			TimeFilter: TimeFilter{
 				Column: "c0",
@@ -966,9 +970,9 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
 		Ω(bs).Should(MatchJSON(` {
-			"0": [[5]],
-			"60000": [[4]],
-			"120000": [[3]]
+			"0": [[5,1.2999999523162842,1.100000023841858,1.2000000476837158,3.600000023841858]],
+			"60000": [[4,1.100000023841858,1,1.0499999523162842,2.100000023841858]],
+			"120000": [[3,1.2999999523162842,1.2000000476837158,1.2333333492279053,3.700000047683716]]
 		  }`))
 
 		bc := qc.OOPK.currentBatch

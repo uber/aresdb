@@ -666,15 +666,18 @@ func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, val
 	device int) {
 	inputKeys := makeDimensionColumnVector(
 		bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(), bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
+
+	var newResultSize int
 	for measureIndex, valueWidth := range valueWidths {
 		outputKeys := makeDimensionColumnVector(
 			bc.dimensionVectorD[1].getPointer(), bc.hashVectorD[1].getPointer(), bc.dimIndexVectorD[1].getPointer(), numDims, bc.resultCapacity)
 		inputValues, outputValues := (*C.uint8_t)(bc.measureVectorDs[measureIndex][0].getPointer()), (*C.uint8_t)(bc.measureVectorDs[measureIndex][1].getPointer())
-		bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {
+		newResultSize = int(doCGoCall(func() C.CGoCallResHandle {
 			return C.Reduce(inputKeys, inputValues, outputKeys, outputValues, (C.int)(valueWidth), (C.int)(bc.resultSize+bc.size), aggFuncs[measureIndex],
 				stream, C.int(device))
 		}))
 	}
+	bc.resultSize = newResultSize
 }
 
 func (bc *oopkBatchContext) allocateStackFrame() (values, nulls devicePointer) {

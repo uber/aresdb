@@ -1433,6 +1433,67 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}))
 	})
 
+	ginkgo.It("processes non-agg measures", func() {
+
+		table := metaCom.Table{
+			Columns: []metaCom.Column{
+				{Name: "status", Type: metaCom.Uint8},
+				{Name: "city_id", Type: metaCom.Uint16},
+				{Name: "is_first", Type: metaCom.Bool},
+				{Name: "fare", Type: metaCom.Float32},
+				{Name: "request_at", Type: metaCom.Uint32},
+			},
+		}
+		schema := memstore.NewTableSchema(&table)
+
+		qc := &AQLQueryContext{
+			TableIDByAlias: map[string]int{
+				"trips": 0,
+			},
+			TableScanners: []*TableScanner{
+				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
+			},
+		}
+		qc.Query = &AQLQuery{
+			Table: "trips",
+			Measures: []Measure{
+				{Expr: "request_at"},
+				{Expr: "fare"},
+			},
+		}
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processMeasureAndDimensions()
+		Ω(qc.Error).Should(BeNil())
+
+		Ω(qc.OOPK.Measures).Should(HaveLen(2))
+		Ω(qc.OOPK.Measures[0]).Should(Equal(&expr.VarRef{
+			Val:      "request_at",
+			ColumnID: 4,
+			ExprType: expr.Unsigned,
+			DataType: memCom.Uint32,
+		}))
+		Ω(qc.OOPK.Measures[1]).Should(Equal(&expr.VarRef{
+			Val:      "fare",
+			ColumnID: 3,
+			ExprType: expr.Float,
+			DataType: memCom.Float32,
+		}))
+
+		qc.Query.Measures = []Measure{
+			{Expr: "sum(fare)"},
+			{Expr: "request_at"},
+		}
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processMeasureAndDimensions()
+		Ω(qc.Error.Error()).Should(ContainSubstring("aggregate queries must have dimensions"))
+	})
+
 	ginkgo.It("sorts used columns", func() {
 		schema := &memstore.TableSchema{
 			Schema: metaCom.Table{
