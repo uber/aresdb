@@ -21,7 +21,7 @@ var (
 	ActiveJobNameSpace string
 
 	// ConfigRootPath is the root path of config
-	ConfigRootPath string = "subscriber/config"
+	ConfigRootPath string = "config"
 
 	// ConfigFile is the file path of config file
 	ConfigFile string
