@@ -31,6 +31,7 @@ Run the following to make sure the following environment variables are correctly
 ```
 export PATH=/path/to/cuda/bin:${PATH}
 export LD_LIBRARY_PATH=/path/to/cuda/lib64:/path/to/aresdb/lib:${LD_LIBRARY_PATH}
+export PKG_CONFIG_PATH=${LD_LIBRARY_PATH}/pkgconfig:${PKG_CONFIG_PATH}
 ```
 
 

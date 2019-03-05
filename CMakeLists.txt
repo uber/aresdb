@@ -67,7 +67,6 @@ cuda_add_library(algorithm SHARED
 ################################
 # rdkafka 
 ################################
-execute_process(COMMAND bash -c "export PKG_CONFIG_PATH='${GOPATH}/src/github.com/uber/aresdb/lib/pkgconfig:${PKG_CONFIG_PATH}'") 
 include(rdkafka.cmake)
 
 ################################

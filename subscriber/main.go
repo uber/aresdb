@@ -11,6 +11,7 @@ import (
 	"github.com/uber/aresdb/subscriber/common/consumer"
 	"github.com/uber/aresdb/subscriber/common/job"
 	"github.com/uber/aresdb/subscriber/common/message"
+	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	cfgfx "go.uber.org/config"
@@ -37,7 +38,7 @@ type Result struct {
 
 func main() {
 	module := fx.Provide(Init)
-	Execute(module)
+	Execute(module, config.Module, rules.Module, job.Module)
 }
 
 func Execute(opts ...fx.Option) {
@@ -56,8 +57,8 @@ func Execute(opts ...fx.Option) {
 }
 
 func addFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&config.ConfigRootPath, "r", "config", "Config root path")
-	cmd.Flags().StringVar(&config.ConfigFile, "c", "config/staging/staging.yaml", "Config file path")
+	cmd.Flags().StringVar(&config.ConfigRootPath, "r", "subscriber/config", "Config root path")
+	cmd.Flags().StringVar(&config.ConfigFile, "c", "subscriber/config/staging/staging.yaml", "Config file path")
 	cmd.Flags().StringVar(&config.ActiveJobNameSpace, "j", "jobNameSpace", "Job namespace")
 	cmd.Flags().StringVar(&config.ActiveAresNameSpace, "a", "aresNameSpace", "Ares cluster namespace")
 

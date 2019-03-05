@@ -220,8 +220,8 @@ func AddLocalJobConfig(serviceConfig config.ServiceConfig, jobConfigs JobConfigs
 
 		// set the job configure by loading its configuration file
 		jobConfFile := fmt.Sprintf(
-			"config/%s/jobs/%s-%s.json",
-			serviceConfig.Environment.RuntimeEnvironment, jobName, serviceConfig.Environment.Zone)
+			"%s/%s/jobs/%s-%s.json",
+			config.ConfigRootPath, serviceConfig.Environment.RuntimeEnvironment, jobName, serviceConfig.Environment.Zone)
 		serviceConfig.Logger.Info(fmt.Sprintf("Loading job config file: %s", jobConfFile))
 
 		jobConf, err := ioutil.ReadFile(jobConfFile)

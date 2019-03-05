@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-        "time"
+	"time"
 
 	mux "github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
@@ -55,7 +55,7 @@ var _ = ginkgo.Describe("Controller", func() {
 	})
 
 	ginkgo.It("NewControllerHTTPClient should work", func() {
-		c := NewControllerHTTPClient(hostPort, 20 * time.Second, headers)
+		c := NewControllerHTTPClient(hostPort, 20*time.Second, headers)
 		Ω(c.address).Should(Equal(hostPort))
 		Ω(c.headers).Should(Equal(headers))
 
@@ -69,7 +69,7 @@ var _ = ginkgo.Describe("Controller", func() {
 	})
 
 	ginkgo.It("should fail with errors", func() {
-		c := NewControllerHTTPClient(hostPort, 2 * time.Second, headers)
+		c := NewControllerHTTPClient(hostPort, 2*time.Second, headers)
 		_, err := c.GetSchemaHash("bad_ns")
 		Ω(err).ShouldNot(BeNil())
 		tablesGot, err := c.GetAllSchema("bad_ns")
