@@ -67,7 +67,7 @@ cuda_add_library(algorithm SHARED
 ################################
 # rdkafka 
 ################################
-execute_process(COMMAND bash -c "export PKG_CONFIG_PATH='${GOPATH}/src/github.com/uber/aresdb/lib/pkgconfig:${PKG_CONFIG_PATH}'") 
+set(ENV{PKG_CONFIG_PATH} "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 include(rdkafka.cmake)
 
 ################################
@@ -94,10 +94,17 @@ add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
 execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
   -e vendor -e go-build \
   -e build \
+  -e subscriber \
   -e '.*/\\..*' \
   -e '.*/_.*' \
   -e '.*/mocks.*' | tr \"\n\" \" \""
         OUTPUT_VARIABLE ALL_GO_SRC)
+
+execute_process(COMMAND bash -c "find subscriber  -name '*.go' | grep -v \
+  -e '.*/\\..*' \
+  -e '.*/_.*' \
+  -e '.*/mocks.*' | tr \"\n\" \" \""
+        OUTPUT_VARIABLE ALL_SUBSCRIBER_SRC)
 
 execute_process(
         COMMAND bash -c "git diff origin/master HEAD --name-only --diff-filter=AMR | grep -e \".*\\.go\" | tr \"\n\" \" \""
@@ -149,10 +156,18 @@ add_custom_command(
         VERBATIM
 )
 
+if( NOT TARGET lib )
 add_custom_target(lib DEPENDS algorithm mem rdkafka::rdkafka)
+endif()
 string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
 add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
-        COMMAND go build -tags static -o bin/aresd
+        COMMAND go build -o bin/aresd
+        VERBATIM
+        )
+
+string(REPLACE " " ";" ALL_SUBSCRIBER_SRC_LIST ${ALL_SUBSCRIBER_SRC})
+add_custom_target(ares-subscriber DEPENDS golang-dep lib ${ALL_SUBSCRIBER_SRC_LIST}
+        COMMAND go build -tags static -o bin/ares-subscriber
         VERBATIM
         )
 
