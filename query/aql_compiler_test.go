@@ -1045,6 +1045,18 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		qc.resolveTypes()
 		Ω(qc.Error.Error()).Should(ContainSubstring("string type only support EQ and NEQ operators"))
+
+		qc.Query.Measures = []Measure{
+			{Expr: "count()", Filters: []string{"status"}},
+			{Expr: "count()", Filters: []string{"status"}},
+		}
+		qc.Query.Filters = []string{}
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processFilters()
+		Ω(qc.Error.Error()).Should(ContainSubstring("query with multiple measures can not have measure level filters"))
+
 	})
 
 	ginkgo.It("processes matched time filters", func() {
@@ -1433,6 +1445,65 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}))
 	})
 
+	ginkgo.It("processNonAggregateMeasure should work", func() {
+		qc := &AQLQueryContext{}
+		qc.processNonAggregateMeasure(&expr.VarRef{
+			DataType: memCom.Uint32,
+		})
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.OOPK.Measures).Should(HaveLen(1))
+		Ω(qc.OOPK.Measures[0]).Should(Equal(&expr.VarRef{
+			DataType: memCom.Uint32,
+		}))
+		Ω(qc.OOPK.MeasureBytes).Should(HaveLen(1))
+		Ω(qc.OOPK.MeasureBytes[0]).Should(Equal(32))
+
+		qc.processNonAggregateMeasure(&expr.StringLiteral{
+			Val: "foo",
+		})
+		qc.processNonAggregateMeasure(&expr.NumberLiteral{
+			Int: 1,
+		})
+		Ω(qc.OOPK.Measures).Should(HaveLen(1))
+		Ω(qc.OOPK.MeasureBytes).Should(HaveLen(1))
+
+		qc.processNonAggregateMeasure(&expr.BinaryExpr{
+			ExprType: expr.Boolean,
+			Op:       expr.EQ,
+			LHS: &expr.VarRef{
+				Val:      "city_id",
+				ColumnID: 1,
+				ExprType: expr.Unsigned,
+				DataType: memCom.Uint16,
+			},
+			RHS: &expr.NumberLiteral{
+				Val:      1,
+				ExprType: expr.Unsigned,
+				Int:      1,
+				Expr:     "1",
+			},
+		})
+		Ω(qc.OOPK.Measures).Should(HaveLen(2))
+		Ω(qc.OOPK.MeasureBytes).Should(HaveLen(2))
+		Ω(qc.OOPK.MeasureBytes[1]).Should(Equal(1))
+
+		qc.processNonAggregateMeasure(&expr.BinaryExpr{
+			ExprType: expr.Boolean,
+			Op:       expr.EQ,
+			LHS: &expr.StringLiteral{
+				Val:      "some string",
+			},
+			RHS: &expr.NumberLiteral{
+				Val:      1,
+				ExprType: expr.Unsigned,
+				Int:      1,
+				Expr:     "1",
+			},
+		})
+		Ω(qc.Error.Error()).Should(ContainSubstring("string operations not supported in measures"))
+
+	})
+
 	ginkgo.It("processes non-agg measures", func() {
 
 		table := metaCom.Table{
@@ -1481,7 +1552,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			ExprType: expr.Float,
 			DataType: memCom.Float32,
 		}))
+		Ω(qc.TableScanners[0].ColumnUsages).Should(Equal(map[int]columnUsage{
+			3: columnUsedByAllBatches,
+			4: columnUsedByAllBatches,
+		}))
 
+		// test errors
 		qc.Query.Measures = []Measure{
 			{Expr: "sum(fare)"},
 			{Expr: "request_at"},
@@ -1492,6 +1568,20 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		qc.processMeasureAndDimensions()
 		Ω(qc.Error.Error()).Should(ContainSubstring("aggregate queries must have dimensions"))
+
+		qc.Query.Measures = []Measure{
+			{Expr: "request_at"},
+		}
+		qc.Query.Dimensions = []Dimension{
+			{Expr: "city_id"},
+			{Expr: "request_at", TimeBucketizer: "m"},
+		}
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processMeasureAndDimensions()
+		Ω(qc.Error.Error()).Should(ContainSubstring("non aggregate queries can not have dimensions"))
 	})
 
 	ginkgo.It("sorts used columns", func() {

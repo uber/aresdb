@@ -1333,8 +1333,15 @@ func (qc *AQLQueryContext) matchPrefilters() {
 func (qc *AQLQueryContext) processFilters() {
 	// Categorize common filters and prefilters based on matched prefilters.
 	commonFilters := []expr.Expr{}
-	for _, measure := range qc.Query.Measures {
-		commonFilters = append(commonFilters, measure.filters...)
+	if len(qc.Query.Measures) == 1 {
+		commonFilters = qc.Query.Measures[0].filters
+	} else {
+		for _, measure := range qc.Query.Measures {
+			if len(measure.filters) > 0 {
+				qc.Error = utils.StackError(nil, "query with multiple measures can not have measure level filters")
+				return
+			}
+		}
 	}
 	prefilters := qc.Prefilters
 	for index, filter := range qc.Query.filters {
@@ -1643,12 +1650,11 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 		aggregate, ok := measure.expr.(*expr.Call)
 		if index == 0 {
 			qc.isNonAggQuery = !ok
-			fmt.Println("qc.isNonAggQuery", qc.isNonAggQuery)
-			if qc.isNonAggQuery && len(qc.OOPK.Dimensions) > 0 {
+			if qc.isNonAggQuery && len(qc.Query.Dimensions) > 0 {
 				qc.Error = utils.StackError(nil, "non aggregate queries can not have dimensions")
 				return
 			}
-			if !qc.isNonAggQuery && len(qc.OOPK.Dimensions) == 0 {
+			if !qc.isNonAggQuery && len(qc.Query.Dimensions) == 0 {
 				qc.Error = utils.StackError(nil, "aggregate queries must have dimensions")
 				return
 			}
@@ -1747,19 +1753,23 @@ func (qc *AQLQueryContext) processNonAggregateMeasure(nonAgg expr.Expr) {
 		// note order of measures matters here
 	default:
 		slc := stringOperandCollector{}
-		expr.Walk(slc, nonAgg)
+		expr.Walk(&slc, nonAgg)
 		if slc.stringOperandSeen {
 			qc.Error = utils.StackError(nil, "string operations not supported in measures")
+			return
 		}
 		// determine bytes base on expr type, which should already be resolved in Rewrite step
+		// TODO: handle more types
 		switch nonAgg.Type() {
 		case expr.Boolean:
-			measureBytes = 1
+			measureBytes = memCom.DataTypeBits(memCom.Bool)
 		}
 		measure = nonAgg
 	}
-	qc.OOPK.Measures = append(qc.OOPK.Measures, measure)
-	qc.OOPK.MeasureBytes = append(qc.OOPK.MeasureBytes, measureBytes)
+	if measure != nil {
+		qc.OOPK.Measures = append(qc.OOPK.Measures, measure)
+		qc.OOPK.MeasureBytes = append(qc.OOPK.MeasureBytes, measureBytes)
+	}
 }
 
 func (qc *AQLQueryContext) processAggregateMeasure(aggregate *expr.Call) {

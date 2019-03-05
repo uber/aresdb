@@ -55,9 +55,13 @@ type stringOperandCollector struct {
 	stringOperandSeen bool
 }
 
-func (slc stringOperandCollector) Visit(expression expr.Expr) expr.Visitor {
+func (slc *stringOperandCollector) Visit(expression expr.Expr) expr.Visitor {
+	if slc.stringOperandSeen == true {
+		return nil
+	}
 	if _, ok := expression.(*expr.StringLiteral); ok {
 		slc.stringOperandSeen = true
+		return nil
 	}
 	if varRefExpr, ok := expression.(*expr.VarRef); ok {
 		slc.stringOperandSeen = varRefExpr.DataType == memCom.BigEnum || varRefExpr.DataType == memCom.SmallEnum
