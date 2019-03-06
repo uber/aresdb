@@ -11,7 +11,7 @@ set(CMAKE_C_FLAGS -fPIC)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_C .so)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX .so)
 set(CUDA_SEPARABLE_COMPILATION true)
-set(CUDA_NVCC_FLAGS "-rdc=true -lineinfo -I. -std=c++11 $ENV{NVCCFLAGS}")
+set(CUDA_NVCC_FLAGS "-lineinfo -I. -std=c++11 $ENV{NVCCFLAGS}")
 set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,code=compute_60")
 
 if (NOT QUERY_MODE)
