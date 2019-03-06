@@ -10,8 +10,10 @@ set(QUERY_MODE $ENV{QUERY_MODE})
 set(CMAKE_C_FLAGS -fPIC)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_C .so)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX .so)
-set(CUDA_NVCC_FLAGS "-lineinfo -I. -std=c++11 $ENV{NVCCFLAGS}")
-set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,code=compute_60")
+set(CUDA_SEPARABLE_COMPILATION ON)
+string(REPLACE " " ";" CUDA_NVCC_FLAGS $ENV{NVCCFLAGS})
+list(APPEND CUDA_NVCC_FLAGS -lineinfo -I. -std=c++11)
+set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60" ""-gencode arch=compute_60,code=compute_60")
 
 if (NOT QUERY_MODE)
     execute_process(COMMAND which nvidia-smi && nvidia-smi | grep "Driver Version:" RESULT_VARIABLE ret)
@@ -38,11 +40,9 @@ endif ()
 
 string(REPLACE " " ";" CUDA_XCOMPILER_FLAGS ${CMAKE_C_FLAGS})
 list(TRANSFORM CUDA_XCOMPILER_FLAGS PREPEND " -Xcompiler ")
-string(REPLACE ";" " " CUDA_XCOMPILER_FLAGS ${CUDA_XCOMPILER_FLAGS})
 # transform macro to prepend -D prefix
 list(TRANSFORM MARCROS PREPEND "-D ")
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_XCOMPILER_FLAGS} ${GENCODE_FLAGS} ${MARCROS}")
-string(REPLACE " " ";" CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
+list(APPEND CUDA_NVCC_FLAGS ${CUDA_XCOMPILER_FLAGS} ${GENCODE_FLAGS} ${MARCROS})
 file(MAKE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
@@ -65,8 +65,7 @@ cuda_add_library(algorithm SHARED
         query/utils.cu
         query/utils.hpp)
 
-set_target_properties(algorithm
-                       PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+set_target_properties(algorithm)
 
 
 ################################
