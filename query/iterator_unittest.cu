@@ -38,11 +38,16 @@ TEST(BoolValueIteratorTest, CheckDereference) {
 
   uint8_t *basePtr = allocate_column(nullptr, &nullsH[0], &valuesH[0], 0, 1, 1);
 
+  printf("1\n");
+
   ColumnIterator<bool> begin = make_column_iterator<bool>(indexVector,
                                                           nullptr, 0, basePtr,
                                                           0, 8, 8, 1, 0);
+  printf("2\n");
   bool expected[8] = {false, false, false, false, true, true, true, true};
+  printf("3\n");
   EXPECT_TRUE(compare_value(begin, begin + 8, &expected[0]));
+  printf("4\n");
   release(indexVector);
   release(basePtr);
 }

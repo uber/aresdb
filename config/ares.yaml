@@ -1,5 +1,5 @@
-port: 9374
-debug_port: 43202
+port: 19374
+debug_port: 53202
 root_path: ares-root
 total_memory_size: 161061273600 # 150gb
 query:
