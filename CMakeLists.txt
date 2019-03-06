@@ -11,8 +11,9 @@ set(CMAKE_C_FLAGS -fPIC)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_C .so)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX .so)
 set(CUDA_SEPARABLE_COMPILATION ON)
+set(CMAKE_CUDA_FLAGS "--cudart shared")
 if($ENV{NVCCFLAGS})
-    string(REPLACE " " ";" CUDA_NVCC_FLAGS $ENV{NVCCFLAGS})
+    set(NVCCFLAGS $ENV{NVCCFLAGS})
 endif()
 list(APPEND CUDA_NVCC_FLAGS -lineinfo -I. -std=c++11)
 set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60" "-gencode arch=compute_60,code=compute_60")
@@ -44,26 +45,27 @@ string(REPLACE " " ";" CUDA_XCOMPILER_FLAGS ${CMAKE_C_FLAGS})
 list(TRANSFORM CUDA_XCOMPILER_FLAGS PREPEND " -Xcompiler ")
 # transform macro to prepend -D prefix
 list(TRANSFORM MARCROS PREPEND "-D ")
-list(APPEND CUDA_NVCC_FLAGS ${CUDA_XCOMPILER_FLAGS} ${GENCODE_FLAGS} ${MARCROS})
+#list(APPEND CUDA_NVCC_FLAGS ${CUDA_XCOMPILER_FLAGS} ${GENCODE_FLAGS} ${MARCROS})
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-D RUN_ON_DEVICE=1)
 file(MAKE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 cuda_add_library(algorithm SHARED
-        query/algorithm.hpp
-        query/algorithm.cu
-        query/binder.hpp
-        query/dimension_transform.cu
-        query/filter.cu
-        query/functor.cu
-        query/geo_intersects.cu
+#        query/algorithm.hpp
+#        query/algorithm.cu
+#        query/binder.hpp
+#        query/dimension_transform.cu
+#        query/filter.cu
+#        query/functor.cu
+#        query/geo_intersects.cu
         query/hash_lookup.cu
-        query/hll.cu
-        query/iterator.hpp
-        query/measure_transform.cu
-        query/scratch_space_transform.cu
-        query/sort_reduce.cu
-        query/transform.cu
-        query/transform.hpp
+#        query/hll.cu
+#        query/iterator.hpp
+#        query/measure_transform.cu
+#        query/scratch_space_transform.cu
+#        query/sort_reduce.cu
+#        query/transform.cu
+#        query/transform.hpp
         query/utils.cu
         query/utils.hpp)
 
