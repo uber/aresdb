@@ -11,9 +11,11 @@ set(CMAKE_C_FLAGS -fPIC)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_C .so)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX .so)
 set(CUDA_SEPARABLE_COMPILATION ON)
-string(REPLACE " " ";" CUDA_NVCC_FLAGS $ENV{NVCCFLAGS})
+if($ENV{NVCCFLAGS})
+    string(REPLACE " " ";" CUDA_NVCC_FLAGS $ENV{NVCCFLAGS})
+endif()
 list(APPEND CUDA_NVCC_FLAGS -lineinfo -I. -std=c++11)
-set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60" ""-gencode arch=compute_60,code=compute_60")
+set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60" "-gencode arch=compute_60,code=compute_60")
 
 if (NOT QUERY_MODE)
     execute_process(COMMAND which nvidia-smi && nvidia-smi | grep "Driver Version:" RESULT_VARIABLE ret)
@@ -64,9 +66,6 @@ cuda_add_library(algorithm SHARED
         query/transform.hpp
         query/utils.cu
         query/utils.hpp)
-
-set_target_properties(algorithm)
-
 
 ################################
 # GTest
