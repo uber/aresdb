@@ -83,8 +83,6 @@ add_library(algorithm SHARED
         query/utils.cu
         query/utils.hpp)
 
-message(CMAKE_CUDA_FLAGS is "${CMAKE_CUDA_FLAGS}")
-
 ################################
 # GTest
 ################################
@@ -94,10 +92,10 @@ enable_testing()
 ################################
 # Unit Tests
 ################################
-file(GLOB QUERY_UNITTEST_FILES query/algorithm_unittest.cu query/iterator_unittest.cu)
+file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 target_include_directories(all_unittest PRIVATE ${GTEST_ROOT}/include ${gtest_SOURCE_DIR})
-#add_dependencies(all_unittest algorithm)
+add_dependencies(all_unittest algorithm)
 # Link test executable against gtest & gtest_main
 target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
 add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
@@ -107,7 +105,7 @@ add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
 ###############################
 
 execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
-  -e vendor -e go-build \
+  -e vendor -e go-build -e CMakeFiles \
   -e build \
   -e '.*/\\..*' \
   -e '.*/_.*' \
@@ -122,7 +120,7 @@ execute_process(
 execute_process(COMMAND bash -c "find .  -type f \
     \\( -iname \\*.cu -o -iname \\*.h -o -iname \\*.hpp -o -iname \\*.c \\) \
      | grep -v \
-  -e vendor -e go-build \
+  -e vendor -e go-build -e CMakeFiles \
   -e build \
   -e '.*/\\..*' \
   -e '.*/_.*' \

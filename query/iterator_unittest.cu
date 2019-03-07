@@ -31,7 +31,6 @@
 #include "query/iterator.hpp"
 
 namespace ares {
-/*
 // cppcheck-suppress *
 TEST(BoolValueIteratorTest, CheckDereference) {
   uint32_t indexVectorH[8] = {0, 1, 2, 3, 4, 5, 6, 7};
@@ -279,7 +278,6 @@ TEST(VectorPartyIteratorTest, CheckIntIterator) {
   release(indexVector);
 }
 
-
 // cppcheck-suppress *
 TEST(VectorPartyIteratorTest, CheckFloatIterator) {
   uint32_t indexVectorH[5];
@@ -305,9 +303,7 @@ TEST(VectorPartyIteratorTest, CheckFloatIterator) {
   release(basePtr);
   release(indexVector);
 }
- */
 
-/*
 // cppcheck-suppress *
 TEST(CompressedColumnTest, CheckCountPointer) {
   uint32_t indexVectorH[5];
@@ -344,8 +340,6 @@ TEST(CompressedColumnTest, CheckCountPointer) {
   release(baseCounts);
 }
 
-
-
 // cppcheck-suppress *
 TEST(CompressedColumnTest, CheckStartCount) {
   uint32_t indexVectorH[4];
@@ -375,7 +369,7 @@ TEST(CompressedColumnTest, CheckStartCount) {
   release(basePtr);
   release(indexVector);
 }
-*/
+
 
 // cppcheck-suppress *
 TEST(DimensionOutputIteratorTest, CheckCopy) {
@@ -519,8 +513,7 @@ TEST(MeasureIteratorTest, CheckMax) {
 // cppcheck-suppress *
 TEST(RecordIDJoinIteratorTest, CheckIterator) {
   RecordID recordIDsH[5];
-  thrust::host_vector<ForeignTableIterator<int32_t>> vpItersHost(5);
-  ForeignTableIterator<int32_t> *vpIters = vpItersHost.data();
+  ForeignTableIterator<int32_t> vpItersH[5];
   int values[5][5] = {{1, 0, 0, 0, 0},
                       {0, 2, 0, 0, 0},
                       {0, 0, 3, 0, 0},
@@ -531,9 +524,8 @@ TEST(RecordIDJoinIteratorTest, CheckIterator) {
   int16_t timezoneLookupH[6] = {0, 1, 2, 3, 10};
   int32_t baseBatchID = -2147483648;
   for (int i = 0; i < 5; i++) {
-    RecordID recordID = {static_cast<int32_t>(baseBatchID + i),
+    recordIDsH[i] = {static_cast<int32_t>(baseBatchID + i),
                          static_cast<uint32_t>(i)};
-    recordIDsH[i] = recordID;
   }
 
   RecordID* recordIDs = allocate(&recordIDsH[0], 5);
@@ -543,24 +535,21 @@ TEST(RecordIDJoinIteratorTest, CheckIterator) {
   for (int i = 0; i < 5; i++) {
     basePtrs[i] =
         allocate_column(nullptr, nullptr, &values[i], 0, 0, 20);
-    vpItersHost[i] = ForeignTableIterator<int32_t>(VectorPartyIterator<int32_t>(
+    vpItersH[i] = ForeignTableIterator<int32_t>(VectorPartyIterator<int32_t>(
         nullptr, 0, basePtrs[i], 0, 0, 5, 4, 0));
   }
 
-#ifdef RUN_ON_DEVICE
-  thrust::device_vector<ForeignTableIterator<int32_t> > vpItersDevice = vpItersHost;
-  vpIters = thrust::raw_pointer_cast(vpItersDevice.data());
-#endif
+  ForeignTableIterator<int32_t>* vpIters = allocate(&vpItersH[0], 5);
 
-//  RecordIDJoinIterator<int32_t> joinIter(
-//      &recordIDs[0], 5, baseBatchID, vpIters, 5, timezoneLookup, 5);
+  RecordIDJoinIterator<int32_t> joinIter(
+      &recordIDs[0], 5, baseBatchID, vpIters, 5, timezoneLookup, 5);
   int32_t expectedValues[5] = {1, 2, 3, 10, 0};
   uint8_t expectedNulls[5] = {1, 1, 1, 1, 1};
 
-//  EXPECT_TRUE(compare_value(joinIter,
-//                            joinIter + 5,
-//                            std::begin(expectedValues)));
-//  EXPECT_TRUE(compare_null(joinIter, joinIter + 5, std::begin(expectedNulls)));
+  EXPECT_TRUE(compare_value(joinIter,
+                            joinIter + 5,
+                            std::begin(expectedValues)));
+  EXPECT_TRUE(compare_null(joinIter, joinIter + 5, std::begin(expectedNulls)));
   for (int i = 0; i < 5; i++) {
     release(basePtrs[i]);
   }

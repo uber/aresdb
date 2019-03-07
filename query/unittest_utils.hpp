@@ -62,15 +62,18 @@ inline bool compare_tuple(Iterator1 begin,
                           Iterator1 end,
                           Iterator2 expectedBegin) {
 #ifdef RUN_ON_DEVICE
-  //int size = end - begin;
-  //typedef typename thrust::iterator_traits<Iterator2>::value_type V;
-//  thrust::host_vector<V> expectedH(expectedBegin, expectedBegin + size);
-//  thrust::device_vector<V> expectedD = expectedH;
-//  return thrust::equal(thrust::device, begin, end, expectedD.begin(),
-//      tuple_compare_func<N>());
-  return true;
+    int size = end - begin;
+  typedef typename thrust::iterator_traits<Iterator1>::value_type V;
+  thrust::device_vector<V> actualD(size);
+  thrust::copy(thrust::device, begin, end, actualD.begin());
+  thrust::host_vector<V> actualH(size);
+  cudaMemcpy(actualH.data(), thrust::raw_pointer_cast(actualD.data()),
+      sizeof(V) * size, cudaMemcpyDeviceToHost);
+  CheckCUDAError("cudaMemcpy");
+  return std::equal(actualH.begin(), actualH.end(), expectedBegin,
+                    tuple_compare_func<N>());
 #else
-  return thrust::equal(begin, end, expectedBegin, tuple_compare_func<N>());
+  return std::equal(begin, end, expectedBegin, tuple_compare_func<N>());
 #endif
 }
 
@@ -185,8 +188,8 @@ inline bool equal_print(V *resBegin, V *resEnd, V *expectedBegin, CmpFunc f) {
   int size = resEnd - resBegin;
 #ifdef RUN_ON_DEVICE
   thrust::host_vector<V> expectedH(expectedBegin, expectedBegin + size);
-  thrust::device_vector<V> expectedD = expectedH;
-  return thrust::equal(thrust::device, resBegin, resEnd, expectedD.begin(), f);
+  thrust::device_vector<V> expectedV = expectedH;
+  return thrust::equal(thrust::device, resBegin, resEnd, expectedV.begin(), f);
 #else
   std::cout << "result:" << std::endl;
   std::ostream_iterator<int > out_it(std::cout, ", ");
