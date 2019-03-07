@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.12)
 # This has to be specified before enable_language according to
 # https://gitlab.kitware.com/cmake/cmake/issues/17559
 set( CMAKE_CUDA_FLAGS "" CACHE STRING "" )
-message(CMAKE_CUDA_FLAGS is ${CMAKE_CUDA_FLAGS})
 if ( CMAKE_CUDA_FLAGS )
 	list(REMOVE_ITEM CMAKE_CUDA_FLAGS "-cudart static")
 endif()
@@ -68,14 +67,14 @@ file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 add_library(algorithm SHARED
         query/algorithm.hpp
         query/algorithm.cu
-        query/binder.hpp
+#        query/binder.hpp
         query/dimension_transform.cu
         query/filter.cu
         query/functor.cu
         query/geo_intersects.cu
         query/hash_lookup.cu
         query/hll.cu
-        query/iterator.hpp
+#        query/iterator.hpp
         query/measure_transform.cu
         query/scratch_space_transform.cu
         query/sort_reduce.cu
@@ -95,10 +94,10 @@ enable_testing()
 ################################
 # Unit Tests
 ################################
-file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
+file(GLOB QUERY_UNITTEST_FILES query/algorithm_unittest.cu query/iterator_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 target_include_directories(all_unittest PRIVATE ${GTEST_ROOT}/include ${gtest_SOURCE_DIR})
-add_dependencies(all_unittest algorithm)
+#add_dependencies(all_unittest algorithm)
 # Link test executable against gtest & gtest_main
 target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
 add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
