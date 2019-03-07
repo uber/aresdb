@@ -62,7 +62,7 @@ inline bool compare_tuple(Iterator1 begin,
                           Iterator1 end,
                           Iterator2 expectedBegin) {
 #ifdef RUN_ON_DEVICE
-    int size = end - begin;
+  int size = end - begin;
   typedef typename thrust::iterator_traits<Iterator1>::value_type V;
   thrust::device_vector<V> actualD(size);
   thrust::copy(thrust::device, begin, end, actualD.begin());

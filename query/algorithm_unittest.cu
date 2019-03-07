@@ -74,7 +74,6 @@ TEST(CGoCallResHandleTest, CheckCGoCallResHandle) {
   EXPECT_TRUE(resHandle2.pStrErr == nullptr);
 }
 
-
 // cppcheck-suppress *
 TEST(UnaryTransformTest, CheckInt) {
   const int size = 3;
@@ -123,7 +122,6 @@ TEST(UnaryTransformTest, CheckInt) {
   release(indexVector);
 }
 
-
 // cppcheck-suppress *
 TEST(UnaryTransformTest, CheckConstant) {
   const int size = 3;
@@ -163,7 +161,6 @@ TEST(UnaryTransformTest, CheckConstant) {
   release(outputBasePtr);
   release(indexVector);
 }
-
 
 // cppcheck-suppress *
 TEST(UnaryTransformTest, CheckMeasureOutputIteratorForAvg) {
@@ -306,7 +303,6 @@ TEST(UnaryTransformTest, CheckGeoPoint) {
   release(outputBasePtr);
   release(indexVector);
 }
-
 
 // cppcheck-suppress *
 TEST(UnaryFilterTest, CheckFilter) {
@@ -700,7 +696,6 @@ TEST(BinaryFilterTest, CheckFilter) {
   release(indexVector);
   release(boolVector);
 }
-
 
 // cppcheck-suppress *
 TEST(BinaryTransformTest, CheckMeasureOutputIterator) {
@@ -1269,7 +1264,6 @@ TEST(SortAndReduceTest, CheckHash) {
   release(indexValuesOut);
 }
 
-
 // cppcheck-suppress *
 TEST(HyperLogLogTest, CheckSparseMode) {
   int prevResultSize = 0;
@@ -1345,7 +1339,6 @@ TEST(HyperLogLogTest, CheckSparseMode) {
   release(hllVector);
   release(hllDimRegIDCount);
 }
-
 
 // cppcheck-suppress *
 TEST(HyperLogLogTest, CheckDenseMode) {
@@ -1789,5 +1782,4 @@ TEST(GeoBatchIntersectionJoinTest, DimensionWriting) {
   release(basePtr);
   release(geoShapes);
 }
-
 }  // namespace ares

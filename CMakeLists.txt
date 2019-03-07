@@ -67,14 +67,14 @@ file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 add_library(algorithm SHARED
         query/algorithm.hpp
         query/algorithm.cu
-#        query/binder.hpp
+        query/binder.hpp
         query/dimension_transform.cu
         query/filter.cu
         query/functor.cu
         query/geo_intersects.cu
         query/hash_lookup.cu
         query/hll.cu
-#        query/iterator.hpp
+        query/iterator.hpp
         query/measure_transform.cu
         query/scratch_space_transform.cu
         query/sort_reduce.cu

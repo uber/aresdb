@@ -13,9 +13,7 @@
 // limitations under the License.
 
 #include <thrust/execution_policy.h>
-#include <thrust/device_vector.h>
 #include <thrust/fill.h>
-#include <thrust/host_vector.h>
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/sequence.h>
 #include <thrust/sort.h>
@@ -39,9 +37,6 @@ TEST(BoolValueIteratorTest, CheckDereference) {
   uint8_t valuesH[1] = {0xF0};
 
   uint8_t *basePtr = allocate_column(nullptr, &nullsH[0], &valuesH[0], 0, 1, 1);
-
-  printf("1\n");
-
   ColumnIterator<bool> begin = make_column_iterator<bool>(indexVector,
                                                           nullptr, 0, basePtr,
                                                           0, 8, 8, 1, 0);
@@ -363,13 +358,12 @@ TEST(CompressedColumnTest, CheckStartCount) {
 
   int32_t expectedValues[4] = {2, 2, 3, 3};
   uint8_t expectedNulls[4] = {1, 1, 1, 1};
-  EXPECT_TRUE(compare_value(begin, begin, std::begin(expectedValues)));
+  EXPECT_TRUE(compare_value(begin, begin + 4, std::begin(expectedValues)));
   EXPECT_TRUE(compare_null(begin, begin + 4, std::begin(expectedNulls)));
 
   release(basePtr);
   release(indexVector);
 }
-
 
 // cppcheck-suppress *
 TEST(DimensionOutputIteratorTest, CheckCopy) {
@@ -387,7 +381,6 @@ TEST(DimensionOutputIteratorTest, CheckCopy) {
   EXPECT_EQ(1, *reinterpret_cast<uint16_t *>(&out[2]));
   EXPECT_EQ(true, *reinterpret_cast<bool *>(&out[5]));
 }
-
 
 // cppcheck-suppress *
 TEST(DimensionOutputIteratorTest, CheckTransform) {
@@ -408,7 +401,6 @@ TEST(DimensionOutputIteratorTest, CheckTransform) {
   EXPECT_EQ(4, out[2]);
   EXPECT_EQ(true, out[5]);
 }
-
 
 // cppcheck-suppress *
 TEST(MeasureIteratorTest, CheckSum) {
@@ -443,7 +435,6 @@ TEST(MeasureIteratorTest, CheckSum) {
   EXPECT_EQ(output[2], 2);
 }
 
-
 // cppcheck-suppress *
 TEST(MeasureIteratorTest, CheckMin) {
   uint32_t baseCounts[5] = {0, 3, 6, 9, 10};
@@ -474,7 +465,6 @@ TEST(MeasureIteratorTest, CheckMin) {
   measureIterFloat[1] = thrust::make_tuple(2.2, false);
   EXPECT_EQ(outputFloat[1], FLT_MAX);
 }
-
 
 // cppcheck-suppress *
 TEST(MeasureIteratorTest, CheckMax) {
@@ -575,7 +565,6 @@ TEST(DimensionHashIterator, CheckIterator) {
   DimensionHashIterator iter(dimValues, indexVector, numDimsPerDimWidth, 2);
   EXPECT_EQ(iter[0], iter[1]);
 }
-
 
 // cppcheck-suppress *
 TEST(DimensionColumnPermutateIteratorTest, CheckIterator) {
