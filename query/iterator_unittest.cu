@@ -37,7 +37,6 @@ TEST(BoolValueIteratorTest, CheckDereference) {
   uint8_t valuesH[1] = {0xF0};
 
   uint8_t *basePtr = allocate_column(nullptr, &nullsH[0], &valuesH[0], 0, 1, 1);
-
   ColumnIterator<bool> begin = make_column_iterator<bool>(indexVector,
                                                           nullptr, 0, basePtr,
                                                           0, 8, 8, 1, 0);
@@ -504,8 +503,7 @@ TEST(MeasureIteratorTest, CheckMax) {
 // cppcheck-suppress *
 TEST(RecordIDJoinIteratorTest, CheckIterator) {
   RecordID recordIDsH[5];
-  thrust::host_vector<ForeignTableIterator<int32_t>> vpItersHost(5);
-  ForeignTableIterator<int32_t> *vpIters = vpItersHost.data();
+  ForeignTableIterator<int32_t> vpItersH[5];
   int values[5][5] = {{1, 0, 0, 0, 0},
                       {0, 2, 0, 0, 0},
                       {0, 0, 3, 0, 0},
@@ -516,9 +514,8 @@ TEST(RecordIDJoinIteratorTest, CheckIterator) {
   int16_t timezoneLookupH[6] = {0, 1, 2, 3, 10};
   int32_t baseBatchID = -2147483648;
   for (int i = 0; i < 5; i++) {
-    RecordID recordID = {static_cast<int32_t>(baseBatchID + i),
+    recordIDsH[i] = {static_cast<int32_t>(baseBatchID + i),
                          static_cast<uint32_t>(i)};
-    recordIDsH[i] = recordID;
   }
 
   RecordID* recordIDs = allocate(&recordIDsH[0], 5);
@@ -528,15 +525,11 @@ TEST(RecordIDJoinIteratorTest, CheckIterator) {
   for (int i = 0; i < 5; i++) {
     basePtrs[i] =
         allocate_column(nullptr, nullptr, &values[i], 0, 0, 20);
-    vpItersHost[i] = ForeignTableIterator<int32_t>(VectorPartyIterator<int32_t>(
+    vpItersH[i] = ForeignTableIterator<int32_t>(VectorPartyIterator<int32_t>(
         nullptr, 0, basePtrs[i], 0, 0, 5, 4, 0));
   }
 
-#ifdef RUN_ON_DEVICE
-  thrust::device_vector<ForeignTableIterator<int32_t>>
-      vpItersDevice = vpItersHost;
-  vpIters = thrust::raw_pointer_cast(vpItersDevice.data());
-#endif
+  ForeignTableIterator<int32_t>* vpIters = allocate(&vpItersH[0], 5);
 
   RecordIDJoinIterator<int32_t> joinIter(
       &recordIDs[0], 5, baseBatchID, vpIters, 5, timezoneLookup, 5);
@@ -547,7 +540,6 @@ TEST(RecordIDJoinIteratorTest, CheckIterator) {
                             joinIter + 5,
                             std::begin(expectedValues)));
   EXPECT_TRUE(compare_null(joinIter, joinIter + 5, std::begin(expectedNulls)));
-
   for (int i = 0; i < 5; i++) {
     release(basePtrs[i]);
   }
