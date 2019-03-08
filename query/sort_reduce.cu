@@ -23,8 +23,6 @@
 #include "query/time_series_aggregate.h"
 
 CGoCallResHandle Sort(DimensionColumnVector keys,
-                      uint8_t *values,
-                      int valueBytes,
                       int length,
                       void *cudaStream,
                       int device) {
@@ -33,7 +31,7 @@ CGoCallResHandle Sort(DimensionColumnVector keys,
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
 #endif
-    ares::sort(keys, values, valueBytes, length, cudaStream);
+    ares::sort(keys, length, cudaStream);
     CheckCUDAError("Sort");
   }
   catch (std::exception &e) {
@@ -79,9 +77,7 @@ CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
 
 namespace ares {
 
-template<typename ValueType>
-void sortInternal(DimensionColumnVector vector,
-                  ValueType values,
+void sort(DimensionColumnVector vector,
                   int length,
                   void *cudaStream) {
   DimensionHashIterator hashIter(vector.DimValues,
@@ -104,26 +100,6 @@ void sortInternal(DimensionColumnVector vector,
                              vector.HashValues + length,
                              vector.IndexVector);
 #endif
-}
-
-// sort based on DimensionColumnVector
-void sort(DimensionColumnVector keys,
-          uint8_t *values,
-          int valueBytes,
-          int length,
-          void *cudaStream) {
-  switch (valueBytes) {
-#define  SORT_INTERNAL(ValueType) \
-      sortInternal<ValueType>(keys, reinterpret_cast<ValueType>(values), \
-                               length, cudaStream); \
-      break;
-
-    case 4:
-      SORT_INTERNAL(uint32_t *)
-    case 8:
-      SORT_INTERNAL(uint64_t *)
-    default:throw std::invalid_argument("ValueBytes is invalid");
-  }
 }
 
 template<typename Value, typename AggFunc>

@@ -492,13 +492,9 @@ CGoCallResHandle BinaryFilter(InputVector lhs,
                               void *cudaStream,
                               int device);
 
-// Sort performs a key-value sort to sort elements in keys and values in
-// ascending key order. Notice we don't need data type of the measure
-// values here since we only need to move the whole 4 bytes around
-// without any change.
+// Sort performs a key-value sort to sort elements in keys in
+// ascending key order, and generate indexVector to be used at reduce time
 CGoCallResHandle Sort(DimensionColumnVector keys,
-                      uint8_t *values,
-                      int valueWidth,
                       int length,
                       void *cudaStream,
                       int device);

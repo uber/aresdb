@@ -1027,12 +1027,10 @@ TEST(SortDimColumnVectorTest, CheckSort) {
   (keysH + 18)[2] = 1;
 
   uint32_t indexH[3] = {0, 1, 2};
-  uint32_t valuesH[3] = {1, 2, 3};
   uint64_t hashValuesH[3] = {0};
 
   uint8_t *keys = allocate(&keysH[0], 30);
   uint32_t *index = allocate(&indexH[0], 3);
-  uint32_t *values = allocate(&valuesH[0], 3);
   uint64_t *hashValues = allocate(&hashValuesH[0], 3);
 
   const int vectorCapacity = 3;
@@ -1043,13 +1041,10 @@ TEST(SortDimColumnVectorTest, CheckSort) {
       index,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
-  Sort(keyColVector, reinterpret_cast<uint8_t *>(values), 4, length,
-       0, 0);
+  Sort(keyColVector, length, 0, 0);
 
-  uint32_t expectedValues[3] = {1, 2, 3};
   uint32_t expectedIndex1[3] = {1, 0, 2};
   uint32_t expectedIndex2[3] = {0, 2, 1};
-  EXPECT_TRUE(equal(values, values + 3, expectedValues));
   EXPECT_TRUE(equal(index, index + 3, expectedIndex1) ||
       equal(index, index + 3, expectedIndex2));
 }
@@ -1236,8 +1231,7 @@ TEST(SortAndReduceTest, CheckHash) {
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)1}};
 
-  Sort(inputKeyColVector, reinterpret_cast<uint8_t *>(measureValues), 4, length,
-       0, 0);
+  Sort(inputKeyColVector, length, 0, 0);
   CGoCallResHandle resHandle =
       Reduce(inputKeyColVector, reinterpret_cast<uint8_t *>(measureValues),
              outputKeyColVector, reinterpret_cast<uint8_t *>(measureValuesOut),
