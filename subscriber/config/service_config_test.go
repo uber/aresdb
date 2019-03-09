@@ -10,7 +10,7 @@ import (
 )
 
 var _ = Describe("service_config", func() {
-	ActiveAresNameSpace = "dev01-sjc1"
+	ActiveAresNameSpace = "dev01"
 	ActiveJobNameSpace = "job-test"
 	It("NewServiceConfig", func() {
 		cfg, err := config.NewYAMLProviderFromFiles("test.yaml")

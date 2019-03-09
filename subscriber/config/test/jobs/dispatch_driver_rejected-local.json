@@ -1,6 +1,9 @@
 {
   "job": "dispatch_driver_rejected",
   "streamConfig": {
+    "kafkaBroker": "localhost:17791",
+    "maxPollIntervalMs": 300000,
+    "sessionTimeoutNs": 10000,
     "kafkaClusterName": "kloak-sjc1-agg1",
     "kafkaClusterFile": "/etc/uber/kafka8/clusters.yaml",
     "topic": "hp_demand_job-offer-expired",

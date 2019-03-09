@@ -76,8 +76,8 @@ type StreamingConfig struct {
 	KafkaClusterFile      string               `json:"kafkaClusterFile" yaml:"kafkaClusterFile"`
 	KafkaVersion          string               `json:"kafkaVersion" yaml:"kafkaVersion"`
 	ChannelBufferSize     uint                 `json:"channelBufferSize" yaml:"channelBufferSize" default:"256"`
-	MaxPollIntervalMs     int                  `json:"maxPollIntervalMs" yaml:"maxPollIntervalMs" default:"100"`
-	SessionTimeoutNs      int                  `json:"sessionTimeoutNs" yaml:"sessionTimeoutNs" default:"6000"`
+	MaxPollIntervalMs     int                  `json:"maxPollIntervalMs" yaml:"maxPollIntervalMs" default:"300000"`
+	SessionTimeoutNs      int                  `json:"sessionTimeoutNs" yaml:"sessionTimeoutNs" default:"10000"`
 	Topic                 string               `json:"topic" yaml:"topic"`
 	TopicType             string               `json:"topicType" yaml:"topicType"`
 	LatestOffset          bool                 `json:"latestOffset" yaml:"latestOffset"`

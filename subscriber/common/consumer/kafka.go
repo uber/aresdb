@@ -35,22 +35,25 @@ type KafkaConsumer struct {
 type KafkaMessage struct {
 	*kafka.Message
 
-	consumer Consumer
-	cluster  string
+	Consumer    Consumer
+	ClusterName string
 }
 
 // NewKafkaConsumer creates kafka consumer by using https://github.com/confluentinc/confluent-kafka-go.
 func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (Consumer, error) {
+	offsetReset := "earliest"
+	if jobConfig.StreamingConfig.LatestOffset {
+		offsetReset = "latest"
+	}
 	cfg := kafka.ConfigMap{
 		"bootstrap.servers":               jobConfig.StreamingConfig.KafkaBroker,
-		"cluster":                         jobConfig.StreamingConfig.KafkaClusterName,
 		"group.id":                        GetConsumerGroupName(serviceConfig.Environment.Deployment, jobConfig.Name, jobConfig.AresTableConfig.Cluster),
 		"max.poll.interval.ms":            jobConfig.StreamingConfig.MaxPollIntervalMs,
 		"session.timeout.ms":              jobConfig.StreamingConfig.SessionTimeoutNs,
 		"go.events.channel.enable":        false,
 		"go.application.rebalance.enable": false,
 		"enable.partition.eof":            true,
-		"auto.offset.reset":               jobConfig.StreamingConfig.LatestOffset,
+		"auto.offset.reset":               offsetReset,
 	}
 	serviceConfig.Logger.Info("Kafka consumer",
 		zap.String("job", jobConfig.Name),
@@ -164,59 +167,63 @@ func (c *KafkaConsumer) startConsuming() {
 		msgLagGauge[topic] = make(map[int32]tally.Gauge)
 	}
 
-	for {
-		event := c.Consumer.Poll(c.ConfigMap["max.poll.interval.ms"].(int))
-		if event == nil {
-			continue
-		}
-		switch e := event.(type) {
-		case *kafka.Message:
-			c.MsgCh <- &KafkaMessage{
-				e,
-				c,
-				c.ConfigMap["cluster"].(string),
-			}
-			topic := *e.TopicPartition.Topic
-			partition := e.TopicPartition.Partition
-			pncm := msgCounter[topic]
-			nCounter, ok := pncm[partition]
-			if !ok {
-				nCounter = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Counter("messages-count")
-				pncm[partition] = nCounter
-			}
-			nCounter.Inc(1)
+	for run := true; run; {
+		select {
+		case _ = <-c.CloseCh:
+			c.Logger.Info("Received close Signal")
+			run = false
+		case event := <-c.Events():
+			switch e := event.(type) {
+			case *kafka.Message:
+				c.Logger.Debug("Received nessage event", zap.Any("message", e))
+				c.MsgCh <- &KafkaMessage{
+					e,
+					c,
+					c.ConfigMap["cluster"].(string),
+				}
+				topic := *e.TopicPartition.Topic
+				partition := e.TopicPartition.Partition
+				pncm := msgCounter[topic]
+				nCounter, ok := pncm[partition]
+				if !ok {
+					nCounter = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Counter("messages-count")
+					pncm[partition] = nCounter
+				}
+				nCounter.Inc(1)
 
-			pbcm := msgByteCounter[topic]
-			bCounter, ok := pbcm[partition]
-			if !ok {
-				bCounter = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Counter("message-bytes-count")
-				pbcm[partition] = bCounter
-			}
-			bCounter.Inc(int64(len(e.Value)))
+				pbcm := msgByteCounter[topic]
+				bCounter, ok := pbcm[partition]
+				if !ok {
+					bCounter = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Counter("message-bytes-count")
+					pbcm[partition] = bCounter
+				}
+				bCounter.Inc(int64(len(e.Value)))
 
-			pogm := msgOffsetGauge[topic]
-			oGauge, ok := pogm[partition]
-			if !ok {
-				oGauge = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Gauge("latest-offset")
-				pogm[partition] = oGauge
-			}
-			oGauge.Update(float64(e.TopicPartition.Offset))
+				pogm := msgOffsetGauge[topic]
+				oGauge, ok := pogm[partition]
+				if !ok {
+					oGauge = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Gauge("latest-offset")
+					pogm[partition] = oGauge
+				}
+				oGauge.Update(float64(e.TopicPartition.Offset))
 
-			plgm := msgLagGauge[topic]
-			lGauge, ok := plgm[partition]
-			if !ok {
-				lGauge = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Gauge("offset-lag")
+				plgm := msgLagGauge[topic]
+				lGauge, ok := plgm[partition]
+				if !ok {
+					lGauge = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Gauge("offset-lag")
+				}
+				_, offset, _ := c.Consumer.QueryWatermarkOffsets(topic, partition, 100)
+				if offset > int64(e.TopicPartition.Offset) {
+					lGauge.Update(float64(offset - int64(e.TopicPartition.Offset) - 1))
+				} else {
+					lGauge.Update(0)
+				}
+			case kafka.Error:
+				c.ErrCh <- e
+				c.Logger.Error("Received error event", zap.Error(e))
+			default:
+				c.Logger.Info("Ignored consumer event", zap.Any("event", e))
 			}
-			_, offset, _ := c.Consumer.QueryWatermarkOffsets(topic, partition, 100)
-			if offset > int64(e.TopicPartition.Offset) {
-				lGauge.Update(float64(offset - int64(e.TopicPartition.Offset) - 1))
-			} else {
-				lGauge.Update(0)
-			}
-		case kafka.Error:
-			c.ErrCh <- e
-		default:
-			c.Logger.Info("Ignored consumer event", zap.String("event", e.String()))
 		}
 	}
 }
@@ -265,8 +272,8 @@ func (m *KafkaMessage) Offset() int64 {
 }
 
 func (m *KafkaMessage) Ack() {
-	if m.consumer != nil {
-		m.consumer.CommitUpTo(m)
+	if m.Consumer != nil {
+		m.Consumer.CommitUpTo(m)
 	}
 }
 
@@ -275,7 +282,7 @@ func (m *KafkaMessage) Nack() {
 }
 
 func (m *KafkaMessage) Cluster() string {
-	return m.cluster
+	return m.ClusterName
 }
 
 // GetConsumerGroupName will return the consumer group name to use or being used

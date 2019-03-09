@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-
 	"time"
 
 	"github.com/uber/aresdb/metastore/common"
