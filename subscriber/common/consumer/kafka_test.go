@@ -69,13 +69,41 @@ var _ = Describe("KafkaConsumer", func() {
 	})
 
 	It("KafkaMessage functions", func() {
+		topic := "topic"
 		message := &KafkaMessage{
-			&kafka.Message{},
+			&kafka.Message{
+				TopicPartition: kafka.TopicPartition {
+					Topic: &topic,
+					Partition: int32(0),
+					Offset: 0,
+				},
+				Value: []byte("value"),
+				Key: []byte("key"),
+			},
 			nil,
 			"kloak-sjc1-agg1",
 		}
 
+		key := message.Key()
+		Ω(string(key)).Should(Equal("key"))
+
+		value := message.Value()
+		Ω(string(value)).Should(Equal("value"))
+
 		cluster := message.Cluster()
 		Ω(cluster).Should(Equal("kloak-sjc1-agg1"))
+
+		topic = message.Topic()
+		Ω(topic).Should(Equal("topic"))
+
+		offset := message.Offset()
+		Ω(offset).Should(Equal(int64(0)))
+
+		partition := message.Partition()
+		Ω(partition).Should(Equal(int32(0)))
+
+		message.Ack()
+
+		message.Nack()
 	})
 })

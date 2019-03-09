@@ -252,11 +252,11 @@ func (c *KafkaConsumer) Close() error {
 }
 
 func (m *KafkaMessage) Key() []byte {
-	return m.Key()
+	return m.Message.Key
 }
 
 func (m *KafkaMessage) Value() []byte {
-	return m.Value()
+	return m.Message.Value
 }
 
 func (m *KafkaMessage) Topic() string {
