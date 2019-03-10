@@ -39,7 +39,7 @@ var _ = Describe("KafkaConsumer", func() {
 	if jobConfigs["dispatch_driver_rejected"]["dev01"] == nil {
 		panic("Failed to get (jobConfigs[\"dispatch_driver_rejected\"][\"dev01\"]")
 	} else {
-		jobConfigs["dispatch_driver_rejected"]["dev01"].AresTableConfig.Cluster = "dev-ares01"
+		jobConfigs["dispatch_driver_rejected"]["dev01"].AresTableConfig.Cluster = "dev01"
 	}
 
 	It("KafkaConsumer functions", func() {
@@ -48,7 +48,7 @@ var _ = Describe("KafkaConsumer", func() {
 		Ω(kc).ShouldNot(BeNil())
 
 		groupId := kc.Name()
-		Ω(groupId).Should(Equal("ares-subscriber_test_dispatch_driver_rejected_dev-ares01_streaming"))
+		Ω(groupId).Should(Equal("ares-subscriber_test_dispatch_driver_rejected_dev01_streaming"))
 
 		topics := kc.Topics()
 		len := len(topics)
@@ -72,13 +72,13 @@ var _ = Describe("KafkaConsumer", func() {
 		topic := "topic"
 		message := &KafkaMessage{
 			&kafka.Message{
-				TopicPartition: kafka.TopicPartition {
-					Topic: &topic,
+				TopicPartition: kafka.TopicPartition{
+					Topic:     &topic,
 					Partition: int32(0),
-					Offset: 0,
+					Offset:    0,
 				},
 				Value: []byte("value"),
-				Key: []byte("key"),
+				Key:   []byte("key"),
 			},
 			nil,
 			"kloak-sjc1-agg1",

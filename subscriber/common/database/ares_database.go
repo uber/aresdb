@@ -13,11 +13,11 @@ import (
 
 // AresDatabase is an implementation of Database interface for saving data to ares
 type AresDatabase struct {
-	serviceConfig config.ServiceConfig
-	scope         tally.Scope
-	cluster       string
-	connector     client.Connector
-	jobName       string
+	ServiceConfig config.ServiceConfig
+	Scope         tally.Scope
+	ClusterName   string
+	Connector     client.Connector
+	JobName       string
 }
 
 // NewAresDatabase initialize an AresDatabase cluster
@@ -32,14 +32,14 @@ func NewAresDatabase(
 		return nil, utils.StackError(err, "failed to create ares connector")
 	}
 	return &AresDatabase{
-		serviceConfig: serviceConfig,
-		scope: serviceConfig.Scope.Tagged(map[string]string{
+		ServiceConfig: serviceConfig,
+		Scope: serviceConfig.Scope.Tagged(map[string]string{
 			"job":         jobName,
 			"aresCluster": cluster,
 		}),
-		cluster:   cluster,
-		connector: connector,
-		jobName:   jobName,
+		ClusterName: cluster,
+		Connector:   connector,
+		JobName:     jobName,
 	}, nil
 }
 
@@ -48,29 +48,29 @@ func (db *AresDatabase) Shutdown() {}
 
 // Save saves a batch of row objects into a destination
 func (db *AresDatabase) Save(destination Destination, rows []Row) error {
-	db.scope.Gauge("batchSize").Update(float64(len(rows)))
+	db.Scope.Gauge("batchSize").Update(float64(len(rows)))
 	aresRows := make([]client.Row, 0, len(rows))
 	for _, row := range rows {
 		aresRows = append(aresRows, client.Row(row))
 	}
 
 	saveStart := time.Now()
-	db.serviceConfig.Logger.Debug("saving", zap.Any("rows", aresRows))
-	rowsInserted, err := db.connector.
+	db.ServiceConfig.Logger.Debug("saving", zap.Any("rows", aresRows))
+	rowsInserted, err := db.Connector.
 		Insert(destination.Table, destination.ColumnNames, aresRows, destination.AresUpdateModes...)
 	if err != nil {
-		db.scope.Counter("errors.insert").Inc(1)
+		db.Scope.Counter("errors.insert").Inc(1)
 		return utils.StackError(err, fmt.Sprintf("Failed to save rows in table %s, columns: %+v",
 			destination.Table, destination.ColumnNames))
 	}
-	db.scope.Timer("latency.ares.save").Record(time.Now().Sub(saveStart))
-	db.scope.Counter("rowsWritten").Inc(int64(rowsInserted))
-	db.scope.Counter("rowsIgnored").Inc(int64(len(aresRows)) - int64(rowsInserted))
-	db.scope.Gauge("upsertBatchSize").Update(float64(rowsInserted))
+	db.Scope.Timer("latency.ares.save").Record(time.Now().Sub(saveStart))
+	db.Scope.Counter("rowsWritten").Inc(int64(rowsInserted))
+	db.Scope.Counter("rowsIgnored").Inc(int64(len(aresRows)) - int64(rowsInserted))
+	db.Scope.Gauge("upsertBatchSize").Update(float64(rowsInserted))
 	return nil
 }
 
 // Cluster returns the DB cluster name
 func (db *AresDatabase) Cluster() string {
-	return db.cluster
+	return db.ClusterName
 }

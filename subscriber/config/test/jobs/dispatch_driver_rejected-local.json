@@ -7,7 +7,7 @@
     "kafkaClusterName": "kloak-sjc1-agg1",
     "kafkaClusterFile": "/etc/uber/kafka8/clusters.yaml",
     "topic": "hp_demand_job-offer-expired",
-    "topicType": "heatpipe",
+    "topicType": "json",
     "latestOffset": true,
     "errorThreshold": 10,
     "statusCheckInterval": 60,

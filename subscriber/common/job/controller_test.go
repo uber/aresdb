@@ -15,7 +15,10 @@ var _ = Describe("controller", func() {
 	mockControllerClient := &mocks.ControllerClient{}
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
-			Deployment: "test",
+			Deployment:         "test",
+			RuntimeEnvironment: "test",
+			Zone:               "local",
+			InstanceID:         "0",
 		},
 		Logger:           zap.NewNop(),
 		Scope:            tally.NoopScope,
@@ -33,10 +36,17 @@ var _ = Describe("controller", func() {
 		jobNS:                "job_test",
 		aresClusterNS:        "dev01",
 	}
+
 	It("SyncUpJobConfigs", func() {
 		controller.SyncUpJobConfigs()
 		Ω(controller.Drivers["dispatch_driver_rejected"]).ShouldNot(BeNil())
 		Ω(controller.Drivers["dispatch_driver_rejected"]["dev01"]).ShouldNot(BeNil())
 		controller.Drivers["dispatch_driver_rejected"]["dev01"].Stop()
+	})
+
+	It("updateAssignmentHash", func() {
+		update, newHash := controller.updateAssignmentHash()
+		Ω(update).Should(Equal(false))
+		Ω(newHash).Should(Equal("12345"))
 	})
 })

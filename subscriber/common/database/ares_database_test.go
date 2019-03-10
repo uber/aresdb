@@ -39,11 +39,11 @@ var _ = Describe("AresDatabase client", func() {
 		Scope:  tally.NoopScope,
 	}
 	aresDB := &AresDatabase{
-		serviceConfig: serviceConfig,
-		scope:         tally.NoopScope,
-		cluster:       cluster,
-		connector:     &mockConnector,
-		jobName:       jobName,
+		ServiceConfig: serviceConfig,
+		Scope:         tally.NoopScope,
+		ClusterName:   cluster,
+		Connector:     &mockConnector,
+		JobName:       jobName,
 	}
 	It("Save", func() {
 		aresRows := make([]client.Row, 0, len(rows))
