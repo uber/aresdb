@@ -7,6 +7,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
@@ -40,8 +42,32 @@ var _ = Describe("message_parser", func() {
 		Transformations: jobConfigs["dispatch_driver_rejected"]["dev01"].GetTranformations(),
 	}
 
+	It("NewParser", func() {
+		parser := NewParser(jobConfigs["dispatch_driver_rejected"]["dev01"], serviceConfig)
+		Ω(parser).ShouldNot(BeNil())
+	})
+
 	It("populateDestination", func() {
 		mp.populateDestination(jobConfigs["dispatch_driver_rejected"]["dev01"])
 		Ω(mp.Destination).ShouldNot(BeNil())
+	})
+
+	It("ParseMessage", func() {
+		msg := map[string]interface{}{
+			"project": "ares-subscriber",
+		}
+
+		dst := database.Destination{
+			"table",
+			[]string{"project"},
+			map[string]interface{}{"1": "project"},
+			[]memCom.ColumnUpdateMode{memCom.UpdateOverwriteNotNull},
+		}
+		mp.Transformations = map[string]*rules.TransformationConfig{
+			"project": &rules.TransformationConfig{},
+		}
+		row, err := mp.ParseMessage(msg, dst)
+		Ω(row).ShouldNot(BeNil())
+		Ω(err).Should(BeNil())
 	})
 })

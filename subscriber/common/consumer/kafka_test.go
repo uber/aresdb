@@ -64,8 +64,12 @@ var _ = Describe("KafkaConsumer", func() {
 		closeCh := kc.Closed()
 		Ω(closeCh).ShouldNot(BeNil())
 
+		go kc.(*KafkaConsumer).startConsuming()
 		err = kc.Close()
 		Ω(err).Should(BeNil())
+
+		err = kc.Close()
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	It("KafkaMessage functions", func() {
@@ -101,6 +105,9 @@ var _ = Describe("KafkaConsumer", func() {
 
 		partition := message.Partition()
 		Ω(partition).Should(Equal(int32(0)))
+
+		message.Ack()
+		message.Consumer, _ = NewKafkaConsumer(jobConfigs["dispatch_driver_rejected"]["dev01"], serviceConfig)
 
 		message.Ack()
 

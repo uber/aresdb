@@ -5,17 +5,17 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/client/mocks"
+	"github.com/uber/aresdb/subscriber/common/consumer"
+	"github.com/uber/aresdb/subscriber/common/database"
+	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
 	"os"
-	"github.com/uber/aresdb/subscriber/common/consumer"
-	"github.com/uber/aresdb/subscriber/common/message"
 	"time"
-	"github.com/uber/aresdb/subscriber/common/database"
-	"github.com/uber/aresdb/client/mocks"
 )
 
 var _ = Describe("driver", func() {
@@ -87,7 +87,7 @@ var _ = Describe("driver", func() {
 		},
 	}
 
-	driver, err :=  NewDriver(jobConfig, serviceConfig, NewStreamingProcessor,
+	driver, err := NewDriver(jobConfig, serviceConfig, NewStreamingProcessor,
 		consumer.NewKafkaConsumer, message.NewDefaultDecoder)
 	driver.processors = []Processor{processor}
 
@@ -119,5 +119,3 @@ var _ = Describe("driver", func() {
 		driver.Stop()
 	})
 })
-
-

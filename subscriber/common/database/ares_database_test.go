@@ -61,4 +61,7 @@ var _ = Describe("AresDatabase client", func() {
 		c := aresDB.Cluster()
 		Ω(c).Should(Equal(cluster))
 	})
+	It("Shutdown", func() {
+		aresDB.Shutdown()
+	})
 })
