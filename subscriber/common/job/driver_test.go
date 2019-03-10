@@ -5,8 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/client/mocks"
-	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
@@ -16,10 +14,11 @@ import (
 	"github.com/uber/aresdb/subscriber/common/consumer"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"time"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/uber/aresdb/subscriber/common/database"
+	"github.com/uber/aresdb/client/mocks"
 )
 
-var _ = Describe("streaming_processor", func() {
+var _ = Describe("driver", func() {
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",
@@ -88,35 +87,37 @@ var _ = Describe("streaming_processor", func() {
 		},
 	}
 
-	topic := "topic"
-	message := &consumer.KafkaMessage{
-		&kafka.Message{
-			TopicPartition: kafka.TopicPartition{
-				Topic:     &topic,
-				Partition: int32(0),
-				Offset:    0,
-			},
-			Value: []byte(`{"project": "ares-subscriber"}`),
-			Key:   []byte("key"),
-		},
-		nil,
-		"kloak-sjc1-agg1",
-	}
+	driver, err :=  NewDriver(jobConfig, serviceConfig, NewStreamingProcessor,
+		consumer.NewKafkaConsumer, message.NewDefaultDecoder)
+	driver.processors = []Processor{processor}
 
-	It("Run", func() {
-		id := processor.GetID()
-		Ω(id).Should(Equal(1))
-
-		ctx := processor.GetContext()
-		Ω(ctx).ShouldNot(BeNil())
-
-		processor.initBatcher()
-
-		_, err := processor.decodeMessage(message)
+	It("NewDriver", func() {
+		Ω(driver).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
+	})
 
-		go processor.Run()
+	It("MarshalJSON", func() {
+		_, err := driver.MarshalJSON()
+		Ω(err).Should(BeNil())
+	})
 
-		processor.Stop()
+	It("GetErrors", func() {
+		errors := driver.GetErrors()
+		Ω(errors).ShouldNot(BeNil())
+	})
+
+	It("", func() {
+		ok := driver.RemoveProcessor(0)
+		Ω(ok).Should(Equal(false))
+	})
+
+	It("Stop", func() {
+		go driver.monitorStatus(time.NewTicker(time.Duration(driver.statusCheckInterval) * time.Second))
+		go driver.monitorErrors()
+		go driver.limitRate()
+
+		driver.Stop()
 	})
 })
+
+
