@@ -1724,13 +1724,57 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 	}
 
 	// Collect column usage from measures and dimensions
-	for _, measure := range qc.OOPK.Measures {
-		expr.Walk(columnUsageCollector{
-			tableScanners: qc.TableScanners,
-			usages:        columnUsedByAllBatches,
-		}, measure)
-	}
+	if !qc.isNonAggQuery {
+		for _, measure := range qc.OOPK.Measures {
+			expr.Walk(columnUsageCollector{
+				tableScanners: qc.TableScanners,
+				usages:        columnUsedByAllBatches,
+			}, measure)
+		}
 
+		for _, dim := range qc.OOPK.Dimensions {
+			expr.Walk(columnUsageCollector{
+				tableScanners: qc.TableScanners,
+				usages:        columnUsedByAllBatches,
+			}, dim)
+		}
+	}
+}
+
+func (qc *AQLQueryContext) processNonAggregateMeasure(nonAgg expr.Expr) {
+	var measure expr.Expr
+	// default is 4 bytes
+	measureBytes := 4
+	switch nonAgg.(type) {
+	case *expr.VarRef:
+		measure = nonAgg
+		measureBytes = memCom.DataTypeBits(nonAgg.(*expr.VarRef).DataType)
+	case *expr.NumberLiteral, *expr.StringLiteral:
+		// no need to transform literals to oopk, post processing will fill values
+		// note order of measures matters here
+	default:
+		slc := stringOperandCollector{}
+		expr.Walk(&slc, nonAgg)
+		if slc.stringOperandSeen {
+			qc.Error = utils.StackError(nil, "string operations not supported in measures")
+			return
+		}
+		// determine bytes base on expr type, which should already be resolved in Rewrite step
+		// TODO: handle more types
+		switch nonAgg.Type() {
+		case expr.Boolean:
+			measureBytes = memCom.DataTypeBits(memCom.Bool)
+		}
+		measure = nonAgg
+	}
+	if measure != nil {
+		qc.OOPK.Measures = append(qc.OOPK.Measures, measure)
+		qc.OOPK.MeasureBytes = append(qc.OOPK.MeasureBytes, measureBytes)
+	}
+}
+
+func (qc *AQLQueryContext) processAggregateMeasure(aggregate *expr.Call) {
+>>>>>>> support-multiple-measures-staging
 	if qc.ReturnHLLData && aggregate.Name != hllCallName {
 		qc.Error = utils.StackError(nil, "expect hll aggregate function as client specify 'Accept' as "+
 			"'application/hll', but got %s",
