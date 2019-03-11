@@ -19,6 +19,7 @@ if ( CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES )
         list( REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart_static" )
 endif()
 
+include(ExternalProject)
 include_directories(${PROJECT_SOURCE_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
