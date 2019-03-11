@@ -75,6 +75,8 @@ const (
 	avgCallName              = "avg"
 )
 
+var aggCallNames = []string{countCallName, countDistinctHllCallName, maxCallName, minCallName, sumCallName, avgCallName}
+
 // Compile returns the compiled AQLQueryContext for data feeding and query
 // execution. Caller should check for AQLQueryContext.Error.
 func (q *AQLQuery) Compile(store memstore.MemStore, returnHLL bool) *AQLQueryContext {
@@ -1643,10 +1645,25 @@ func (qc *AQLQueryContext) matchAndRewriteGeoDimension(dimExpr expr.Expr) (expr.
 	return nil, utils.StackError(nil, "Only hex(uuid) or uuid supported, got %s", dimExpr.String())
 }
 
+func isAggMeasure(e expr.Expr) (expression expr.Expr, isAgg bool) {
+	callExpr, ok := e.(*expr.Call)
+	if !ok {
+		expression = e
+		isAgg = false
+		return
+	}
+
+	expression = callExpr
+	index := utils.IndexOfStr(aggCallNames, callExpr.Name)
+	if index >= 0 {
+		isAgg = true
+	}
+	return
+}
 
 func (qc *AQLQueryContext) processMeasureAndDimensions() {
 	for index, measure := range qc.Query.Measures {
-		aggregate, ok := measure.expr.(*expr.Call)
+		expression, ok := isAggMeasure(measure.expr)
 		if index == 0 {
 			qc.isNonAggQuery = !ok
 			if qc.isNonAggQuery && len(qc.Query.Dimensions) > 0 {
@@ -1658,13 +1675,14 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 				return
 			}
 		}
+
 		if qc.isNonAggQuery {
 			if ok {
 				qc.Error = utils.StackError(nil, "expect non aggregate measure, but got %s",
 					measure.Expr)
 				return
 			}
-			qc.processNonAggregateMeasure(measure.expr)
+			qc.processNonAggregateMeasure(expression)
 			if qc.Error != nil {
 				return
 			}
@@ -1674,7 +1692,7 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 					measure.Expr)
 				return
 			}
-			qc.processAggregateMeasure(aggregate)
+			qc.processAggregateMeasure(expression.(*expr.Call))
 			if qc.Error != nil {
 				return
 			}
