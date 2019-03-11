@@ -65,10 +65,35 @@ var _ = Describe("KafkaConsumer", func() {
 		Ω(closeCh).ShouldNot(BeNil())
 
 		go kc.(*KafkaConsumer).startConsuming()
-		err = kc.Close()
+
+		topic := "topic"
+		msg := &kafka.Message{
+			TopicPartition: kafka.TopicPartition{
+				Topic:     &topic,
+				Partition: int32(0),
+				Offset:    0,
+			},
+			Value: []byte("value"),
+			Key:   []byte("key"),
+		}
+		msgCounter := map[string]map[int32]tally.Counter{
+			"topic": make(map[int32]tally.Counter),
+		}
+		msgByteCounter := map[string]map[int32]tally.Counter{
+			"topic": make(map[int32]tally.Counter),
+		}
+		msgOffsetGauge := map[string]map[int32]tally.Gauge{
+			"topic": make(map[int32]tally.Gauge),
+		}
+		msgLagGauge := map[string]map[int32]tally.Gauge{
+			"topic": make(map[int32]tally.Gauge),
+		}
+		kc.(*KafkaConsumer).processMsg(msg, msgCounter, msgByteCounter, msgOffsetGauge, msgLagGauge)
+
+		err = kc.(*KafkaConsumer).Close()
 		Ω(err).Should(BeNil())
 
-		err = kc.Close()
+		err = kc.(*KafkaConsumer).Close()
 		Ω(err).ShouldNot(BeNil())
 	})
 
@@ -112,5 +137,7 @@ var _ = Describe("KafkaConsumer", func() {
 		message.Ack()
 
 		message.Nack()
+
+		message.Consumer.Close()
 	})
 })

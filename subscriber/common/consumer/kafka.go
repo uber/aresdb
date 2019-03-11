@@ -2,7 +2,6 @@ package consumer
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
@@ -11,6 +10,7 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"strconv"
 )
 
 // KafkaConsumer implements Consumer interface
@@ -76,8 +76,7 @@ func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceCo
 	)
 
 	scope := serviceConfig.Scope.Tagged(map[string]string{
-		"cluster": jobConfig.StreamingConfig.KafkaClusterName,
-		"broker":  jobConfig.StreamingConfig.KafkaBroker,
+		"broker": jobConfig.StreamingConfig.KafkaBroker,
 	})
 
 	kc := KafkaConsumer{
@@ -175,49 +174,7 @@ func (c *KafkaConsumer) startConsuming() {
 		case event := <-c.Events():
 			switch e := event.(type) {
 			case *kafka.Message:
-				c.Logger.Debug("Received nessage event", zap.Any("message", e))
-				c.MsgCh <- &KafkaMessage{
-					e,
-					c,
-					c.ConfigMap["cluster"].(string),
-				}
-				topic := *e.TopicPartition.Topic
-				partition := e.TopicPartition.Partition
-				pncm := msgCounter[topic]
-				nCounter, ok := pncm[partition]
-				if !ok {
-					nCounter = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Counter("messages-count")
-					pncm[partition] = nCounter
-				}
-				nCounter.Inc(1)
-
-				pbcm := msgByteCounter[topic]
-				bCounter, ok := pbcm[partition]
-				if !ok {
-					bCounter = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Counter("message-bytes-count")
-					pbcm[partition] = bCounter
-				}
-				bCounter.Inc(int64(len(e.Value)))
-
-				pogm := msgOffsetGauge[topic]
-				oGauge, ok := pogm[partition]
-				if !ok {
-					oGauge = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Gauge("latest-offset")
-					pogm[partition] = oGauge
-				}
-				oGauge.Update(float64(e.TopicPartition.Offset))
-
-				plgm := msgLagGauge[topic]
-				lGauge, ok := plgm[partition]
-				if !ok {
-					lGauge = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Gauge("offset-lag")
-				}
-				_, offset, _ := c.Consumer.QueryWatermarkOffsets(topic, partition, 100)
-				if offset > int64(e.TopicPartition.Offset) {
-					lGauge.Update(float64(offset - int64(e.TopicPartition.Offset) - 1))
-				} else {
-					lGauge.Update(0)
-				}
+				c.processMsg(e, msgCounter, msgByteCounter, msgOffsetGauge, msgLagGauge)
 			case kafka.Error:
 				c.ErrCh <- e
 				c.Logger.Error("Received error event", zap.Error(e))
@@ -225,6 +182,60 @@ func (c *KafkaConsumer) startConsuming() {
 				c.Logger.Info("Ignored consumer event", zap.Any("event", e))
 			}
 		}
+	}
+}
+
+func (c *KafkaConsumer) processMsg(msg *kafka.Message,
+	msgCounter map[string]map[int32]tally.Counter,
+	msgByteCounter map[string]map[int32]tally.Counter,
+	msgOffsetGauge map[string]map[int32]tally.Gauge,
+	msgLagGauge map[string]map[int32]tally.Gauge) {
+
+	c.Logger.Debug("Received nessage event", zap.Any("message", msg))
+	c.MsgCh <- &KafkaMessage{
+		Message:  msg,
+		Consumer: c,
+	}
+
+	topic := *msg.TopicPartition.Topic
+	partition := msg.TopicPartition.Partition
+	pncm := msgCounter[topic]
+	nCounter, ok := pncm[partition]
+	if !ok {
+		nCounter = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Counter("messages-count")
+		pncm[partition] = nCounter
+	}
+	nCounter.Inc(1)
+
+	fmt.Println("step2")
+	pbcm := msgByteCounter[topic]
+	bCounter, ok := pbcm[partition]
+	if !ok {
+		bCounter = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Counter("message-bytes-count")
+		pbcm[partition] = bCounter
+	}
+	bCounter.Inc(int64(len(msg.Value)))
+
+	pogm := msgOffsetGauge[topic]
+	oGauge, ok := pogm[partition]
+	if !ok {
+		oGauge = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Gauge("latest-offset")
+		pogm[partition] = oGauge
+	}
+	oGauge.Update(float64(msg.TopicPartition.Offset))
+
+	plgm := msgLagGauge[topic]
+	lGauge, ok := plgm[partition]
+	if !ok {
+		lGauge = c.Scope.Tagged(map[string]string{"topic": topic, "partition": strconv.Itoa(int(partition))}).Gauge("offset-lag")
+	}
+
+	_, offset, _ := c.Consumer.QueryWatermarkOffsets(topic, partition, 100)
+
+	if offset > int64(msg.TopicPartition.Offset) {
+		lGauge.Update(float64(offset - int64(msg.TopicPartition.Offset) - 1))
+	} else {
+		lGauge.Update(0)
 	}
 }
 
