@@ -664,6 +664,7 @@ func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, val
 	inputKeys := makeDimensionColumnVector(
 		bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(), bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
 
+	// TODO: @shz push multiple measures to C++ level and reduce once for all
 	var newResultSize int
 	for measureIndex, valueWidth := range valueWidths {
 		outputKeys := makeDimensionColumnVector(

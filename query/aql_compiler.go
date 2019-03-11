@@ -1725,18 +1725,20 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 	}
 
 	// Collect column usage from measures and dimensions
-	for _, measure := range qc.OOPK.Measures {
-		expr.Walk(columnUsageCollector{
-			tableScanners: qc.TableScanners,
-			usages:        columnUsedByAllBatches,
-		}, measure)
-	}
+	if !qc.isNonAggQuery {
+		for _, measure := range qc.OOPK.Measures {
+			expr.Walk(columnUsageCollector{
+				tableScanners: qc.TableScanners,
+				usages:        columnUsedByAllBatches,
+			}, measure)
+		}
 
-	for _, dim := range qc.OOPK.Dimensions {
-		expr.Walk(columnUsageCollector{
-			tableScanners: qc.TableScanners,
-			usages:        columnUsedByAllBatches,
-		}, dim)
+		for _, dim := range qc.OOPK.Dimensions {
+			expr.Walk(columnUsageCollector{
+				tableScanners: qc.TableScanners,
+				usages:        columnUsedByAllBatches,
+			}, dim)
+		}
 	}
 }
 

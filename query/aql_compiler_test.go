@@ -1552,10 +1552,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			ExprType: expr.Float,
 			DataType: memCom.Float32,
 		}))
-		Ω(qc.TableScanners[0].ColumnUsages).Should(Equal(map[int]columnUsage{
-			3: columnUsedByAllBatches,
-			4: columnUsedByAllBatches,
-		}))
+		Ω(qc.TableScanners[0].ColumnUsages).Should(HaveLen(0))
 
 		// test errors
 		qc.Query.Measures = []Measure{
@@ -2879,6 +2876,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				Column: "request_at",
 				From:   "-1d",
 			},
+			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
 		}
 		qc.Query = query
 		qc.parseExprs()
