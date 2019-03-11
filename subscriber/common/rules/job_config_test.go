@@ -33,6 +33,7 @@ var _ = Describe("job_config", func() {
 	}
 	
 	It("NewJobConfigs", func() {
+		serviceConfig.ActiveJobs = []string{"dispatch"}
 		rootPath := tools.GetModulePath("")
 		os.Chdir(rootPath)
 		rst, err := NewJobConfigs(p)

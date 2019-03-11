@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/uber/aresdb/subscriber/common/tools"
+	"fmt"
 )
 
 // Processor is a interface that all processor needs to implement to work with Driver
@@ -64,5 +65,5 @@ type ProcessorError struct {
 
 // ErrorToJSON converts error to json format
 func (p ProcessorError) ErrorToJSON() string {
-	return tools.ToJSON(p.Error)
+	return tools.ToJSON(fmt.Sprintf(`{"error": "%s"}`, p.Error.Error()))
 }
