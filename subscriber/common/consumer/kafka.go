@@ -207,7 +207,6 @@ func (c *KafkaConsumer) processMsg(msg *kafka.Message,
 	}
 	nCounter.Inc(1)
 
-	fmt.Println("step2")
 	pbcm := msgByteCounter[topic]
 	bCounter, ok := pbcm[partition]
 	if !ok {
