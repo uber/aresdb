@@ -1,0 +1,34 @@
+graphite:
+  address: "localhost:4756"
+
+ares:
+
+  # A list of ares clusters. Each cluster includes master node address and timeout in seconds.
+  clusters:
+    clusters:
+      dev-ares01:
+        address: "geforcedbdev01-sjc1:9374"
+        timeout: 20
+      dev-ares02:
+        address: "geforcedbdev02-sjc1:9374"
+        timeout: 20
+
+
+# A list of jobs which are defined in config/jobs
+jobs:
+  # A list of namespaces. Each namespace includes a list of jobs.
+  namespaces:
+    job-test:
+      - driver_signups
+    trips:
+      - dispatch_driver_rejected
+
+controller:
+  # enable sync up with aresDB controller
+  enable: false
+  address: "localhost:5436"
+  refreshInterval: 10
+  serviceName: "ares-controller-staging"
+
+zookeeper:
+  server: "localhost:2181"
