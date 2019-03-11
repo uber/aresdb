@@ -45,6 +45,13 @@ var _ = Describe("AresDatabase client", func() {
 		Connector:     &mockConnector,
 		JobName:       jobName,
 	}
+	It("NewAresDatabase", func() {
+		 config := client.ConnectorConfig {
+		 	Address: "localhost:8081",
+		}
+		_, err := NewAresDatabase(serviceConfig, jobName, cluster, config)
+		Ω(err).ShouldNot(BeNil())
+	})
 	It("Save", func() {
 		aresRows := make([]client.Row, 0, len(rows))
 		for _, row := range rows {
