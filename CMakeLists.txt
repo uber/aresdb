@@ -1,5 +1,23 @@
 cmake_minimum_required(VERSION 3.12)
-find_package(CUDA REQUIRED)
+# This has to be specified before enable_language according to
+# https://gitlab.kitware.com/cmake/cmake/issues/17559
+set( CMAKE_CUDA_FLAGS "" CACHE STRING "" )
+if ( CMAKE_CUDA_FLAGS )
+	list(REMOVE_ITEM CMAKE_CUDA_FLAGS "-cudart static")
+endif()
+string(APPEND CMAKE_CUDA_FLAGS -cudart=shared)
+
+project(aresdb LANGUAGES CUDA C CXX)
+
+
+# Also needs to be fixed after the find_package.
+# https://gitlab.kitware.com/cmake/cmake/issues/17559
+if ( CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES )
+        list( REMOVE_ITEM CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudart_static" )
+endif()
+if ( CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES )
+        list( REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart_static" )
+endif()
 
 include_directories(${PROJECT_SOURCE_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
@@ -10,8 +28,9 @@ set(QUERY_MODE $ENV{QUERY_MODE})
 set(CMAKE_C_FLAGS -fPIC)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_C .so)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX .so)
-set(CUDA_NVCC_FLAGS "-lineinfo -I. -std=c++11 $ENV{NVCCFLAGS}")
+set(CMAKE_CUDA_FLAGS "-lineinfo -I. -std=c++11 $ENV{NVCCFLAGS} ${CMAKE_CUDA_FLAGS}")
 set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,code=compute_60")
+set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
 if (NOT QUERY_MODE)
     execute_process(COMMAND which nvidia-smi && nvidia-smi | grep "Driver Version:" RESULT_VARIABLE ret)
@@ -24,14 +43,14 @@ endif ()
 
 if (QUERY_MODE STREQUAL "DEVICE")
     list(APPEND MARCROS "RUN_ON_DEVICE=1")
-    cuda_add_library(mem SHARED memutils/memory.h memutils/memory/cuda_malloc.cu)
+    add_library(mem SHARED memutils/memory.h memutils/memory/cuda_malloc.cu)
 else ()
     add_library(mem SHARED memutils/memory.h memutils/memory/malloc.c)
 endif ()
 
-# based on DEBUG and QUERY_MODE, transform CUDA_NVCC_FLAGS
+# based on DEBUG and QUERY_MODE, transform CMAKE_CUDA_FLAGS
 if (DEBUG STREQUAL "y")
-    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -g -G --compiler-options='-g -ggdb'")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -G --compiler-options='-g -ggdb'")
 else ()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 endif ()
@@ -41,11 +60,11 @@ list(TRANSFORM CUDA_XCOMPILER_FLAGS PREPEND " -Xcompiler ")
 string(REPLACE ";" " " CUDA_XCOMPILER_FLAGS ${CUDA_XCOMPILER_FLAGS})
 # transform macro to prepend -D prefix
 list(TRANSFORM MARCROS PREPEND "-D ")
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_XCOMPILER_FLAGS} ${GENCODE_FLAGS} ${MARCROS}")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_XCOMPILER_FLAGS} ${GENCODE_FLAGS} ${MARCROS}")
 file(MAKE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-cuda_add_library(algorithm SHARED
+add_library(algorithm SHARED
         query/algorithm.hpp
         query/algorithm.cu
         query/binder.hpp
@@ -64,7 +83,6 @@ cuda_add_library(algorithm SHARED
         query/utils.cu
         query/utils.hpp)
 
-
 ################################
 # GTest
 ################################
@@ -75,7 +93,7 @@ enable_testing()
 # Unit Tests
 ################################
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
-cuda_add_executable(all_unittest ${QUERY_UNITTEST_FILES})
+add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 target_include_directories(all_unittest PRIVATE ${GTEST_ROOT}/include ${gtest_SOURCE_DIR})
 add_dependencies(all_unittest algorithm)
 # Link test executable against gtest & gtest_main
@@ -87,7 +105,7 @@ add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
 ###############################
 
 execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
-  -e vendor -e go-build \
+  -e vendor -e go-build -e CMakeFiles \
   -e build \
   -e '.*/\\..*' \
   -e '.*/_.*' \
@@ -102,7 +120,7 @@ execute_process(
 execute_process(COMMAND bash -c "find .  -type f \
     \\( -iname \\*.cu -o -iname \\*.h -o -iname \\*.hpp -o -iname \\*.c \\) \
      | grep -v \
-  -e vendor -e go-build \
+  -e vendor -e go-build -e CMakeFiles \
   -e build \
   -e '.*/\\..*' \
   -e '.*/_.*' \

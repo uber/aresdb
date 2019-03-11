@@ -66,7 +66,10 @@ inline bool compare_tuple(Iterator1 begin,
   typedef typename thrust::iterator_traits<Iterator1>::value_type V;
   thrust::device_vector<V> actualD(size);
   thrust::copy(thrust::device, begin, end, actualD.begin());
-  thrust::host_vector<V> actualH = actualD;
+  thrust::host_vector<V> actualH(size);
+  cudaMemcpy(actualH.data(), thrust::raw_pointer_cast(actualD.data()),
+      sizeof(V) * size, cudaMemcpyDeviceToHost);
+  CheckCUDAError("cudaMemcpy");
   return std::equal(actualH.begin(), actualH.end(), expectedBegin,
                     tuple_compare_func<N>());
 #else
