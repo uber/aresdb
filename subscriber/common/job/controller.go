@@ -4,19 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/curator-go/curator"
+	"github.com/uber/aresdb/gateway"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"os"
 )
 
 // Module configures Drivers and Controller.
@@ -50,29 +50,13 @@ const (
 	defaultRefreshInterval = 10
 )
 
-// ControllerClient is aresDB Controller client interface
-type ControllerClient interface {
-	// GetAssignmentHash get hash code of assignment
-	GetAssignmentHash(jobNamespace, instance string) (string, error)
-	// GetAssignment gets the job assignment of the ares-subscriber
-	GetAssignment(jobNamespace, instance string) (*rules.Assignment, error)
-}
-
-// ControllerHTTPClient implements ControllerClient interface
-type ControllerHTTPClient struct {
-	client     *http.Client
-	rpcCaller  string
-	rpcService string
-	address    string
-}
-
 // Controller is responsible for syncing up with aresDB control
 type Controller struct {
 	sync.RWMutex
 
 	serviceConfig config.ServiceConfig
 	// aresControllerClient is aresDB controller client
-	aresControllerClient ControllerClient
+	aresControllerClient gateway.ControllerClient
 	// Drivers are all running jobs
 	Drivers Drivers
 	// jobNS is current active job namespace
@@ -113,14 +97,12 @@ func NewController(params Params) *Controller {
 		params.ServiceConfig.ControllerConfig.RefreshInterval = defaultRefreshInterval
 	}
 
-	aresControllerClient := &ControllerHTTPClient{
-		&http.Client{
-			Timeout: time.Duration(params.ServiceConfig.ControllerConfig.Timeout) * time.Second,
-		},
-		os.Getenv("UDEPLOY_APP_ID"),
-		params.ServiceConfig.ControllerConfig.ServiceName,
-		params.ServiceConfig.ControllerConfig.Address,
-	}
+	aresControllerClient := gateway.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
+		time.Duration(params.ServiceConfig.ControllerConfig.Timeout)*time.Second,
+		http.Header{
+			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
+			"RPC-Service": []string{params.ServiceConfig.ControllerConfig.ServiceName},
+		})
 
 	controller := &Controller{
 		serviceConfig:        params.ServiceConfig,
@@ -178,86 +160,6 @@ func createZKClient(params Params) curator.CuratorFramework {
 	})
 
 	return zkClient
-}
-
-// buildRequest builds an http.Request with headers for Muttley to routing the request.
-func (c *ControllerHTTPClient) buildRequest(method, path string) (req *http.Request, err error) {
-	path = strings.TrimPrefix(path, "/")
-	url := fmt.Sprintf("http://%s/%s", c.address, path)
-	req, err = http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("RPC-Caller", c.rpcCaller)
-	req.Header.Add("RPC-Procedure", path)
-	req.Header.Add("RPC-Service", c.rpcService)
-
-	return req, nil
-}
-
-func (c *ControllerHTTPClient) getResponse(request *http.Request) ([]byte, error) {
-	resp, err := c.client.Do(request)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("aresDB controller return status: %d", resp.StatusCode)
-	}
-
-	respBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return respBytes, nil
-}
-
-func (c *ControllerHTTPClient) getJSONResponse(request *http.Request, output interface{}) error {
-	bytes, err := c.getResponse(request)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(bytes, output)
-	return err
-}
-
-// GetAssignmentHash get hash code of assignment
-func (c *ControllerHTTPClient) GetAssignmentHash(jobNamespace, instance string) (string, error) {
-	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("assignment/%s/hash/%s", jobNamespace, instance))
-	if err != nil {
-		return "", err
-	}
-
-	bytes, err := c.getResponse(request)
-	if err != nil {
-		return "", utils.StackError(err, "Failed to GetAssignmentHash")
-	}
-
-	return string(bytes), nil
-}
-
-// GetAssignment gets the job assignment of the ares-subscriber
-func (c *ControllerHTTPClient) GetAssignment(jobNamespace, instance string) (*rules.Assignment, error) {
-	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("assignment/%s/assignments/%s", jobNamespace, instance))
-	if err != nil {
-		return nil, utils.StackError(err, "Failed to buildRequest")
-	}
-
-	request.Header.Add("content-type", "application/json")
-	assignment := &rules.Assignment{}
-	err = c.getJSONResponse(request, &assignment)
-	if err != nil {
-		return nil, utils.StackError(err, "Failed to GetAssignment")
-	}
-
-	for _, jobConfig := range assignment.Jobs {
-		if jobConfig.PopulateAresTableConfig() != nil {
-			return nil, utils.StackError(err, "Failed to PopulateAresTableConfig")
-		}
-	}
-	return assignment, nil
 }
 
 // RegisterOnZK registes aresDB subscriber instance in zookeeper as an ephemeral node

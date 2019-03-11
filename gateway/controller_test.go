@@ -46,6 +46,58 @@ var _ = ginkgo.Describe("Controller", func() {
 		testRouter.HandleFunc("/schema/ns1/hash", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("123"))
 		})
+		testRouter.HandleFunc("/assignment/ns1/hash/0", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("123"))
+		})
+		testRouter.HandleFunc("/assignment/ns1/assignments/0", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`
+{  
+   "subscriber":"0",
+   "jobs":[  
+      {  
+         "job":"client_info_test_1",
+         "version":1,
+         "aresTableConfig":{  
+            "name":"client_info_test_1",
+            "cluster":"",
+            "schema":{  
+               "name":"",
+               "columns":null,
+               "primaryKeyColumns":null,
+               "isFactTable":false,
+               "config":{  
+
+               },
+               "version":0
+            }
+         },
+         "streamConfig":{  
+            "topic":"hp-styx-rta-client_info",
+            "kafkaClusterName":"kloak-sjc1-lossless",
+            "kafkaClusterFile":"/etc/uber/kafka8/clusters.yaml",
+            "topicType":"heatpipe",
+            "lastestOffset":true,
+            "errorThreshold":10,
+            "statusCheckInterval":60,
+            "autoRecoveryThreshold":8,
+            "processorCount":1,
+            "batchSize":32768,
+            "maxBatchDelayMS":10000,
+            "megaBytePerSec":600,
+            "restartOnFailure":true,
+            "restartInterval":300,
+            "failureHandler":{  
+               "type":"retry",
+               "config":{  
+                  "initRetryIntervalInSeconds":60,
+                  "multiplier":1,
+                  "maxRetryMinutes":525600
+               }
+            }
+         }
+      }
+   ]
+}`))})
 		testServer.Start()
 		hostPort = testServer.Listener.Addr().String()
 	})
@@ -66,6 +118,13 @@ var _ = ginkgo.Describe("Controller", func() {
 		tablesGot, err := c.GetAllSchema("ns1")
 		Ω(err).Should(BeNil())
 		Ω(tablesGot).Should(Equal(tables))
+
+		hash, err = c.GetAssignmentHash("ns1", "0")
+		Ω(err).Should(BeNil())
+		Ω(hash).Should(Equal("123"))
+
+		_, err = c.GetAssignment("ns1", "0")
+		Ω(err).Should(BeNil())
 	})
 
 	ginkgo.It("should fail with errors", func() {

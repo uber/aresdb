@@ -54,6 +54,7 @@ func (c *ControllerHTTPClient) buildRequest(method, path string) (req *http.Requ
 	}
 
 	req.Header = c.headers
+	req.Header.Add("RPC-Procedure", path)
 	return
 }
 
