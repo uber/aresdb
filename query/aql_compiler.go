@@ -1327,7 +1327,6 @@ func (qc *AQLQueryContext) matchPrefilters() {
 }
 
 
-
 // processFilters processes all filters and categorize them into common filters,
 // prefilters, and time filters. It also collect column usages from the filters.
 func (qc *AQLQueryContext) processFilters() {
@@ -1732,47 +1731,6 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 		}, measure)
 	}
 
-	for _, dim := range qc.OOPK.Dimensions {
-		expr.Walk(columnUsageCollector{
-			tableScanners: qc.TableScanners,
-			usages:        columnUsedByAllBatches,
-		}, dim)
-	}
-}
-
-func (qc *AQLQueryContext) processNonAggregateMeasure(nonAgg expr.Expr) {
-	var measure expr.Expr
-	// default is 4 bytes
-	measureBytes := 4
-	switch nonAgg.(type) {
-	case *expr.VarRef:
-		measure = nonAgg
-		measureBytes = memCom.DataTypeBits(nonAgg.(*expr.VarRef).DataType)
-	case *expr.NumberLiteral, *expr.StringLiteral:
-		// no need to transform literals to oopk, post processing will fill values
-		// note order of measures matters here
-	default:
-		slc := stringOperandCollector{}
-		expr.Walk(&slc, nonAgg)
-		if slc.stringOperandSeen {
-			qc.Error = utils.StackError(nil, "string operations not supported in measures")
-			return
-		}
-		// determine bytes base on expr type, which should already be resolved in Rewrite step
-		// TODO: handle more types
-		switch nonAgg.Type() {
-		case expr.Boolean:
-			measureBytes = memCom.DataTypeBits(memCom.Bool)
-		}
-		measure = nonAgg
-	}
-	if measure != nil {
-		qc.OOPK.Measures = append(qc.OOPK.Measures, measure)
-		qc.OOPK.MeasureBytes = append(qc.OOPK.MeasureBytes, measureBytes)
-	}
-}
-
-func (qc *AQLQueryContext) processAggregateMeasure(aggregate *expr.Call) {
 	if qc.ReturnHLLData && aggregate.Name != hllCallName {
 		qc.Error = utils.StackError(nil, "expect hll aggregate function as client specify 'Accept' as "+
 			"'application/hll', but got %s",
@@ -1786,80 +1744,123 @@ func (qc *AQLQueryContext) processAggregateMeasure(aggregate *expr.Call) {
 			aggregate.Name, len(aggregate.Args))
 		return
 	}
-
-	measure := aggregate.Args[0]
-	var aggregateType C.enum_AggregateFunction
+	qc.OOPK.Measure = aggregate.Args[0]
 	// default is 4 bytes
-	measureBytes := 4
-
+	qc.OOPK.MeasureBytes = 4
 	switch strings.ToLower(aggregate.Name) {
 	case countCallName:
-		measure = &expr.NumberLiteral{
-			Int:       1,
+		qc.OOPK.Measure = &expr.NumberLiteral{
+			Int:      1,
 			Expr:     "1",
 			ExprType: expr.Unsigned,
 		}
-		aggregateType = C.AGGR_SUM_UNSIGNED
+		qc.OOPK.AggregateType = C.AGGR_SUM_UNSIGNED
 	case sumCallName:
-		measureBytes = 8
-		switch measure.Type() {
+		qc.OOPK.MeasureBytes = 8
+		switch qc.OOPK.Measure.Type() {
 		case expr.Float:
-			aggregateType = C.AGGR_SUM_FLOAT
+			qc.OOPK.AggregateType = C.AGGR_SUM_FLOAT
 		case expr.Signed:
-			aggregateType = C.AGGR_SUM_SIGNED
+			qc.OOPK.AggregateType = C.AGGR_SUM_SIGNED
 		case expr.Unsigned:
-			aggregateType = C.AGGR_SUM_UNSIGNED
+			qc.OOPK.AggregateType = C.AGGR_SUM_UNSIGNED
 		default:
 			qc.Error = utils.StackError(nil,
-				unsupportedInputType, sumCallName, measure.String())
+				unsupportedInputType, sumCallName, qc.OOPK.Measure.String())
 			return
 		}
 	case avgCallName:
 		// 4 bytes for storing average result and another 4 byte for count
-		measureBytes = 8
+		qc.OOPK.MeasureBytes = 8
 		// for average, we should always use float type as the agg type.
-		aggregateType = C.AGGR_AVG_FLOAT
+		qc.OOPK.AggregateType = C.AGGR_AVG_FLOAT
 	case minCallName:
-		switch measure.Type() {
+		switch qc.OOPK.Measure.Type() {
 		case expr.Float:
-			aggregateType = C.AGGR_MIN_FLOAT
+			qc.OOPK.AggregateType = C.AGGR_MIN_FLOAT
 		case expr.Signed:
-			aggregateType = C.AGGR_MIN_SIGNED
+			qc.OOPK.AggregateType = C.AGGR_MIN_SIGNED
 		case expr.Unsigned:
-			aggregateType = C.AGGR_MIN_UNSIGNED
+			qc.OOPK.AggregateType = C.AGGR_MIN_UNSIGNED
 		default:
 			qc.Error = utils.StackError(nil,
-				unsupportedInputType, minCallName, measure.String())
+				unsupportedInputType, minCallName, qc.OOPK.Measure.String())
 			return
 		}
 	case maxCallName:
-		switch measure.Type() {
+		switch qc.OOPK.Measure.Type() {
 		case expr.Float:
-			aggregateType = C.AGGR_MAX_FLOAT
+			qc.OOPK.AggregateType = C.AGGR_MAX_FLOAT
 		case expr.Signed:
-			aggregateType = C.AGGR_MAX_SIGNED
+			qc.OOPK.AggregateType = C.AGGR_MAX_SIGNED
 		case expr.Unsigned:
-			aggregateType = C.AGGR_MAX_UNSIGNED
+			qc.OOPK.AggregateType = C.AGGR_MAX_UNSIGNED
 		default:
 			qc.Error = utils.StackError(nil,
-				unsupportedInputType, maxCallName, measure.String())
+				unsupportedInputType, maxCallName, qc.OOPK.Measure.String())
 			return
 		}
 	case hllCallName:
-		aggregateType = C.AGGR_HLL
-		if len(qc.OOPK.AggregateTypes) > 0 {
-			qc.Error = utils.StackError(nil,
-				"hll aggregation must be in separate query")
-		}
-		return
+		qc.OOPK.AggregateType = C.AGGR_HLL
 	default:
 		qc.Error = utils.StackError(nil,
 			"unsupported aggregate function: %s", aggregate.Name)
 		return
 	}
-	qc.OOPK.Measures = append(qc.OOPK.Measures, measure)
-	qc.OOPK.AggregateTypes = append(qc.OOPK.AggregateTypes, aggregateType)
-	qc.OOPK.MeasureBytes = append(qc.OOPK.MeasureBytes, measureBytes)
+
+	// Copy dimension ASTs.
+	qc.OOPK.Dimensions = make([]expr.Expr, len(qc.Query.Dimensions))
+	for i, dim := range qc.Query.Dimensions {
+		// TODO: support numeric bucketizer.
+		qc.OOPK.Dimensions[i] = dim.expr
+	}
+
+	if qc.OOPK.geoIntersection != nil {
+		gc := &geoTableUsageCollector{
+			geoIntersection: *qc.OOPK.geoIntersection,
+		}
+		// Check whether measure and dimensions are referencing any geo table columns.
+		expr.Walk(gc, qc.OOPK.Measure)
+
+		if gc.useGeoTable {
+			qc.Error = utils.StackError(nil,
+				"Geo table column is not allowed to be used in measure: %s", qc.OOPK.Measure.String())
+			return
+		}
+
+		foundGeoJoin := false
+		for i, dimExpr := range qc.OOPK.Dimensions {
+			geoDimExpr, err := qc.matchAndRewriteGeoDimension(dimExpr)
+			if err != nil {
+				qc.Error = err
+				return
+			}
+
+			if geoDimExpr != nil {
+				if foundGeoJoin {
+					qc.Error = utils.StackError(nil,
+						"Only one geo dimension allowed: %s", dimExpr.String())
+					return
+				}
+				foundGeoJoin = true
+				qc.OOPK.Dimensions[i] = geoDimExpr
+				qc.OOPK.geoIntersection.dimIndex = i
+			}
+		}
+	}
+
+	// Collect column usage from measure and dimensions
+	expr.Walk(columnUsageCollector{
+		tableScanners: qc.TableScanners,
+		usages:        columnUsedByAllBatches,
+	}, qc.OOPK.Measure)
+
+	for _, dim := range qc.OOPK.Dimensions {
+		expr.Walk(columnUsageCollector{
+			tableScanners: qc.TableScanners,
+			usages:        columnUsedByAllBatches,
+		}, dim)
+	}
 }
 
 func getDimensionDataType(expression expr.Expr) memCom.DataType {
