@@ -87,19 +87,35 @@ add_library(algorithm SHARED
 ################################
 # GTest
 ################################
-set(GTEST_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest)
+set(GTEST_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest)
+set(GTEST_LIB_DIR ${CMAKE_CURRENT_LIST_DIR}/googletest-prefix/src/googletest-build/lib)
 ExternalProject_Add(   googletest
-    SOURCE_DIR ${GTEST_DIR}
+    SOURCE_DIR ${GTEST_SRC_DIR}
+    # Ignore install command to avoid install lib and include
+    # files to /usr/local where we might don't have permission to write to.
+    INSTALL_COMMAND ""
 )
-link_directories(${GTEST_DIR}/googletest)
+link_directories(${GTEST_LIB_DIR})
 enable_testing()
+################################
+# RMM
+################################
+set(RMM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/rmm)
+set(RMM_LIB_DIR ${CMAKE_CURRENT_LIST_DIR}/rmm-prefix/src/rmm-build/lib)
+ExternalProject_Add(   rmm
+    SOURCE_DIR ${RMM_SRC_DIR}
+    # Ignore install command to avoid install lib and include
+    # files to /usr/local where we might don't have permission to write to.
+    INSTALL_COMMAND ""
+)
+# link_directories(${RMM_LIB_DIR})
 ################################
 # Unit Tests
 ################################
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
-target_include_directories(all_unittest PRIVATE ${GTEST_DIR}/googletest/include)
-add_dependencies(all_unittest algorithm)
+target_include_directories(all_unittest PRIVATE ${GTEST_SRC_DIR}/googletest/include)
+add_dependencies(all_unittest algorithm googletest)
 # Link test executable against gtest & gtest_main
 target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
 add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
@@ -154,18 +170,6 @@ add_custom_command(
         VERBATIM
 )
 
-add_custom_target(swagger-gen
-        COMMAND swagger generate spec -o api/ui/swagger/swagger.json
-        VERBATIM)
-
-add_custom_target(npm-install DEPENDS api/ui/npm.updated)
-add_custom_command(
-        OUTPUT api/ui/npm.updated
-        COMMAND cd api/ui/ && npm install && touch npm.updated
-        DEPENDS api/ui/package.json
-        VERBATIM
-)
-
 add_custom_target(lib DEPENDS algorithm mem)
 string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
 add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
@@ -181,6 +185,10 @@ add_custom_target(test-golang DEPENDS aresd
         COMMAND bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
         )
 
+###############################
+# misc
+###############################
+
 add_custom_target(travis
         COMMAND bash -c 'ARES_ENV=test .travis/run_unittest.sh'
         )
@@ -188,4 +196,16 @@ add_custom_target(travis
 add_custom_target(
         test-cuda DEPENDS all_unittest
         COMMAND bash -c "DYLD_LIBRARY_PATH=$$LIBRARY_PATH ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest --gtest_output=xml:junit.xml"
+)
+
+add_custom_target(swagger-gen
+        COMMAND swagger generate spec -o api/ui/swagger/swagger.json
+        VERBATIM)
+
+add_custom_target(npm-install DEPENDS api/ui/npm.updated)
+add_custom_command(
+        OUTPUT api/ui/npm.updated
+        COMMAND cd api/ui/ && npm install && touch npm.updated
+        DEPENDS api/ui/package.json
+        VERBATIM
 )
