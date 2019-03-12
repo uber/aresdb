@@ -419,7 +419,9 @@ func (qc *AQLQueryContext) parseExprs() {
 	}
 
 	// Dimensions.
-	for i, dim := range qc.Query.Dimensions {
+	rawDimensions := qc.Query.Dimensions
+	qc.Query.Dimensions = []Dimension{}
+	for _, dim := range rawDimensions {
 		dim.TimeBucketizer = strings.Trim(dim.TimeBucketizer, " ")
 		if dim.TimeBucketizer != "" {
 			// make sure time column is defined
@@ -439,16 +441,20 @@ func (qc *AQLQueryContext) parseExprs() {
 				qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.TimeBucketizer)
 				return
 			}
+			qc.Query.Dimensions = append(qc.Query.Dimensions, dim)
 		} else {
 			// dimension is defined as sqlExpression
 			dim.expr, err = expr.ParseExpr(dim.Expr)
+			if err != nil {
+				qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.Expr)
+				return
+			}
+			if _, ok := dim.expr.(*expr.Wildcard); ok {
+				qc.Query.Dimensions = append(qc.Query.Dimensions, qc.getAllColumnsDimension()...)
+			} else {
+				qc.Query.Dimensions = append(qc.Query.Dimensions, dim)
+			}
 		}
-
-		if err != nil {
-			qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.Expr)
-			return
-		}
-		qc.Query.Dimensions[i] = dim
 	}
 
 	// Measures.
@@ -1786,28 +1792,22 @@ func (qc *AQLQueryContext) processMeasure() {
 	}
 }
 
-func (qc *AQLQueryContext) getAllColumns() (columns []expr.Expr) {
+func (qc *AQLQueryContext) getAllColumnsDimension() (columns []Dimension) {
 	// only main table columns wildcard match supported
 	for _, column := range qc.TableScanners[0].Schema.Schema.Columns {
-		rawVarRef := &expr.VarRef{
-			Val: column.Name,
-		}
-		rewrittenVarRef := qc.Rewrite(rawVarRef)
-		columns = append(columns, rewrittenVarRef)
+		columns = append(columns, Dimension{
+			expr: &expr.VarRef{Val: column.Name},
+		})
 	}
 	return
 }
 
 func (qc *AQLQueryContext) processDimensions() {
 	// Copy dimension ASTs.
-	qc.OOPK.Dimensions = []expr.Expr{}
-	for _, dim := range qc.Query.Dimensions {
+	qc.OOPK.Dimensions = make([]expr.Expr, len(qc.Query.Dimensions))
+	for i, dim := range qc.Query.Dimensions {
 		// TODO: support numeric bucketizer.
-		if _, ok := dim.expr.(*expr.Wildcard); ok {
-			qc.OOPK.Dimensions = append(qc.OOPK.Dimensions, qc.getAllColumns()...)
-		} else {
-			qc.OOPK.Dimensions = append(qc.OOPK.Dimensions, dim.expr)
-		}
+		qc.OOPK.Dimensions[i] = dim.expr
 	}
 
 	if qc.OOPK.geoIntersection != nil {

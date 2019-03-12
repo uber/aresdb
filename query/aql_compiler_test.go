@@ -1458,6 +1458,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 		qc.parseExprs()
+		Ω(qc.Query.Dimensions).Should(HaveLen(7))
 		Ω(qc.Error).Should(BeNil())
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())

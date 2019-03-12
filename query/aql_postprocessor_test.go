@@ -268,7 +268,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					TimeUnit:       "second",
 				},
 				{
-					Expr: "",
+					Expr: "1",
 				},
 			},
 			TimeFilter: TimeFilter{
@@ -287,7 +287,9 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 			fixedTimezone: tzloc,
 		}
 		ctx.parseExprs()
+		Ω(ctx.Error).Should(BeNil())
 		ctx1.parseExprs()
+		Ω(ctx1.Error).Should(BeNil())
 		oopkContext := OOPKContext{
 			Dimensions: []expr.Expr{
 				&expr.VarRef{

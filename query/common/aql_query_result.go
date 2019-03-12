@@ -14,8 +14,6 @@
 
 package common
 
-import "github.com/uber/aresdb/utils"
-
 const (
 	MatrixDataKey = "matrixData"
 	HeadersKey = "headers"
@@ -95,24 +93,13 @@ func (r AQLQueryResult) SetHLL(dimValues []*string, hll HLL) {
 
 // =====  Non aggregate query result methods start =====
 
-// Append appends single value to specific row, result rows must be built in order
-func (r AQLQueryResult) Append(row int, value interface{}) error {
+// Append appends one row
+func (r AQLQueryResult) Append(row []interface{}) {
 	if _, ok := r[MatrixDataKey]; !ok {
 		r[MatrixDataKey] = [][]interface{}{}
 	}
 
-	values := r[MatrixDataKey].([][]interface{})
-	if row > len(values) {
-		return utils.StackError(nil, "result rows must be built in order")
-	}
-
-	if row == len(values) {
-		values = append(values, []interface{}{})
-	}
-
-	values[row] = append(values[row], value)
-	r[MatrixDataKey] = values
-	return nil
+	r[MatrixDataKey] = append(r[MatrixDataKey].([][]interface{}), row)
 }
 
 // SetHeaders sets headers field for the results

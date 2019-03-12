@@ -51,18 +51,12 @@ var _ = ginkgo.Describe("time series result", func() {
 
 	ginkgo.It("Append should work", func() {
 		res := AQLQueryResult{}
-		res.Append(0, 1)
+		res.Append([]interface{}{1})
 		Ω(res).Should(Equal(AQLQueryResult{
 			"matrixData": [][]interface{}{
 				{1},
 			},
 		}))
-	})
-
-	ginkgo.It("Append should fail", func() {
-		res := AQLQueryResult{}
-		err := res.Append(1, 1)
-		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("SetHeaders should work", func() {
