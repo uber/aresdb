@@ -46,6 +46,11 @@ type customFilterExecutor func(stream unsafe.Pointer)
 
 // ProcessQuery processes the compiled query and executes it on GPU.
 func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
+	// TODO: remove when non agg query processing supported
+	if qc.isNonAggregationQuery {
+		qc.Error = utils.StackError(nil, "non agg query not supported yet")
+		return
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			// find out exactly what the error was and set err

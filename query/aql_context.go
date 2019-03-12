@@ -360,7 +360,7 @@ type AQLQueryContext struct {
 	// [0] stores the current stream, and [1] stores the other stream.
 	cudaStreams [2]unsafe.Pointer
 
-	Results queryCom.AQLTimeSeriesResult `json:"-"`
+	Results queryCom.AQLQueryResult `json:"-"`
 
 	// whether to serialize the query result as HLLData. If ReturnHLLData is true, we will not release dimension
 	// vector and measure vector until serialization is done.
@@ -375,6 +375,9 @@ type AQLQueryContext struct {
 
 	// timezone column and time filter related
 	timezoneTable timezoneTableContext
+
+	// Flag to indicate if this query is not aggregation query
+	isNonAggregationQuery bool
 }
 
 func (ctx *OOPKContext) IsHLL() bool {

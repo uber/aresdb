@@ -121,7 +121,11 @@ func (q *AQLQuery) Compile(store memstore.MemStore, returnHLL bool) *AQLQueryCon
 	}
 
 	// Process measure and dimensions.
-	qc.processMeasureAndDimensions()
+	qc.processMeasure()
+	if qc.Error != nil {
+		return qc
+	}
+	qc.processDimensions()
 	if qc.Error != nil {
 		return qc
 	}
@@ -415,7 +419,9 @@ func (qc *AQLQueryContext) parseExprs() {
 	}
 
 	// Dimensions.
-	for i, dim := range qc.Query.Dimensions {
+	rawDimensions := qc.Query.Dimensions
+	qc.Query.Dimensions = []Dimension{}
+	for _, dim := range rawDimensions {
 		dim.TimeBucketizer = strings.Trim(dim.TimeBucketizer, " ")
 		if dim.TimeBucketizer != "" {
 			// make sure time column is defined
@@ -435,16 +441,20 @@ func (qc *AQLQueryContext) parseExprs() {
 				qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.TimeBucketizer)
 				return
 			}
+			qc.Query.Dimensions = append(qc.Query.Dimensions, dim)
 		} else {
 			// dimension is defined as sqlExpression
 			dim.expr, err = expr.ParseExpr(dim.Expr)
+			if err != nil {
+				qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.Expr)
+				return
+			}
+			if _, ok := dim.expr.(*expr.Wildcard); ok {
+				qc.Query.Dimensions = append(qc.Query.Dimensions, qc.getAllColumnsDimension()...)
+			} else {
+				qc.Query.Dimensions = append(qc.Query.Dimensions, dim)
+			}
 		}
-
-		if err != nil {
-			qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.Expr)
-			return
-		}
-		qc.Query.Dimensions[i] = dim
 	}
 
 	// Measures.
@@ -1683,11 +1693,16 @@ func (g *geoTableUsageCollector) Visit(expression expr.Expr) expr.Visitor {
 	return g
 }
 
-func (qc *AQLQueryContext) processMeasureAndDimensions() {
+func (qc *AQLQueryContext) processMeasure() {
 	// OOPK engine only supports one measure per query.
 	if len(qc.Query.Measures) != 1 {
 		qc.Error = utils.StackError(nil, "expect one measure per query, but got %d",
 			len(qc.Query.Measures))
+		return
+	}
+
+	if _, ok := qc.Query.Measures[0].expr.(*expr.NumberLiteral); ok {
+		qc.isNonAggregationQuery = true
 		return
 	}
 
@@ -1775,7 +1790,19 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 			"unsupported aggregate function: %s", aggregate.Name)
 		return
 	}
+}
 
+func (qc *AQLQueryContext) getAllColumnsDimension() (columns []Dimension) {
+	// only main table columns wildcard match supported
+	for _, column := range qc.TableScanners[0].Schema.Schema.Columns {
+		columns = append(columns, Dimension{
+			expr: &expr.VarRef{Val: column.Name},
+		})
+	}
+	return
+}
+
+func (qc *AQLQueryContext) processDimensions() {
 	// Copy dimension ASTs.
 	qc.OOPK.Dimensions = make([]expr.Expr, len(qc.Query.Dimensions))
 	for i, dim := range qc.Query.Dimensions {

@@ -57,7 +57,7 @@ namespace ares {
 //
 // The mode of the column is judged by following logic:
 // If valuesOffset == 0, it means it’s a mode 1 vector.
-// Otherwise if nullsOffset, it’s a mode 2 vector.
+// Otherwise if nullsOffset == 0, it’s a mode 2 vector.
 // Otherwise it’s a mode 3 vector.
 template <typename Value>
 class VectorPartyIterator
@@ -125,7 +125,7 @@ class VectorPartyIterator
     return 3;
   }
 
-  // offset must be largert than 0, otherwise it may lead to access to undesired
+  // offset must be greater than 0, otherwise it may lead to access to undesired
   // location.
   __host__ __device__
   bool get_null() const {

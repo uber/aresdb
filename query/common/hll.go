@@ -214,10 +214,10 @@ func (hll *HLL) Set(index uint16, rho byte) {
 	}
 }
 
-func parseOldTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
+func parseOldTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
 	// empty result buffer
 	if len(buffer) == 0 {
-		return AQLTimeSeriesResult{}, nil
+		return AQLQueryResult{}, nil
 	}
 
 	reader := utils.NewStreamDataReader(bytes.NewBuffer(buffer))
@@ -320,7 +320,7 @@ func parseOldTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
 
 	headerSize := reader.GetBytesRead()
 
-	result := make(AQLTimeSeriesResult)
+	result := make(AQLQueryResult)
 
 	paddedCountLength := uint32(2*resultSize+7) / 8 * 8
 
@@ -357,10 +357,10 @@ func parseOldTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
 	return result, nil
 }
 
-func parseTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
+func parseTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
 	// empty result buffer
 	if len(buffer) == 0 {
-		return AQLTimeSeriesResult{}, nil
+		return AQLQueryResult{}, nil
 	}
 
 	reader := utils.NewStreamDataReader(bytes.NewBuffer(buffer))
@@ -372,7 +372,7 @@ func parseTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
 	var numDimsPerDimWidth DimCountsPerDimWidth
 	err = reader.Read([]byte(numDimsPerDimWidth[:]))
 	if err != nil {
-		return AQLTimeSeriesResult{}, nil
+		return AQLQueryResult{}, nil
 	}
 
 	totalDims := 0
@@ -454,7 +454,7 @@ func parseTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
 
 	headerSize := reader.GetBytesRead()
 
-	result := make(AQLTimeSeriesResult)
+	result := make(AQLQueryResult)
 
 	paddedCountLength := uint32(2*resultSize+7) / 8 * 8
 
@@ -492,14 +492,14 @@ func parseTimeseriesHLLResult(buffer []byte) (AQLTimeSeriesResult, error) {
 }
 
 // ComputeHLLResult computes hll result
-func ComputeHLLResult(result AQLTimeSeriesResult) AQLTimeSeriesResult {
-	return computeHLLResultRecursive(result).(AQLTimeSeriesResult)
+func ComputeHLLResult(result AQLQueryResult) AQLQueryResult {
+	return computeHLLResultRecursive(result).(AQLQueryResult)
 }
 
 // computeHLLResultRecursive computes hll value
 func computeHLLResultRecursive(result interface{}) interface{} {
 	switch r := result.(type) {
-	case AQLTimeSeriesResult:
+	case AQLQueryResult:
 		for k, v := range r {
 			r[k] = computeHLLResultRecursive(v)
 		}
@@ -518,7 +518,7 @@ func computeHLLResultRecursive(result interface{}) interface{} {
 }
 
 // NewTimeSeriesHLLResult creates a new NewTimeSeriesHLLResult and deserialize the buffer into the result.
-func NewTimeSeriesHLLResult(buffer []byte, magicHeader uint32) (AQLTimeSeriesResult, error) {
+func NewTimeSeriesHLLResult(buffer []byte, magicHeader uint32) (AQLQueryResult, error) {
 	switch magicHeader {
 	case OldHLLDataHeader:
 		return parseOldTimeseriesHLLResult(buffer)
@@ -572,7 +572,7 @@ func readHLL(hllVector unsafe.Pointer, count uint16, currentOffset *int64) HLL {
 }
 
 // ParseHLLQueryResults will parse the response body into a slice of query results and a slice of errors.
-func ParseHLLQueryResults(data []byte) (queryResults []AQLTimeSeriesResult, queryErrors []error, err error) {
+func ParseHLLQueryResults(data []byte) (queryResults []AQLQueryResult, queryErrors []error, err error) {
 	reader := utils.NewStreamDataReader(bytes.NewBuffer(data))
 
 	var magicHeader uint32
@@ -609,7 +609,7 @@ func ParseHLLQueryResults(data []byte) (queryResults []AQLTimeSeriesResult, quer
 			queryErrors = append(queryErrors, errors.New(string(bs)))
 			queryResults = append(queryResults, nil)
 		} else {
-			var res AQLTimeSeriesResult
+			var res AQLQueryResult
 			if res, err = NewTimeSeriesHLLResult(bs, magicHeader); err != nil {
 				return
 			}
