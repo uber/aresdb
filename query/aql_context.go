@@ -375,6 +375,9 @@ type AQLQueryContext struct {
 
 	// timezone column and time filter related
 	timezoneTable timezoneTableContext
+
+	// Flag to indicate if this query is not aggregation query
+	isNonAggregationQuery bool
 }
 
 func (ctx *OOPKContext) IsHLL() bool {

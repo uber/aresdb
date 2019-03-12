@@ -121,7 +121,11 @@ func (q *AQLQuery) Compile(store memstore.MemStore, returnHLL bool) *AQLQueryCon
 	}
 
 	// Process measure and dimensions.
-	qc.processMeasureAndDimensions()
+	qc.processMeasure()
+	if qc.Error != nil {
+		return qc
+	}
+	qc.processDimensions()
 	if qc.Error != nil {
 		return qc
 	}
@@ -1683,11 +1687,16 @@ func (g *geoTableUsageCollector) Visit(expression expr.Expr) expr.Visitor {
 	return g
 }
 
-func (qc *AQLQueryContext) processMeasureAndDimensions() {
+func (qc *AQLQueryContext) processMeasure() {
 	// OOPK engine only supports one measure per query.
 	if len(qc.Query.Measures) != 1 {
 		qc.Error = utils.StackError(nil, "expect one measure per query, but got %d",
 			len(qc.Query.Measures))
+		return
+	}
+
+	if _, ok := qc.Query.Measures[0].expr.(*expr.NumberLiteral); ok {
+		qc.isNonAggregationQuery = true
 		return
 	}
 
@@ -1775,7 +1784,9 @@ func (qc *AQLQueryContext) processMeasureAndDimensions() {
 			"unsupported aggregate function: %s", aggregate.Name)
 		return
 	}
+}
 
+func (qc *AQLQueryContext) processDimensions() {
 	// Copy dimension ASTs.
 	qc.OOPK.Dimensions = make([]expr.Expr, len(qc.Query.Dimensions))
 	for i, dim := range qc.Query.Dimensions {

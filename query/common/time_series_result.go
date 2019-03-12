@@ -14,7 +14,7 @@
 
 package common
 
-// AQLTimeSeriesResult is ported from Apollo, see time_series_result.go
+// AQLTimeSeriesResult
 //
 // Represents a nested AQL time series result with one dimension on each layer:
 //  - there is always an outermost time dimension. it stores the start time of
@@ -26,7 +26,7 @@ package common
 //    or nil (not *float64);
 type AQLTimeSeriesResult map[string]interface{}
 
-// Set is ported from Apollo, see time_series_result.go
+// Set measure value for dimensions
 func (r AQLTimeSeriesResult) Set(dimValues []*string, measureValue *float64) {
 	null := "NULL"
 	var current map[string]interface{} = r
