@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.12)
 # This has to be specified before enable_language according to
 # https://gitlab.kitware.com/cmake/cmake/issues/17559
-set( CMAKE_CUDA_FLAGS "" CACHE STRING "" )
-if ( CMAKE_CUDA_FLAGS )
-	list(REMOVE_ITEM CMAKE_CUDA_FLAGS "-cudart static")
-endif()
+set(CMAKE_CUDA_FLAGS "" CACHE STRING "")
+if (CMAKE_CUDA_FLAGS)
+    list(REMOVE_ITEM CMAKE_CUDA_FLAGS "-cudart static")
+endif ()
 string(APPEND CMAKE_CUDA_FLAGS -cudart=shared)
 
 project(aresdb LANGUAGES CUDA C CXX)
@@ -12,12 +12,12 @@ project(aresdb LANGUAGES CUDA C CXX)
 
 # Also needs to be fixed after the find_package.
 # https://gitlab.kitware.com/cmake/cmake/issues/17559
-if ( CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES )
-        list( REMOVE_ITEM CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudart_static" )
-endif()
-if ( CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES )
-        list( REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart_static" )
-endif()
+if (CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES)
+    list(REMOVE_ITEM CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudart_static")
+endif ()
+if (CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES)
+    list(REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart_static")
+endif ()
 
 include(ExternalProject)
 include_directories(${PROJECT_SOURCE_DIR})
@@ -88,27 +88,35 @@ add_library(algorithm SHARED
 # GTest
 ################################
 set(GTEST_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest)
-set(GTEST_LIB_DIR ${CMAKE_CURRENT_LIST_DIR}/googletest-prefix/src/googletest-build/lib)
-ExternalProject_Add(   googletest
-    SOURCE_DIR ${GTEST_SRC_DIR}
-    # Ignore install command to avoid install lib and include
-    # files to /usr/local where we might don't have permission to write to.
-    INSTALL_COMMAND ""
-)
+set(GTEST_LIB_DIR ${GTEST_SRC_DIR}/lib)
+ExternalProject_Add(googletest
+        SOURCE_DIR ${GTEST_SRC_DIR}
+        BUILD_IN_SOURCE    1
+        # Ignore install command to avoid install lib and include
+        # files to /usr/local where we might don't have permission to write to.
+        INSTALL_COMMAND ""
+        )
 link_directories(${GTEST_LIB_DIR})
 enable_testing()
-################################
+######################################################
 # RMM
-################################
-set(RMM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/rmm)
-set(RMM_LIB_DIR ${CMAKE_CURRENT_LIST_DIR}/rmm-prefix/src/rmm-build/lib)
-ExternalProject_Add(   rmm
-    SOURCE_DIR ${RMM_SRC_DIR}
-    # Ignore install command to avoid install lib and include
-    # files to /usr/local where we might don't have permission to write to.
-    INSTALL_COMMAND ""
-)
-# link_directories(${RMM_LIB_DIR})
+# Can only be built in a machine installed with
+# cuda driver api.
+######################################################
+if (QUERY_MODE STREQUAL "DEVICE")
+    set(RMM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/rmm)
+    set(RMM_LIB_DIR ${RMM_SRC_DIR})
+    ExternalProject_Add(rmm
+            SOURCE_DIR ${RMM_SRC_DIR}
+            BUILD_IN_SOURCE    1
+            CONFIGURE_COMMAND cmake -DBUILD_TESTS=OFF .
+            # librmm.so will be in ${RMM_SRC_DIR} by default.
+            BUILD_COMMAND make -j
+            BYPRODUCTS ${RMM_LIB_DIR}/librmm.so
+            INSTALL_COMMAND ""
+            )
+    link_directories(${RMM_LIB_DIR})
+endif ()
 ################################
 # Unit Tests
 ################################
