@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/aresdb/subscriber/common/tools"
 	"fmt"
+	"github.com/uber/aresdb/subscriber/common/tools"
 )
 
 // Processor is a interface that all processor needs to implement to work with Driver

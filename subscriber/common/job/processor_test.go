@@ -1,9 +1,9 @@
 package job
 
 import (
+	"errors"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"errors"
 )
 
 var _ = Describe("driver", func() {
@@ -18,4 +18,3 @@ var _ = Describe("driver", func() {
 		Ω(j).ShouldNot(BeEmpty())
 	})
 })
-

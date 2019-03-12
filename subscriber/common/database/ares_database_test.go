@@ -29,7 +29,7 @@ var _ = Describe("AresDatabase client", func() {
 		PrimaryKeys:     pk,
 		AresUpdateModes: modes,
 	}
-	rows := []Row{
+	rows := []client.Row{
 		{"v11", "v12", "v13"},
 		{"v21", "v22", "v23"},
 		{"v31", "v32", "v33"},
@@ -46,20 +46,16 @@ var _ = Describe("AresDatabase client", func() {
 		JobName:       jobName,
 	}
 	It("NewAresDatabase", func() {
-		 config := client.ConnectorConfig {
-		 	Address: "localhost:8081",
+		config := client.ConnectorConfig{
+			Address: "localhost:8081",
 		}
 		_, err := NewAresDatabase(serviceConfig, jobName, cluster, config)
 		Ω(err).ShouldNot(BeNil())
 	})
 	It("Save", func() {
-		aresRows := make([]client.Row, 0, len(rows))
-		for _, row := range rows {
-			aresRows = append(aresRows, client.Row(row))
-		}
 		mockConnector.On("Insert",
-			table, columnNames, aresRows).
-			Return(3, nil)
+			table, columnNames, rows).
+			Return(6, nil)
 		err := aresDB.Save(destination, rows)
 		Ω(err).Should(BeNil())
 

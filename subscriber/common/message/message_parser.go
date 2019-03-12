@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/uber-go/tally"
+	"github.com/uber/aresdb/client"
 	aresMemCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/rules"
@@ -69,9 +70,9 @@ func (mp *Parser) populateDestination(jobConfig *rules.JobConfig) {
 }
 
 // ParseMessage will parse given message to fit the destination
-func (mp *Parser) ParseMessage(msg map[string]interface{}, destination database.Destination) (database.Row, error) {
+func (mp *Parser) ParseMessage(msg map[string]interface{}, destination database.Destination) (client.Row, error) {
 	mp.ServiceConfig.Logger.Debug("Parsing", zap.Any("msg", msg))
-	var row database.Row
+	var row client.Row
 	for _, col := range destination.ColumnNames {
 		transformation := mp.Transformations[col]
 		fromValue := mp.extractSourceFieldValue(msg, col)

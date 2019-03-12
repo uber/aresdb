@@ -1,11 +1,9 @@
 package database
 
 import (
+	"github.com/uber/aresdb/client"
 	memCom "github.com/uber/aresdb/memstore/common"
 )
-
-// Row represents a single database row
-type Row []interface{}
 
 // Database is abstraction for interactions with downstream storage layer
 type Database interface {
@@ -13,7 +11,7 @@ type Database interface {
 	Cluster() string
 
 	// Save will save the rows into underlying database
-	Save(destination Destination, rows []Row) error
+	Save(destination Destination, rows []client.Row) error
 
 	// Shutdown will close the connections to the database
 	Shutdown()

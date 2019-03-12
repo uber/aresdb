@@ -7,6 +7,7 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
 	"github.com/uber/aresdb/client/mocks"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/consumer"
 	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/message"
@@ -49,6 +50,25 @@ var _ = Describe("streaming_processor", func() {
 	jobConfig := jobConfigs["dispatch_driver_rejected"]["dev01"]
 
 	mockConnector := mocks.Connector{}
+	table := "test"
+	columnNames := []string{"c1", "c2", "c3"}
+	pk := map[string]interface{}{"c1": nil}
+	modes := []memCom.ColumnUpdateMode{
+		memCom.UpdateOverwriteNotNull,
+		memCom.UpdateOverwriteNotNull,
+		memCom.UpdateOverwriteNotNull,
+	}
+	destination := database.Destination{
+		Table:           table,
+		ColumnNames:     columnNames,
+		PrimaryKeys:     pk,
+		AresUpdateModes: modes,
+	}
+	rows := []client.Row{
+		{"v11", "v12", "v13"},
+		{"v21", "v22", "v23"},
+		{"v31", "v32", "v33"},
+	}
 	aresDB := &database.AresDatabase{
 		ServiceConfig: serviceConfig,
 		Scope:         tally.NoopScope,
@@ -89,7 +109,7 @@ var _ = Describe("streaming_processor", func() {
 	}
 
 	topic := "topic"
-	message := &consumer.KafkaMessage{
+	msg := &consumer.KafkaMessage{
 		&kafka.Message{
 			TopicPartition: kafka.TopicPartition{
 				Topic:     &topic,
@@ -103,6 +123,13 @@ var _ = Describe("streaming_processor", func() {
 		"kloak-sjc1-agg1",
 	}
 
+	It("NewStreamingProcessor", func() {
+		p, err := NewStreamingProcessor(1, jobConfig, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+			make(chan ProcessorError), make(chan int64), serviceConfig)
+		Ω(p).Should(BeNil())
+		Ω(err).ShouldNot(BeNil())
+
+	})
 	It("Run", func() {
 		id := processor.GetID()
 		Ω(id).Should(Equal(1))
@@ -112,11 +139,25 @@ var _ = Describe("streaming_processor", func() {
 
 		processor.initBatcher()
 
-		_, err := processor.decodeMessage(message)
+		_, err := processor.decodeMessage(msg)
 		Ω(err).Should(BeNil())
+
+		mockConnector.On("Insert",
+			table, columnNames, rows).
+			Return(6, nil)
+		processor.writeRow(rows, destination)
+
+		processor.reportMessageAge(&message.Message{
+			MsgMetaDataTS: time.Now(),
+			RawMessage:    msg,
+		})
 
 		go processor.Run()
 
 		processor.Stop()
+	})
+	It("Restart", func() {
+		processor.reInitialize()
+		processor.Restart()
 	})
 })

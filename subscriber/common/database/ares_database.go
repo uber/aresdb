@@ -47,7 +47,7 @@ func NewAresDatabase(
 func (db *AresDatabase) Shutdown() {}
 
 // Save saves a batch of row objects into a destination
-func (db *AresDatabase) Save(destination Destination, rows []Row) error {
+func (db *AresDatabase) Save(destination Destination, rows []client.Row) error {
 	db.Scope.Gauge("batchSize").Update(float64(len(rows)))
 	aresRows := make([]client.Row, 0, len(rows))
 	for _, row := range rows {

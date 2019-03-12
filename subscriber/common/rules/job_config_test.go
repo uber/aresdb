@@ -7,11 +7,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	memCom "github.com/uber/aresdb/memstore/common"
 )
 
 var _ = Describe("job_config", func() {
@@ -31,7 +31,7 @@ var _ = Describe("job_config", func() {
 	p := Params{
 		ServiceConfig: serviceConfig,
 	}
-	
+
 	It("NewJobConfigs", func() {
 		serviceConfig.ActiveJobs = []string{"dispatch"}
 		rootPath := tools.GetModulePath("")

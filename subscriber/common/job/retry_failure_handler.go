@@ -7,6 +7,7 @@ import (
 	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
+	"github.com/uber/aresdb/client"
 )
 
 const defaultInitInterval = 5 * time.Second
@@ -64,7 +65,7 @@ func NewRetryFailureHandler(
 }
 
 // HandleFailure handles failure with retry
-func (handler *RetryFailureHandler) HandleFailure(destination database.Destination, rows []database.Row) (err error) {
+func (handler *RetryFailureHandler) HandleFailure(destination database.Destination, rows []client.Row) (err error) {
 	timer := time.NewTimer(0)
 	for handler.elapsedTime+handler.interval < handler.maxElapsedTime {
 		timer.Reset(handler.interval)

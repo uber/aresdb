@@ -382,7 +382,7 @@ func (s *StreamingProcessor) decodeMessage(msg consumer.Message) (*message.Messa
 func (s *StreamingProcessor) saveToDestination(batch []interface{}, destination database.Destination) {
 	s.scope.Gauge("batcherBatchSize").Update(float64(len(batch)))
 
-	rows := []database.Row{}
+	rows := []client.Row{}
 	for _, b := range batch {
 		msg := b.(*message.Message).DecodedMessage[message.MsgPrefix].(map[string]interface{})
 		row, err := s.parser.ParseMessage(msg, destination)
@@ -404,7 +404,7 @@ func (s *StreamingProcessor) saveToDestination(batch []interface{}, destination 
 
 }
 
-func (s *StreamingProcessor) writeRow(rows []database.Row, destination database.Destination) {
+func (s *StreamingProcessor) writeRow(rows []client.Row, destination database.Destination) {
 	err := s.database.Save(destination, rows)
 	if err != nil {
 		s.serviceConfig.Logger.Error(

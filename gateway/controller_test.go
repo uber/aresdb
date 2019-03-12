@@ -97,7 +97,8 @@ var _ = ginkgo.Describe("Controller", func() {
          }
       }
    ]
-}`))})
+}`))
+		})
 		testServer.Start()
 		hostPort = testServer.Listener.Addr().String()
 	})
