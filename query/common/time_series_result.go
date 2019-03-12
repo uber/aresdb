@@ -14,9 +14,18 @@
 
 package common
 
-// AQLTimeSeriesResult
+import "github.com/uber/aresdb/utils"
+
+const (
+	MatrixDataKey = "matrixData"
+	HeadersKey = "headers"
+)
+
+// AQLQueryResult represents final result of one AQL query
 //
-// Represents a nested AQL time series result with one dimension on each layer:
+// It has 2 possible formats:
+// Time series result format:
+// One dimension on each layer:
 //  - there is always an outermost time dimension. it stores the start time of
 //    the bucket/duration (in seconds since Epoch).
 //  - after the time dimension, there could be zero or more layers of additional
@@ -24,10 +33,18 @@ package common
 ///   is used to represent NULL values.
 //  - there is always a single measure, and the measure type is either float64
 //    or nil (not *float64);
-type AQLTimeSeriesResult map[string]interface{}
+//
+// Non aggregate query result format:
+//  - there will be a "headers" key, value will be a list of column names
+//  - there will be a "matrixData" key, value will be a 2d arary of values (row formated)
+//
+// user should use it as only 1 of the 2 formats consistently
+type AQLQueryResult map[string]interface{}
+
+// =====  Time series result methods start =====
 
 // Set measure value for dimensions
-func (r AQLTimeSeriesResult) Set(dimValues []*string, measureValue *float64) {
+func (r AQLQueryResult) Set(dimValues []*string, measureValue *float64) {
 	null := "NULL"
 	var current map[string]interface{} = r
 	for i, dimValue := range dimValues {
@@ -53,7 +70,7 @@ func (r AQLTimeSeriesResult) Set(dimValues []*string, measureValue *float64) {
 }
 
 // SetHLL sets hll struct to be the leaves of the nested map.
-func (r AQLTimeSeriesResult) SetHLL(dimValues []*string, hll HLL) {
+func (r AQLQueryResult) SetHLL(dimValues []*string, hll HLL) {
 	null := "NULL"
 	var current map[string]interface{} = r
 	for i, dimValue := range dimValues {
@@ -73,3 +90,36 @@ func (r AQLTimeSeriesResult) SetHLL(dimValues []*string, hll HLL) {
 		}
 	}
 }
+
+// =====  Time series result methods end =====
+
+// =====  Non aggregate query result methods start =====
+
+// Append appends single value to specific row, result rows must be built in order
+func (r AQLQueryResult) Append(row int, value interface{}) error {
+	if _, ok := r[MatrixDataKey]; !ok {
+		r[MatrixDataKey] = [][]interface{}{}
+	}
+
+	values := r[MatrixDataKey].([][]interface{})
+	if row > len(values) {
+		return utils.StackError(nil, "result rows must be built in order")
+	}
+
+	if row == len(values) {
+		values = append(values, []interface{}{})
+	}
+
+	values[row] = append(values[row], value)
+	r[MatrixDataKey] = values
+	return nil
+}
+
+// SetHeaders sets headers field for the results
+func (r AQLQueryResult) SetHeaders(headers []string) {
+	r[HeadersKey] = headers
+}
+
+// =====  Non aggregate query result methods end =====
+
+

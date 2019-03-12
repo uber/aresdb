@@ -1786,12 +1786,28 @@ func (qc *AQLQueryContext) processMeasure() {
 	}
 }
 
+func (qc *AQLQueryContext) getAllColumns() (columns []expr.Expr) {
+	// only main table columns wildcard match supported
+	for _, column := range qc.TableScanners[0].Schema.Schema.Columns {
+		rawVarRef := &expr.VarRef{
+			Val: column.Name,
+		}
+		rewrittenVarRef := qc.Rewrite(rawVarRef)
+		columns = append(columns, rewrittenVarRef)
+	}
+	return
+}
+
 func (qc *AQLQueryContext) processDimensions() {
 	// Copy dimension ASTs.
-	qc.OOPK.Dimensions = make([]expr.Expr, len(qc.Query.Dimensions))
-	for i, dim := range qc.Query.Dimensions {
+	qc.OOPK.Dimensions = []expr.Expr{}
+	for _, dim := range qc.Query.Dimensions {
 		// TODO: support numeric bucketizer.
-		qc.OOPK.Dimensions[i] = dim.expr
+		if _, ok := dim.expr.(*expr.Wildcard); ok {
+			qc.OOPK.Dimensions = append(qc.OOPK.Dimensions, qc.getAllColumns()...)
+		} else {
+			qc.OOPK.Dimensions = append(qc.OOPK.Dimensions, dim.expr)
+		}
 	}
 
 	if qc.OOPK.geoIntersection != nil {

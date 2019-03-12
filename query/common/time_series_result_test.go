@@ -21,11 +21,11 @@ import (
 
 var _ = ginkgo.Describe("time series result", func() {
 	ginkgo.It("SetHLL should work", func() {
-		res := AQLTimeSeriesResult{}
+		res := AQLQueryResult{}
 		dim0 := "dim0"
 		dim1 := "dim1"
 		res.SetHLL([]*string{&dim0, &dim1, nil}, HLL{NonZeroRegisters: 1})
-		Ω(res).Should(Equal(AQLTimeSeriesResult{
+		Ω(res).Should(Equal(AQLQueryResult{
 			"dim0": map[string]interface{}{
 				"dim1": map[string]interface{}{
 					"NULL": HLL{DenseData: nil, NonZeroRegisters: 1},
@@ -35,17 +35,41 @@ var _ = ginkgo.Describe("time series result", func() {
 	})
 
 	ginkgo.It("Set should work", func() {
-		res := AQLTimeSeriesResult{}
+		res := AQLQueryResult{}
 		dim0 := "dim0"
 		dim1 := "dim1"
 		v := 0.01
 		res.Set([]*string{&dim0, &dim1, nil}, &v)
-		Ω(res).Should(Equal(AQLTimeSeriesResult{
+		Ω(res).Should(Equal(AQLQueryResult{
 			"dim0": map[string]interface{}{
 				"dim1": map[string]interface{}{
 					"NULL": 0.01,
 				},
 			},
+		}))
+	})
+
+	ginkgo.It("Append should work", func() {
+		res := AQLQueryResult{}
+		res.Append(0, 1)
+		Ω(res).Should(Equal(AQLQueryResult{
+			"matrixData": [][]interface{}{
+				{1},
+			},
+		}))
+	})
+
+	ginkgo.It("Append should fail", func() {
+		res := AQLQueryResult{}
+		err := res.Append(1, 1)
+		Ω(err).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("SetHeaders should work", func() {
+		res := AQLQueryResult{}
+		res.SetHeaders([]string{"field1", "field2"})
+		Ω(res).Should(Equal(AQLQueryResult{
+			"headers": []string{"field1", "field2"},
 		}))
 	})
 })

@@ -184,7 +184,7 @@ var _ = ginkgo.Describe("hll", func() {
 		// Then we deserialize it.
 		res, err := queryCom.NewTimeSeriesHLLResult(data, queryCom.HLLDataHeader)
 		Ω(err).Should(BeNil())
-		Ω(res).Should(Equal(queryCom.AQLTimeSeriesResult{
+		Ω(res).Should(Equal(queryCom.AQLQueryResult{
 			"NULL": map[string]interface{}{
 				"NULL": map[string]interface{}{
 					"NULL": queryCom.HLL{NonZeroRegisters: 3,
@@ -210,7 +210,7 @@ var _ = ginkgo.Describe("hll", func() {
 		//ioutil.WriteFile("../testing/data/query/hll", data, 0644)
 		res, err := queryCom.NewTimeSeriesHLLResult(data, queryCom.HLLDataHeader)
 		Ω(err).Should(BeNil())
-		Ω(res).Should(Equal(queryCom.AQLTimeSeriesResult{
+		Ω(res).Should(Equal(queryCom.AQLQueryResult{
 			"NULL": map[string]interface{}{
 				"NULL": map[string]interface{}{
 					"NULL": queryCom.HLL{NonZeroRegisters: 3,
@@ -248,7 +248,7 @@ var _ = ginkgo.Describe("hll", func() {
 		Ω(errs).Should(HaveLen(1))
 		Ω(errs[0]).Should(BeNil())
 		Ω(results).Should(HaveLen(1))
-		Ω(results[0]).Should(Equal(queryCom.AQLTimeSeriesResult{
+		Ω(results[0]).Should(Equal(queryCom.AQLQueryResult{
 			"NULL": map[string]interface{}{
 				"NULL": map[string]interface{}{
 					"NULL": queryCom.HLL{NonZeroRegisters: 3,

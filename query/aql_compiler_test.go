@@ -1454,6 +1454,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Dimensions: []Dimension{
 				{Expr: "city_id"},
 				{Expr: "request_at"},
+				{Expr: "*"},
 			},
 		}
 		qc.parseExprs()
@@ -1462,6 +1463,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		qc.processMeasure()
 		Ω(qc.isNonAggregationQuery).Should(BeTrue())
+		qc.processDimensions()
+		Ω(qc.OOPK.Dimensions).Should(HaveLen(7))
 	})
 
 	ginkgo.It("sorts used columns", func() {

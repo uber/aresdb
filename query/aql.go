@@ -142,9 +142,9 @@ type AQLRequest struct {
 
 // AQLResponse contains results for multiple AQLQueries.
 type AQLResponse struct {
-	Results      []queryCom.AQLTimeSeriesResult `json:"results"`
-	Errors       []error                        `json:"errors,omitempty"`
-	QueryContext []*AQLQueryContext             `json:"context,omitempty"`
+	Results      []queryCom.AQLQueryResult `json:"results"`
+	Errors       []error                   `json:"errors,omitempty"`
+	QueryContext []*AQLQueryContext        `json:"context,omitempty"`
 }
 
 func (d Dimension) isTimeDimension() bool {
