@@ -3,17 +3,6 @@ set -ex
 # install google test
 output_dir=./build
 cmake_version=3.12.0
-rm -rf /tmp/googletest
-
-git clone -b release-1.8.1 --single-branch https://github.com/google/googletest.git /tmp/googletest
-pushd .
-cd /tmp/googletest/googletest
-# build makefile
-cmake CMakeLists.txt
-make
-popd
-mv /tmp/googletest/googletest ${output_dir}
-
 # install cppcheck
 sudo apt-get update
 sudo apt-get install cppcheck

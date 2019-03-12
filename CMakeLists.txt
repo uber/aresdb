@@ -87,15 +87,18 @@ add_library(algorithm SHARED
 ################################
 # GTest
 ################################
-set(GTEST_ROOT $ENV{GTEST_ROOT})
-link_directories(${GTEST_ROOT})
+set(GTEST_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest)
+ExternalProject_Add(   googletest
+    SOURCE_DIR ${GTEST_DIR}
+)
+link_directories(${GTEST_DIR}/googletest)
 enable_testing()
 ################################
 # Unit Tests
 ################################
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
-target_include_directories(all_unittest PRIVATE ${GTEST_ROOT}/include ${gtest_SOURCE_DIR})
+target_include_directories(all_unittest PRIVATE ${GTEST_DIR}/googletest/include)
 add_dependencies(all_unittest algorithm)
 # Link test executable against gtest & gtest_main
 target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
