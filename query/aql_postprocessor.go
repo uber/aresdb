@@ -90,18 +90,34 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLQueryResult {
 				timeDimensionMeta, dimensionValueCache[dimIndex])
 		}
 
-		measureBytes := oopkContext.MeasureBytes
+		if qc.isNonAggregationQuery {
+			values := make([]interface{}, len(dimValues))
+			for index, v := range dimValues {
+				values[index] = *v
+			}
+			result.Append(values)
+		} else {
+			measureBytes := oopkContext.MeasureBytes
 
-		// For avg aggregation function, we only need to read first 4 bytes which is the average.
-		if qc.OOPK.AggregateType == C.AGGR_AVG_FLOAT {
-			measureBytes = 4
+			// For avg aggregation function, we only need to read first 4 bytes which is the average.
+			if qc.OOPK.AggregateType == C.AGGR_AVG_FLOAT {
+				measureBytes = 4
+			}
+
+			measureValue := readMeasure(
+				memutils.MemAccess(oopkContext.measureVectorH, i*oopkContext.MeasureBytes), oopkContext.Measure,
+				measureBytes)
+
+			result.Set(dimValues, measureValue)
 		}
+	}
 
-		measureValue := readMeasure(
-			memutils.MemAccess(oopkContext.measureVectorH, i*oopkContext.MeasureBytes), oopkContext.Measure,
-			measureBytes)
-
-		result.Set(dimValues, measureValue)
+	if qc.isNonAggregationQuery {
+		headers := make([]string, len(qc.Query.Dimensions))
+		for i, dim := range qc.Query.Dimensions {
+			headers[i] = dim.Expr
+		}
+		result.SetHeaders(headers)
 	}
 	return result
 }
