@@ -232,7 +232,7 @@ type JSONQueryResponseWriter struct {
 func NewJSONQueryResponseWriter(nQueries int) QueryResponseWriter {
 	return &JSONQueryResponseWriter{
 		response: query.AQLResponse{
-			Results: make([]queryCom.AQLTimeSeriesResult, nQueries),
+			Results: make([]queryCom.AQLQueryResult, nQueries),
 		},
 		statusCode: http.StatusOK,
 	}

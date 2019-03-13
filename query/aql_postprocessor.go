@@ -27,9 +27,9 @@ import (
 )
 
 // Postprocess converts the internal dimension and measure vector in binary
-// format to AQLTimeSeriesResult nested result format. It also translates enum
+// format to AQLQueryResult nested result format. It also translates enum
 // values back to their string representations.
-func (qc *AQLQueryContext) Postprocess() queryCom.AQLTimeSeriesResult {
+func (qc *AQLQueryContext) Postprocess() queryCom.AQLQueryResult {
 	oopkContext := qc.OOPK
 	if oopkContext.IsHLL() {
 		result, err := queryCom.NewTimeSeriesHLLResult(qc.HLLQueryResult, queryCom.HLLDataHeader)
@@ -41,7 +41,7 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLTimeSeriesResult {
 		return queryCom.ComputeHLLResult(result)
 	}
 
-	result := make(queryCom.AQLTimeSeriesResult)
+	result := make(queryCom.AQLQueryResult)
 	dimValues := make([]*string, len(oopkContext.Dimensions))
 	dataTypes := make([]memCom.DataType, len(oopkContext.Dimensions))
 	reverseDicts := make(map[int][]string)

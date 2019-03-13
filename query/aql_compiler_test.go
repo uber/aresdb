@@ -1386,7 +1386,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		qc.processMeasureAndDimensions()
+		qc.processMeasure()
+		qc.processDimensions()
 		Ω(qc.Error).Should(BeNil())
 
 		Ω(qc.OOPK.Measure).Should(Equal(&expr.VarRef{
@@ -1423,6 +1424,48 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			3: columnUsedByAllBatches,
 			4: columnUsedByAllBatches,
 		}))
+	})
+
+	ginkgo.It("process dimensions non agg", func() {
+		table := metaCom.Table{
+			Columns: []metaCom.Column{
+				{Name: "status", Type: metaCom.Uint8},
+				{Name: "city_id", Type: metaCom.Uint16},
+				{Name: "is_first", Type: metaCom.Bool},
+				{Name: "fare", Type: metaCom.Float32},
+				{Name: "request_at", Type: metaCom.Uint32},
+			},
+		}
+		schema := memstore.NewTableSchema(&table)
+
+		qc := &AQLQueryContext{
+			TableIDByAlias: map[string]int{
+				"trips": 0,
+			},
+			TableScanners: []*TableScanner{
+				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
+			},
+		}
+		qc.Query = &AQLQuery{
+			Table: "trips",
+			Measures: []Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []Dimension{
+				{Expr: "city_id"},
+				{Expr: "request_at"},
+				{Expr: "*"},
+			},
+		}
+		qc.parseExprs()
+		Ω(qc.Query.Dimensions).Should(HaveLen(7))
+		Ω(qc.Error).Should(BeNil())
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processMeasure()
+		Ω(qc.isNonAggregationQuery).Should(BeTrue())
+		qc.processDimensions()
+		Ω(qc.OOPK.Dimensions).Should(HaveLen(7))
 	})
 
 	ginkgo.It("sorts used columns", func() {
@@ -2733,7 +2776,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
 				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
-		qc.processMeasureAndDimensions()
+		qc.processMeasure()
+		qc.processDimensions()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Geo table column is not allowed to be used in measure"))
 
@@ -2789,7 +2833,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
 				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
-		qc.processMeasureAndDimensions()
+		qc.processMeasure()
+		qc.processDimensions()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Only one geo dimension allowed"))
 
@@ -2842,7 +2887,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
 				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
-		qc.processMeasureAndDimensions()
+		qc.processMeasure()
+		qc.processDimensions()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Only geo uuid is allowed in dimensions"))
 
@@ -2942,7 +2988,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(*qc.OOPK.geoIntersection).Should(
 			Equal(geoIntersection{shapeTableID: 2, shapeColumnID: 1, pointColumnID: 2,
 				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
-		qc.processMeasureAndDimensions()
+		qc.processMeasure()
+		qc.processDimensions()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Only hex function is supported on UUID type, but got count"))
 
@@ -2997,7 +3044,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				shapeUUIDs: nil, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, validShapeUUIDs: nil, dimIndex: -1, inOrOut: true}))
 		qc.processFilters()
 		Ω(qc.Error).Should(BeNil())
-		qc.processMeasureAndDimensions()
+		qc.processMeasure()
+		qc.processDimensions()
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.OOPK.geoIntersection.shapeUUIDs).Should(
 			Equal([]string{

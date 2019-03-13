@@ -105,7 +105,7 @@ var _ = ginkgo.Describe("hll", func() {
 		data, err := ioutil.ReadFile("../../testing/data/query/hll")
 		Ω(err).Should(BeNil())
 
-		expected := AQLTimeSeriesResult{
+		expected := AQLQueryResult{
 			"NULL": map[string]interface{}{
 				"NULL": map[string]interface{}{
 					"NULL": HLL{NonZeroRegisters: 3,
@@ -135,7 +135,7 @@ var _ = ginkgo.Describe("hll", func() {
 		Ω(errs).Should(HaveLen(2))
 		Ω(results).Should(HaveLen(2))
 		Ω(errs[1].Error()).Should(Equal("test"))
-		Ω(results[0]).Should(Equal(AQLTimeSeriesResult{
+		Ω(results[0]).Should(Equal(AQLQueryResult{
 			"NULL": map[string]interface{}{
 				"NULL": map[string]interface{}{
 					"NULL": HLL{NonZeroRegisters: 3,
@@ -174,7 +174,7 @@ var _ = ginkgo.Describe("hll", func() {
 		Ω(err).Should(BeNil())
 		results, errs, err := ParseHLLQueryResults(data)
 		fmt.Println(errs, err)
-		Ω(results).Should(Equal([]AQLTimeSeriesResult{{}}))
+		Ω(results).Should(Equal([]AQLQueryResult{{}}))
 		Ω(errs).Should(Equal([]error{nil}))
 		Ω(err).Should(BeNil())
 	})

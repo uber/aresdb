@@ -41,6 +41,7 @@ func TestParser_ParseExpr(t *testing.T) {
 		{s: `true`, expr: &expr.BooleanLiteral{Val: true}},
 		{s: `false`, expr: &expr.BooleanLiteral{Val: false}},
 		{s: `my_ident`, expr: &expr.VarRef{Val: "my_ident"}},
+		{s: `*`, expr: &expr.Wildcard{}},
 
 		// Simple binary expression
 		{
