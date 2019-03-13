@@ -81,21 +81,25 @@ namespace ares {
 void sort(DimensionColumnVector keys,
           int length,
           void *cudaStream) {
+  DimensionHashIterator hashIter(keys.DimValues,
+                                 keys.IndexVector,
+                                 keys.NumDimsPerDimWidth,
+                                 keys.VectorCapacity);
 #ifdef RUN_ON_DEVICE
   thrust::copy(thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
-               hashIter, hashIter + length, vector.HashValues);
+               hashIter, hashIter + length, keys.HashValues);
   thrust::stable_sort_by_key(
       thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
-      vector.HashValues, vector.HashValues + length, vector.IndexVector);
+      keys.HashValues, keys.HashValues + length, keys.IndexVector);
 #else
   thrust::copy(thrust::host,
                hashIter,
                hashIter + length,
-               vector.HashValues);
+               keys.HashValues);
   thrust::stable_sort_by_key(thrust::host,
-                             vector.HashValues,
-                             vector.HashValues + length,
-                             vector.IndexVector);
+                             keys.HashValues,
+                             keys.HashValues + length,
+                             keys.IndexVector);
 #endif
 }
 

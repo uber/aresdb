@@ -1188,22 +1188,6 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(dimValResVectorSize(0, queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 1})).Should(Equal(0))
 	})
 
-	ginkgo.It("doCGoCall should work", func() {
-		batchCtx := oopkBatchContext{size: 10}
-		err := func() (err error) {
-			defer func() {
-				r := recover()
-				if r != nil {
-					err, _ = r.(error)
-				}
-			}()
-			batchCtx.sortByKey(queryCom.DimCountsPerDimWidth{}, unsafe.Pointer(nil), 0)
-			return
-		}()
-		Ω(err).ShouldNot(BeNil())
-		Ω(err.Error()).Should(ContainSubstring("ValueBytes is invalid"))
-	})
-
 	ginkgo.It("getGeoShapeLatLongSlice", func() {
 		var lats, longs []float32
 
