@@ -27,7 +27,7 @@ WORKDIR /
 # clone aresdb repo and set up GOPATH
 RUN mkdir -p $UBER_GITHUB_DIR
 WORKDIR $UBER_GITHUB_DIR
-RUN git clone https://github.com/uber/aresdb
+RUN git clone --recursive https://github.com/uber/aresdb.git
 RUN ln -sf $UBER_GITHUB_DIR/aresdb $HOME/aresdb
 WORKDIR aresdb
 RUN cmake .

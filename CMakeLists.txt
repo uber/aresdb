@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.12)
 # This has to be specified before enable_language according to
 # https://gitlab.kitware.com/cmake/cmake/issues/17559
-set( CMAKE_CUDA_FLAGS "" CACHE STRING "" )
-if ( CMAKE_CUDA_FLAGS )
-	list(REMOVE_ITEM CMAKE_CUDA_FLAGS "-cudart static")
-endif()
+set(CMAKE_CUDA_FLAGS "" CACHE STRING "")
+if (CMAKE_CUDA_FLAGS)
+    list(REMOVE_ITEM CMAKE_CUDA_FLAGS "-cudart static")
+endif ()
 string(APPEND CMAKE_CUDA_FLAGS -cudart=shared)
 
 project(aresdb LANGUAGES CUDA C CXX)
@@ -12,13 +12,14 @@ project(aresdb LANGUAGES CUDA C CXX)
 
 # Also needs to be fixed after the find_package.
 # https://gitlab.kitware.com/cmake/cmake/issues/17559
-if ( CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES )
-        list( REMOVE_ITEM CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudart_static" )
-endif()
-if ( CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES )
-        list( REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart_static" )
-endif()
+if (CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES)
+    list(REMOVE_ITEM CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudart_static")
+endif ()
+if (CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES)
+    list(REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart_static")
+endif ()
 
+include(ExternalProject)
 include_directories(${PROJECT_SOURCE_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
@@ -86,16 +87,43 @@ add_library(algorithm SHARED
 ################################
 # GTest
 ################################
-set(GTEST_ROOT $ENV{GTEST_ROOT})
-link_directories(${GTEST_ROOT})
+set(GTEST_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest)
+set(GTEST_LIB_DIR ${GTEST_SRC_DIR}/lib)
+ExternalProject_Add(googletest
+        SOURCE_DIR ${GTEST_SRC_DIR}
+        BUILD_IN_SOURCE    1
+        # Ignore install command to avoid install lib and include
+        # files to /usr/local where we might don't have permission to write to.
+        INSTALL_COMMAND ""
+        )
+link_directories(${GTEST_LIB_DIR})
 enable_testing()
+######################################################
+# RMM
+# Can only be built in a machine installed with
+# cuda driver api.
+######################################################
+if (QUERY_MODE STREQUAL "DEVICE")
+    set(RMM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/rmm)
+    set(RMM_LIB_DIR ${RMM_SRC_DIR})
+    ExternalProject_Add(rmm
+            SOURCE_DIR ${RMM_SRC_DIR}
+            BUILD_IN_SOURCE    1
+            CONFIGURE_COMMAND cmake -DBUILD_TESTS=OFF .
+            # librmm.so will be in ${RMM_SRC_DIR} by default.
+            BUILD_COMMAND make -j
+            BYPRODUCTS ${RMM_LIB_DIR}/librmm.so
+            INSTALL_COMMAND ""
+            )
+    link_directories(${RMM_LIB_DIR})
+endif ()
 ################################
 # Unit Tests
 ################################
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
-target_include_directories(all_unittest PRIVATE ${GTEST_ROOT}/include ${gtest_SOURCE_DIR})
-add_dependencies(all_unittest algorithm)
+target_include_directories(all_unittest PRIVATE ${GTEST_SRC_DIR}/googletest/include)
+add_dependencies(all_unittest algorithm googletest)
 # Link test executable against gtest & gtest_main
 target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
 add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
@@ -150,18 +178,6 @@ add_custom_command(
         VERBATIM
 )
 
-add_custom_target(swagger-gen
-        COMMAND swagger generate spec -o api/ui/swagger/swagger.json
-        VERBATIM)
-
-add_custom_target(npm-install DEPENDS api/ui/npm.updated)
-add_custom_command(
-        OUTPUT api/ui/npm.updated
-        COMMAND cd api/ui/ && npm install && touch npm.updated
-        DEPENDS api/ui/package.json
-        VERBATIM
-)
-
 add_custom_target(lib DEPENDS algorithm mem)
 string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
 add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
@@ -177,6 +193,10 @@ add_custom_target(test-golang DEPENDS aresd
         COMMAND bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
         )
 
+###############################
+# misc
+###############################
+
 add_custom_target(travis
         COMMAND bash -c 'ARES_ENV=test .travis/run_unittest.sh'
         )
@@ -184,4 +204,16 @@ add_custom_target(travis
 add_custom_target(
         test-cuda DEPENDS all_unittest
         COMMAND bash -c "DYLD_LIBRARY_PATH=$$LIBRARY_PATH ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest --gtest_output=xml:junit.xml"
+)
+
+add_custom_target(swagger-gen
+        COMMAND swagger generate spec -o api/ui/swagger/swagger.json
+        VERBATIM)
+
+add_custom_target(npm-install DEPENDS api/ui/npm.updated)
+add_custom_command(
+        OUTPUT api/ui/npm.updated
+        COMMAND cd api/ui/ && npm install && touch npm.updated
+        DEPENDS api/ui/package.json
+        VERBATIM
 )
