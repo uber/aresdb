@@ -18,6 +18,13 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"time"
+	"net/http/httptest"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"regexp"
+	"net/http"
+	"strings"
+	"encoding/json"
+	"io/ioutil"
 )
 
 var _ = Describe("streaming_processor", func() {
@@ -69,6 +76,7 @@ var _ = Describe("streaming_processor", func() {
 		{"v21", "v22", "v23"},
 		{"v31", "v32", "v33"},
 	}
+	
 	aresDB := &database.AresDatabase{
 		ServiceConfig: serviceConfig,
 		Scope:         tally.NoopScope,
@@ -123,42 +131,150 @@ var _ = Describe("streaming_processor", func() {
 		"kloak-sjc1-agg1",
 	}
 
+	var address string
+	var testServer *httptest.Server
+	testTableNames := []string{"a"}
+	re := regexp.MustCompile("/schema/tables/a/columns/(.+)/enum-cases")
+	testTables := map[string]metaCom.Table{
+		"a": {
+			Name: "a",
+			Columns: []metaCom.Column{
+				{
+					Name: "col0",
+					Type: metaCom.Int32,
+				},
+				{
+					Name: "col1",
+					Type: metaCom.Int32,
+				},
+				{
+					Name: "col1_hll",
+					Type: metaCom.UUID,
+					HLLConfig: metaCom.HLLConfig{
+						IsHLLColumn: true,
+					},
+				},
+				{
+					Name: "col2",
+					Type: metaCom.BigEnum,
+				},
+				{
+					Name: "col3",
+					Type: metaCom.Bool,
+				},
+				{
+					Name:              "col4",
+					Type:              metaCom.BigEnum,
+					DisableAutoExpand: true,
+					CaseInsensitive:   true,
+				},
+				{
+					Name:              "col5",
+					Type:              metaCom.BigEnum,
+					DisableAutoExpand: true,
+					CaseInsensitive:   true,
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+		},
+	}
+
+	// this is the enum cases at first
+	initialColumn2EnumCases := map[string][]string{
+		"col2": {"1"},
+		"col4": {"a"},
+		"col5": {"A"},
+	}
+
+	// extendedEnumIDs
+	column2extendedEnumIDs := []int{2}
+
+	var insertBytes []byte
+	BeforeEach(func() {
+		testServer = httptest.NewUnstartedServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if strings.HasSuffix(r.URL.Path, "tables") && r.Method == http.MethodGet {
+					tableListBytes, _ := json.Marshal(testTableNames)
+					w.WriteHeader(http.StatusOK)
+					w.Write(tableListBytes)
+				} else if strings.HasSuffix(r.URL.Path, "tables/a") && r.Method == http.MethodGet {
+					tableBytes, _ := json.Marshal(testTables["a"])
+					w.WriteHeader(http.StatusOK)
+					w.Write(tableBytes)
+				} else if strings.HasSuffix(r.URL.Path, "enum-cases") {
+					if r.Method == http.MethodGet {
+						column := string(re.FindSubmatch([]byte(r.URL.Path))[1])
+						var enumBytes []byte
+						if enumCases, ok := initialColumn2EnumCases[column]; ok {
+							enumBytes, _ = json.Marshal(enumCases)
+						}
+
+						w.WriteHeader(http.StatusOK)
+						w.Write(enumBytes)
+					} else if r.Method == http.MethodPost {
+						enumIDBytes, _ := json.Marshal(column2extendedEnumIDs)
+						w.WriteHeader(http.StatusOK)
+						w.Write(enumIDBytes)
+					}
+				} else if strings.Contains(r.URL.Path, "data") && r.Method == http.MethodPost {
+					var err error
+					insertBytes, err = ioutil.ReadAll(r.Body)
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+					} else {
+						w.WriteHeader(http.StatusOK)
+					}
+				}
+			}))
+		testServer.Start()
+		address = testServer.Listener.Addr().String()
+	})
+
+	AfterEach(func() {
+		testServer.Close()
+	})
 	It("NewStreamingProcessor", func() {
 		p, err := NewStreamingProcessor(1, jobConfig, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).Should(BeNil())
 		Ω(err).ShouldNot(BeNil())
 
-	})
-	It("Run", func() {
-		id := processor.GetID()
-		Ω(id).Should(Equal(1))
-
-		ctx := processor.GetContext()
-		Ω(ctx).ShouldNot(BeNil())
-
-		processor.initBatcher()
-
-		_, err := processor.decodeMessage(msg)
+		serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
+			"dev01": client.ConnectorConfig{Address: address},
+		}
+		p, err = NewStreamingProcessor(1, jobConfig, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+			make(chan ProcessorError), make(chan int64), serviceConfig)
+		Ω(p).ShouldNot(BeNil())
+		Ω(p.(*StreamingProcessor).highLevelConsumer).ShouldNot(BeNil())
+		Ω(p.(*StreamingProcessor).database).ShouldNot(BeNil())
+		Ω(p.(*StreamingProcessor).context).ShouldNot(BeNil())
+		Ω(p.GetID()).Should(Equal(1))
+		Ω(p.GetContext()).ShouldNot(BeNil())
+		Ω(p.(*StreamingProcessor).batcher).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
 
-		mockConnector.On("Insert",
-			table, columnNames, rows).
-			Return(6, nil)
-		processor.writeRow(rows, destination)
+		_, err = p.(*StreamingProcessor).decodeMessage(msg)
+		Ω(err).Should(BeNil())
 
-		processor.reportMessageAge(&message.Message{
+		p.(*StreamingProcessor).reportMessageAge(&message.Message{
 			MsgMetaDataTS: time.Now(),
 			RawMessage:    msg,
 		})
 
-		go processor.Run()
+		go p.Run()
+		p.(*StreamingProcessor).highLevelConsumer.(*consumer.KafkaConsumer).Close()
 
-		processor.Stop()
+		p.(*StreamingProcessor).reInitialize()
+		go p.Run()
+		p.Restart()
+		p.Stop()
 	})
-	It("Restart", func() {
-		processor.reInitialize()
-		processor.Restart()
+	It("Run", func() {
+		mockConnector.On("Insert",
+			table, columnNames, rows).
+			Return(6, nil)
+		processor.writeRow(rows, destination)
 	})
 	It("HandleFailure", func() {
 		failureHandler.(*RetryFailureHandler).interval = 1
