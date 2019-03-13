@@ -160,4 +160,8 @@ var _ = Describe("streaming_processor", func() {
 		processor.reInitialize()
 		processor.Restart()
 	})
+	It("HandleFailure", func() {
+		failureHandler.(*RetryFailureHandler).maxElapsedTime = 1 * time.Microsecond
+		failureHandler.HandleFailure(destination, rows)
+	})
 })
