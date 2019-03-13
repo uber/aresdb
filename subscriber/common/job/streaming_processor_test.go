@@ -85,36 +85,9 @@ var _ = Describe("streaming_processor", func() {
 		JobName:       "dispatch_driver_rejected",
 	}
 
-	hlConsumer, _ := consumer.NewKafkaConsumer(jobConfigs["dispatch_driver_rejected"]["dev01"], serviceConfig)
-	decoder, _ := message.NewDefaultDecoder(jobConfig, serviceConfig)
-	failureHandler := initFailureHandler(serviceConfig, jobConfig, aresDB)
-
-	processor := &StreamingProcessor{
-		ID:            1,
-		jobConfig:     jobConfig,
-		cluster:       "dev01",
-		serviceConfig: serviceConfig,
-		scope: serviceConfig.Scope.Tagged(map[string]string{
-			"job":         "dispatch_driver_rejected",
-			"aresCluster": "dev01",
-		}),
-		database:          aresDB,
-		failureHandler:    failureHandler,
-		highLevelConsumer: hlConsumer,
-		consumerInitFunc:  consumer.NewKafkaConsumer,
-		msgSizes:          make(chan int64),
-		parser:            message.NewParser(jobConfig, serviceConfig),
-		decoder:           decoder,
-		shutdown:          make(chan bool),
-		close:             make(chan bool),
-		errors:            make(chan ProcessorError),
-		context: &ProcessorContext{
-			StartTime: time.Now(),
-			Errors: processorErrors{
-				errors: make([]ProcessorError, jobConfig.StreamingConfig.ErrorThreshold*10),
-			},
-		},
-	}
+	//hlConsumer, _ := consumer.NewKafkaConsumer(jobConfigs["dispatch_driver_rejected"]["dev01"], serviceConfig)
+	//decoder, _ := message.NewDefaultDecoder(jobConfig, serviceConfig)
+	//failureHandler := initFailureHandler(serviceConfig, jobConfig, aresDB)
 
 	topic := "topic"
 	msg := &consumer.KafkaMessage{
@@ -125,6 +98,20 @@ var _ = Describe("streaming_processor", func() {
 				Offset:    0,
 			},
 			Value: []byte(`{"project": "ares-subscriber"}`),
+			Key:   []byte("key"),
+		},
+		nil,
+		"kloak-sjc1-agg1",
+	}
+
+	errMsg := &consumer.KafkaMessage{
+		&kafka.Message{
+			TopicPartition: kafka.TopicPartition{
+				Topic:     &topic,
+				Partition: int32(0),
+				Offset:    0,
+			},
+			Value: []byte(`{project: ares-subscriber}`),
 			Key:   []byte("key"),
 		},
 		nil,
@@ -252,29 +239,75 @@ var _ = Describe("streaming_processor", func() {
 		Ω(p.GetID()).Should(Equal(1))
 		Ω(p.GetContext()).ShouldNot(BeNil())
 		Ω(p.(*StreamingProcessor).batcher).ShouldNot(BeNil())
+		Ω(p.(*StreamingProcessor).parser).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
 
 		_, err = p.(*StreamingProcessor).decodeMessage(msg)
 		Ω(err).Should(BeNil())
 
+		_, err = p.(*StreamingProcessor).decodeMessage(errMsg)
+		Ω(err).ShouldNot(BeNil())
+
+		p.(*StreamingProcessor).parser.Transformations = map[string]*rules.TransformationConfig{
+			"c1": &rules.TransformationConfig{},
+			"c2": &rules.TransformationConfig{},
+			"c3": &rules.TransformationConfig{},
+		}
+		p.(*StreamingProcessor).database = aresDB
+		mockConnector.On("Insert",
+			table, columnNames, rows).
+			Return(6, nil)
+		batch := []interface{}{
+			&message.Message{
+				MsgInSubTS:    time.Now(),
+				MsgMetaDataTS: time.Now(),
+				DecodedMessage: map[string]interface{}{
+					"msg": map[string]interface{}{
+						"c1": "v11",
+						"c2": "v12",
+						"c3": "v13",
+					},
+				},
+			},
+			&message.Message{
+				MsgInSubTS:    time.Now(),
+				MsgMetaDataTS: time.Now(),
+				DecodedMessage: map[string]interface{}{
+					"msg": map[string]interface{}{
+						"c1": "v21",
+						"c2": "v22",
+						"c3": "v23",
+					},
+				},
+			},
+			&message.Message{
+				MsgInSubTS:    time.Now(),
+				MsgMetaDataTS: time.Now(),
+				DecodedMessage: map[string]interface{}{
+					"msg": map[string]interface{}{
+						"c1": "v31",
+						"c2": "v32",
+						"c3": "v33",
+					},
+				},
+			},
+		}
+		p.(*StreamingProcessor).saveToDestination(batch, destination)
 		p.(*StreamingProcessor).reportMessageAge(&message.Message{
 			MsgMetaDataTS: time.Now(),
 			RawMessage:    msg,
 		})
 
 		go p.Run()
-		p.(*StreamingProcessor).highLevelConsumer.(*consumer.KafkaConsumer).Close()
-		
 		p.Restart()
+		p.(*StreamingProcessor).highLevelConsumer.(*consumer.KafkaConsumer).Close()
+
+		p.(*StreamingProcessor).reInitialize()
+		go p.Run()
 		p.Stop()
 	})
-	It("Run", func() {
-		mockConnector.On("Insert",
-			table, columnNames, rows).
-			Return(6, nil)
-		processor.writeRow(rows, destination)
-	})
 	It("HandleFailure", func() {
+		failureHandler := initFailureHandler(serviceConfig, jobConfig, aresDB)
 		failureHandler.(*RetryFailureHandler).interval = 1
 		failureHandler.(*RetryFailureHandler).maxElapsedTime = 2 * time.Microsecond
 		failureHandler.HandleFailure(destination, rows)
