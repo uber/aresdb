@@ -264,9 +264,7 @@ var _ = Describe("streaming_processor", func() {
 
 		go p.Run()
 		p.(*StreamingProcessor).highLevelConsumer.(*consumer.KafkaConsumer).Close()
-
-		p.(*StreamingProcessor).reInitialize()
-		go p.Run()
+		
 		p.Restart()
 		p.Stop()
 	})
