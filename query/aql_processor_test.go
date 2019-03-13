@@ -818,7 +818,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			resultCapacity:   3,
 		}
 
-		batchCtx.sortByKey(numDims, 4, stream, 0)
+		batchCtx.sortByKey(numDims, stream, 0)
 		memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&measureVectorH), measureVectorD.getPointer(), 12, stream, 0)
 		memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&dimIndexVectorH), dimIndexVectorD.getPointer(), 12, stream, 0)
 
@@ -1197,7 +1197,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					err, _ = r.(error)
 				}
 			}()
-			batchCtx.sortByKey(queryCom.DimCountsPerDimWidth{}, 20, unsafe.Pointer(nil), 0)
+			batchCtx.sortByKey(queryCom.DimCountsPerDimWidth{}, unsafe.Pointer(nil), 0)
 			return
 		}()
 		Ω(err).ShouldNot(BeNil())
