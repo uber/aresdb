@@ -8,21 +8,21 @@ import (
 
 	"github.com/uber/aresdb/subscriber/common/consumer"
 
+	"encoding/json"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"os"
-	"time"
-	"net/http/httptest"
-	"regexp"
-	metaCom "github.com/uber/aresdb/metastore/common"
-	"net/http"
-	"strings"
-	"encoding/json"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"regexp"
+	"strings"
+	"time"
 )
 
 var _ = Describe("driver", func() {
@@ -176,6 +176,8 @@ var _ = Describe("driver", func() {
 		errors := driver.GetErrors()
 		Ω(errors).ShouldNot(BeNil())
 
+		driver.restartProcessor(1)
+
 		ok := driver.RemoveProcessor(0)
 		Ω(ok).Should(Equal(true))
 
@@ -187,7 +189,7 @@ var _ = Describe("driver", func() {
 
 		driver.addProcessors(1)
 
-		go driver.monitorStatus(time.NewTicker(time.Duration(driver.statusCheckInterval) * time.Second))
+		go driver.monitorStatus(time.NewTicker(time.Second))
 		go driver.monitorErrors()
 		go driver.limitRate()
 

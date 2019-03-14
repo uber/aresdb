@@ -1,18 +1,27 @@
 package job
 
 import (
+	"encoding/json"
+	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/gateway/mocks"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/subscriber/common/consumer"
+	"github.com/uber/aresdb/subscriber/common/message"
+	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"regexp"
+	"strings"
 )
 
 var _ = Describe("controller", func() {
-	mockControllerClient := &mocks.ControllerClient{}
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",
@@ -26,27 +35,234 @@ var _ = Describe("controller", func() {
 	}
 	serviceConfig.ActiveJobs = []string{"dispatch_driver_rejected"}
 	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-		"dev01": {Address: "localhost:5436"},
-	}
-	drivers := make(Drivers)
-	controller := &Controller{
-		serviceConfig:        serviceConfig,
-		aresControllerClient: mockControllerClient,
-		Drivers:              drivers,
-		jobNS:                "job_test",
-		aresClusterNS:        "dev01",
+		"dev-ares01": client.ConnectorConfig{Address: "localhost:8888"},
 	}
 
-	It("SyncUpJobConfigs", func() {
-		controller.SyncUpJobConfigs()
-		Ω(controller.Drivers["dispatch_driver_rejected"]).ShouldNot(BeNil())
-		Ω(controller.Drivers["dispatch_driver_rejected"]["dev01"]).ShouldNot(BeNil())
-		controller.Drivers["dispatch_driver_rejected"]["dev01"].Stop()
+	var testServer *httptest.Server
+	var address string
+
+	tables := []metaCom.Table{
+		{
+			Version: 0,
+			Name:    "test1",
+			Columns: []metaCom.Column{
+				{
+					Name: "col1",
+					Type: "int32",
+				},
+			},
+		},
+	}
+
+	testTableNames := []string{"a"}
+	re := regexp.MustCompile("/schema/tables/a/columns/(.+)/enum-cases")
+	testTables := map[string]metaCom.Table{
+		"a": {
+			Name: "a",
+			Columns: []metaCom.Column{
+				{
+					Name: "col0",
+					Type: metaCom.Int32,
+				},
+				{
+					Name: "col1",
+					Type: metaCom.Int32,
+				},
+				{
+					Name: "col1_hll",
+					Type: metaCom.UUID,
+					HLLConfig: metaCom.HLLConfig{
+						IsHLLColumn: true,
+					},
+				},
+				{
+					Name: "col2",
+					Type: metaCom.BigEnum,
+				},
+				{
+					Name: "col3",
+					Type: metaCom.Bool,
+				},
+				{
+					Name:              "col4",
+					Type:              metaCom.BigEnum,
+					DisableAutoExpand: true,
+					CaseInsensitive:   true,
+				},
+				{
+					Name:              "col5",
+					Type:              metaCom.BigEnum,
+					DisableAutoExpand: true,
+					CaseInsensitive:   true,
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+		},
+	}
+
+	// this is the enum cases at first
+	initialColumn2EnumCases := map[string][]string{
+		"col2": {"1"},
+		"col4": {"a"},
+		"col5": {"A"},
+	}
+
+	// extendedEnumIDs
+	column2extendedEnumIDs := []int{2}
+
+	var insertBytes []byte
+	// set up aresDB server
+	BeforeEach(func() {
+		testServer = httptest.NewUnstartedServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if strings.HasSuffix(r.URL.Path, "tables") && r.Method == http.MethodGet {
+					tableListBytes, _ := json.Marshal(testTableNames)
+					w.WriteHeader(http.StatusOK)
+					w.Write(tableListBytes)
+				} else if strings.HasSuffix(r.URL.Path, "tables/a") && r.Method == http.MethodGet {
+					tableBytes, _ := json.Marshal(testTables["a"])
+					w.WriteHeader(http.StatusOK)
+					w.Write(tableBytes)
+				} else if strings.HasSuffix(r.URL.Path, "enum-cases") {
+					if r.Method == http.MethodGet {
+						column := string(re.FindSubmatch([]byte(r.URL.Path))[1])
+						var enumBytes []byte
+						if enumCases, ok := initialColumn2EnumCases[column]; ok {
+							enumBytes, _ = json.Marshal(enumCases)
+						}
+
+						w.WriteHeader(http.StatusOK)
+						w.Write(enumBytes)
+					} else if r.Method == http.MethodPost {
+						enumIDBytes, _ := json.Marshal(column2extendedEnumIDs)
+						w.WriteHeader(http.StatusOK)
+						w.Write(enumIDBytes)
+					}
+				} else if strings.Contains(r.URL.Path, "data") && r.Method == http.MethodPost {
+					var err error
+					insertBytes, err = ioutil.ReadAll(r.Body)
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+					} else {
+						w.WriteHeader(http.StatusOK)
+					}
+				}
+			}))
+		testServer.Start()
+		address = testServer.Listener.Addr().String()
+		serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
+			"dev-ares01": client.ConnectorConfig{Address: address},
+		}
 	})
 
-	It("updateAssignmentHash", func() {
+	AfterEach(func() {
+		testServer.Close()
+	})
+
+	// set up controller server
+	BeforeEach(func() {
+		testRouter := mux.NewRouter()
+		testServer = httptest.NewUnstartedServer(testRouter)
+		testRouter.HandleFunc("/schema/dev01/tables", func(w http.ResponseWriter, r *http.Request) {
+			b, _ := json.Marshal(tables)
+			w.Write(b)
+		})
+		testRouter.HandleFunc("/schema/dev01/tables", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`"bad data`))
+		})
+		testRouter.HandleFunc("/schema/dev01/hash", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("12345"))
+		})
+		testRouter.HandleFunc("/assignment/dev01/hash/0", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("12345"))
+		})
+		testRouter.HandleFunc("/assignment/dev01/assignments/0", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`
+{  
+   "subscriber":"0",
+   "jobs":[  
+      {  
+         "job":"dispatch_driver_rejected",
+         "version":1,
+         "aresTableConfig":{  
+            "name":"dispatch_driver_rejected",
+            "cluster":"",
+            "schema":{  
+               "name":"",
+               "columns":null,
+               "primaryKeyColumns":null,
+               "isFactTable":false,
+               "config":{  
+
+               },
+               "version":0
+            }
+         },
+         "streamConfig":{  
+            "topic":"hp-styx-rta-client_info",
+            "kafkaClusterName":"kloak-sjc1-lossless",
+            "kafkaClusterFile":"/etc/uber/kafka8/clusters.yaml",
+            "topicType":"heatpipe",
+            "lastestOffset":true,
+            "errorThreshold":10,
+            "statusCheckInterval":60,
+            "autoRecoveryThreshold":8,
+            "processorCount":1,
+            "batchSize":32768,
+            "maxBatchDelayMS":10000,
+            "megaBytePerSec":600,
+            "restartOnFailure":true,
+            "restartInterval":300,
+            "failureHandler":{  
+               "type":"retry",
+               "config":{  
+                  "initRetryIntervalInSeconds":60,
+                  "multiplier":1,
+                  "maxRetryMinutes":525600
+               }
+            }
+         }
+      }
+   ]
+}`))
+		})
+		testServer.Start()
+		address = testServer.Listener.Addr().String()
+		serviceConfig.ControllerConfig.Address = address
+	})
+
+	AfterEach(func() {
+		testServer.Close()
+	})
+
+	It("NewController", func() {
+
+		paramsR := rules.Params{
+			ServiceConfig: serviceConfig}
+
+		rst, _ := rules.NewJobConfigs(paramsR)
+		params := Params{
+			ServiceConfig:    serviceConfig,
+			JobConfigs:       rst.JobConfigs,
+			ConsumerInitFunc: consumer.NewKafkaConsumer,
+			DecoderInitFunc:  message.NewDefaultDecoder,
+		}
+		controller := NewController(params)
+		Ω(controller).ShouldNot(BeNil())
+		Ω(controller.Drivers["dispatch_driver_rejected"]).ShouldNot(BeNil())
+		Ω(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"]).ShouldNot(BeNil())
+		controller.deleteDriver(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"],
+			"dev-ares01", controller.Drivers["dispatch_driver_rejected"])
+
+		controller.jobNS = "dev01"
 		update, newHash := controller.updateAssignmentHash()
-		Ω(update).Should(Equal(false))
+		Ω(update).Should(Equal(true))
 		Ω(newHash).Should(Equal("12345"))
+
+		controller.SyncUpJobConfigs()
+		Ω(controller.Drivers["dispatch_driver_rejected"]).ShouldNot(BeNil())
+		Ω(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"]).Should(BeNil())
+
 	})
 })

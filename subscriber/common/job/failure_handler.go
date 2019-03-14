@@ -1,8 +1,8 @@
 package job
 
 import (
-	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/subscriber/common/database"
 )
 
 const retryHandler string = "retry"

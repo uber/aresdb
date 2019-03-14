@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/uber-go/tally"
+	"github.com/uber/aresdb/client"
 	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
-	"github.com/uber/aresdb/client"
 )
 
 const defaultInitInterval = 5 * time.Second

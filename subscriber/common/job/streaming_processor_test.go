@@ -1,6 +1,7 @@
 package job
 
 import (
+	"encoding/json"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -8,6 +9,7 @@ import (
 	"github.com/uber/aresdb/client"
 	"github.com/uber/aresdb/client/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/common/consumer"
 	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/message"
@@ -16,15 +18,13 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"os"
-	"time"
-	"net/http/httptest"
-	metaCom "github.com/uber/aresdb/metastore/common"
-	"regexp"
-	"net/http"
-	"strings"
-	"encoding/json"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"regexp"
+	"strings"
+	"time"
 )
 
 var _ = Describe("streaming_processor", func() {
@@ -76,7 +76,7 @@ var _ = Describe("streaming_processor", func() {
 		{"v21", "v22", "v23"},
 		{"v31", "v32", "v33"},
 	}
-	
+
 	aresDB := &database.AresDatabase{
 		ServiceConfig: serviceConfig,
 		Scope:         tally.NoopScope,
