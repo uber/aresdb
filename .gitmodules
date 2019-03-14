@@ -1,3 +1,13 @@
 [submodule "thirdparty/librdkafka"]
 	path = thirdparty/librdkafka
 	url = https://github.com/edenhill/librdkafka.git
+
+[submodule "thirdparty/rmm"]
+	path = thirdparty/rmm
+	url = https://github.com/rapidsai/rmm
+
+[submodule "thirdparty/googletest"]
+	path = thirdparty/googletest
+	url = https://github.com/google/googletest.git
+	branch = release-1.8.1
+

@@ -18,7 +18,7 @@ Getting started
 To get AresDB:
 
 ```
-git clone https://github.com/uber/aresdb.git $GOPATH/src/github.com/uber/aresdb
+git clone --recursive https://github.com/uber/aresdb.git $GOPATH/src/github.com/uber/aresdb
 ```
 
 NVIDIA Driver and CUDA Setup

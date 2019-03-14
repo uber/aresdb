@@ -14,7 +14,7 @@ env:
     - NVCCFLAGS="-ldir ${CUDA_HOME}/nvvm/libdevice -noprof -I ${CUDA_HOME}/include/ -L ${CUDA_HOME}/lib64"
     - GTEST_ROOT=./build/googletest
     - PKG_CONFIG_PATH=${LD_LIBRARY_PATH}/pkgconfig:${PKG_CONFIG_PATH}
-cache: 
+cache:
   directories:
     - lib
     - gtest

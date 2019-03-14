@@ -146,6 +146,41 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		}))
 	})
 
+	ginkgo.It("works for non agg queries", func() {
+		ctx := &AQLQueryContext{
+			Query: &AQLQuery{
+				Dimensions: []Dimension{
+					{Expr: "someField"},
+				},
+			},
+			isNonAggregationQuery: true,
+		}
+		oopkContext := OOPKContext{
+			Dimensions: []expr.Expr{
+				&expr.VarRef{
+					ExprType: expr.Float,
+					DataType: memCom.Float32,
+				},
+			},
+			DimRowBytes:        5,
+			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0},
+			DimensionVectorIndex: []int{
+				0,
+			},
+			ResultSize:       1,
+			dimensionVectorH: unsafe.Pointer(&[]uint8{0, 0, 0, 0, 0}[0]),
+		}
+
+		ctx.OOPK = oopkContext
+		*(*float32)(oopkContext.dimensionVectorH) = 3.2
+		*(*uint8)(memutils.MemAccess(oopkContext.dimensionVectorH, 4)) = 1
+
+		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLQueryResult{
+			"headers": []string{"someField"},
+			"matrixData": [][]interface{}{{"3.2"}},
+		}))
+	})
+
 	ginkgo.It("time Unit formatting works", func() {
 		query := &AQLQuery{
 			Dimensions: []Dimension{
