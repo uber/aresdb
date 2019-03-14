@@ -5,9 +5,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/client/mocks"
+
 	"github.com/uber/aresdb/subscriber/common/consumer"
-	"github.com/uber/aresdb/subscriber/common/database"
+
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/tools"
@@ -16,6 +16,13 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"time"
+	"net/http/httptest"
+	"regexp"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"net/http"
+	"strings"
+	"encoding/json"
+	"io/ioutil"
 )
 
 var _ = Describe("driver", func() {
@@ -47,71 +54,139 @@ var _ = Describe("driver", func() {
 	}
 	jobConfig := jobConfigs["dispatch_driver_rejected"]["dev01"]
 
-	mockConnector := mocks.Connector{}
-	aresDB := &database.AresDatabase{
-		ServiceConfig: serviceConfig,
-		Scope:         tally.NoopScope,
-		ClusterName:   "dev01",
-		Connector:     &mockConnector,
-		JobName:       "dispatch_driver_rejected",
-	}
-
-	hlConsumer, _ := consumer.NewKafkaConsumer(jobConfigs["dispatch_driver_rejected"]["dev01"], serviceConfig)
-	decoder, _ := message.NewDefaultDecoder(jobConfig, serviceConfig)
-	failureHandler := initFailureHandler(serviceConfig, jobConfig, aresDB)
-
-	processor := &StreamingProcessor{
-		ID:            1,
-		jobConfig:     jobConfig,
-		cluster:       "dev01",
-		serviceConfig: serviceConfig,
-		scope: serviceConfig.Scope.Tagged(map[string]string{
-			"job":         "dispatch_driver_rejected",
-			"aresCluster": "dev01",
-		}),
-		database:          aresDB,
-		failureHandler:    failureHandler,
-		highLevelConsumer: hlConsumer,
-		consumerInitFunc:  consumer.NewKafkaConsumer,
-		msgSizes:          make(chan int64),
-		parser:            message.NewParser(jobConfig, serviceConfig),
-		decoder:           decoder,
-		shutdown:          make(chan bool),
-		close:             make(chan bool),
-		errors:            make(chan ProcessorError),
-		context: &ProcessorContext{
-			StartTime: time.Now(),
-			Errors: processorErrors{
-				errors: make([]ProcessorError, jobConfig.StreamingConfig.ErrorThreshold*10),
+	var address string
+	var testServer *httptest.Server
+	testTableNames := []string{"a"}
+	re := regexp.MustCompile("/schema/tables/a/columns/(.+)/enum-cases")
+	testTables := map[string]metaCom.Table{
+		"a": {
+			Name: "a",
+			Columns: []metaCom.Column{
+				{
+					Name: "col0",
+					Type: metaCom.Int32,
+				},
+				{
+					Name: "col1",
+					Type: metaCom.Int32,
+				},
+				{
+					Name: "col1_hll",
+					Type: metaCom.UUID,
+					HLLConfig: metaCom.HLLConfig{
+						IsHLLColumn: true,
+					},
+				},
+				{
+					Name: "col2",
+					Type: metaCom.BigEnum,
+				},
+				{
+					Name: "col3",
+					Type: metaCom.Bool,
+				},
+				{
+					Name:              "col4",
+					Type:              metaCom.BigEnum,
+					DisableAutoExpand: true,
+					CaseInsensitive:   true,
+				},
+				{
+					Name:              "col5",
+					Type:              metaCom.BigEnum,
+					DisableAutoExpand: true,
+					CaseInsensitive:   true,
+				},
 			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
 		},
 	}
 
-	driver, err := NewDriver(jobConfig, serviceConfig, NewStreamingProcessor,
-		consumer.NewKafkaConsumer, message.NewDefaultDecoder)
-	driver.processors = []Processor{processor}
+	// this is the enum cases at first
+	initialColumn2EnumCases := map[string][]string{
+		"col2": {"1"},
+		"col4": {"a"},
+		"col5": {"A"},
+	}
+
+	// extendedEnumIDs
+	column2extendedEnumIDs := []int{2}
+
+	var insertBytes []byte
+	BeforeEach(func() {
+		testServer = httptest.NewUnstartedServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if strings.HasSuffix(r.URL.Path, "tables") && r.Method == http.MethodGet {
+					tableListBytes, _ := json.Marshal(testTableNames)
+					w.WriteHeader(http.StatusOK)
+					w.Write(tableListBytes)
+				} else if strings.HasSuffix(r.URL.Path, "tables/a") && r.Method == http.MethodGet {
+					tableBytes, _ := json.Marshal(testTables["a"])
+					w.WriteHeader(http.StatusOK)
+					w.Write(tableBytes)
+				} else if strings.HasSuffix(r.URL.Path, "enum-cases") {
+					if r.Method == http.MethodGet {
+						column := string(re.FindSubmatch([]byte(r.URL.Path))[1])
+						var enumBytes []byte
+						if enumCases, ok := initialColumn2EnumCases[column]; ok {
+							enumBytes, _ = json.Marshal(enumCases)
+						}
+
+						w.WriteHeader(http.StatusOK)
+						w.Write(enumBytes)
+					} else if r.Method == http.MethodPost {
+						enumIDBytes, _ := json.Marshal(column2extendedEnumIDs)
+						w.WriteHeader(http.StatusOK)
+						w.Write(enumIDBytes)
+					}
+				} else if strings.Contains(r.URL.Path, "data") && r.Method == http.MethodPost {
+					var err error
+					insertBytes, err = ioutil.ReadAll(r.Body)
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+					} else {
+						w.WriteHeader(http.StatusOK)
+					}
+				}
+			}))
+		testServer.Start()
+		address = testServer.Listener.Addr().String()
+		serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
+			"dev01": client.ConnectorConfig{Address: address},
+		}
+	})
+
+	AfterEach(func() {
+		testServer.Close()
+	})
 
 	It("NewDriver", func() {
+		driver, err := NewDriver(jobConfig, serviceConfig, NewStreamingProcessor,
+			consumer.NewKafkaConsumer, message.NewDefaultDecoder)
 		Ω(driver).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
-	})
 
-	It("MarshalJSON", func() {
-		_, err := driver.MarshalJSON()
+		driver.addProcessors(2)
+		Ω(len(driver.processors)).Should(Equal(2))
+
+		_, err = driver.MarshalJSON()
 		Ω(err).Should(BeNil())
-	})
 
-	It("GetErrors", func() {
 		errors := driver.GetErrors()
 		Ω(errors).ShouldNot(BeNil())
-	})
 
-	It("", func() {
 		ok := driver.RemoveProcessor(0)
-		Ω(ok).Should(Equal(false))
-	})
+		Ω(ok).Should(Equal(true))
 
-	It("Stop", func() {
+		ok = driver.RemoveProcessor(1)
+		Ω(ok).Should(Equal(true))
+
+		ok = driver.RemoveProcessor(0)
+		Ω(ok).Should(Equal(false))
+
+		driver.addProcessors(1)
+
 		go driver.monitorStatus(time.NewTicker(time.Duration(driver.statusCheckInterval) * time.Second))
 		go driver.monitorErrors()
 		go driver.limitRate()

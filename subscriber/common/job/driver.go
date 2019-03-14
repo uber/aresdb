@@ -462,12 +462,10 @@ func (d *Driver) Stop() {
 	d.Lock()
 	// Shutdown all processors
 	for _, processor := range d.processors {
-		pid := processor.GetID()
-		if d.processors[pid-1] != nil && !d.processors[pid-1].GetContext().Stopped {
-			d.processors[pid-1].Stop()
+		if processor == nil {
+			continue
 		}
 		d.removeProcessor(processor.GetID())
-		d.processors[pid-1] = nil
 	}
 
 	if !d.Shutdown {

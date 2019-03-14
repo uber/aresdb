@@ -85,10 +85,6 @@ var _ = Describe("streaming_processor", func() {
 		JobName:       "dispatch_driver_rejected",
 	}
 
-	//hlConsumer, _ := consumer.NewKafkaConsumer(jobConfigs["dispatch_driver_rejected"]["dev01"], serviceConfig)
-	//decoder, _ := message.NewDefaultDecoder(jobConfig, serviceConfig)
-	//failureHandler := initFailureHandler(serviceConfig, jobConfig, aresDB)
-
 	topic := "topic"
 	msg := &consumer.KafkaMessage{
 		&kafka.Message{
