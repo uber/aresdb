@@ -254,6 +254,10 @@ var _ = Describe("controller", func() {
 		Ω(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"]).ShouldNot(BeNil())
 		controller.deleteDriver(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"],
 			"dev-ares01", controller.Drivers["dispatch_driver_rejected"])
+		Ω(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"]).Should(BeNil())
+		ok := controller.addDriver(params.JobConfigs["dispatch_driver_rejected"]["dev-ares01"], "dev-ares01",
+			controller.Drivers["dispatch_driver_rejected"], true)
+		Ω(ok).Should(Equal(true))
 
 		controller.jobNS = "dev01"
 		update, newHash := controller.updateAssignmentHash()
