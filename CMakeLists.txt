@@ -190,18 +190,6 @@ add_custom_command(
         VERBATIM
 )
 
-add_custom_target(swagger-gen
-        COMMAND swagger generate spec -o api/ui/swagger/swagger.json
-        VERBATIM)
-
-add_custom_target(npm-install DEPENDS api/ui/npm.updated)
-add_custom_command(
-        OUTPUT api/ui/npm.updated
-        COMMAND cd api/ui/ && npm install && touch npm.updated
-        DEPENDS api/ui/package.json
-        VERBATIM
-)
-
 if( NOT TARGET lib )
 add_custom_target(lib DEPENDS algorithm mem rdkafka::rdkafka)
 endif()
