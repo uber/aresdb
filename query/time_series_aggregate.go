@@ -649,13 +649,12 @@ func (bc *oopkBatchContext) hll(numDims common.DimCountsPerDimWidth, isLastBatch
 	return
 }
 
-func (bc *oopkBatchContext) sortByKey(numDims common.DimCountsPerDimWidth, valueWidth int, stream unsafe.Pointer, device int) {
+func (bc *oopkBatchContext) sortByKey(numDims common.DimCountsPerDimWidth, stream unsafe.Pointer, device int) {
 	keys := makeDimensionColumnVector(bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(),
 		bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
-	values := (*C.uint8_t)(bc.measureVectorD[0].getPointer())
 	doCGoCall(func() C.CGoCallResHandle {
 		// sort the previous result with current batch together
-		return C.Sort(keys, values, (C.int)(valueWidth), (C.int)(bc.resultSize+bc.size), stream, C.int(device))
+		return C.Sort(keys, (C.int)(bc.resultSize+bc.size), stream, C.int(device))
 	})
 }
 
