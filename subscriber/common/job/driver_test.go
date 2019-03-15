@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"fmt"
 )
 
 var _ = Describe("driver", func() {
@@ -189,10 +190,19 @@ var _ = Describe("driver", func() {
 
 		driver.addProcessors(1)
 
-		go driver.monitorStatus(time.NewTicker(time.Second))
+		t := time.NewTicker(time.Second)
+		go driver.monitorStatus(t)
 		go driver.monitorErrors()
 		go driver.limitRate()
 
+		t.Stop()
+		driver.errors <- ProcessorError{
+			1,
+			int64(12345),
+			fmt.Errorf("this is error"),
+		}
+	
+		close(driver.processorMsgSizes)
 		driver.Stop()
 	})
 })
