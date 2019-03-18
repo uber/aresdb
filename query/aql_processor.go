@@ -115,6 +115,9 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		if qc.Error != nil {
 			return
 		}
+		if qc.OOPK.done {
+			break
+		}
 	}
 
 	// query execution for last batch.
