@@ -23,8 +23,8 @@
 
 // some macro used for host or device compilation
 #ifdef RUN_ON_DEVICE
-   #define HOST_DEVICE_STRATEGY(stream) thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(stream)
-   #define SET_DEVICE(device)) cudaSetDevice(device)
+   #define HOST_DEVICE_STRATEGY(stream) thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(stream))
+   #define SET_DEVICE(device) cudaSetDevice(device)
    #define HOST_DEVICE_VECTOR(vtype) thrust::device_vector<vtype>
 #else
    #define HOST_DEVICE_STRATEGY(stream) thrust::host

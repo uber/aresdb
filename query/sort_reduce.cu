@@ -89,7 +89,7 @@ CGoCallResHandle Expand(DimensionColumnVector inputKeys,
   CGoCallResHandle resHandle = {nullptr, nullptr};
 
   try {
-    SET_DEVICE(device)
+    SET_DEVICE(device);
     resHandle.res = reinterpret_cast<void *>(ares::expand(inputKeys,
                                                           outputKeys,
                                                           baseCounts,
