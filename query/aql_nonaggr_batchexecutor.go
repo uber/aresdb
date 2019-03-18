@@ -3,17 +3,13 @@ package query
 import (
 	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/utils"
 	"unsafe"
 )
 
 // NonAggrBatchExecutorImpl is batch executor implementation for non-aggregation query
 type NonAggrBatchExecutorImpl struct {
 	*BatchExecutorImpl
-}
-
-// reduce function for NonAggrBatchExecutorImpl is empty
-func (e *NonAggrBatchExecutorImpl) reduce() {
-	// nothing to do for non-aggregation query
 }
 
 // project for non-aggregation query will only calculate the selected columns
@@ -80,4 +76,28 @@ func (e *NonAggrBatchExecutorImpl) prepareForDimEval(
 	// to keep the consistency of the output dimension vector
 	e.qc.OOPK.currentBatch.swapResultBufferForNextBatch()
 	bc.size = lenWanted
+}
+
+// Run is the function to run the whole process for a batch
+func (e *NonAggrBatchExecutorImpl) Run(isLastBatch bool) {
+	e.isLastBatch = isLastBatch
+	start := utils.Now()
+	// initialize index vector.
+	initIndexVector(e.qc.OOPK.currentBatch.indexVectorD.getPointer(), 0, e.qc.OOPK.currentBatch.size, e.stream, e.qc.Device)
+
+	e.qc.reportTimingForCurrentBatch(e.stream, &start, initIndexVectorTiming)
+
+	e.filter()
+
+	e.join()
+
+	e.project()
+
+	// swap result buffer before next batch
+	e.qc.OOPK.currentBatch.swapResultBufferForNextBatch()
+	e.qc.reportTimingForCurrentBatch(e.stream, &start, cleanupTiming)
+	e.qc.reportBatch(e.batchID > 0)
+
+	// Only profile one batch.
+	e.qc.Profiling = ""
 }

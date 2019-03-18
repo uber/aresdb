@@ -93,7 +93,11 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLQueryResult {
 		if qc.isNonAggregationQuery {
 			values := make([]interface{}, len(dimValues))
 			for index, v := range dimValues {
-				values[index] = *v
+				if v == nil {
+					values[index] = "NULL"
+				} else {
+					values[index] = *v
+				}
 			}
 			result.Append(values)
 		} else {

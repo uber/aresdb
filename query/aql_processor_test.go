@@ -62,7 +62,6 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	var batch99, batch101, batch110, batch120, batch130 *memstore.Batch
 	var vs memstore.LiveStore
 	var archiveBatch0 *memstore.ArchiveBatch
-	var dataTypes []memCom.DataType
 	var memStore memstore.MemStore
 	var metaStore metastore.MetaStore
 	var diskStore diskstore.DiskStore
@@ -82,7 +81,6 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		memStore = new(memMocks.MemStore)
 		diskStore = new(diskMocks.DiskStore)
 
-		dataTypes = []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32}
 		var err error
 		batch110, err = testFactory.ReadLiveBatch("archiving/batch-110")
 		Ω(err).Should(BeNil())
@@ -2027,5 +2025,83 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			}`,
 		))
 		qc.ReleaseHostResultsBuffers()
+	})
+
+	ginkgo.It("ProcessQuery for non-aggregation query should work", func() {
+		qc := &AQLQueryContext{}
+		q := &AQLQuery{
+			Table: table,
+			Dimensions: []Dimension{
+				{Expr: "c0"},
+				{Expr: "c1"},
+				{Expr: "c2"},
+			},
+			Measures: []Measure{
+				{Expr: "1"},
+			},
+			TimeFilter: TimeFilter{
+				Column: "c0",
+				From:   "1970-01-01",
+				To:     "1970-01-02",
+			},
+			Limit: 3,
+		}
+		qc.Query = q
+
+		qc = q.Compile(memStore, false)
+		Ω(qc.Error).Should(BeNil())
+		qc.ProcessQuery(memStore)
+		Ω(qc.Error).Should(BeNil())
+
+		qc.Results = qc.Postprocess()
+		qc.ReleaseHostResultsBuffers()
+		bs, err := json.Marshal(qc.Results)
+		Ω(err).Should(BeNil())
+
+		Ω(bs).Should(MatchJSON(` {
+			"matrixData": [
+				["100", "0", "1"],
+				["110", "1", "NULL"],
+				["120", "NULL", "1.2"]
+			],
+			"headers": ["c0", "c1", "c2"]
+		  }`))
+
+		bc := qc.OOPK.currentBatch
+		// Check whether pointers are properly cleaned up.
+		Ω(len(qc.OOPK.foreignTables)).Should(BeZero())
+		Ω(qc.cudaStreams[0]).Should(BeZero())
+		Ω(qc.cudaStreams[1]).Should(BeZero())
+
+		Ω(bc.dimensionVectorD[0]).Should(BeZero())
+		Ω(bc.dimensionVectorD[1]).Should(BeZero())
+
+		Ω(bc.dimIndexVectorD[0]).Should(BeZero())
+		Ω(bc.dimIndexVectorD[1]).Should(BeZero())
+
+		Ω(bc.hashVectorD[0]).Should(BeZero())
+		Ω(bc.hashVectorD[1]).Should(BeZero())
+
+		Ω(bc.measureVectorD[0]).Should(BeZero())
+		Ω(bc.measureVectorD[1]).Should(BeZero())
+
+		Ω(bc.resultSize).Should(BeZero())
+		Ω(bc.resultCapacity).Should(BeZero())
+
+		Ω(len(bc.columns)).Should(BeZero())
+
+		Ω(bc.indexVectorD).Should(BeZero())
+		Ω(bc.predicateVectorD).Should(BeZero())
+
+		Ω(bc.size).Should(BeZero())
+
+		Ω(len(bc.foreignTableRecordIDsD)).Should(BeZero())
+		Ω(len(bc.exprStackD)).Should(BeZero())
+
+		Ω(qc.OOPK.measureVectorH).Should(BeZero())
+		Ω(qc.OOPK.dimensionVectorH).Should(BeZero())
+
+		Ω(qc.OOPK.hllVectorD).Should(BeZero())
+		Ω(qc.OOPK.hllDimRegIDCountD).Should(BeZero())
 	})
 })
