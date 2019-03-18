@@ -168,7 +168,7 @@ func (qc *AQLQueryContext) SerializeHLL(dataTypes []memCom.DataType,
 	return builder.buffer, nil
 }
 
-// SerializeHeader
+// SerializeHeader serialize HLL header
 //	-----------query result 0-------------------
 //	 <header>
 //	 [uint8] num_enum_columns [uint8] bytes per dim ... [padding for 8 bytes]

@@ -1779,7 +1779,8 @@ TEST(GeoBatchIntersectionJoinTest, DimensionWriting) {
 
 TEST(ExpandTest, testOverFill) {
     // test with 3 dimensions (4-byte, 2-byte, 1-byte)
-    // each dimension vector has 6 elements with values assigned as [1,2,3,2,3,1]
+    // each dimension vector has 6 elements with values assigned as
+    // [1,2,3,2,3,1]
     uint8_t inputDimValuesH[60] = {
         1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0,
         1, 0, 2, 0, 3, 0, 2, 0, 3, 0, 1, 0,
@@ -1840,12 +1841,14 @@ TEST(ExpandTest, testOverFill) {
                            0);
     EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 10);
     EXPECT_EQ(resHandle.pStrErr, nullptr);
-    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100, expectedDimValues));
+    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100,
+                        expectedDimValues));
 }
 
 TEST(ExpandTest, testAppend) {
     // test with 3 dimensions (4-byte, 2-byte, 1-byte)
-    // each dimension vector has 6 elements with values assigned as [1,2,3,2,3,1]
+    // each dimension vector has 6 elements with values assigned as
+    // [1,2,3,2,3,1]
     uint8_t inputDimValuesH[60] = {
         1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0,
         1, 0, 2, 0, 3, 0, 2, 0, 3, 0, 1, 0,
@@ -1907,12 +1910,14 @@ TEST(ExpandTest, testAppend) {
                            0);
     EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 10);
     EXPECT_EQ(resHandle.pStrErr, nullptr);
-    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100, expectedDimValues));
+    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100,
+                        expectedDimValues));
 }
 
 TEST(ExpandTest, testFillPartial) {
     // test with 3 dimensions (4-byte, 2-byte, 1-byte)
-    // each dimension vector has 6 elements with values assigned as [1,2,3,2,3,1]
+    // each dimension vector has 6 elements with values assigned as
+    // [1,2,3,2,3,1]
     uint8_t inputDimValuesH[60] = {
         1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0,
         1, 0, 2, 0, 3, 0, 2, 0, 3, 0, 1, 0,
@@ -1973,7 +1978,8 @@ TEST(ExpandTest, testFillPartial) {
                            0);
     EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 6);
     EXPECT_EQ(resHandle.pStrErr, nullptr);
-    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100, expectedDimValues));
+    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100,
+                        expectedDimValues));
 }
 
 }  // namespace ares

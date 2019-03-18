@@ -1,12 +1,12 @@
 package query
 
 import (
+	"fmt"
 	"github.com/uber/aresdb/memutils"
-	"github.com/uber/aresdb/utils"
 	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/utils"
 	"time"
 	"unsafe"
-	"fmt"
 )
 
 // BatchExecutor is batch executor interface for both Non-aggregation query and Aggregation query
@@ -27,6 +27,7 @@ type BatchExecutor interface {
 type DummyBatchExecutorImpl struct {
 }
 
+// NewDummyBatchExecutor create a dummy BatchExecutor
 func NewDummyBatchExecutor() BatchExecutor {
 	return &DummyBatchExecutorImpl{}
 }
@@ -57,7 +58,6 @@ type BatchExecutorImpl struct {
 	start               time.Time
 	sizeBeforeGeoFilter int
 }
-
 
 // NewBatchExecutor is to create a BatchExecutor.
 func NewBatchExecutor(qc *AQLQueryContext, batchID int32, customFilterFunc customFilterExecutor, stream unsafe.Pointer) BatchExecutor {

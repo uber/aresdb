@@ -1061,7 +1061,8 @@ class DimensionColumnOutputIterator
   __host__ __device__ typename super_t::reference dereference() const {
     int baseIndex = *this->base_reference();
     int dimIndex = baseIndex / dimOutputLength;
-    int globalIndex = baseIndex + (capacity - dimOutputLength) * dimIndex + offset;
+    int globalIndex = baseIndex + (capacity - dimOutputLength) * dimIndex
+                        + offset;
     uint8_t numDims = 0;
     int bytes = 0;
     uint8_t dimBytes = 0;
@@ -1093,7 +1094,8 @@ class HLLRegIDHeadFlagIterator
  public:
   friend class thrust::iterator_core_access;
   typedef thrust::iterator_adaptor<HLLRegIDHeadFlagIterator,
-                                   thrust::counting_iterator<int>, unsigned int,
+                                   thrust::counting_iterator<int>,
+                                   unsigned int,
                                    thrust::use_default, thrust::use_default,
                                    unsigned int, thrust::use_default>
       super_t;
@@ -1239,9 +1241,9 @@ struct EmptyStruct {};
 // GeoBatchIntersectIterator is the iterator to compute whether the
 // semi-infinite ray horizontally emitted from the geo point crosses a single
 // edge of the geoshape. Note value and dereference type of this iterator are
-// all default which means accessing and assigning value to this iterator has no
-// meaning. The dereference function will directly write to the output predicate
-// vector using atomicXor.
+// all default which means accessing and assigning value to this iterator has
+// no meaning. The dereference function will directly write to the output
+// predicate vector using atomicXor.
 template <typename GeoInputIterator>
 class GeoBatchIntersectIterator
     : public thrust::iterator_adaptor<
@@ -1378,36 +1380,34 @@ GeoBatchIntersectIterator<GeoInputIterator> make_geo_batch_intersect_iterator(
                                                      inOrOut);
 }
 
-// Iterator to retrieve counts on index, which is usually for mode 3 archive vectorparty
+// Iterator to retrieve counts on index, which is usually for
+// mode 3 archive vectorparty
 class IndexCountIterator :
-    public thrust::iterator_adaptor<IndexCountIterator,
+  public thrust::iterator_adaptor<IndexCountIterator,
                                     uint32_t *, uint32_t,
                                     thrust::use_default, thrust::use_default,
                                     uint32_t,
                                     thrust::use_default> {
  public:
-  friend class thrust::iterator_core_access;
+    friend class thrust::iterator_core_access;
 
-  typedef thrust::iterator_adaptor<IndexCountIterator,
+    typedef thrust::iterator_adaptor<IndexCountIterator,
                                    uint32_t *, uint32_t,
                                    thrust::use_default, thrust::use_default,
                                    uint32_t,
                                    thrust::use_default> super_t;
 
-  __host__ __device__ IndexCountIterator() {}
+    __host__ __device__ IndexCountIterator() {}
 
-  IndexCountIterator(
-      uint32_t *baseCount,
-      uint32_t *indexVector
-  ) : super_t(indexVector), baseCount(baseCount) {
-  }
+    IndexCountIterator(uint32_t *baseCount, uint32_t *indexVector) :
+        super_t(indexVector), baseCount(baseCount) {}
 
  private:
-   uint32_t *baseCount;
+    uint32_t *baseCount;
 
-  __host__ __device__
-  uint32_t dereference() const {
-    return baseCount[*this->base_reference()+1] - baseCount[*this->base_reference()];
+    __host__ __device__ uint32_t dereference() const {
+      return baseCount[*this->base_reference()+1]
+            - baseCount[*this->base_reference()];
   }
 };
 

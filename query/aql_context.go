@@ -384,6 +384,7 @@ type AQLQueryContext struct {
 	isNonAggregationQuery bool
 }
 
+// IsHLL return if the aggregation function is HLL
 func (ctx *OOPKContext) IsHLL() bool {
 	return ctx.AggregateType == C.AGGR_HLL
 }

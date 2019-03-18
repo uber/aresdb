@@ -664,8 +664,8 @@ TEST(GeoPredicateIteratorTest, CheckIterator) {
 }
 
 TEST(IndexCountIterator, checkCount) {
-  uint32_t counts[10] = {1,3,5,8,9,10,15,16,18,20};
-  uint32_t indexes[3] = {2,5,3};
+  uint32_t counts[10] = {1, 3, 5, 8, 9, 10, 15, 16, 18, 20};
+  uint32_t indexes[3] = {2, 5, 3};
 
   IndexCountIterator it(counts, indexes);
   EXPECT_EQ(it[0], 3);

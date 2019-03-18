@@ -29,7 +29,7 @@ func (e *NonAggrBatchExecutorImpl) project() {
 	memutils.WaitForCudaStream(e.stream, e.qc.Device)
 	e.qc.OOPK.currentBatch.cleanupBeforeAggregation()
 
-	if e.qc.OOPK.ResultSize == e.qc.Query.Limit {
+	if e.qc.OOPK.currentBatch.resultSize == e.qc.Query.Limit {
 		e.qc.OOPK.done = true
 	}
 }

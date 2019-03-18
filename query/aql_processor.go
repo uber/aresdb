@@ -788,7 +788,6 @@ func (bc *oopkBatchContext) reallocateResultBuffers(
 	return
 }
 
-
 // doProfile checks the corresponding profileName against query parameter
 // and do cuda profiling for this action if name matches.
 func (qc *AQLQueryContext) doProfile(action func(), profileName string, stream unsafe.Pointer) {

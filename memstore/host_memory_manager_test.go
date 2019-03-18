@@ -576,11 +576,9 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 
 		testMetaStore, err := metastore.NewDiskMetaStore(testBasePath)
 		// watch schema change
-		events, done, err := testMetaStore.WatchTableSchemaEvents()
+		_, done, err := testMetaStore.WatchTableSchemaEvents()
 		Ω(err).Should(BeNil())
-		var schemaEvent *metaCom.Table
 		go func() {
-			schemaEvent = <-events
 			done <- struct{}{}
 		}()
 
@@ -725,11 +723,9 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 
 		testMetaStore, err := metastore.NewDiskMetaStore(testBasePath)
 		// watch schema change
-		events, done, err := testMetaStore.WatchTableSchemaEvents()
+		_, done, err := testMetaStore.WatchTableSchemaEvents()
 		Ω(err).Should(BeNil())
-		var schemaEvent *metaCom.Table
 		go func() {
-			schemaEvent = <-events
 			done <- struct{}{}
 		}()
 
@@ -832,11 +828,9 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			},
 		}
 		// watch schema change
-		events, done, err := testMetaStore.WatchTableSchemaEvents()
+		_, done, err := testMetaStore.WatchTableSchemaEvents()
 		Ω(err).Should(BeNil())
-		var schemaEvent *metaCom.Table
 		go func() {
-			schemaEvent = <-events
 			done <- struct{}{}
 		}()
 
