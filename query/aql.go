@@ -133,6 +133,9 @@ type AQLQuery struct {
 
 	// This overrides "now" (in seconds)
 	Now int64 `json:"now,omitempty"`
+
+	// Limit is the max number of rows need to be return, and only used for non-aggregation
+	Limit int `json:"limit,omitempty"`
 }
 
 // AQLRequest contains multiple of AQLQueries.

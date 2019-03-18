@@ -289,6 +289,10 @@ type OOPKContext struct {
 	// Stores the overall query stats for live batches and archive batches.
 	LiveBatchStats    oopkQueryStats `json:"liveStats"`
 	ArchiveBatchStats oopkQueryStats `json:"archiveStats"`
+
+	// indicate query can be return in the middle, no need to process all batches,
+	// this is usually for non-aggregation query with limit condition
+	done bool
 }
 
 // timezoneTableContext stores context for timezone column queries

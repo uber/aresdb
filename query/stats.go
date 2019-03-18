@@ -44,6 +44,7 @@ const (
 	hllEvalTiming                           = "hllEval"
 	sortEvalTiming                          = "sortEval"
 	reduceEvalTiming                        = "reduceEval"
+	expandEvalTiming                        = "expandEval"
 	cleanupTiming                           = "cleanUpEval"
 	resultTransferTiming                    = "resultTransfer"
 	finalCleanupTiming                      = "finalCleanUp"

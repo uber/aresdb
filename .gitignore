@@ -21,3 +21,4 @@ Makefile
 cmake-build-debug/
 bin/
 lib/
+*.cmake

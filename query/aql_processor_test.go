@@ -911,7 +911,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		dimensionVectorHost := unsafe.Pointer(&dvHost[0])
 		numDims := queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 1}
 		var stream unsafe.Pointer
-		asyncCopyDimensionVector(dimensionVectorHost, ctx.dimensionVectorD[0].getPointer(), ctx.resultSize,
+		asyncCopyDimensionVector(dimensionVectorHost, ctx.dimensionVectorD[0].getPointer(), ctx.resultSize, 0,
 			numDims, ctx.resultSize, ctx.resultCapacity, memutils.AsyncCopyDeviceToHost, stream, 0)
 		Ω(dvHost).Should(Equal(dvHostExpected))
 	})

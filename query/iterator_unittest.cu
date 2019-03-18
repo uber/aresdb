@@ -580,7 +580,7 @@ TEST(DimensionColumnPermutateIteratorTest, CheckIterator) {
   uint8_t numDimsPerDimWidth[NUM_DIM_WIDTH] = {0, 0, 1, 1, 1};
   DimensionColumnPermutateIterator iterIn(valuesIn, indexVector, 4, 2,
                                           numDimsPerDimWidth);
-  DimensionColumnOutputIterator iterOut(valuesOut, 4, 2, numDimsPerDimWidth);
+  DimensionColumnOutputIterator iterOut(valuesOut, 4, 2, numDimsPerDimWidth, 0);
 #ifdef RUN_ON_DEVICE
   thrust::copy(thrust::device, iterIn, iterIn + 6, iterOut);
 #else
@@ -662,5 +662,25 @@ TEST(GeoPredicateIteratorTest, CheckIterator) {
   EXPECT_EQ(geoIter + 1 - geoIter, 1);
   EXPECT_EQ(geoIter + 2 - geoIter, 2);
 }
+
+TEST(IndexCountIterator, checkCount) {
+  uint32_t counts[10] = {1,3,5,8,9,10,15,16,18,20};
+  uint32_t indexes[3] = {2,5,3};
+
+  IndexCountIterator it(counts, indexes);
+  EXPECT_EQ(it[0], 3);
+  EXPECT_EQ(it[1], 5);
+  EXPECT_EQ(it[2], 1);
+}
+
+int expand(uint32_t *baseCounts,
+           uint32_t *indexVector,
+           DimensionColumnVector inputKeys,
+           DimensionColumnVector outputKeys,
+           int indexVectorLen,
+           int outputUsedSize,
+           int maxOutputSize,
+           void *cudaStream,
+           int device);
 
 }  // namespace ares

@@ -113,7 +113,7 @@ func (qc *AQLQueryContext) SerializeHLL(dataTypes []memCom.DataType,
 	// Copy dim values vector from device.
 	dimVectorH := unsafe.Pointer(&builder.buffer[headerSize])
 	asyncCopyDimensionVector(dimVectorH, oopkContext.currentBatch.dimensionVectorD[0].getPointer(),
-		oopkContext.ResultSize, oopkContext.NumDimsPerDimWidth, oopkContext.ResultSize, oopkContext.currentBatch.resultCapacity,
+		oopkContext.ResultSize, 0, oopkContext.NumDimsPerDimWidth, oopkContext.ResultSize, oopkContext.currentBatch.resultCapacity,
 		memutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
 
 	memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&builder.buffer[headerSize+paddedRawDimValuesVectorLength]),

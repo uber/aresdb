@@ -671,6 +671,18 @@ func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, val
 	}))
 }
 
+func (bc *oopkBatchContext) expand(numDims common.DimCountsPerDimWidth, lenWanted int, stream unsafe.Pointer, device int) {
+	inputKeys := makeDimensionColumnVector(
+		bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(), bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
+	outputKeys := makeDimensionColumnVector(
+		bc.dimensionVectorD[1].getPointer(), bc.hashVectorD[1].getPointer(), bc.dimIndexVectorD[1].getPointer(), numDims, bc.resultCapacity)
+
+	bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {
+		return C.Expand(inputKeys, outputKeys, (*C.uint32_t)(bc.baseCountD.getPointer()), (*C.uint32_t)(bc.indexVectorD.getPointer()),
+			C.int(lenWanted), C.int(bc.resultSize), stream, C.int(device))
+	}))
+}
+
 func (bc *oopkBatchContext) allocateStackFrame() (values, nulls devicePointer) {
 	// width bytes * bc.size (value buffer) + 1 byte * bc.size (null buffer)
 	valuesPointer := deviceAllocate((4+1)*bc.size, bc.device)

@@ -1020,7 +1020,9 @@ class DimensionColumnPermutateIterator
   }
 };
 
-// DimensionColumnOutputIterator skips certain protion of the vector and proceed
+// DimensionColumnOutputIterator output dimension of dimOutputLength rows into
+// a bigger dimension space which can hold capacity rows, the smallest unit of
+// the output is one single dimension column
 class DimensionColumnOutputIterator
     : public thrust::iterator_adaptor<
         DimensionColumnOutputIterator, thrust::counting_iterator<int>,
@@ -1035,12 +1037,14 @@ class DimensionColumnOutputIterator
       super_t;
 
   __host__ __device__ DimensionColumnOutputIterator(
-      uint8_t *values, int dimInputLength, int dimOutputLength,
-      uint8_t _numDimsPerDimWidth[NUM_DIM_WIDTH])
+      uint8_t *values, int capacity, int dimOutputLength,
+      uint8_t _numDimsPerDimWidth[NUM_DIM_WIDTH],
+      int offset)
       : super_t(thrust::make_counting_iterator<int>(0)),
         values(values),
         dimOutputLength(dimOutputLength),
-        dimInputLength(dimInputLength) {
+        capacity(capacity),
+        offset(offset) {
     for (int i = 0; i < NUM_DIM_WIDTH; i++) {
       numDimsPerDimWidth[i] = _numDimsPerDimWidth[i];
     }
@@ -1048,14 +1052,16 @@ class DimensionColumnOutputIterator
 
  private:
   uint8_t *values;
-  int dimInputLength;
+  int capacity;
   int dimOutputLength;
   uint8_t numDimsPerDimWidth[NUM_DIM_WIDTH];
+  // the start row to write output data, this is used to append operation
+  int offset;
 
   __host__ __device__ typename super_t::reference dereference() const {
     int baseIndex = *this->base_reference();
     int dimIndex = baseIndex / dimOutputLength;
-    int globalIndex = baseIndex + (dimInputLength - dimOutputLength) * dimIndex;
+    int globalIndex = baseIndex + (capacity - dimOutputLength) * dimIndex + offset;
     uint8_t numDims = 0;
     int bytes = 0;
     uint8_t dimBytes = 0;
@@ -1063,15 +1069,15 @@ class DimensionColumnOutputIterator
     for (; i < NUM_DIM_WIDTH; i++) {
       dimBytes = 1 << (NUM_DIM_WIDTH - i - 1);
       if (dimIndex < numDims + numDimsPerDimWidth[i]) {
-        bytes += (globalIndex - numDims * dimInputLength) * dimBytes;
+        bytes += (globalIndex - numDims * capacity) * dimBytes;
         break;
       } else {
-        bytes += numDimsPerDimWidth[i] * dimInputLength * dimBytes;
+        bytes += numDimsPerDimWidth[i] * capacity * dimBytes;
       }
       numDims += numDimsPerDimWidth[i];
     }
     if (i == NUM_DIM_WIDTH) {
-      bytes += (globalIndex - numDims * dimInputLength) * dimBytes;
+      bytes += (globalIndex - numDims * capacity) * dimBytes;
       return DimValueProxy(values + bytes, dimBytes);
     }
     return DimValueProxy(values + bytes, dimBytes);
@@ -1371,6 +1377,39 @@ GeoBatchIntersectIterator<GeoInputIterator> make_geo_batch_intersect_iterator(
                                                      outputPredicate,
                                                      inOrOut);
 }
+
+// Iterator to retrieve counts on index, which is usually for mode 3 archive vectorparty
+class IndexCountIterator :
+    public thrust::iterator_adaptor<IndexCountIterator,
+                                    uint32_t *, uint32_t,
+                                    thrust::use_default, thrust::use_default,
+                                    uint32_t,
+                                    thrust::use_default> {
+ public:
+  friend class thrust::iterator_core_access;
+
+  typedef thrust::iterator_adaptor<IndexCountIterator,
+                                   uint32_t *, uint32_t,
+                                   thrust::use_default, thrust::use_default,
+                                   uint32_t,
+                                   thrust::use_default> super_t;
+
+  __host__ __device__ IndexCountIterator() {}
+
+  IndexCountIterator(
+      uint32_t *baseCount,
+      uint32_t *indexVector
+  ) : super_t(indexVector), baseCount(baseCount) {
+  }
+
+ private:
+   uint32_t *baseCount;
+
+  __host__ __device__
+  uint32_t dereference() const {
+    return baseCount[*this->base_reference()+1] - baseCount[*this->base_reference()];
+  }
+};
 
 }  // namespace ares
 

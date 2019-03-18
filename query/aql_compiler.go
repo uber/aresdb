@@ -1907,6 +1907,11 @@ func (qc *AQLQueryContext) sortDimensionColumns() {
 	}
 	// plus one byte per dimension column for validity
 	qc.OOPK.DimRowBytes += numDimensions
+
+	if qc.isNonAggregationQuery {
+		// no dimension size checking for non-aggregation query
+		return
+	}
 	if qc.OOPK.DimRowBytes > C.MAX_DIMENSION_BYTES {
 		qc.Error = utils.StackError(nil, "maximum dimension bytes: %d, got: %", C.MAX_DIMENSION_BYTES, qc.OOPK.DimRowBytes)
 		return

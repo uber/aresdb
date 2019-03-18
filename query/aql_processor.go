@@ -15,7 +15,6 @@
 package query
 
 import (
-	"fmt"
 	"math"
 	"unsafe"
 
@@ -77,7 +76,7 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		Name2Stage: make(map[stageName]*oopkStageSummaryStats),
 	}
 
-	previousBatchExecutor := func(isLastBatch bool) {}
+	previousBatchExecutor := NewDummyBatchExecutor()
 
 	start := utils.Now()
 	for joinTableID, join := range qc.Query.Joins {
@@ -119,7 +118,7 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 	}
 
 	// query execution for last batch.
-	previousBatchExecutor(true)
+	previousBatchExecutor.Run(true)
 
 	// this code snippet does the followings:
 	// 1. write stats to log.
@@ -137,16 +136,18 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		if qc.OOPK.IsHLL() {
 			qc.HLLQueryResult, qc.Error = qc.PostprocessAsHLLData()
 		} else {
-			qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
-			qc.OOPK.measureVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.MeasureBytes)
 			// copy dimensions
-			asyncCopyDimensionVector(qc.OOPK.dimensionVectorH, qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), qc.OOPK.ResultSize,
+			qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
+			asyncCopyDimensionVector(qc.OOPK.dimensionVectorH, qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), qc.OOPK.ResultSize, 0,
 				qc.OOPK.NumDimsPerDimWidth, qc.OOPK.ResultSize, qc.OOPK.currentBatch.resultCapacity,
 				memutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
-			// copy measures
-			memutils.AsyncCopyDeviceToHost(
-				qc.OOPK.measureVectorH, qc.OOPK.currentBatch.measureVectorD[0].getPointer(),
-				qc.OOPK.ResultSize*qc.OOPK.MeasureBytes, qc.cudaStreams[0], qc.Device)
+			if !qc.isNonAggregationQuery {
+				// copy measures
+				qc.OOPK.measureVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.MeasureBytes)
+				memutils.AsyncCopyDeviceToHost(
+					qc.OOPK.measureVectorH, qc.OOPK.currentBatch.measureVectorD[0].getPointer(),
+					qc.OOPK.ResultSize*qc.OOPK.MeasureBytes, qc.cudaStreams[0], qc.Device)
+			}
 			memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 		}
 	}
@@ -155,7 +156,7 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 	qc.reportTiming(nil, &start, finalCleanupTiming)
 }
 
-func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int, previousBatchExecutor func(isLastBatch bool)) func(isLastBatch bool) {
+func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int, previousBatchExecutor BatchExecutor) BatchExecutor {
 	var liveRecordsProcessed, archiveRecordsProcessed, liveBatchProcessed, archiveBatchProcessed, liveBytesTransferred, archiveBytesTransferred int
 	shard, err := memStore.GetTableShard(qc.Query.Table, shardID)
 	if err != nil {
@@ -177,6 +178,9 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 	if int(cutoff) < qc.TableScanners[0].ArchiveBatchIDEnd*86400 {
 		batchIDs, numRecordsInLastBatch := shard.LiveStore.GetBatchIDs()
 		for i, batchID := range batchIDs {
+			if qc.OOPK.done {
+				break
+			}
 			batch := shard.LiveStore.GetBatchForRead(batchID)
 			if batch == nil {
 				continue
@@ -210,6 +214,9 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 	if archiveStore != nil {
 		scanner := qc.TableScanners[0]
 		for batchID := scanner.ArchiveBatchIDStart; batchID < scanner.ArchiveBatchIDEnd; batchID++ {
+			if qc.OOPK.done {
+				break
+			}
 			archiveBatch := archiveStore.RequestBatch(int32(batchID))
 			if archiveBatch.Size == 0 {
 				qc.OOPK.ArchiveBatchStats.NumBatchSkipped++
@@ -616,7 +623,7 @@ func (qc *AQLQueryContext) archiveBatchCustomFilterExecutor(isFirstOrLast bool) 
 }
 
 // helper function for copy dimension vector. Returns the total size of dimension vector.
-func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth,
+func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length, offset int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth,
 	toVectorCapacity, fromVectorCapacity int, copyFunc memutils.AsyncMemCopyFunc,
 	stream unsafe.Pointer, device int) {
 
@@ -630,6 +637,7 @@ func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length 
 	bytesToCopy := length * dimBytes
 	for _, numDim := range numDimsPerDimWidth {
 		for i := 0; i < int(numDim); i++ {
+			ptrTo = memutils.MemAccess(ptrTo, dimBytes*offset)
 			copyFunc(ptrTo, ptrFrom, bytesToCopy, stream, device)
 			ptrTo = memutils.MemAccess(ptrTo, dimBytes*toVectorCapacity)
 			ptrFrom = memutils.MemAccess(ptrFrom, dimBytes*fromVectorCapacity)
@@ -640,6 +648,7 @@ func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length 
 
 	// copy null bytes
 	for i := 0; i < numNullVectors; i++ {
+		ptrTo = memutils.MemAccess(ptrTo, offset)
 		copyFunc(ptrTo, ptrFrom, length, stream, device)
 		ptrTo = memutils.MemAccess(ptrTo, toVectorCapacity)
 		ptrFrom = memutils.MemAccess(ptrFrom, fromVectorCapacity)
@@ -739,7 +748,7 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 		bc.resultCapacity += bc.resultCapacity / 8
 
 		bc.dimensionVectorD = bc.reallocateResultBuffers(bc.dimensionVectorD, dimRowBytes, stream, func(to, from unsafe.Pointer) {
-			asyncCopyDimensionVector(to, from, bc.resultSize,
+			asyncCopyDimensionVector(to, from, bc.resultSize, 0,
 				numDimsPerDimWidth, bc.resultCapacity, oldCapacity,
 				memutils.AsyncCopyDeviceToDevice, stream, bc.device)
 		})
@@ -781,6 +790,7 @@ func (bc *oopkBatchContext) reallocateResultBuffers(
 	return
 }
 
+
 // doProfile checks the corresponding profileName against query parameter
 // and do cuda profiling for this action if name matches.
 func (qc *AQLQueryContext) doProfile(action func(), profileName string, stream unsafe.Pointer) {
@@ -807,7 +817,7 @@ func (qc *AQLQueryContext) doProfile(action func(), profileName string, stream u
 // to apply custom filters for live batch and archive batch.
 func (qc *AQLQueryContext) processBatch(
 	batch *memstore.Batch, batchID int32, transferFunc batchTransferExecutor,
-	customFilterFunc customFilterExecutor, previousBatchExecutor func(isLastBatch bool), needToUnlockBatch bool) func(isLastBatch bool) {
+	customFilterFunc customFilterExecutor, previousBatchExecutor BatchExecutor, needToUnlockBatch bool) BatchExecutor {
 	defer func() {
 		if needToUnlockBatch {
 			batch.RUnlock()
@@ -816,8 +826,8 @@ func (qc *AQLQueryContext) processBatch(
 
 	if qc.Debug {
 		// Finish executing previous batch first to avoid timeline overlapping
-		previousBatchExecutor(false)
-		previousBatchExecutor = func(isLastBatch bool) {}
+		previousBatchExecutor.Run(false)
+		previousBatchExecutor = NewDummyBatchExecutor()
 	}
 
 	// reset stats.
@@ -853,7 +863,7 @@ func (qc *AQLQueryContext) processBatch(
 				executionDone <- struct{ error }{err}
 			}
 		}()
-		previousBatchExecutor(false)
+		previousBatchExecutor.Run(false)
 		executionDone <- struct{ error }{}
 	}()
 
@@ -883,151 +893,20 @@ func (qc *AQLQueryContext) processBatch(
 		panic(res.error)
 	}
 
+	if qc.OOPK.done {
+		// if the query is already satisfied in the middle, we can skip next batch and return
+		for _, column := range deviceSlices {
+			deviceFreeAndSetNil(&column.basePtr)
+		}
+		return NewDummyBatchExecutor()
+	}
+
 	// no prefilter slicing in livebatch, startRow is always 0
 	qc.OOPK.currentBatch.prepareForFiltering(deviceSlices, firstColumn, startRow, stream)
 
 	qc.reportTimingForCurrentBatch(stream, &start, prepareForFilteringTiming)
 
-	return func(isLastBatch bool) {
-		start := utils.Now()
-		// initialize index vector.
-		initIndexVector(qc.OOPK.currentBatch.indexVectorD.getPointer(), 0, qc.OOPK.currentBatch.size, stream, qc.Device)
-
-		qc.reportTimingForCurrentBatch(stream, &start, initIndexVectorTiming)
-
-		// process main table common filter first
-		qc.doProfile(func() {
-			for _, filter := range qc.OOPK.MainTableCommonFilters {
-				qc.OOPK.currentBatch.processExpression(filter, nil,
-					qc.TableScanners, qc.OOPK.foreignTables, stream, qc.Device, qc.OOPK.currentBatch.filterAction)
-			}
-			customFilterFunc(stream)
-			qc.reportTimingForCurrentBatch(stream, &start, filterEvalTiming)
-		}, "filters", stream)
-
-		qc.doProfile(func() {
-			// join foreign tables
-			for joinTableID, foreignTable := range qc.OOPK.foreignTables {
-				if foreignTable != nil {
-					// prepare foreign table recordIDs
-					// Note:
-					// RecordID {
-					//   int32_t batchID
-					// 	 uint32_t index
-					// }
-					// takes up 8 bytes
-					qc.OOPK.currentBatch.foreignTableRecordIDsD = append(qc.OOPK.currentBatch.foreignTableRecordIDsD, deviceAllocate(8*qc.OOPK.currentBatch.size, qc.Device))
-					mainTableJoinColumnIndex := qc.TableScanners[0].ColumnsByIDs[foreignTable.remoteJoinColumn.ColumnID]
-					// perform hash lookup
-					qc.OOPK.currentBatch.prepareForeignRecordIDs(mainTableJoinColumnIndex, joinTableID, *foreignTable, stream, qc.Device)
-				}
-			}
-			qc.reportTimingForCurrentBatch(stream, &start, prepareForeignRecordIDsTiming)
-		}, "joins", stream)
-
-		qc.doProfile(func() {
-			// process filters that involves foreign table columns if any
-			for _, filter := range qc.OOPK.ForeignTableCommonFilters {
-				qc.OOPK.currentBatch.processExpression(filter, nil,
-					qc.TableScanners, qc.OOPK.foreignTables, stream, qc.Device, qc.OOPK.currentBatch.filterAction)
-			}
-			qc.reportTimingForCurrentBatch(stream, &start, foreignTableFilterEvalTiming)
-		}, "filters", stream)
-
-		if qc.OOPK.geoIntersection != nil {
-			// allocate two predicate vector for geo intersect
-			numWords := (qc.OOPK.geoIntersection.numShapes + 31) / 32
-			qc.OOPK.currentBatch.geoPredicateVectorD = deviceAllocate(qc.OOPK.currentBatch.size*4*numWords, qc.Device)
-		}
-
-		sizeBeforeGeoFilter := qc.OOPK.currentBatch.size
-		qc.doProfile(func() {
-			if qc.OOPK.geoIntersection != nil {
-				pointColumnIndex := qc.TableScanners[qc.OOPK.geoIntersection.pointTableID].
-					ColumnsByIDs[qc.OOPK.geoIntersection.pointColumnID]
-				qc.OOPK.currentBatch.geoIntersect(
-					qc.OOPK.geoIntersection,
-					pointColumnIndex,
-					qc.OOPK.foreignTables,
-					qc.OOPK.currentBatch.geoPredicateVectorD,
-					stream, qc.Device)
-			}
-			qc.reportTimingForCurrentBatch(stream, &start, geoIntersectEvalTiming)
-		}, "geo_intersect", stream)
-
-		// Prepare for dimension and measure evaluation.
-		qc.OOPK.currentBatch.prepareForDimAndMeasureEval(qc.OOPK.DimRowBytes, qc.OOPK.MeasureBytes, qc.OOPK.NumDimsPerDimWidth, qc.OOPK.IsHLL(), stream)
-
-		qc.reportTimingForCurrentBatch(stream, &start, prepareForDimAndMeasureTiming)
-
-		// dimension expression evaluation.
-		for dimIndex, dimension := range qc.OOPK.Dimensions {
-			qc.doProfile(func() {
-				dimVectorIndex := qc.OOPK.DimensionVectorIndex[dimIndex]
-				dimValueOffset, dimNullOffset := queryCom.GetDimensionStartOffsets(qc.OOPK.NumDimsPerDimWidth, dimVectorIndex, qc.OOPK.currentBatch.resultCapacity)
-				if qc.OOPK.geoIntersection != nil && qc.OOPK.geoIntersection.dimIndex == dimIndex {
-					qc.OOPK.currentBatch.writeGeoShapeDim(
-						qc.OOPK.geoIntersection, qc.OOPK.currentBatch.geoPredicateVectorD,
-						dimValueOffset, dimNullOffset, sizeBeforeGeoFilter, stream, qc.Device)
-				} else {
-					dimensionExprRootAction := qc.OOPK.currentBatch.makeWriteToDimensionVectorAction(dimValueOffset, dimNullOffset)
-					qc.OOPK.currentBatch.processExpression(dimension, nil,
-						qc.TableScanners, qc.OOPK.foreignTables, stream, qc.Device, dimensionExprRootAction)
-				}
-			}, fmt.Sprintf("dim%d", dimIndex), stream)
-		}
-
-		qc.reportTimingForCurrentBatch(stream, &start, dimEvalTiming)
-
-		// measure evaluation.
-		qc.doProfile(func() {
-			measureExprRootAction := qc.OOPK.currentBatch.makeWriteToMeasureVectorAction(qc.OOPK.AggregateType, qc.OOPK.MeasureBytes)
-			qc.OOPK.currentBatch.processExpression(qc.OOPK.Measure, nil, qc.TableScanners, qc.OOPK.foreignTables, stream, qc.Device, measureExprRootAction)
-			qc.reportTimingForCurrentBatch(stream, &start, measureEvalTiming)
-		}, "measure", stream)
-
-		// wait for stream to clean up non used buffer before final aggregation
-		memutils.WaitForCudaStream(stream, qc.Device)
-		qc.OOPK.currentBatch.cleanupBeforeAggregation()
-
-		// init dimIndexVectorD for sorting and reducing
-		if qc.OOPK.IsHLL() {
-			initIndexVector(qc.OOPK.currentBatch.dimIndexVectorD[0].getPointer(), 0, qc.OOPK.currentBatch.resultSize, stream, qc.Device)
-			initIndexVector(qc.OOPK.currentBatch.dimIndexVectorD[1].getPointer(), qc.OOPK.currentBatch.resultSize, qc.OOPK.currentBatch.resultSize+qc.OOPK.currentBatch.size, stream, qc.Device)
-		} else {
-			initIndexVector(qc.OOPK.currentBatch.dimIndexVectorD[0].getPointer(), 0, qc.OOPK.currentBatch.resultSize+qc.OOPK.currentBatch.size, stream, qc.Device)
-		}
-
-		if qc.OOPK.IsHLL() {
-			qc.doProfile(func() {
-				qc.OOPK.hllVectorD, qc.OOPK.hllDimRegIDCountD, qc.OOPK.hllVectorSize =
-					qc.OOPK.currentBatch.hll(qc.OOPK.NumDimsPerDimWidth, isLastBatch, stream, qc.Device)
-				qc.reportTimingForCurrentBatch(stream, &start, hllEvalTiming)
-			}, "hll", stream)
-		} else {
-			// sort by key.
-			qc.doProfile(func() {
-				qc.OOPK.currentBatch.sortByKey(qc.OOPK.NumDimsPerDimWidth, stream, qc.Device)
-				qc.reportTimingForCurrentBatch(stream, &start, sortEvalTiming)
-			}, "sort", stream)
-
-			// reduce by key.
-			qc.doProfile(func() {
-				qc.OOPK.currentBatch.reduceByKey(qc.OOPK.NumDimsPerDimWidth, qc.OOPK.MeasureBytes, qc.OOPK.AggregateType, stream, qc.Device)
-				qc.reportTimingForCurrentBatch(stream, &start, reduceEvalTiming)
-			}, "reduce", stream)
-		}
-
-		memutils.WaitForCudaStream(stream, qc.Device)
-		// swap result buffer before next batch
-		qc.OOPK.currentBatch.swapResultBufferForNextBatch()
-
-		qc.reportTimingForCurrentBatch(stream, &start, cleanupTiming)
-		qc.reportBatch(batchID > 0)
-
-		// Only profile one batch.
-		qc.Profiling = ""
-	}
+	return NewBatchExecutor(qc, batchID, customFilterFunc, stream)
 }
 
 // prefilterSlice does the following:

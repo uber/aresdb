@@ -20,6 +20,21 @@
 #include <stdint.h>
 #include "../cgoutils/utils.h"
 
+
+// some macro used for host or device compilation
+#ifdef RUN_ON_DEVICE
+   #define HOST_DEVICE_STRATEGY(stream) thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(stream##)
+   #define SET_DEVICE(device)) cudaSetDevice(device##)
+   #define HOST_DEVICE_VECTOR(vtype) thrust::device_vector<vtype>
+
+#else
+   #define HOST_DEVICE_STRATEGY(stream) thrust::host
+   #define SET_DEVICE(device)
+   #define HOST_DEVICE_VECTOR(vtype) thrust::host_vector<vtype>
+
+#endif
+
+
 // These C-style array limits are used to make the query structure as flat as
 // reasonably possible.
 enum {
@@ -512,6 +527,26 @@ CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
                         int valueBytes,
                         int length,
                         enum AggregateFunction aggFunc,
+                        void *cudaStream,
+                        int device);
+
+/** Expand function is used to decompress the dimensions which are compressed
+ through baseCounts, and append to existing outputKeys.
+ @inputKeys input DimensionColumnVector
+ @outputKeys output DimensionColumnVector
+ @baseCounts count vector for first column
+ @indexVector index vector of the dimension keys
+ @indexVectorLen length of index vector will be used for the output, it should
+  be less or equal to length of keys in inputKeys
+ @outputOccupiedLen number of rows already in the outputKeys, as this will
+  be append operation
+*/
+CGoCallResHandle Expand(DimensionColumnVector inputKeys,
+                        DimensionColumnVector outputKeys,
+                        uint32_t *baseCounts,
+                        uint32_t *indexVector,
+                        int indexVectorLen,
+                        int outputOccupiedLen,
                         void *cudaStream,
                         int device);
 

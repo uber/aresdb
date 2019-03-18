@@ -165,8 +165,10 @@ func (qc *AQLQueryContext) ReleaseHostResultsBuffers() {
 	ctx := &qc.OOPK
 	memutils.HostFree(ctx.dimensionVectorH)
 	ctx.dimensionVectorH = nil
-	memutils.HostFree(ctx.measureVectorH)
-	ctx.measureVectorH = nil
+	if ctx.measureVectorH != nil {
+		memutils.HostFree(ctx.measureVectorH)
+		ctx.measureVectorH = nil
+	}
 
 	// hllVectorD and hllDimRegIDCountD used for hll query only
 	deviceFreeAndSetNil(&ctx.hllVectorD)
