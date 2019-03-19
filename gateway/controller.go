@@ -50,7 +50,8 @@ func (c *ControllerHTTPClient) buildRequest(method, path string) (req *http.Requ
 	url := fmt.Sprintf("http://%s/%s", c.address, path)
 	req, err = http.NewRequest(method, url, nil)
 	if err != nil {
-		return nil, err
+		req = nil
+		return
 	}
 
 	req.Header = c.headers
@@ -58,22 +59,24 @@ func (c *ControllerHTTPClient) buildRequest(method, path string) (req *http.Requ
 	return
 }
 
-func (c *ControllerHTTPClient) getResponse(request *http.Request) ([]byte, error) {
+func (c *ControllerHTTPClient) getResponse(request *http.Request) (respBytes []byte, err error) {
 	resp, err := c.c.Do(request)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("aresDB controller return status: %d", resp.StatusCode)
+		err = fmt.Errorf("aresDB controller return status: %d", resp.StatusCode)
+		return
 	}
 
-	respBytes, err := ioutil.ReadAll(resp.Body)
+	respBytes, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		respBytes = nil
+		return
 	}
 
-	return respBytes, nil
+	return
 }
 
 func (c *ControllerHTTPClient) getJSONResponse(request *http.Request, output interface{}) error {
@@ -93,9 +96,12 @@ func (c *ControllerHTTPClient) GetSchemaHash(namespace string) (hash string, err
 	}
 	bytes, err := c.getResponse(request)
 	if err != nil {
-		return "", utils.StackError(err, "controller client error fetching hash")
+		err = utils.StackError(err, "controller client error fetching hash")
+		return
 	}
-	return string(bytes), nil
+
+	hash = string(bytes)
+	return
 }
 
 func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []common.Table, err error) {
@@ -105,7 +111,8 @@ func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []common.T
 	}
 	err = c.getJSONResponse(request, &tables)
 	if err != nil {
-		return nil, utils.StackError(err, "controller client error fetching schema")
+		err = utils.StackError(err, "controller client error fetching schema")
+		return
 	}
 
 	return
@@ -115,34 +122,39 @@ func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []common.T
 func (c *ControllerHTTPClient) GetAssignmentHash(jobNamespace, instance string) (hash string, err error) {
 	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("assignment/%s/hash/%s", jobNamespace, instance))
 	if err != nil {
-		return "", err
+		return
 	}
 
 	bytes, err := c.getResponse(request)
 	if err != nil {
-		return "", utils.StackError(err, "controller client error fetching assignment hash")
+		err = utils.StackError(err, "controller client error fetching assignment hash")
+		return
 	}
 
-	return string(bytes), nil
+	hash = string(bytes)
+	return
 }
 
 // GetAssignment gets the job assignment of the ares-subscriber
 func (c *ControllerHTTPClient) GetAssignment(jobNamespace, instance string) (assignment *rules.Assignment, err error) {
 	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("assignment/%s/assignments/%s", jobNamespace, instance))
 	if err != nil {
-		return nil, utils.StackError(err, "Failed to buildRequest")
+		err = utils.StackError(err, "Failed to buildRequest")
+		return
 	}
 
 	request.Header.Add("content-type", "application/json")
 	assignment = &rules.Assignment{}
 	err = c.getJSONResponse(request, assignment)
 	if err != nil {
-		return nil, utils.StackError(err, "Failed to GetAssignment")
+		err = utils.StackError(err, "Failed to GetAssignment")
+		return
 	}
 
 	for _, jobConfig := range assignment.Jobs {
 		if jobConfig.PopulateAresTableConfig() != nil {
-			return nil, utils.StackError(err, "Failed to PopulateAresTableConfig")
+			err = utils.StackError(err, "Failed to PopulateAresTableConfig")
+			return
 		}
 	}
 	return
