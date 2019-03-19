@@ -146,12 +146,6 @@ execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
   -e '.*/mocks.*' | tr \"\n\" \" \""
         OUTPUT_VARIABLE ALL_GO_SRC)
 
-execute_process(COMMAND bash -c "find subscriber  -name '*.go' | grep -v \
-  -e '.*/\\..*' \
-  -e '.*/_.*' \
-  -e '.*/mocks.*' | tr \"\n\" \" \""
-        OUTPUT_VARIABLE ALL_SUBSCRIBER_SRC)
-
 execute_process(
         COMMAND bash -c "git diff origin/master HEAD --name-only --diff-filter=AMR | grep -e \".*\\.go\" | tr \"\n\" \" \""
         OUTPUT_VARIABLE CHANGED_GO_SRC
@@ -190,9 +184,7 @@ add_custom_command(
         VERBATIM
 )
 
-if( NOT TARGET lib )
-add_custom_target(lib DEPENDS algorithm mem rdkafka::rdkafka)
-endif()
+add_custom_target(lib DEPENDS algorithm mem)
 
 string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
 add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
@@ -200,9 +192,8 @@ add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
         VERBATIM
         )
 
-string(REPLACE " " ";" ALL_SUBSCRIBER_SRC_LIST ${ALL_SUBSCRIBER_SRC})
-add_custom_target(ares-subscriber DEPENDS golang-dep lib ${ALL_SUBSCRIBER_SRC_LIST}
-        COMMAND go build -tags static -o bin/ares-subscriber
+add_custom_target(ares-subscriber DEPENDS golang-dep rdkafka::rdkafka ${ALL_GO_SRC_LIST}
+        COMMAND go build -tags static -o bin/ares-subscriber ./subscriber
         VERBATIM
         )
 
@@ -210,7 +201,7 @@ add_custom_target(run_server DEPENDS aresd
         COMMAND bash -c 'DYLD_LIBRARY_PATH=$$LIBRARY_PATH ./bin/aresd'
         )
 
-add_custom_target(test-golang DEPENDS aresd
+add_custom_target(test-golang DEPENDS aresd rdkafka::rdkafka
         COMMAND bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
         )
 

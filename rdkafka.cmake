@@ -46,6 +46,5 @@ set_target_properties( rdkafka::rdkafka PROPERTIES
                        IMPORTED_LOCATION             ${CMAKE_CURRENT_SOURCE_DIR}/lib/librdkafka.a
                        INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/librdkafka/src
                        INTERFACE_LINK_LIBRARIES      "Threads::Threads;${ZLIB_LIBRARIES}") #ZLIB::ZLIB
-
 endif()
 
