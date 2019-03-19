@@ -209,7 +209,7 @@ add_custom_target(test-golang DEPENDS aresd rdkafka::rdkafka
 # misc
 ###############################
 
-add_custom_target(travis
+add_custom_target(travis DEPENDS rdkafka::rdkafka
         COMMAND bash -c 'ARES_ENV=test .travis/run_unittest.sh'
         )
 
