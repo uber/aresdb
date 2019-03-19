@@ -81,7 +81,7 @@ func (_m *ControllerClient) GetAssignment(jobNamespace, instance string) (*rules
 		Logger: zap.NewNop(),
 		Scope:  tally.NoopScope,
 	}
-	serviceConfig.ActiveJobs = []string{"dispatch_driver_rejected"}
+	serviceConfig.ActiveJobs = []string{"job1"}
 	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
 		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
 	}
@@ -90,7 +90,7 @@ func (_m *ControllerClient) GetAssignment(jobNamespace, instance string) (*rules
 	jobConfigs := make(rules.JobConfigs)
 	rules.AddLocalJobConfig(serviceConfig, jobConfigs)
 	jobs := []*rules.JobConfig{
-		jobConfigs["dispatch_driver_rejected"]["dev01"],
+		jobConfigs["job1"]["dev01"],
 	}
 
 	aresClusters := map[string]client.ConnectorConfig{

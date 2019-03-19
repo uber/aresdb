@@ -33,7 +33,7 @@ var _ = Describe("controller", func() {
 		Scope:            tally.NoopScope,
 		ControllerConfig: &config.ControllerConfig{},
 	}
-	serviceConfig.ActiveJobs = []string{"dispatch_driver_rejected"}
+	serviceConfig.ActiveJobs = []string{"job1"}
 	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
 		"dev-ares01": client.ConnectorConfig{Address: "localhost:8888"},
 	}
@@ -183,10 +183,10 @@ var _ = Describe("controller", func() {
    "subscriber":"0",
    "jobs":[  
       {  
-         "job":"dispatch_driver_rejected",
+         "job":"job1",
          "version":1,
          "aresTableConfig":{  
-            "name":"dispatch_driver_rejected",
+            "name":"job1",
             "cluster":"",
             "schema":{  
                "name":"",
@@ -202,7 +202,7 @@ var _ = Describe("controller", func() {
          "streamConfig":{  
             "topic":"hp-styx-rta-client_info",
             "kafkaClusterName":"kloak-sjc1-lossless",
-            "kafkaClusterFile":"/etc/uber/kafka8/clusters.yaml",
+            "kafkaClusterFile":"clusters.yaml",
             "topicType":"heatpipe",
             "lastestOffset":true,
             "errorThreshold":10,
@@ -250,13 +250,13 @@ var _ = Describe("controller", func() {
 		}
 		controller := NewController(params)
 		Ω(controller).ShouldNot(BeNil())
-		Ω(controller.Drivers["dispatch_driver_rejected"]).ShouldNot(BeNil())
-		Ω(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"]).ShouldNot(BeNil())
-		controller.deleteDriver(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"],
-			"dev-ares01", controller.Drivers["dispatch_driver_rejected"])
-		Ω(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"]).Should(BeNil())
-		ok := controller.addDriver(params.JobConfigs["dispatch_driver_rejected"]["dev-ares01"], "dev-ares01",
-			controller.Drivers["dispatch_driver_rejected"], true)
+		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
+		Ω(controller.Drivers["job1"]["dev-ares01"]).ShouldNot(BeNil())
+		controller.deleteDriver(controller.Drivers["job1"]["dev-ares01"],
+			"dev-ares01", controller.Drivers["job1"])
+		Ω(controller.Drivers["job1"]["dev-ares01"]).Should(BeNil())
+		ok := controller.addDriver(params.JobConfigs["job1"]["dev-ares01"], "dev-ares01",
+			controller.Drivers["job1"], true)
 		Ω(ok).Should(Equal(true))
 
 		controller.jobNS = "dev01"
@@ -265,8 +265,8 @@ var _ = Describe("controller", func() {
 		Ω(newHash).Should(Equal("12345"))
 
 		controller.SyncUpJobConfigs()
-		Ω(controller.Drivers["dispatch_driver_rejected"]).ShouldNot(BeNil())
-		Ω(controller.Drivers["dispatch_driver_rejected"]["dev-ares01"]).Should(BeNil())
+		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
+		Ω(controller.Drivers["job1"]["dev-ares01"]).Should(BeNil())
 
 	})
 })

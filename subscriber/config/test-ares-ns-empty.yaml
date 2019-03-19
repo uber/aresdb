@@ -7,10 +7,10 @@ ares:
   clusters:
     clusters:
       dev-ares01:
-        address: "geforcedbdev01-sjc1:9374"
+        address: "ares01:9000"
         timeout: 20
       dev-ares02:
-        address: "geforcedbdev02-sjc1:9374"
+        address: "ares02:9000"
         timeout: 20
 
 
@@ -19,9 +19,9 @@ jobs:
   # A list of namespaces. Each namespace includes a list of jobs.
   namespaces:
     job-test:
-      - driver_signups
+      - test1
     trips:
-      - dispatch_driver_rejected
+      - job1
 
 controller:
   # enable sync up with aresDB controller

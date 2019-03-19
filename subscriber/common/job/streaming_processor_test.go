@@ -37,7 +37,7 @@ var _ = Describe("streaming_processor", func() {
 		Logger: zap.NewNop(),
 		Scope:  tally.NoopScope,
 	}
-	serviceConfig.ActiveJobs = []string{"dispatch_driver_rejected"}
+	serviceConfig.ActiveJobs = []string{"job1"}
 	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
 		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
 	}
@@ -49,12 +49,12 @@ var _ = Describe("streaming_processor", func() {
 	if err != nil {
 		panic("Failed to AddLocalJobConfig")
 	}
-	if jobConfigs["dispatch_driver_rejected"]["dev01"] == nil {
-		panic("Failed to get (jobConfigs[\"dispatch_driver_rejected\"][\"dev01\"]")
+	if jobConfigs["job1"]["dev01"] == nil {
+		panic("Failed to get (jobConfigs[\"job1\"][\"dev01\"]")
 	} else {
-		jobConfigs["dispatch_driver_rejected"]["dev01"].AresTableConfig.Cluster = "dev01"
+		jobConfigs["job1"]["dev01"].AresTableConfig.Cluster = "dev01"
 	}
-	jobConfig := jobConfigs["dispatch_driver_rejected"]["dev01"]
+	jobConfig := jobConfigs["job1"]["dev01"]
 
 	mockConnector := mocks.Connector{}
 	table := "test"
@@ -82,7 +82,7 @@ var _ = Describe("streaming_processor", func() {
 		Scope:         tally.NoopScope,
 		ClusterName:   "dev01",
 		Connector:     &mockConnector,
-		JobName:       "dispatch_driver_rejected",
+		JobName:       "job1",
 	}
 
 	topic := "topic"
@@ -97,7 +97,7 @@ var _ = Describe("streaming_processor", func() {
 			Key:   []byte("key"),
 		},
 		nil,
-		"kloak-sjc1-agg1",
+		"kafka-cluster1",
 	}
 
 	errMsg := &consumer.KafkaMessage{
@@ -111,7 +111,7 @@ var _ = Describe("streaming_processor", func() {
 			Key:   []byte("key"),
 		},
 		nil,
-		"kloak-sjc1-agg1",
+		"kafka-cluster1",
 	}
 
 	var address string

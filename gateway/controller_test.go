@@ -74,7 +74,7 @@ var _ = ginkgo.Describe("Controller", func() {
          "streamConfig":{  
             "topic":"hp-styx-rta-client_info",
             "kafkaClusterName":"kloak-sjc1-lossless",
-            "kafkaClusterFile":"/etc/uber/kafka8/clusters.yaml",
+            "kafkaClusterFile":"clusters.yaml",
             "topicType":"heatpipe",
             "lastestOffset":true,
             "errorThreshold":10,

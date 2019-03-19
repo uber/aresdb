@@ -1,13 +1,13 @@
 {
-  "job": "dispatch_driver_rejected",
+  "job": "job1",
   "streamConfig": {
     "kafkaBroker": "localhost:17791",
     "ChannelBufferSize": 256,
     "maxPollIntervalMs": 300000,
     "sessionTimeoutNs": 10000,
-    "kafkaClusterName": "kloak-sjc1-agg1",
-    "kafkaClusterFile": "/etc/uber/kafka8/clusters.yaml",
-    "topic": "hp_demand_job-offer-expired",
+    "kafkaClusterName": "kafka-cluster1",
+    "kafkaClusterFile": "clusters.yaml",
+    "topic": "job1-topic",
     "topicType": "json",
     "latestOffset": true,
     "errorThreshold": 10,
@@ -31,7 +31,7 @@
   "aresTableConfig": {
     "cluster": "",
     "schema": {
-      "name": "trips",
+      "name": "job1",
       "columns": [
         {
           "name": "request_at",
@@ -46,14 +46,14 @@
           "config": {}
         },
         {
-          "name": "city_id",
+          "name": "f1",
           "type": "Uint16",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "marketplace",
+          "name": "f2",
           "type": "SmallEnum",
           "caseInsensitive": true,
           "disableAutoExpand": true,
@@ -62,7 +62,7 @@
           }
         },
         {
-          "name": "status",
+          "name": "f3",
           "type": "SmallEnum",
           "defaultValue": "ACTIVE",
           "caseInsensitive": true,
@@ -72,28 +72,28 @@
           }
         },
         {
-          "name": "dispatch_accepted",
+          "name": "f4",
           "type": "Bool",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "dispatch_canceled",
+          "name": "f5",
           "type": "Bool",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "dispatch_rejected",
+          "name": "f6",
           "type": "Bool",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "flow_type",
+          "name": "f7",
           "type": "SmallEnum",
           "defaultValue": "NULL_SENTINEL",
           "caseInsensitive": true,
@@ -103,108 +103,108 @@
           }
         },
         {
-          "name": "surge_multiplier",
+          "name": "f8",
           "type": "Float32",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "request_vehicle_view_id",
+          "name": "f9",
           "type": "Uint32",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "usd_fx_rate",
+          "name": "f10",
           "type": "Float32",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "fare_total",
+          "name": "f11",
           "type": "Float32",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "predicted_eta",
+          "name": "f12",
           "type": "Uint32",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "actual_eta",
+          "name": "f13",
           "type": "Uint32",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "client_uuid",
+          "name": "f14",
           "type": "UUID",
           "deleted": true,
           "config": {}
         },
         {
-          "name": "driver_uuid",
+          "name": "f15",
           "type": "UUID",
           "deleted": true,
           "config": {}
         },
         {
-          "name": "client_uuid_hll",
+          "name": "f16",
           "type": "Uint32",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "driver_uuid_hll",
+          "name": "f17",
           "type": "Uint32",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "is_first_client_trip",
+          "name": "f18",
           "type": "Bool",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "is_first_driver_trip",
+          "name": "f19",
           "type": "Bool",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "is_first_vehicle_trip",
+          "name": "f19",
           "type": "Bool",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "is_first_partner_trip",
+          "name": "f20",
           "type": "Bool",
           "config": {
             "preloadingDays": 52
           }
         },
         {
-          "name": "request_point",
+          "name": "f21",
           "type": "GeoPoint",
           "config": {}
         },
         {
-          "name": "num_rejections",
+          "name": "f22",
           "type": "Uint8",
           "defaultValue": "0",
           "config": {

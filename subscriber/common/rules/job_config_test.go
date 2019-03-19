@@ -24,7 +24,7 @@ var _ = Describe("job_config", func() {
 		Logger: zap.NewNop(),
 		Scope:  tally.NoopScope,
 	}
-	serviceConfig.ActiveJobs = []string{"dispatch_driver_rejected"}
+	serviceConfig.ActiveJobs = []string{"job1"}
 	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
 		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
 	}
@@ -39,12 +39,12 @@ var _ = Describe("job_config", func() {
 		rst, err := NewJobConfigs(p)
 		Ω(rst).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
-		Ω(rst.JobConfigs["dispatch_driver_rejected"]).ShouldNot(BeNil())
-		Ω(rst.JobConfigs["dispatch_driver_rejected"]["dev01"]).ShouldNot(BeNil())
+		Ω(rst.JobConfigs["job1"]).ShouldNot(BeNil())
+		Ω(rst.JobConfigs["job1"]["dev01"]).ShouldNot(BeNil())
 
-		dst := rst.JobConfigs["dispatch_driver_rejected"]["dev01"].GetDestinations()
-		transformation := rst.JobConfigs["dispatch_driver_rejected"]["dev01"].GetTranformations()
-		primaryKey := rst.JobConfigs["dispatch_driver_rejected"]["dev01"].GetPrimaryKeys()
+		dst := rst.JobConfigs["job1"]["dev01"].GetDestinations()
+		transformation := rst.JobConfigs["job1"]["dev01"].GetTranformations()
+		primaryKey := rst.JobConfigs["job1"]["dev01"].GetPrimaryKeys()
 		Ω(dst).ShouldNot(BeNil())
 		Ω(transformation).ShouldNot(BeNil())
 		Ω(primaryKey).ShouldNot(BeNil())

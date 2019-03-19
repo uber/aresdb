@@ -3,7 +3,7 @@
   "version": 0,
   "streamConfig": {
     "kafkaClusterName": "kloak-sjc1f",
-    "kafkaClusterFile": "/etc/uber/kafka8/clusters.yaml",
+    "kafkaClusterFile": "clusters.yaml",
     "topic": "hp-styx-rta-client_info-staging",
     "topicType": "heatpipe",
     "latestOffset": true,

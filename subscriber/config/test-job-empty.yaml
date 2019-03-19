@@ -11,10 +11,10 @@ ares:
   clusters:
     clusters:
       dev-ares01:
-        address: "geforcedbdev01-sjc1:9374"
+        address: "ares01:9000"
         timeout: 20
       dev-ares02:
-        address: "geforcedbdev02-sjc1:9374"
+        address: "ares02:9000"
         timeout: 20
 
 # A list of jobs which are defined in config/jobs

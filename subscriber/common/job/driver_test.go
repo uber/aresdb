@@ -36,7 +36,7 @@ var _ = Describe("driver", func() {
 		Logger: zap.NewNop(),
 		Scope:  tally.NoopScope,
 	}
-	serviceConfig.ActiveJobs = []string{"dispatch_driver_rejected"}
+	serviceConfig.ActiveJobs = []string{"job1"}
 	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
 		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
 	}
@@ -48,12 +48,12 @@ var _ = Describe("driver", func() {
 	if err != nil {
 		panic("Failed to AddLocalJobConfig")
 	}
-	if jobConfigs["dispatch_driver_rejected"]["dev01"] == nil {
-		panic("Failed to get (jobConfigs[\"dispatch_driver_rejected\"][\"dev01\"]")
+	if jobConfigs["job1"]["dev01"] == nil {
+		panic("Failed to get (jobConfigs[\"job1\"][\"dev01\"]")
 	} else {
-		jobConfigs["dispatch_driver_rejected"]["dev01"].AresTableConfig.Cluster = "dev01"
+		jobConfigs["job1"]["dev01"].AresTableConfig.Cluster = "dev01"
 	}
-	jobConfig := jobConfigs["dispatch_driver_rejected"]["dev01"]
+	jobConfig := jobConfigs["job1"]["dev01"]
 
 	var address string
 	var testServer *httptest.Server

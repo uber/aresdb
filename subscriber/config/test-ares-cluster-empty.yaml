@@ -12,9 +12,9 @@ jobs:
   # A list of namespaces. Each namespace includes a list of jobs.
   namespaces:
     job-test:
-      - driver_signups
+      - test1
     trips:
-      - dispatch_driver_rejected
+      - job1
 
 controller:
   # enable sync up with aresDB controller

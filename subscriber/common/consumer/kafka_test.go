@@ -24,7 +24,7 @@ var _ = Describe("KafkaConsumer", func() {
 		Logger: zap.NewNop(),
 		Scope:  tally.NoopScope,
 	}
-	serviceConfig.ActiveJobs = []string{"dispatch_driver_rejected"}
+	serviceConfig.ActiveJobs = []string{"job1"}
 	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
 		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
 	}
@@ -36,24 +36,24 @@ var _ = Describe("KafkaConsumer", func() {
 	if err != nil {
 		panic("Failed to AddLocalJobConfig")
 	}
-	if jobConfigs["dispatch_driver_rejected"]["dev01"] == nil {
-		panic("Failed to get (jobConfigs[\"dispatch_driver_rejected\"][\"dev01\"]")
+	if jobConfigs["job1"]["dev01"] == nil {
+		panic("Failed to get (jobConfigs[\"job1\"][\"dev01\"]")
 	} else {
-		jobConfigs["dispatch_driver_rejected"]["dev01"].AresTableConfig.Cluster = "dev01"
+		jobConfigs["job1"]["dev01"].AresTableConfig.Cluster = "dev01"
 	}
 
 	It("KafkaConsumer functions", func() {
-		kc, err := NewKafkaConsumer(jobConfigs["dispatch_driver_rejected"]["dev01"], serviceConfig)
+		kc, err := NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
 		Ω(err).Should(BeNil())
 		Ω(kc).ShouldNot(BeNil())
 
 		groupId := kc.Name()
-		Ω(groupId).Should(Equal("ares-subscriber_test_dispatch_driver_rejected_dev01_streaming"))
+		Ω(groupId).Should(Equal("ares-subscriber_test_job1_dev01_streaming"))
 
 		topics := kc.Topics()
 		len := len(topics)
 		Ω(len).Should(Equal(1))
-		Ω(topics[0]).Should(Equal("hp_demand_job-offer-expired"))
+		Ω(topics[0]).Should(Equal("job1-topic"))
 
 		errCh := kc.Errors()
 		Ω(errCh).ShouldNot(BeNil())
@@ -110,7 +110,7 @@ var _ = Describe("KafkaConsumer", func() {
 				Key:   []byte("key"),
 			},
 			nil,
-			"kloak-sjc1-agg1",
+			"kafka-cluster1",
 		}
 
 		key := message.Key()
@@ -120,7 +120,7 @@ var _ = Describe("KafkaConsumer", func() {
 		Ω(string(value)).Should(Equal("value"))
 
 		cluster := message.Cluster()
-		Ω(cluster).Should(Equal("kloak-sjc1-agg1"))
+		Ω(cluster).Should(Equal("kafka-cluster1"))
 
 		topic = message.Topic()
 		Ω(topic).Should(Equal("topic"))
@@ -132,7 +132,7 @@ var _ = Describe("KafkaConsumer", func() {
 		Ω(partition).Should(Equal(int32(0)))
 
 		message.Ack()
-		message.Consumer, _ = NewKafkaConsumer(jobConfigs["dispatch_driver_rejected"]["dev01"], serviceConfig)
+		message.Consumer, _ = NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
 
 		message.Ack()
 

@@ -24,7 +24,7 @@ var _ = Describe("message_parser", func() {
 		Logger: zap.NewNop(),
 		Scope:  tally.NoopScope,
 	}
-	serviceConfig.ActiveJobs = []string{"dispatch_driver_rejected"}
+	serviceConfig.ActiveJobs = []string{"job1"}
 	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
 		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
 	}
@@ -37,18 +37,18 @@ var _ = Describe("message_parser", func() {
 
 	mp := &Parser{
 		ServiceConfig:   serviceConfig,
-		JobName:         jobConfigs["dispatch_driver_rejected"]["dev01"].Name,
-		Cluster:         jobConfigs["dispatch_driver_rejected"]["dev01"].AresTableConfig.Cluster,
-		Transformations: jobConfigs["dispatch_driver_rejected"]["dev01"].GetTranformations(),
+		JobName:         jobConfigs["job1"]["dev01"].Name,
+		Cluster:         jobConfigs["job1"]["dev01"].AresTableConfig.Cluster,
+		Transformations: jobConfigs["job1"]["dev01"].GetTranformations(),
 	}
 
 	It("NewParser", func() {
-		parser := NewParser(jobConfigs["dispatch_driver_rejected"]["dev01"], serviceConfig)
+		parser := NewParser(jobConfigs["job1"]["dev01"], serviceConfig)
 		Ω(parser).ShouldNot(BeNil())
 	})
 
 	It("populateDestination", func() {
-		mp.populateDestination(jobConfigs["dispatch_driver_rejected"]["dev01"])
+		mp.populateDestination(jobConfigs["job1"]["dev01"])
 		Ω(mp.Destination).ShouldNot(BeNil())
 	})
 
