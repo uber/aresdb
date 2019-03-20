@@ -28,6 +28,8 @@ import (
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 
+	"time"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
@@ -127,7 +129,8 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 		if cfg.Cluster.InstanceName != "" {
 			controllerClientCfg.Headers.Add(gateway.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
 		}
-		controllerClient := gateway.NewControllerHTTPClient(controllerClientCfg.Host, controllerClientCfg.Port, controllerClientCfg.Headers)
+
+		controllerClient := gateway.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
 		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.ClusterName, "")
 		// immediate initial fetch
 		schemaFetchJob.FetchSchema()

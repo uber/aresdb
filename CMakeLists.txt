@@ -85,6 +85,11 @@ add_library(algorithm SHARED
         query/utils.hpp)
 
 ################################
+# rdkafka 
+################################
+include(rdkafka.cmake)
+
+################################
 # GTest
 ################################
 set(GTEST_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest)
@@ -135,6 +140,7 @@ add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
 execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
   -e vendor -e go-build -e CMakeFiles \
   -e build \
+  -e subscriber \
   -e '.*/\\..*' \
   -e '.*/_.*' \
   -e '.*/mocks.*' | tr \"\n\" \" \""
@@ -179,9 +185,15 @@ add_custom_command(
 )
 
 add_custom_target(lib DEPENDS algorithm mem)
+
 string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
 add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
         COMMAND go build -o bin/aresd
+        VERBATIM
+        )
+
+add_custom_target(ares-subscriber DEPENDS golang-dep rdkafka::rdkafka ${ALL_GO_SRC_LIST}
+        COMMAND go build -tags static -o bin/ares-subscriber ./subscriber
         VERBATIM
         )
 
@@ -189,7 +201,7 @@ add_custom_target(run_server DEPENDS aresd
         COMMAND bash -c 'DYLD_LIBRARY_PATH=$$LIBRARY_PATH ./bin/aresd'
         )
 
-add_custom_target(test-golang DEPENDS aresd
+add_custom_target(test-golang DEPENDS aresd rdkafka::rdkafka
         COMMAND bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
         )
 
@@ -197,7 +209,7 @@ add_custom_target(test-golang DEPENDS aresd
 # misc
 ###############################
 
-add_custom_target(travis
+add_custom_target(travis DEPENDS rdkafka::rdkafka
         COMMAND bash -c 'ARES_ENV=test .travis/run_unittest.sh'
         )
 

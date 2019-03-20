@@ -1,0 +1,13 @@
+{
+  "fields": [
+    {
+      "name": "project",
+      "type": "string"
+    }
+  ],
+  "name": "test_topic",
+  "namespace": "api",
+  "owner": "pbathala@uber.com",
+  "schema_id": 1,
+  "type": "record"
+}

@@ -47,9 +47,9 @@ type HTTPConfig struct {
 
 // ControllerConfig is the config for ares-controller client
 type ControllerConfig struct {
-	Host    string      `yaml:"host"`
-	Port    int         `yaml:"port"`
-	Headers http.Header `yaml:"headers"`
+	Address    string      `yaml:"address"`
+	Headers    http.Header `yaml:"headers"`
+	TimeoutSec int         `yaml:"timeout"`
 }
 
 // GatewayConfig is the config for all gateway
