@@ -497,8 +497,6 @@ CGoCallResHandle BinaryFilter(InputVector lhs,
 // values here since we only need to move the whole 4 bytes around
 // without any change.
 CGoCallResHandle Sort(DimensionColumnVector keys,
-                      uint8_t *values,
-                      int valueWidth,
                       int length,
                       void *cudaStream,
                       int device);

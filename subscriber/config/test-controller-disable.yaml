@@ -1,0 +1,37 @@
+graphite:
+  address: "localhost:4756"
+
+ares:
+  # A list of namespaces. Each namespace includes a list of ares clusters
+  namespaces:
+    dev01:
+      - dev-ares01
+
+  # A list of ares clusters. Each cluster includes master node address and timeout in seconds.
+  clusters:
+    clusters:
+      dev-ares01:
+        address: "ares01:9000"
+        timeout: 20
+      dev-ares02:
+        address: "ares02:9000"
+        timeout: 20
+
+# A list of jobs which are defined in config/jobs
+jobs:
+  # A list of namespaces. Each namespace includes a list of jobs.
+  namespaces:
+    job-test:
+      - test1
+    trips:
+      - job1
+
+controller:
+  # enable sync up with aresDB controller
+  enable: true
+  address: "localhost:5436"
+  refreshInterval: 10
+  serviceName: "ares-controller-staging"
+
+zookeeper:
+  server: "localhost:2181"

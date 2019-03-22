@@ -23,8 +23,6 @@
 #include "query/time_series_aggregate.h"
 
 CGoCallResHandle Sort(DimensionColumnVector keys,
-                      uint8_t *values,
-                      int valueBytes,
                       int length,
                       void *cudaStream,
                       int device) {
@@ -33,8 +31,8 @@ CGoCallResHandle Sort(DimensionColumnVector keys,
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
 #endif
-    ares::sort(keys, values, valueBytes, length,
-        reinterpret_cast<cudaStream_t>(cudaStream));
+    ares::sort(keys, length, 
+               reinterpret_cast<cudaStream_t>(cudaStream));
     CheckCUDAError("Sort");
   }
   catch (std::exception &e) {
@@ -80,44 +78,23 @@ CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
 }
 
 namespace ares {
-
-template<typename ValueType>
-void sortInternal(DimensionColumnVector vector,
-                  ValueType values,
-                  int length,
-                  cudaStream_t cudaStream) {
-  DimensionHashIterator hashIter(vector.DimValues,
-                                 vector.IndexVector,
-                                 vector.NumDimsPerDimWidth,
-                                 vector.VectorCapacity);
+  
+// sort based on DimensionColumnVector
+void sort(DimensionColumnVector keys,
+          int length,
+          cudaStream_t cudaStream) {
+  DimensionHashIterator hashIter(keys.DimValues,
+                                 keys.IndexVector,
+                                 keys.NumDimsPerDimWidth,
+                                 keys.VectorCapacity);
   thrust::copy(GET_EXECUTION_POLICY(cudaStream),
                hashIter,
                hashIter + length,
-               vector.HashValues);
+               keys.HashValues);
   thrust::stable_sort_by_key(GET_EXECUTION_POLICY(cudaStream),
-                             vector.HashValues,
-                             vector.HashValues + length,
-                             vector.IndexVector);
-}
-
-// sort based on DimensionColumnVector
-void sort(DimensionColumnVector keys,
-          uint8_t *values,
-          int valueBytes,
-          int length,
-          cudaStream_t cudaStream) {
-  switch (valueBytes) {
-#define  SORT_INTERNAL(ValueType) \
-      sortInternal<ValueType>(keys, reinterpret_cast<ValueType>(values), \
-                               length, cudaStream); \
-      break;
-
-    case 4:
-      SORT_INTERNAL(uint32_t *)
-    case 8:
-      SORT_INTERNAL(uint64_t *)
-    default:throw std::invalid_argument("ValueBytes is invalid");
-  }
+                             keys.HashValues,
+                             keys.HashValues + length,
+                             keys.IndexVector);
 }
 
 template<typename Value, typename AggFunc>

@@ -1007,7 +1007,7 @@ func (qc *AQLQueryContext) processBatch(
 		} else {
 			// sort by key.
 			qc.doProfile(func() {
-				qc.OOPK.currentBatch.sortByKey(qc.OOPK.NumDimsPerDimWidth, qc.OOPK.MeasureBytes, stream, qc.Device)
+				qc.OOPK.currentBatch.sortByKey(qc.OOPK.NumDimsPerDimWidth, stream, qc.Device)
 				qc.reportTimingForCurrentBatch(stream, &start, sortEvalTiming)
 			}, "sort", stream)
 

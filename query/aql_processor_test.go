@@ -818,7 +818,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			resultCapacity:   3,
 		}
 
-		batchCtx.sortByKey(numDims, 4, stream, 0)
+		batchCtx.sortByKey(numDims, stream, 0)
 		memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&measureVectorH), measureVectorD.getPointer(), 12, stream, 0)
 		memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&dimIndexVectorH), dimIndexVectorD.getPointer(), 12, stream, 0)
 
@@ -1186,22 +1186,6 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 0, 1, 0})).Should(Equal(9))
 		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 0, 0, 1})).Should(Equal(6))
 		Ω(dimValResVectorSize(0, queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 1})).Should(Equal(0))
-	})
-
-	ginkgo.It("doCGoCall should work", func() {
-		batchCtx := oopkBatchContext{size: 10}
-		err := func() (err error) {
-			defer func() {
-				r := recover()
-				if r != nil {
-					err, _ = r.(error)
-				}
-			}()
-			batchCtx.sortByKey(queryCom.DimCountsPerDimWidth{}, 20, unsafe.Pointer(nil), 0)
-			return
-		}()
-		Ω(err).ShouldNot(BeNil())
-		Ω(err.Error()).Should(ContainSubstring("ValueBytes is invalid"))
 	})
 
 	ginkgo.It("getGeoShapeLatLongSlice", func() {

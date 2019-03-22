@@ -58,8 +58,7 @@ int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
            void *cudaStream);
 
 // sort binds KeyIter type from keys.
-void sort(DimensionColumnVector keys, uint8_t *values, int valueBytes,
-          int length, void *cudaStream);
+void sort(DimensionColumnVector keys, int length, void *cudaStream);
 
 // hyperloglog.
 int hyperloglog(DimensionColumnVector prevDimOut,

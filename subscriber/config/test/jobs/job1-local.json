@@ -1,0 +1,254 @@
+{
+  "job": "job1",
+  "streamConfig": {
+    "kafkaBroker": "localhost:17791",
+    "ChannelBufferSize": 256,
+    "maxPollIntervalMs": 300000,
+    "sessionTimeoutNs": 10000,
+    "kafkaClusterName": "kafka-cluster1",
+    "kafkaClusterFile": "clusters.yaml",
+    "topic": "job1-topic",
+    "topicType": "json",
+    "latestOffset": true,
+    "errorThreshold": 10,
+    "statusCheckInterval": 60,
+    "autoRecoveryThreshold": 8,
+    "processorCount": 0,
+    "batchSize": 32768,
+    "maxBatchDelayMS": 10000,
+    "megaBytePerSec": 600,
+    "restartOnFailure": true,
+    "restartInterval": 300,
+    "failureHandler": {
+      "type": "retry",
+      "config": {
+        "initRetryIntervalInSeconds": 60,
+        "multiplier": 1,
+        "maxRetryMinutes": 525600
+      }
+    }
+  },
+  "aresTableConfig": {
+    "cluster": "",
+    "schema": {
+      "name": "job1",
+      "columns": [
+        {
+          "name": "request_at",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "uuid",
+          "type": "UUID",
+          "config": {}
+        },
+        {
+          "name": "f1",
+          "type": "Uint16",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f2",
+          "type": "SmallEnum",
+          "caseInsensitive": true,
+          "disableAutoExpand": true,
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f3",
+          "type": "SmallEnum",
+          "defaultValue": "ACTIVE",
+          "caseInsensitive": true,
+          "disableAutoExpand": true,
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f4",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f5",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f6",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f7",
+          "type": "SmallEnum",
+          "defaultValue": "NULL_SENTINEL",
+          "caseInsensitive": true,
+          "disableAutoExpand": true,
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f8",
+          "type": "Float32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f9",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f10",
+          "type": "Float32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f11",
+          "type": "Float32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f12",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f13",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f14",
+          "type": "UUID",
+          "deleted": true,
+          "config": {}
+        },
+        {
+          "name": "f15",
+          "type": "UUID",
+          "deleted": true,
+          "config": {}
+        },
+        {
+          "name": "f16",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f17",
+          "type": "Uint32",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f18",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f19",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f19",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f20",
+          "type": "Bool",
+          "config": {
+            "preloadingDays": 52
+          }
+        },
+        {
+          "name": "f21",
+          "type": "GeoPoint",
+          "config": {}
+        },
+        {
+          "name": "f22",
+          "type": "Uint8",
+          "defaultValue": "0",
+          "config": {
+            "preloadingDays": 52
+          }
+        }
+      ],
+      "primaryKeyColumns": [
+        1
+      ],
+      "isFactTable": true,
+      "config": {
+        "batchSize": 2097152,
+        "archivingDelayMinutes": 1440,
+        "archivingIntervalMinutes": 180,
+        "backfillIntervalMinutes": 60,
+        "backfillMaxBufferSize": 4294967296,
+        "backfillThresholdInBytes": 20971520,
+        "backfillStoreBatchSize": 20000,
+        "recordRetentionInDays": 52,
+        "snapshotThreshold": 6291456,
+        "snapshotIntervalMinutes": 360,
+        "redoLogRotationInterval": 10800,
+        "maxRedoLogFileSize": 1073741824
+      },
+      "archivingSortColumns": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        19,
+        20,
+        21,
+        22
+      ]
+    },
+    "updateMode": {
+      "num_rejections": "addition"
+    }
+  }
+}
