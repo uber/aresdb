@@ -16,7 +16,7 @@ package common
 
 const (
 	MatrixDataKey = "matrixData"
-	HeadersKey = "headers"
+	HeadersKey    = "headers"
 )
 
 // AQLQueryResult represents final result of one AQL query
@@ -108,5 +108,3 @@ func (r AQLQueryResult) SetHeaders(headers []string) {
 }
 
 // =====  Non aggregate query result methods end =====
-
-

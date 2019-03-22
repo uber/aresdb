@@ -16,42 +16,70 @@
 #define MEMUTILS_MEMORY_H_
 
 #include <stddef.h>
+#include <stdint.h>
 #include "../cgoutils/utils.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+enum {
+  DEVICE_MEMORY_IMPLEMENTATION_FLAG = 1,
+  POOLED_MEMORY_FLAG = 1 << 1
+};
+
+// device_memory_flags_t & 0x1: HOST(0) or DEVICE(1) implementation
+// device_memory_flags_t & 0x2: USE POOLED MEMORY MANAGEMENT OR NOT
+typedef uint32_t DeviceMemoryFlags;
+
+// We don't wrap the result with CGoCallResHandle as we know
+// GetFlags is a safe call that will not throw any exceptions.
+// Change to CGoCallResHandle when future it will throw any.
+DeviceMemoryFlags GetFlags();
+
+CGoCallResHandle Init();
+
 CGoCallResHandle HostAlloc(size_t bytes);
 
-CGoCallResHandle HostFree(void* p);
+CGoCallResHandle HostFree(void *p);
 
 CGoCallResHandle CreateCudaStream(int device);
 
-CGoCallResHandle WaitForCudaStream(void* s, int device);
+CGoCallResHandle WaitForCudaStream(void *s, int device);
 
-CGoCallResHandle DestroyCudaStream(void* s, int device);
+CGoCallResHandle DestroyCudaStream(void *s, int device);
 
 CGoCallResHandle DeviceAllocate(size_t bytes, int device);
 
-CGoCallResHandle DeviceFree(void* p, int device);
+CGoCallResHandle DeviceFree(void *p, int device);
 
 CGoCallResHandle AsyncCopyHostToDevice(
-    void* dst, void* src, size_t bytes, void* stream, int device);
+    void *dst, void *src, size_t bytes, void *stream, int device);
 
 CGoCallResHandle AsyncCopyDeviceToDevice(
-    void* dst, void* src, size_t bytes, void* stream, int device);
+    void *dst, void *src, size_t bytes, void *stream, int device);
 
 CGoCallResHandle AsyncCopyDeviceToHost(
-    void* dst, void* src, size_t bytes, void* stream, int device);
+    void *dst, void *src, size_t bytes, void *stream, int device);
 
 CGoCallResHandle GetDeviceCount();
 
 CGoCallResHandle GetDeviceGlobalMemoryInMB(int device);
 
 CGoCallResHandle CudaProfilerStart();
+
 CGoCallResHandle CudaProfilerStop();
 
+CGoCallResHandle GetDeviceMemoryInfo(size_t *freeSize, size_t *totalSize,
+    int device);
+
+// All following functions are called by libalgorithm.so only, not intended
+// to be exposed to go. Caller need to call cudaSetDevice before invocation.
+CGoCallResHandle deviceMalloc(void **devPtr, size_t size);
+CGoCallResHandle deviceFree(void *devPtr);
+CGoCallResHandle deviceMemset(void *devPtr, int value, size_t count);
+CGoCallResHandle memcpyAsyncHostToDevice( void* dst, const void* src,
+    size_t count, void* stream);
 
 #ifdef __cplusplus
 }

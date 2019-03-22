@@ -16,6 +16,7 @@
 #include <thrust/transform.h>
 #include <algorithm>
 #include "query/algorithm.hpp"
+#include "query/memory.hpp"
 
 CGoCallResHandle HyperLogLog(DimensionColumnVector prevDimOut,
                              DimensionColumnVector curDimOut,
@@ -27,13 +28,14 @@ CGoCallResHandle HyperLogLog(DimensionColumnVector prevDimOut,
                              uint8_t **hllVectorPtr,
                              size_t *hllVectorSizePtr,
                              uint16_t **hllRegIDCountPerDimPtr,
-                             void *cudaStream,
+                             void *stream,
                              int device) {
   CGoCallResHandle resHandle = {nullptr, nullptr};
   try {
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
 #endif
+    cudaStream_t cudaStream = reinterpret_cast<cudaStream_t>(stream);
     resHandle.res =
         reinterpret_cast<void *>(ares::hyperloglog(prevDimOut,
                                                    curDimOut,
@@ -69,45 +71,34 @@ void sortCurrentBatch(uint8_t *dimValues, uint64_t *hashValues,
                       uint32_t *indexVector,
                       uint8_t numDimsPerDimWidth[NUM_DIM_WIDTH],
                       int vectorCapacity, uint32_t *curValuesOut,
-                      int prevResultSize, int curBatchSize, void *cudaStream) {
+                      int prevResultSize, int curBatchSize,
+                      cudaStream_t cudaStream) {
   DimensionHashIterator hashIter(dimValues, indexVector, numDimsPerDimWidth,
                                  vectorCapacity);
   auto zippedValueIter = thrust::make_zip_iterator(
       thrust::make_tuple(indexVector, curValuesOut));
-#ifdef RUN_ON_DEVICE
   thrust::transform(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       hashIter, hashIter + curBatchSize, curValuesOut, hashValues,
       HLLHashFunctor());
   thrust::stable_sort_by_key(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       hashValues, hashValues + curBatchSize,
       zippedValueIter);
-#else
-  thrust::transform(thrust::host, hashIter, hashIter + curBatchSize,
-                    curValuesOut, hashValues, HLLHashFunctor());
-  thrust::stable_sort_by_key(thrust::host, hashValues,
-                             hashValues + curBatchSize, zippedValueIter);
-#endif
 }
 
 // prepareHeadFlags prepares dimHeadFlags determines whether a element is the
 // head of a dimension partition
 template<typename DimHeadIter>
 void prepareHeadFlags(uint64_t *hashVector, DimHeadIter dimHeadFlags,
-                      int resultSize, void *cudaStream) {
+                      int resultSize, cudaStream_t cudaStream) {
   HLLDimNotEqualFunctor dimNotEqual;
-// TODO(jians): if we see performance issue here, we can try to use custome
-// kernel to utilize shared memory
-#ifdef RUN_ON_DEVICE
+  // TODO(jians): if we see performance issue here, we can try to use custome
+  // kernel to utilize shared memory
   thrust::transform(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       hashVector, hashVector + resultSize - 1, hashVector + 1, dimHeadFlags + 1,
       dimNotEqual);
-#else
-  thrust::transform(thrust::host, hashVector, hashVector + resultSize - 1,
-                    hashVector + 1, dimHeadFlags + 1, dimNotEqual);
-#endif
 }
 
 // createAndCopyHLLVector creates the hll vector based on
@@ -122,15 +113,14 @@ void createAndCopyHLLVector(uint64_t *hashVector,
                             uint32_t *values,
                             int resultSizeWithRegIDs,
                             int resultSize,
-                            void *cudaStream) {
+                            cudaStream_t cudaStream) {
   HLLRegIDHeadFlagIterator regIDHeadFlagIterator(hashVector);
-#ifdef RUN_ON_DEVICE
   // allocate dimRegIDCount vector
-  cudaMalloc(reinterpret_cast<void **>(hllRegIDCountPerDimPtr),
+  ares::deviceMalloc(reinterpret_cast<void **>(hllRegIDCountPerDimPtr),
              (size_t)resultSize * sizeof(uint16_t));
   // produce dimRegIDCount vector
   thrust::reduce_by_key(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       dimCumCount, dimCumCount + resultSizeWithRegIDs,
       regIDHeadFlagIterator, thrust::make_discard_iterator(),
       *hllRegIDCountPerDimPtr);
@@ -147,79 +137,38 @@ void createAndCopyHLLVector(uint64_t *hashVector,
   thrust::device_vector<uint64_t> hllVectorOffsets(resultSize + 1, 0);
   thrust::device_vector<uint64_t> hllRegIDCumCount(resultSizeWithRegIDs);
   thrust::inclusive_scan(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       hllDimRegIDCountIter, hllDimRegIDCountIter + resultSize,
       hllDimRegIDCumCount.begin() + 1);
   thrust::inclusive_scan(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       hllDimByteCountIter, hllDimByteCountIter + resultSize,
       hllVectorOffsets.begin() + 1);
   thrust::inclusive_scan(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       regIDHeadFlagIterator,
       regIDHeadFlagIterator + resultSizeWithRegIDs,
       hllRegIDCumCount.begin());
-#else
-  // allocate dimRegIDCount vector
-  *hllRegIDCountPerDimPtr = reinterpret_cast<uint16_t *>(
-      malloc((size_t) resultSize * sizeof(uint16_t)));
-  // produce dimRegIDCount vector
-  thrust::reduce_by_key(
-      thrust::host, dimCumCount, dimCumCount + resultSizeWithRegIDs,
-      regIDHeadFlagIterator, thrust::make_discard_iterator(),
-      *hllRegIDCountPerDimPtr);
-  // iterator for get byte count for each dim according to reg id count
-  auto hllDimByteCountIter = thrust::make_transform_iterator(
-      *hllRegIDCountPerDimPtr, HLLDimByteCountFunctor());
-
-  auto hllDimRegIDCountIter = thrust::make_transform_iterator(
-      *hllRegIDCountPerDimPtr, CastFunctor<uint16_t, uint64_t>());
-  // get dim reg id cumulative count (cumulative count of reg_id per each
-  // dimension value)
-  thrust::host_vector<uint64_t> hllDimRegIDCumCount(resultSize + 1, 0);
-  thrust::host_vector<uint64_t> hllVectorOffsets(resultSize + 1, 0);
-  thrust::host_vector<uint64_t> hllRegIDCumCount(resultSizeWithRegIDs);
-  thrust::inclusive_scan(thrust::host, hllDimRegIDCountIter,
-                         hllDimRegIDCountIter + resultSize,
-                         hllDimRegIDCumCount.begin() + 1);
-  thrust::inclusive_scan(thrust::host, hllDimByteCountIter,
-                         hllDimByteCountIter + resultSize,
-                         hllVectorOffsets.begin() + 1);
-  thrust::inclusive_scan(thrust::host, regIDHeadFlagIterator,
-                         regIDHeadFlagIterator + resultSizeWithRegIDs,
-                         hllRegIDCumCount.begin());
-#endif
   *hllVectorSizePtr = hllVectorOffsets[resultSize];
   HLLValueOutputIterator hllValueOutputIter(
       dimCumCount, values, thrust::raw_pointer_cast(hllRegIDCumCount.data()),
       thrust::raw_pointer_cast(hllDimRegIDCumCount.data()),
       thrust::raw_pointer_cast(hllVectorOffsets.data()));
 
-#ifdef RUN_ON_DEVICE
   // allocate dense vector
-  cudaMalloc(reinterpret_cast<void **>(hllVectorPtr), *hllVectorSizePtr);
-  cudaMemset(*hllVectorPtr, 0, *hllVectorSizePtr);
+  deviceMalloc(reinterpret_cast<void **>(hllVectorPtr), *hllVectorSizePtr);
+  deviceMemset(*hllVectorPtr, 0, *hllVectorSizePtr);
   thrust::transform_if(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       hllValueOutputIter, hllValueOutputIter + resultSizeWithRegIDs,
       regIDHeadFlagIterator, thrust::make_discard_iterator(),
       CopyHLLFunctor(*hllVectorPtr), thrust::identity<unsigned int>());
-#else
-  // allocate dense vector
-  *hllVectorPtr = reinterpret_cast<uint8_t *>(malloc(*hllVectorSizePtr));
-  memset(*hllVectorPtr, 0, *hllVectorSizePtr);
-  thrust::transform_if(
-      thrust::host, hllValueOutputIter,
-      hllValueOutputIter + resultSizeWithRegIDs, regIDHeadFlagIterator,
-      thrust::make_discard_iterator(), CopyHLLFunctor(*hllVectorPtr),
-      thrust::identity<unsigned int>());
-#endif
 }
 
 // copyDim is the same as regular dimension copy in regular reduce operations
 void copyDim(DimensionColumnVector inputKeys,
              DimensionColumnVector outputKeys, int outputLength,
-             void *cudaStream) {
+             cudaStream_t cudaStream) {
   DimensionColumnPermutateIterator iterIn(
       inputKeys.DimValues, outputKeys.IndexVector, inputKeys.VectorCapacity,
       outputLength, inputKeys.NumDimsPerDimWidth);
@@ -232,13 +181,9 @@ void copyDim(DimensionColumnVector inputKeys,
   for (int i = 0; i < NUM_DIM_WIDTH; i++) {
     numDims += inputKeys.NumDimsPerDimWidth[i];
   }
-#ifdef RUN_ON_DEVICE
-  thrust::copy(thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+
+  thrust::copy(GET_EXECUTION_POLICY(cudaStream),
                iterIn, iterIn + numDims * 2 * outputLength, iterOut);
-#else
-  thrust::copy(thrust::host, iterIn, iterIn + numDims * 2 * outputLength,
-               iterOut);
-#endif
 }
 
 // merge merges previous batch results with current batch results
@@ -246,7 +191,8 @@ void copyDim(DimensionColumnVector inputKeys,
 void merge(uint64_t *inputHashValues, uint64_t *outputHashValues,
            uint32_t *inputValues, uint32_t *outputValues,
            uint32_t *inputIndexVector, uint32_t *outputIndexVector,
-           int prevResultSize, int curBatchResultSize, void *cudaStream) {
+           int prevResultSize, int curBatchResultSize,
+           cudaStream_t cudaStream) {
   auto zippedPrevBatchMergeKey = thrust::make_zip_iterator(
       thrust::make_tuple(inputHashValues, inputValues));
   auto zippedCurBatchMergeKey = thrust::make_zip_iterator(thrust::make_tuple(
@@ -254,21 +200,12 @@ void merge(uint64_t *inputHashValues, uint64_t *outputHashValues,
   auto zippedOutputKey = thrust::make_zip_iterator(
       thrust::make_tuple(outputHashValues, outputValues));
 
-#ifdef RUN_ON_DEVICE
   thrust::merge_by_key(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       zippedPrevBatchMergeKey, zippedPrevBatchMergeKey + prevResultSize,
       zippedCurBatchMergeKey, zippedCurBatchMergeKey + curBatchResultSize,
       inputIndexVector, inputIndexVector + prevResultSize, zippedOutputKey,
       outputIndexVector, HLLMergeComparator());
-#else
-  thrust::merge_by_key(
-      thrust::host, zippedPrevBatchMergeKey,
-      zippedPrevBatchMergeKey + prevResultSize, zippedCurBatchMergeKey,
-      zippedCurBatchMergeKey + curBatchResultSize, inputIndexVector,
-      inputIndexVector + prevResultSize, zippedOutputKey, outputIndexVector,
-      HLLMergeComparator());
-#endif
 }
 
 int reduceCurrentBatch(uint64_t *inputHashValues,
@@ -278,7 +215,7 @@ int reduceCurrentBatch(uint64_t *inputHashValues,
                        uint32_t *outputIndexVector,
                        uint32_t *outputValues,
                        int length,
-                       void *cudaStream) {
+                       cudaStream_t cudaStream) {
   thrust::equal_to<uint64_t> binaryPred;
   thrust::maximum<uint32_t> maxOp;
   ReduceByHashFunctor<thrust::maximum<uint32_t> > reduceFunc(maxOp);
@@ -286,49 +223,29 @@ int reduceCurrentBatch(uint64_t *inputHashValues,
       thrust::make_tuple(inputIndexVector, inputValues));
   auto zippedOutputIter = thrust::make_zip_iterator(
       thrust::make_tuple(outputIndexVector, outputValues));
-#ifdef RUN_ON_DEVICE
   auto resEnd = thrust::reduce_by_key(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       inputHashValues, inputHashValues + length, zippedInputIter,
       outputHashValues, zippedOutputIter, binaryPred, reduceFunc);
-#else
-  auto resEnd = thrust::reduce_by_key(
-      thrust::host, inputHashValues, inputHashValues + length, zippedInputIter,
-      outputHashValues, zippedOutputIter, binaryPred, reduceFunc);
-#endif
   return thrust::get<0>(resEnd) - outputHashValues;
 }
 
 int makeHLLVector(uint64_t *hashValues, uint32_t *indexVector,
                   uint32_t *values, int resultSize, uint8_t **hllVectorPtr,
                   size_t *hllVectorSizePtr, uint16_t **hllRegIDCountPerDimPtr,
-                  void *cudaStream) {
-#ifdef RUN_ON_DEVICE
-  thrust::device_vector<unsigned int> dimHeadFlags(resultSize, 1);
-#else
-  thrust::host_vector<unsigned int> dimHeadFlags(resultSize, 1);
-#endif
+                  cudaStream_t cudaStream) {
+  ares::device_vector<unsigned int> dimHeadFlags(resultSize, 1);
   prepareHeadFlags(hashValues, dimHeadFlags.begin(), resultSize, cudaStream);
 
-#ifdef RUN_ON_DEVICE
   int reducedResultSize =
       thrust::remove_if(
-          thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+          GET_EXECUTION_POLICY(cudaStream),
           indexVector, indexVector + resultSize, dimHeadFlags.begin(),
           thrust::detail::equal_to_value<unsigned int>(0)) -
       indexVector;
   thrust::inclusive_scan(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
+      GET_EXECUTION_POLICY(cudaStream),
       dimHeadFlags.begin(), dimHeadFlags.end(), dimHeadFlags.begin());
-#else
-  int reducedResultSize =
-      thrust::remove_if(thrust::host, indexVector, indexVector + resultSize,
-                        dimHeadFlags.begin(),
-                        thrust::detail::equal_to_value<unsigned int>(0)) -
-          indexVector;
-  thrust::inclusive_scan(thrust::host, dimHeadFlags.begin(), dimHeadFlags.end(),
-                         dimHeadFlags.begin());
-#endif
   createAndCopyHLLVector(hashValues, hllVectorPtr, hllVectorSizePtr,
                          hllRegIDCountPerDimPtr,
                          thrust::raw_pointer_cast(dimHeadFlags.data()), values,
@@ -347,7 +264,7 @@ int hyperloglog(DimensionColumnVector prevDimOut,
                 uint32_t *curValuesOut, int prevResultSize, int curBatchSize,
                 bool isLastBatch, uint8_t **hllVectorPtr,
                 size_t *hllVectorSizePtr, uint16_t **hllRegIDCountPerDimPtr,
-                void *cudaStream) {
+                cudaStream_t cudaStream) {
   sortCurrentBatch(prevDimOut.DimValues, curDimOut.HashValues,
                    curDimOut.IndexVector, curDimOut.NumDimsPerDimWidth,
                    curDimOut.VectorCapacity, curValuesOut, prevResultSize,

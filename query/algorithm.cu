@@ -17,6 +17,7 @@
 #include <exception>
 #include "query/algorithm.hpp"
 #include "query/iterator.hpp"
+#include "query/utils.hpp"
 
 CGoCallResHandle InitIndexVector(uint32_t *indexVector, uint32_t start,
                      int indexVectorLength, void *cudaStream, int device) {
@@ -24,15 +25,11 @@ CGoCallResHandle InitIndexVector(uint32_t *indexVector, uint32_t start,
   try {
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
-    thrust::sequence(
-        thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
-        indexVector, indexVector + indexVectorLength, start);
-#else
-    thrust::sequence(thrust::host,
-                     indexVector,
-                     indexVector + indexVectorLength,
-                     start);
 #endif
+    thrust::sequence(
+        GET_EXECUTION_POLICY(reinterpret_cast<cudaStream_t>(cudaStream)),
+        indexVector, indexVector + indexVectorLength, start);
+
     CheckCUDAError("InitIndexVector");
   }
   catch (std::exception &e) {

@@ -22,7 +22,7 @@ import (
 var _ = ginkgo.Describe("Device Allocator", func() {
 
 	ginkgo.It("deviceAllocate and deviceFree should work", func() {
-		deviceAllocator := newDeviceAllocator().(*deviceAllocatorImpl)
+		deviceAllocator := newDeviceAllocator().(*memoryTrackingDeviceAllocatorImpl)
 		dp := deviceAllocator.deviceAllocate(12, 0)
 		Ω(dp.bytes).Should(BeEquivalentTo(12))
 		Ω(dp.device).Should(BeEquivalentTo(0))
@@ -48,9 +48,9 @@ var _ = ginkgo.Describe("Device Allocator", func() {
 		Ω(dp.device).Should(BeEquivalentTo(0))
 		Ω(dp.allocated).Should(BeTrue())
 		da := getDeviceAllocator()
-		Ω(da.(*deviceAllocatorImpl).memoryUsage[0]).Should(BeNumerically(">", 0))
+		Ω(da.(*memoryTrackingDeviceAllocatorImpl).memoryUsage[0]).Should(BeNumerically(">", 0))
 
 		deviceFreeAndSetNil(&dp)
-		Ω(da.(*deviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(0))
+		Ω(da.(*memoryTrackingDeviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(0))
 	})
 })

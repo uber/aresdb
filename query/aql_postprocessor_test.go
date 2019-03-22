@@ -176,7 +176,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		*(*uint8)(memutils.MemAccess(oopkContext.dimensionVectorH, 4)) = 1
 
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLQueryResult{
-			"headers": []string{"someField"},
+			"headers":    []string{"someField"},
 			"matrixData": [][]interface{}{{"3.2"}},
 		}))
 	})

@@ -195,7 +195,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		batch101.SafeDestruct()
 		batch99.SafeDestruct()
 		da := getDeviceAllocator()
-		Ω(da.(*deviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(0))
+		Ω(da.(*memoryTrackingDeviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(0))
 	})
 
 	ginkgo.It("prefilterSlice", func() {
@@ -934,7 +934,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.prepareTimezoneTable(memStore)
 		Ω(qc.Error).Should(BeNil())
-		Ω(da.(*deviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(2))
+		Ω(da.(*memoryTrackingDeviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(2))
 		deviceFreeAndSetNil(&qc.OOPK.currentBatch.timezoneLookupD)
 		utils.ResetDefaults()
 	})

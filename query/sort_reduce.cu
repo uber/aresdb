@@ -33,7 +33,8 @@ CGoCallResHandle Sort(DimensionColumnVector keys,
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
 #endif
-    ares::sort(keys, values, valueBytes, length, cudaStream);
+    ares::sort(keys, values, valueBytes, length,
+        reinterpret_cast<cudaStream_t>(cudaStream));
     CheckCUDAError("Sort");
   }
   catch (std::exception &e) {
@@ -51,13 +52,14 @@ CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
                         int valueBytes,
                         int length,
                         AggregateFunction aggFunc,
-                        void *cudaStream,
+                        void *stream,
                         int device) {
   CGoCallResHandle resHandle = {nullptr, nullptr};
   try {
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
 #endif
+    cudaStream_t cudaStream = reinterpret_cast<cudaStream_t>(stream);
     resHandle.res = reinterpret_cast<void *>(ares::reduce(inputKeys,
                                                           inputValues,
                                                           outputKeys,
@@ -83,27 +85,19 @@ template<typename ValueType>
 void sortInternal(DimensionColumnVector vector,
                   ValueType values,
                   int length,
-                  void *cudaStream) {
+                  cudaStream_t cudaStream) {
   DimensionHashIterator hashIter(vector.DimValues,
                                  vector.IndexVector,
                                  vector.NumDimsPerDimWidth,
                                  vector.VectorCapacity);
-#ifdef RUN_ON_DEVICE
-  thrust::copy(thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
-               hashIter, hashIter + length, vector.HashValues);
-  thrust::stable_sort_by_key(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
-      vector.HashValues, vector.HashValues + length, vector.IndexVector);
-#else
-  thrust::copy(thrust::host,
+  thrust::copy(GET_EXECUTION_POLICY(cudaStream),
                hashIter,
                hashIter + length,
                vector.HashValues);
-  thrust::stable_sort_by_key(thrust::host,
+  thrust::stable_sort_by_key(GET_EXECUTION_POLICY(cudaStream),
                              vector.HashValues,
                              vector.HashValues + length,
                              vector.IndexVector);
-#endif
 }
 
 // sort based on DimensionColumnVector
@@ -111,7 +105,7 @@ void sort(DimensionColumnVector keys,
           uint8_t *values,
           int valueBytes,
           int length,
-          void *cudaStream) {
+          cudaStream_t cudaStream) {
   switch (valueBytes) {
 #define  SORT_INTERNAL(ValueType) \
       sortInternal<ValueType>(keys, reinterpret_cast<ValueType>(values), \
@@ -130,7 +124,7 @@ template<typename Value, typename AggFunc>
 int reduceInternal(uint64_t *inputHashValues, uint32_t *inputIndexVector,
                    uint8_t *inputValues, uint64_t *outputHashValues,
                    uint32_t *outputIndexVector, uint8_t *outputValues,
-                   int length, void *cudaStream) {
+                   int length, cudaStream_t cudaStream) {
   thrust::equal_to<uint64_t> binaryPred;
   AggFunc aggFunc;
   ReduceByHashFunctor<AggFunc> reduceFunc(aggFunc);
@@ -140,15 +134,7 @@ int reduceInternal(uint64_t *inputHashValues, uint32_t *inputIndexVector,
                                         inputIndexVector)));
   auto zippedOutputIter = thrust::make_zip_iterator(thrust::make_tuple(
       outputIndexVector, reinterpret_cast<Value *>(outputValues)));
-#ifdef RUN_ON_DEVICE
-  auto resEnd = thrust::reduce_by_key(
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
-      inputHashValues, inputHashValues + length, zippedInputIter,
-      thrust::make_discard_iterator(), zippedOutputIter, binaryPred,
-      reduceFunc);
-  return thrust::get<1>(resEnd) - zippedOutputIter;
-#else
-  auto resEnd = thrust::reduce_by_key(thrust::host,
+  auto resEnd = thrust::reduce_by_key(GET_EXECUTION_POLICY(cudaStream),
                                       inputHashValues,
                                       inputHashValues + length,
                                       zippedInputIter,
@@ -157,7 +143,6 @@ int reduceInternal(uint64_t *inputHashValues, uint32_t *inputIndexVector,
                                       binaryPred,
                                       reduceFunc);
   return thrust::get<1>(resEnd) - zippedOutputIter;
-#endif
 }
 
 struct rolling_avg {
@@ -193,7 +178,7 @@ int bindValueAndAggFunc(uint64_t *inputHashValues,
                         int valueBytes,
                         int length,
                         AggregateFunction aggFunc,
-                        void *cudaStream) {
+                        cudaStream_t cudaStream) {
   switch (aggFunc) {
     #define REDUCE_INTERNAL(ValueType, AggFunc) \
       return reduceInternal< ValueType, AggFunc >( \
@@ -246,7 +231,7 @@ int bindValueAndAggFunc(uint64_t *inputHashValues,
 int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
            DimensionColumnVector outputKeys, uint8_t *outputValues,
            int valueBytes, int length, AggregateFunction aggFunc,
-           void *cudaStream) {
+           cudaStream_t cudaStream) {
   int outputLength = bindValueAndAggFunc(
       inputKeys.HashValues,
       inputKeys.IndexVector,
@@ -269,15 +254,9 @@ int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
   for (int i = 0; i < NUM_DIM_WIDTH; i++) {
     numDims += inputKeys.NumDimsPerDimWidth[i];
   }
-// copy dim values into output
-#ifdef RUN_ON_DEVICE
-  thrust::copy(thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
-                                    iterIn, iterIn + numDims * 2 * outputLength,
-                                    iterOut);
-#else
-  thrust::copy(thrust::host, iterIn, iterIn + numDims * 2 * outputLength,
-               iterOut);
-#endif
+  // copy dim values into output
+  thrust::copy(GET_EXECUTION_POLICY(cudaStream),
+      iterIn, iterIn + numDims * 2 * outputLength, iterOut);
   return outputLength;
 }
 
