@@ -147,7 +147,7 @@ include(rdkafka.cmake)
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 target_include_directories(all_unittest PRIVATE ${GTEST_SRC_DIR}/googletest/include)
-add_dependencies(all_unittest algorithm googletest)
+add_dependencies(all_unittest algorithm googletest mem)
 # Link test executable against gtest & gtest_main
 target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
 add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)

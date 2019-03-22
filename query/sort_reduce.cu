@@ -31,7 +31,7 @@ CGoCallResHandle Sort(DimensionColumnVector keys,
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
 #endif
-    ares::sort(keys, length, 
+    ares::sort(keys, length,
                reinterpret_cast<cudaStream_t>(cudaStream));
     CheckCUDAError("Sort");
   }
@@ -78,7 +78,7 @@ CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
 }
 
 namespace ares {
-  
+
 // sort based on DimensionColumnVector
 void sort(DimensionColumnVector keys,
           int length,
