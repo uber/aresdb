@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
-	"github.com/uber/aresdb/utils"
 	"time"
 	"unsafe"
 )
@@ -19,8 +18,10 @@ type BatchExecutor interface {
 	project()
 	// reduce to sort and aggregate result
 	reduce()
-	// main method to call for execution
-	Run(isLastBatch bool)
+	// prepare work before execution
+	preExec(lastBatch bool, start time.Time)
+	// post execution after execution
+	postExec(start time.Time)
 }
 
 // DummyBatchExecutorImpl is a dummy executor which do nothing
@@ -44,8 +45,10 @@ func (e *DummyBatchExecutorImpl) project() {
 func (e *DummyBatchExecutorImpl) reduce() {
 }
 
-// Run is dummy fuction for dummy executor
-func (e *DummyBatchExecutorImpl) Run(isLastBatch bool) {
+func (e *DummyBatchExecutorImpl) preExec(lastBatch bool, start time.Time) {
+}
+
+func (e *DummyBatchExecutorImpl) postExec(start time.Time) {
 }
 
 // BatchExecutorImpl is batch executor implementation for original aggregation query
@@ -157,7 +160,7 @@ func (e *BatchExecutorImpl) evalMeasures() {
 }
 
 // evalDimensions is to fill dimension values
-func (e *BatchExecutorImpl) evalDimensions() {
+func (e *BatchExecutorImpl) evalDimensions(prevResultSize int) {
 	// dimension expression evaluation.
 	for dimIndex, dimension := range e.qc.OOPK.Dimensions {
 		e.qc.doProfile(func() {
@@ -166,9 +169,9 @@ func (e *BatchExecutorImpl) evalDimensions() {
 			if e.qc.OOPK.geoIntersection != nil && e.qc.OOPK.geoIntersection.dimIndex == dimIndex {
 				e.qc.OOPK.currentBatch.writeGeoShapeDim(
 					e.qc.OOPK.geoIntersection, e.qc.OOPK.currentBatch.geoPredicateVectorD,
-					dimValueOffset, dimNullOffset, e.sizeBeforeGeoFilter, e.stream, e.qc.Device)
+					dimValueOffset, dimNullOffset, e.sizeBeforeGeoFilter, prevResultSize, e.stream, e.qc.Device)
 			} else {
-				dimensionExprRootAction := e.qc.OOPK.currentBatch.makeWriteToDimensionVectorAction(dimValueOffset, dimNullOffset)
+				dimensionExprRootAction := e.qc.OOPK.currentBatch.makeWriteToDimensionVectorAction(dimValueOffset, dimNullOffset, prevResultSize)
 				e.qc.OOPK.currentBatch.processExpression(dimension, nil,
 					e.qc.TableScanners, e.qc.OOPK.foreignTables, e.stream, e.qc.Device, dimensionExprRootAction)
 			}
@@ -185,7 +188,7 @@ func (e *BatchExecutorImpl) project() {
 
 	e.qc.reportTimingForCurrentBatch(e.stream, &e.start, prepareForDimAndMeasureTiming)
 
-	e.evalDimensions()
+	e.evalDimensions(e.qc.OOPK.currentBatch.resultSize)
 
 	e.evalMeasures()
 
@@ -226,23 +229,14 @@ func (e *BatchExecutorImpl) reduce() {
 	memutils.WaitForCudaStream(e.stream, e.qc.Device)
 }
 
-// Run is the function to run the whole process for a batch
-func (e *BatchExecutorImpl) Run(isLastBatch bool) {
+func (e *BatchExecutorImpl) preExec(isLastBatch bool, start time.Time) {
 	e.isLastBatch = isLastBatch
-	start := utils.Now()
 	// initialize index vector.
 	initIndexVector(e.qc.OOPK.currentBatch.indexVectorD.getPointer(), 0, e.qc.OOPK.currentBatch.size, e.stream, e.qc.Device)
-
 	e.qc.reportTimingForCurrentBatch(e.stream, &start, initIndexVectorTiming)
+}
 
-	e.filter()
-
-	e.join()
-
-	e.project()
-
-	e.reduce()
-
+func (e *BatchExecutorImpl) postExec(start time.Time) {
 	// swap result buffer before next batch
 	e.qc.OOPK.currentBatch.swapResultBufferForNextBatch()
 	e.qc.reportTimingForCurrentBatch(e.stream, &start, cleanupTiming)

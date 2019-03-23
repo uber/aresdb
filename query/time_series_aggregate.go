@@ -392,7 +392,7 @@ func (bc *oopkBatchContext) makeWriteToMeasureVectorAction(aggFunc C.enum_Aggreg
 	}
 }
 
-func (bc *oopkBatchContext) makeWriteToDimensionVectorAction(valueOffset, nullOffset int) rootAction {
+func (bc *oopkBatchContext) makeWriteToDimensionVectorAction(valueOffset, nullOffset, prevResultSize int) rootAction {
 	return func(functorType uint32, stream unsafe.Pointer, device int, inputs []C.InputVector, exp expr.Expr) {
 		// If current batch size is already 0, short circuit to avoid issuing a noop cuda call.
 		if bc.size <= 0 {
@@ -406,8 +406,8 @@ func (bc *oopkBatchContext) makeWriteToDimensionVectorAction(valueOffset, nullOf
 			// move dimensionVectorD to the start position of current batch
 			// dimension vector start position + bc.resultSize * dataBytes
 			// null vector start position + bc.resultSize
-			valueOffset+dataBytes*bc.resultSize,
-			nullOffset+bc.resultSize,
+			valueOffset+dataBytes*prevResultSize,
+			nullOffset+prevResultSize,
 			DataTypeToCDataType[dataType])
 
 		if len(inputs) == 1 {
@@ -580,7 +580,7 @@ func (bc *oopkBatchContext) makeGeoPointInputVector(pointTableID int, pointColum
 }
 
 func (bc *oopkBatchContext) writeGeoShapeDim(geo *geoIntersection,
-	outputPredicate devicePointer, dimValueOffset, dimNullOffset int, sizeBeforeGeoFilter int, stream unsafe.Pointer, device int) {
+	outputPredicate devicePointer, dimValueOffset, dimNullOffset int, sizeBeforeGeoFilter, prevResultSize int, stream unsafe.Pointer, device int) {
 	if bc.size <= 0 || geo.shapeLatLongs.isNull() {
 		return
 	}
@@ -590,10 +590,10 @@ func (bc *oopkBatchContext) writeGeoShapeDim(geo *geoIntersection,
 	var dimensionOutputVector C.DimensionOutputVector
 	dimensionVector := bc.dimensionVectorD[0].getPointer()
 	// move dimensionVectorD to the start position of current batch
-	// dimension vector start position + bc.resultSize * dataBytes
-	// null vector start position + bc.resultSize
-	dimensionOutputVector.DimValues = (*C.uint8_t)(memutils.MemAccess(dimensionVector, dimValueOffset+bc.resultSize))
-	dimensionOutputVector.DimNulls = (*C.uint8_t)(memutils.MemAccess(dimensionVector, dimNullOffset+bc.resultSize))
+	// dimension vector start position + prevResultSize * dataBytes
+	// null vector start position + prevResultSize
+	dimensionOutputVector.DimValues = (*C.uint8_t)(memutils.MemAccess(dimensionVector, dimValueOffset+prevResultSize))
+	dimensionOutputVector.DimNulls = (*C.uint8_t)(memutils.MemAccess(dimensionVector, dimNullOffset+prevResultSize))
 	dimensionOutputVector.DataType = C.Uint8
 
 	totalWords := (geo.numShapes + 31) / 32

@@ -91,15 +91,7 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLQueryResult {
 		}
 
 		if qc.isNonAggregationQuery {
-			values := make([]interface{}, len(dimValues))
-			for index, v := range dimValues {
-				if v == nil {
-					values[index] = "NULL"
-				} else {
-					values[index] = *v
-				}
-			}
-			result.Append(values)
+			result.Append(dimValues)
 		} else {
 			measureBytes := oopkContext.MeasureBytes
 

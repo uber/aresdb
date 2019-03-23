@@ -673,14 +673,4 @@ TEST(IndexCountIterator, checkCount) {
   EXPECT_EQ(it[2], 1);
 }
 
-int expand(uint32_t *baseCounts,
-           uint32_t *indexVector,
-           DimensionColumnVector inputKeys,
-           DimensionColumnVector outputKeys,
-           int indexVectorLen,
-           int outputUsedSize,
-           int maxOutputSize,
-           void *cudaStream,
-           int device);
-
 }  // namespace ares

@@ -116,7 +116,7 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 	}
 
 	// query execution for last batch.
-	previousBatchExecutor.Run(true)
+	qc.runBatchExecutor(previousBatchExecutor, true)
 
 	// this code snippet does the followings:
 	// 1. write stats to log.
@@ -635,8 +635,8 @@ func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length,
 	bytesToCopy := length * dimBytes
 	for _, numDim := range numDimsPerDimWidth {
 		for i := 0; i < int(numDim); i++ {
-			ptrTo = memutils.MemAccess(ptrTo, dimBytes*offset)
-			copyFunc(ptrTo, ptrFrom, bytesToCopy, stream, device)
+			ptrTemp := memutils.MemAccess(ptrTo, dimBytes*offset)
+			copyFunc(ptrTemp, ptrFrom, bytesToCopy, stream, device)
 			ptrTo = memutils.MemAccess(ptrTo, dimBytes*toVectorCapacity)
 			ptrFrom = memutils.MemAccess(ptrFrom, dimBytes*fromVectorCapacity)
 		}
@@ -646,8 +646,8 @@ func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length,
 
 	// copy null bytes
 	for i := 0; i < numNullVectors; i++ {
-		ptrTo = memutils.MemAccess(ptrTo, offset)
-		copyFunc(ptrTo, ptrFrom, length, stream, device)
+		ptrTemp := memutils.MemAccess(ptrTo, offset)
+		copyFunc(ptrTemp, ptrFrom, length, stream, device)
 		ptrTo = memutils.MemAccess(ptrTo, toVectorCapacity)
 		ptrFrom = memutils.MemAccess(ptrFrom, fromVectorCapacity)
 	}
@@ -823,7 +823,7 @@ func (qc *AQLQueryContext) processBatch(
 
 	if qc.Debug {
 		// Finish executing previous batch first to avoid timeline overlapping
-		previousBatchExecutor.Run(false)
+		qc.runBatchExecutor(previousBatchExecutor, false)
 		previousBatchExecutor = NewDummyBatchExecutor()
 	}
 
@@ -860,7 +860,7 @@ func (qc *AQLQueryContext) processBatch(
 				executionDone <- struct{ error }{err}
 			}
 		}()
-		previousBatchExecutor.Run(false)
+		qc.runBatchExecutor(previousBatchExecutor, false)
 		executionDone <- struct{ error }{}
 	}()
 
@@ -1270,6 +1270,21 @@ func (qc *AQLQueryContext) FindDeviceForQuery(memStore memstore.MemStore, prefer
 	}
 	qc.OOPK.DurationWaitedForDevice = utils.Now().Sub(waitStart)
 	qc.Device = device
+}
+
+func (qc *AQLQueryContext) runBatchExecutor(e BatchExecutor, isLastBatch bool) {
+	start := utils.Now()
+	e.preExec(isLastBatch, start)
+
+	e.filter()
+
+	e.join()
+
+	e.project()
+
+	e.reduce()
+
+	e.postExec(start)
 }
 
 // copyHostToDevice copy vector party slice to device vector party slice
