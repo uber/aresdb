@@ -80,7 +80,7 @@ func (shard *TableShard) ApplyUpsertBatch(upsertBatch *UpsertBatch, redoLogFile 
 		if valueTypeByColumn[columnID] != columnType {
 			return false, utils.StackError(
 				nil,
-				"Mismatched data type (upsert batch: %s, schema %s) for table %s shard %d column %d", columnType, valueTypeByColumn[columnID], shard.Schema.Schema.Name, shard.ShardID, columnID)
+				"Mismatched data type (upsert batch: %d, schema %d) for table %s shard %d column %d", columnType, valueTypeByColumn[columnID], shard.Schema.Schema.Name, shard.ShardID, columnID)
 		}
 
 		if columnID == 0 && isFactTable {

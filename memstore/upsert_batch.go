@@ -433,7 +433,7 @@ func readUpsertBatchNew(buffer []byte) (*UpsertBatch, error) {
 		return nil, utils.StackError(err, "Failed to read number of rows")
 	}
 	if numRows < 0 {
-		return nil, utils.StackError(err, "Number of rows %d should be >= 0")
+		return nil, utils.StackError(err, "Number of rows should be >= 0")
 	}
 
 	batch.NumRows = int(numRows)

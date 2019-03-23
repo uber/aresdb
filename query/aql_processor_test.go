@@ -96,7 +96,6 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		tmpBatch, err := testFactory.ReadArchiveBatch("archiving/archiveBatch0")
 		tmpBatch1, err := testFactory.ReadArchiveBatch("archiving/archiveBatch1")
 
-
 		Ω(err).Should(BeNil())
 
 		metaStore = new(metaMocks.MetaStore)
@@ -2058,8 +2057,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 	ginkgo.It("ProcessQuery for non-aggregation query should work", func() {
 		shard.ArchiveStore.CurrentVersion.Batches[0] = archiveBatch1
-		qc := &AQLQueryContext{
-		}
+		qc := &AQLQueryContext{}
 		q := &AQLQuery{
 			Table: table,
 			Dimensions: []Dimension{
@@ -2076,7 +2074,6 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				To:     "1970-01-02",
 			},
 			Limit: 20,
-
 		}
 		qc.Query = q
 
