@@ -133,9 +133,9 @@ void createAndCopyHLLVector(uint64_t *hashVector,
       *hllRegIDCountPerDimPtr, CastFunctor<uint16_t, uint64_t>());
   // get dim reg id cumulative count (cumulative count of reg_id per each
   // dimension value)
-  thrust::device_vector<uint64_t> hllDimRegIDCumCount(resultSize + 1, 0);
-  thrust::device_vector<uint64_t> hllVectorOffsets(resultSize + 1, 0);
-  thrust::device_vector<uint64_t> hllRegIDCumCount(resultSizeWithRegIDs);
+  ares::device_vector<uint64_t> hllDimRegIDCumCount(resultSize + 1, 0);
+  ares::device_vector<uint64_t> hllVectorOffsets(resultSize + 1, 0);
+  ares::device_vector<uint64_t> hllRegIDCumCount(resultSizeWithRegIDs);
   thrust::inclusive_scan(
       GET_EXECUTION_POLICY(cudaStream),
       hllDimRegIDCountIter, hllDimRegIDCountIter + resultSize,

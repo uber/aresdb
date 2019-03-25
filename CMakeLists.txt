@@ -35,7 +35,7 @@ OPTION(POOLED_DEVICE_MEMORY "Pooled device memory management" OFF)
 ################################
 # Compiler and linker flags
 ################################
-include_directories(${PROJECT_SOURCE_DIR})
+include_directories(${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 # set C_FLAGS and NVCC FLAGS
@@ -67,18 +67,21 @@ enable_testing()
 ######################################################
 set(RMM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/rmm)
 set(RMM_LIB_DIR ${RMM_SRC_DIR})
-include_directories(${RMM_SRC_DIR}/include)
 if (QUERY_MODE STREQUAL "DEVICE" AND USE_RMM)
-    ExternalProject_Add(rmm
+    message(CMAKE_BINARY_DIR is ${CMAKE_BINARY_DIR})
+    ExternalProject_Add(
+            project_rmm
             SOURCE_DIR ${RMM_SRC_DIR}
             BUILD_IN_SOURCE 1
-            CONFIGURE_COMMAND cmake -DBUILD_TESTS=OFF .
+            CONFIGURE_COMMAND cmake -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DCMAKE_CXX11_ABI=ON -DBUILD_TESTS=OFF .
             # librmm.so will be in ${RMM_SRC_DIR} by default.
             BUILD_COMMAND make -j
-            BYPRODUCTS ${RMM_LIB_DIR}/librmm.so
-            INSTALL_COMMAND ""
-            )
-    link_directories(${RMM_LIB_DIR})
+            BUILD_BYPRODUCTS ${RMM_LIB_DIR}/librmm.so
+            BYPRODUCTS ${CMAKE_BINARY_DIR}/librmm.so
+    )
+    add_library(rmm SHARED IMPORTED)
+    set_target_properties(rmm PROPERTIES IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/librmm.so)
+    add_dependencies(rmm project_rmm)
 endif ()
 ################################
 # Mem
@@ -89,6 +92,7 @@ if (QUERY_MODE STREQUAL "DEVICE")
     if (USE_RMM)
         list(APPEND MARCROS "USE_RMM=1")
         add_library(mem SHARED memutils/memory.h memutils/memory/rmm_alloc.cu)
+        target_link_libraries(mem rmm)
     else ()
         add_library(mem SHARED memutils/memory.h memutils/memory/cuda_malloc.cu)
     endif ()
@@ -147,9 +151,12 @@ include(rdkafka.cmake)
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 target_include_directories(all_unittest PRIVATE ${GTEST_SRC_DIR}/googletest/include)
-add_dependencies(all_unittest algorithm googletest mem)
 # Link test executable against gtest & gtest_main
-target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
+target_link_libraries(all_unittest gtest gtest_main algorithm mem pthread)
+if (USE_RMM)
+    target_link_libraries(all_unittest rmm)
+endif ()
+
 add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
 
 ###############################
