@@ -34,10 +34,10 @@ endif ()
 ################################
 # Compiler and linker flags
 ################################
-if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 14)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-endif()
+set(CMAKE_CUDA_STANDARD 14)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
@@ -45,7 +45,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 set(CMAKE_C_FLAGS -fPIC)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_C .so)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX .so)
-set(CMAKE_CUDA_FLAGS "-lineinfo -I. -std=c++14 $ENV{NVCCFLAGS} ${CMAKE_CUDA_FLAGS}")
+set(CMAKE_CUDA_FLAGS "-lineinfo -I. $ENV{NVCCFLAGS} ${CMAKE_CUDA_FLAGS}")
 set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,code=compute_60")
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
