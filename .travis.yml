@@ -15,6 +15,7 @@ env:
     - NVCCFLAGS="-ldir ${CUDA_HOME}/nvvm/libdevice -noprof -I ${CUDA_HOME}/include/ -L ${CUDA_HOME}/lib64"
     - PKG_CONFIG_PATH=${LD_LIBRARY_PATH}/pkgconfig:${PKG_CONFIG_PATH}
     - COMPILER_NAME=gcc CXX=g++-6 CC=gcc-6
+    - CUDAHOSTCXX=g++-6
 
 addons:
   apt:
@@ -38,7 +39,7 @@ install:
   - rm -rf ./build && mkdir -p build
   - .travis/install_clang_tools.sh
   - .travis/install_cuda.sh
-  - ./build/cmake/bin/cmake .
+  - ./build/cmake/bin/cmake -D  .
   - .travis/install_golang_tools.sh
 script:
   - make lint
