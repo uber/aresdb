@@ -14,13 +14,13 @@ env:
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
     - NVCCFLAGS="-ldir ${CUDA_HOME}/nvvm/libdevice -noprof -I ${CUDA_HOME}/include/ -L ${CUDA_HOME}/lib64"
     - PKG_CONFIG_PATH=${LD_LIBRARY_PATH}/pkgconfig:${PKG_CONFIG_PATH}
-    - COMPILER_NAME=gcc CXX=g++-5 CC=gcc-5
+    - COMPILER_NAME=clang CXX=clang++-3.8 CC=clang-3.8
 
 addons:
   apt:
     packages:
-      - g++-5
-    sources: &sources
+      - clang-3.8
+    sources:
       - llvm-toolchain-precise-3.8
       - ubuntu-toolchain-r-test
 
