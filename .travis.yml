@@ -2,7 +2,7 @@ language: generic
 sudo: required
 go:
     - "1.9"
-`
+
 env:
   global:
     - CUDA_VERSION="10.0"
