@@ -2,7 +2,7 @@ language: generic
 sudo: required
 go:
     - "1.9"
-
+`
 env:
   global:
     - CUDA_VERSION="10.0"
@@ -37,8 +37,8 @@ branches:
 install:
   - rm -rf ./build && mkdir -p build
   - .travis/install_clang_tools.sh
-  - ./build/cmake/bin/cmake .
   - .travis/install_cuda.sh
+  - ./build/cmake/bin/cmake .
   - .travis/install_golang_tools.sh
 script:
   - make lint
