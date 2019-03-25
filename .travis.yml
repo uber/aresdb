@@ -15,7 +15,6 @@ env:
     - NVCCFLAGS="-ccbin /usr/bin/g++-6"
     - PKG_CONFIG_PATH=${LD_LIBRARY_PATH}/pkgconfig:${PKG_CONFIG_PATH}
     - COMPILER_NAME=gcc CXX=g++-6 CC=gcc-6
-    - CUDAHOSTCXX=g++-6
 
 addons:
   apt:
