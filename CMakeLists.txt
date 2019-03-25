@@ -34,8 +34,10 @@ endif ()
 ################################
 # Compiler and linker flags
 ################################
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 14)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
 include_directories(${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
