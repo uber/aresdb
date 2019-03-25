@@ -91,11 +91,7 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLQueryResult {
 		}
 
 		if qc.isNonAggregationQuery {
-			values := make([]interface{}, len(dimValues))
-			for index, v := range dimValues {
-				values[index] = *v
-			}
-			result.Append(values)
+			result.Append(dimValues)
 		} else {
 			measureBytes := oopkContext.MeasureBytes
 
@@ -165,8 +161,10 @@ func (qc *AQLQueryContext) ReleaseHostResultsBuffers() {
 	ctx := &qc.OOPK
 	memutils.HostFree(ctx.dimensionVectorH)
 	ctx.dimensionVectorH = nil
-	memutils.HostFree(ctx.measureVectorH)
-	ctx.measureVectorH = nil
+	if ctx.measureVectorH != nil {
+		memutils.HostFree(ctx.measureVectorH)
+		ctx.measureVectorH = nil
+	}
 
 	// hllVectorD and hllDimRegIDCountD used for hll query only
 	deviceFreeAndSetNil(&ctx.hllVectorD)

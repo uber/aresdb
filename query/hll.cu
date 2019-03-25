@@ -175,7 +175,7 @@ void copyDim(DimensionColumnVector inputKeys,
 
   DimensionColumnOutputIterator iterOut(outputKeys.DimValues,
                                         inputKeys.VectorCapacity, outputLength,
-                                        inputKeys.NumDimsPerDimWidth);
+                                        inputKeys.NumDimsPerDimWidth, 0);
 
   int numDims = 0;
   for (int i = 0; i < NUM_DIM_WIDTH; i++) {

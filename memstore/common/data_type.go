@@ -184,7 +184,7 @@ func ConvertValueForType(dataType DataType, value interface{}) (interface{}, err
 		out, ok = ConvertToGeoShape(value)
 	}
 	if !ok {
-		return nil, utils.StackError(nil, "Invalid data value %v for data type %s", DataTypeName[dataType])
+		return nil, utils.StackError(nil, "Invalid data value %v for data type %s", value, DataTypeName[dataType])
 	}
 	return out, nil
 }

@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	var batch99, batch101, batch110, batch120, batch130 *memstore.Batch
 	var vs memstore.LiveStore
 	var archiveBatch0 *memstore.ArchiveBatch
-	var dataTypes []memCom.DataType
+	var archiveBatch1 *memstore.ArchiveBatch
 	var memStore memstore.MemStore
 	var metaStore metastore.MetaStore
 	var diskStore diskstore.DiskStore
@@ -82,7 +82,6 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		memStore = new(memMocks.MemStore)
 		diskStore = new(diskMocks.DiskStore)
 
-		dataTypes = []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32}
 		var err error
 		batch110, err = testFactory.ReadLiveBatch("archiving/batch-110")
 		Ω(err).Should(BeNil())
@@ -95,6 +94,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		batch130, err = testFactory.ReadLiveBatch("live/batch-130")
 		Ω(err).Should(BeNil())
 		tmpBatch, err := testFactory.ReadArchiveBatch("archiving/archiveBatch0")
+		tmpBatch1, err := testFactory.ReadArchiveBatch("archiving/archiveBatch1")
 
 		Ω(err).Should(BeNil())
 
@@ -140,6 +140,15 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Batch: memstore.Batch{
 				RWMutex: &sync.RWMutex{},
 				Columns: tmpBatch.Columns,
+			},
+		}
+		archiveBatch1 = &memstore.ArchiveBatch{
+			Version: 0,
+			Size:    5,
+			Shard:   shard,
+			Batch: memstore.Batch{
+				RWMutex: &sync.RWMutex{},
+				Columns: tmpBatch1.Columns,
 			},
 		}
 
@@ -581,7 +590,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
 		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
-		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset)
+		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset, 0)
 		// vp2
 		exp := &expr.VarRef{
 			Val:      "vp2",
@@ -632,7 +641,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
 		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
-		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset)
+		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset, 0)
 		// vp2 == 2
 		exp := &expr.BinaryExpr{
 			Op: expr.EQ,
@@ -713,7 +722,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
 		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
-		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset)
+		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset, 0)
 		ctx.processExpression(exp, nil, tableScanners, foreignTables, stream, 0, dimensionExprRootAction)
 		Ω(*(*[30]uint8)(ctx.dimensionVectorD[0].getPointer())).Should(Equal([30]uint8{0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1}))
 		ctx.cleanupBeforeAggregation()
@@ -911,8 +920,25 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		dimensionVectorHost := unsafe.Pointer(&dvHost[0])
 		numDims := queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 1}
 		var stream unsafe.Pointer
-		asyncCopyDimensionVector(dimensionVectorHost, ctx.dimensionVectorD[0].getPointer(), ctx.resultSize,
+		asyncCopyDimensionVector(dimensionVectorHost, ctx.dimensionVectorD[0].getPointer(), ctx.resultSize, 0,
 			numDims, ctx.resultSize, ctx.resultCapacity, memutils.AsyncCopyDeviceToHost, stream, 0)
+		Ω(dvHost).Should(Equal(dvHostExpected))
+	})
+
+	ginkgo.It("copy dimension vector with offset should work", func() {
+		dvDevice := [40]uint8{2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0, 0, 0, 2, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0}
+		dvHostExpected := [40]uint8{0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0, 0, 2, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0}
+		ctx := oopkBatchContext{
+			dimensionVectorD: [2]devicePointer{{pointer: unsafe.Pointer(&dvDevice[0])}, nullDevicePointer},
+			resultSize:       2,
+			resultCapacity:   4,
+		}
+		dvHost := [40]uint8{}
+		dimensionVectorHost := unsafe.Pointer(&dvHost[0])
+		numDims := queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 1}
+		var stream unsafe.Pointer
+		asyncCopyDimensionVector(dimensionVectorHost, ctx.dimensionVectorD[0].getPointer(), ctx.resultSize, 1,
+			numDims, ctx.resultCapacity, ctx.resultCapacity, memutils.AsyncCopyDeviceToHost, stream, 0)
 		Ω(dvHost).Should(Equal(dvHostExpected))
 	})
 
@@ -2027,5 +2053,93 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			}`,
 		))
 		qc.ReleaseHostResultsBuffers()
+	})
+
+	ginkgo.It("ProcessQuery for non-aggregation query should work", func() {
+		shard.ArchiveStore.CurrentVersion.Batches[0] = archiveBatch1
+		qc := &AQLQueryContext{}
+		q := &AQLQuery{
+			Table: table,
+			Dimensions: []Dimension{
+				{Expr: "c0"},
+				{Expr: "c1"},
+				{Expr: "c2"},
+			},
+			Measures: []Measure{
+				{Expr: "1"},
+			},
+			TimeFilter: TimeFilter{
+				Column: "c0",
+				From:   "1970-01-01",
+				To:     "1970-01-02",
+			},
+			Limit: 20,
+		}
+		qc.Query = q
+
+		qc = q.Compile(memStore, false)
+		Ω(qc.Error).Should(BeNil())
+		qc.ProcessQuery(memStore)
+		Ω(qc.Error).Should(BeNil())
+
+		qc.Results = qc.Postprocess()
+		qc.ReleaseHostResultsBuffers()
+		bs, err := json.Marshal(qc.Results)
+		Ω(err).Should(BeNil())
+
+		Ω(bs).Should(MatchJSON(` {
+			"headers": ["c0", "c1", "c2"],
+			"matrixData": [
+				["100", "0", "1"],
+          		["110", "1", "NULL" ],
+          		["120", "NULL", "1.2"],
+          		["130", "0", "1.3"],
+          		["100", "0", "NULL"],
+          		["110", "1", "1.1"],
+          		["120", "0", "1.2"],
+          		["0", "NULL", "NULL"],
+          		["10", "NULL", "1.1"],
+          		["20", "NULL", "1.2"],
+          		["30", "0", "1.3"],
+          		["40","1","NULL"]
+			]
+		  }`))
+
+		bc := qc.OOPK.currentBatch
+		// Check whether pointers are properly cleaned up.
+		Ω(len(qc.OOPK.foreignTables)).Should(BeZero())
+		Ω(qc.cudaStreams[0]).Should(BeZero())
+		Ω(qc.cudaStreams[1]).Should(BeZero())
+
+		Ω(bc.dimensionVectorD[0]).Should(BeZero())
+		Ω(bc.dimensionVectorD[1]).Should(BeZero())
+
+		Ω(bc.dimIndexVectorD[0]).Should(BeZero())
+		Ω(bc.dimIndexVectorD[1]).Should(BeZero())
+
+		Ω(bc.hashVectorD[0]).Should(BeZero())
+		Ω(bc.hashVectorD[1]).Should(BeZero())
+
+		Ω(bc.measureVectorD[0]).Should(BeZero())
+		Ω(bc.measureVectorD[1]).Should(BeZero())
+
+		Ω(bc.resultSize).Should(BeZero())
+		Ω(bc.resultCapacity).Should(BeZero())
+
+		Ω(len(bc.columns)).Should(BeZero())
+
+		Ω(bc.indexVectorD).Should(BeZero())
+		Ω(bc.predicateVectorD).Should(BeZero())
+
+		Ω(bc.size).Should(BeZero())
+
+		Ω(len(bc.foreignTableRecordIDsD)).Should(BeZero())
+		Ω(len(bc.exprStackD)).Should(BeZero())
+
+		Ω(qc.OOPK.measureVectorH).Should(BeZero())
+		Ω(qc.OOPK.dimensionVectorH).Should(BeZero())
+
+		Ω(qc.OOPK.hllVectorD).Should(BeZero())
+		Ω(qc.OOPK.hllDimRegIDCountD).Should(BeZero())
 	})
 })

@@ -51,10 +51,11 @@ var _ = ginkgo.Describe("time series result", func() {
 
 	ginkgo.It("Append should work", func() {
 		res := AQLQueryResult{}
-		res.Append([]interface{}{1})
+		str := "1"
+		res.Append([]*string{&str})
 		Ω(res).Should(Equal(AQLQueryResult{
 			"matrixData": [][]interface{}{
-				{1},
+				{"1"},
 			},
 		}))
 	})

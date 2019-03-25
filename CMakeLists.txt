@@ -167,7 +167,6 @@ execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
   -e vendor -e go-build -e CMakeFiles \
   -e build \
   -e thirdparty \
-  -e subscriber \
   -e '.*/\\..*' \
   -e '.*/_.*' \
   -e '.*/mocks.*' | tr \"\n\" \" \""
@@ -216,12 +215,12 @@ add_custom_target(lib DEPENDS algorithm mem)
 
 string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
 add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
-        COMMAND go build -o bin/aresd
+        COMMAND go build -o bin/aresd ./cmd/aresd/main.go
         VERBATIM
         )
 
 add_custom_target(ares-subscriber DEPENDS golang-dep rdkafka::rdkafka ${ALL_GO_SRC_LIST}
-        COMMAND go build -tags static -o bin/ares-subscriber ./subscriber
+        COMMAND go build -tags static -o bin/ares-subscriber ./cmd/subscriber/main.go
         VERBATIM
         )
 

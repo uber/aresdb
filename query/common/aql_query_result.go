@@ -94,12 +94,24 @@ func (r AQLQueryResult) SetHLL(dimValues []*string, hll HLL) {
 // =====  Non aggregate query result methods start =====
 
 // Append appends one row
-func (r AQLQueryResult) Append(row []interface{}) {
+func (r AQLQueryResult) append(row []interface{}) {
 	if _, ok := r[MatrixDataKey]; !ok {
 		r[MatrixDataKey] = [][]interface{}{}
 	}
 
 	r[MatrixDataKey] = append(r[MatrixDataKey].([][]interface{}), row)
+}
+
+func(r AQLQueryResult) Append(dimValues []*string) {
+	values := make([]interface{}, len(dimValues))
+	for index, v := range dimValues {
+		if v == nil {
+			values[index] = "NULL"
+		} else {
+			values[index] = *v
+		}
+	}
+	r.append(values)
 }
 
 // SetHeaders sets headers field for the results

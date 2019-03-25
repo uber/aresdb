@@ -244,7 +244,7 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 		val, err := common.ValueFromString(values[0], dataType)
 		if err != nil {
 			return nil, utils.StackError(err,
-				"Unable to parse value from string %s for data type %s",
+				"Unable to parse value from string %s for data type %d",
 				values[0], dataType)
 		}
 
@@ -263,7 +263,7 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 			}
 			if err != nil {
 				return nil, utils.StackError(err,
-					"Unable to parse value from string %s for data type %s",
+					"Unable to parse value from string %s for data type %d",
 					values[1], common.Uint32)
 			}
 			setDataValue(countsVec, i+1, currentCountVal)
