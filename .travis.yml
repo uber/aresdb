@@ -1,4 +1,4 @@
-language: generic
+language: go
 sudo: required
 go:
     - "1.9"

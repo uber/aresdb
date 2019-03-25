@@ -205,10 +205,12 @@ func CudaProfilerStop() {
 
 // GetDeviceMemoryInfo returns information about total size and free size of device memory in bytes for a specfic
 // device.
-func GetDeviceMemoryInfo(device int) (freeSize int, totalSize int) {
+func GetDeviceMemoryInfo(device int) (int, int) {
+	var freeSize, totalSize C.size_t
 	doCGoCall(func() C.CGoCallResHandle {
-		return C.GetDeviceMemoryInfo(&freeSize, &totalSize)
+		return C.GetDeviceMemoryInfo(&freeSize, &totalSize, C.int(device))
 	})
+	return int(freeSize), int(totalSize)
 }
 
 // doCGoCall does the cgo call by converting CGoCallResHandle to C.int and *C.char and calls doCGoCall.
