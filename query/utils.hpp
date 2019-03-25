@@ -15,7 +15,9 @@
 #ifndef QUERY_UTILS_HPP_
 #define QUERY_UTILS_HPP_
 #include <cuda_runtime.h>
+#ifdef USE_RMM
 #include <rmm/thrust_rmm_allocator.h>
+#endif
 #include <cfloat>
 #include <cmath>
 #include <cstdint>

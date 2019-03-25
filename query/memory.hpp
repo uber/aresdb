@@ -17,7 +17,9 @@
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
+#ifdef USE_RMM
 #include <rmm/thrust_rmm_allocator.h>
+#endif
 
 namespace ares {
 template<typename V>
