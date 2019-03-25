@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUERY_MEMORY_HPP
-#define QUERY_MEMORY_HPP
+#ifndef QUERY_MEMORY_HPP_
+#define QUERY_MEMORY_HPP_
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -40,4 +40,4 @@ void deviceMemset(void *devPtr, int value, size_t count);
 void memcpyAsyncHostToDevice(void* dst, const void* src, size_t count,
     cudaStream_t stream);
 }  // namespace ares
-#endif  // QUERY_MEMORY_HPP
+#endif  // QUERY_MEMORY_HPP_
