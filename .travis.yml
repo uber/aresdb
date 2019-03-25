@@ -12,6 +12,7 @@ env:
     - CUDA_HOME=${CUDA_LIB_LOCAL}
     - PATH=${CUDA_HOME}/bin:${GOPATH}/bin:${CUDA_HOME}/nvvm/bin:${PATH}
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
+    - NVCCFLAGS="-ccbin /usr/bin/g++-6"
     - PKG_CONFIG_PATH=${LD_LIBRARY_PATH}/pkgconfig:${PKG_CONFIG_PATH}
     - COMPILER_NAME=gcc CXX=g++-6 CC=gcc-6
     - CUDAHOSTCXX=g++-6
