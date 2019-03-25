@@ -31,10 +31,11 @@ if (NOT QUERY_MODE)
     endif ()
 endif ()
 
-OPTION(POOLED_DEVICE_MEMORY "Pooled device memory management" OFF)
 ################################
 # Compiler and linker flags
 ################################
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
