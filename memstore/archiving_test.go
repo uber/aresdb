@@ -33,8 +33,8 @@ var _ = ginkgo.Describe("archiving", func() {
 	var batch99, batch101, batch110 *Batch
 	var archiveBatch0 *ArchiveBatch
 	var vs LiveStore
-	var dataTypes []memCom.DataType
-	var archivingJob *ArchivingJob
+	//var dataTypes []memCom.DataType
+	//var archivingJob *ArchivingJob
 	var scheduler *schedulerImpl
 	var jobManager *archiveJobManager
 	var cutoff uint32 = 140
@@ -76,7 +76,7 @@ var _ = ginkgo.Describe("archiving", func() {
 	}
 
 	ginkgo.BeforeEach(func() {
-		dataTypes = []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32}
+		//dataTypes = []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32}
 		var err error
 		batch110, err = getFactory().ReadLiveBatch("archiving/batch-110")
 		Ω(err).Should(BeNil())
@@ -135,12 +135,14 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardMap[shardID].LiveStore.BackfillManager.LastBatchOffset = 1
 		m.TableShards[table] = shardMap
 
+		/*
 		archivingJob = &ArchivingJob{
 			tableName: table,
 			shardID:   shardID,
 			cutoff:    cutoff,
 			memStore:  m,
 		}
+		*/
 
 		scheduler = newScheduler(m)
 		jobManager = scheduler.jobManagers[memCom.ArchivingJobType].(*archiveJobManager)

@@ -25,7 +25,7 @@ var _ = ginkgo.Describe("merge", func() {
 	var cutoff uint32 = 200
 	var batch0, batch1, noSortColumnBatch *Batch
 	var err error
-	var scheduler *schedulerImpl
+	//var scheduler *schedulerImpl
 	var hostMemoryManager common.HostMemoryManager
 	var shard *TableShard
 	var patch, noSortColumnPatch, patchWithDeletedColumns *archivingPatch
@@ -33,7 +33,7 @@ var _ = ginkgo.Describe("merge", func() {
 
 	ginkgo.BeforeEach(func() {
 
-		scheduler = newScheduler(getFactory().NewMockMemStore())
+		//scheduler = newScheduler(getFactory().NewMockMemStore())
 		hostMemoryManager = NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32)
 		shard = &TableShard{
 			HostMemoryManager: hostMemoryManager,

@@ -14,6 +14,7 @@
 
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/iterator/discard_iterator.h>
+#include <thrust/gather.h>
 #include <thrust/transform.h>
 #include <cstring>
 #include <algorithm>
@@ -21,6 +22,7 @@
 #include "query/algorithm.hpp"
 #include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
+
 
 CGoCallResHandle Sort(DimensionColumnVector keys,
                       int length,
@@ -72,6 +74,38 @@ CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
               << std::endl;
     resHandle.pStrErr = strdup(e.what());
   }
+  return resHandle;
+}
+
+
+CGoCallResHandle Expand(DimensionColumnVector inputKeys,
+                        DimensionColumnVector outputKeys,
+                        uint32_t *baseCounts,
+                        uint32_t *indexVector,
+                        int indexVectorLen,
+                        int outputOccupiedLen,
+                        void *cudaStream,
+                        int device) {
+  CGoCallResHandle resHandle = {nullptr, nullptr};
+
+  try {
+    SET_DEVICE(device);
+    resHandle.res = reinterpret_cast<void *>(ares::expand(inputKeys,
+                                                          outputKeys,
+                                                          baseCounts,
+                                                          indexVector,
+                                                          indexVectorLen,
+                                                          outputOccupiedLen,
+                                                          cudaStream));
+    CheckCUDAError("Expand");
+    return resHandle;
+  }
+  catch (std::exception &e) {
+    std::cerr << "Exception happend when doing Expand:" << e.what()
+              << std::endl;
+    resHandle.pStrErr = strdup(e.what());
+  }
+
   return resHandle;
 }
 
@@ -240,7 +274,7 @@ int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
       outputLength, inputKeys.NumDimsPerDimWidth);
   DimensionColumnOutputIterator iterOut(outputKeys.DimValues,
                                         inputKeys.VectorCapacity, outputLength,
-                                        inputKeys.NumDimsPerDimWidth);
+                                        inputKeys.NumDimsPerDimWidth, 0);
 
   int numDims = 0;
   for (int i = 0; i < NUM_DIM_WIDTH; i++) {
@@ -256,6 +290,71 @@ int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
                iterOut);
 #endif
   return outputLength;
+}
+
+
+int expand(DimensionColumnVector inputKeys,
+           DimensionColumnVector outputKeys,
+           uint32_t *baseCounts,
+           uint32_t *indexVector,
+           int indexVectorLen,
+           int outputOccupiedLen,
+           void *cudaStream) {
+  // create count interator from baseCount and indexVector
+  IndexCountIterator countIter = IndexCountIterator(baseCounts, indexVector);
+
+  // total item counts by adding counts together
+  uint32_t totalCount = thrust::reduce(HOST_DEVICE_STRATEGY(cudaStream),
+                                       countIter,
+                                       countIter+indexVectorLen);
+
+  // scan the counts to obtain output offsets for each input element
+  HOST_DEVICE_VECTOR(uint32_t) offsets(indexVectorLen);
+  thrust::exclusive_scan(HOST_DEVICE_STRATEGY(cudaStream),
+                         countIter,
+                         countIter+indexVectorLen,
+                         offsets.begin());
+
+  // scatter the nonzero counts into their corresponding output positions
+  HOST_DEVICE_VECTOR(uint32_t) indices(totalCount);
+  thrust::scatter_if(HOST_DEVICE_STRATEGY(cudaStream),
+                     thrust::counting_iterator<uint32_t>(0),
+                     thrust::counting_iterator<uint32_t>(indexVectorLen),
+                     offsets.begin(),
+                     countIter,
+                     indices.begin());
+
+  // compute max-scan over the indices, filling in the holes
+  thrust::inclusive_scan(HOST_DEVICE_STRATEGY(cudaStream),
+                         indices.begin(),
+                         indices.end(),
+                         indices.begin(),
+                         thrust::maximum<uint32_t>());
+
+  // get the raw pointer from device/host vector
+  uint32_t * newIndexVector = thrust::raw_pointer_cast(&indices[0]);
+
+  int outputLen = min(totalCount, outputKeys.VectorCapacity
+                        - outputOccupiedLen);
+  // start the real copy operation
+  DimensionColumnPermutateIterator iterIn(
+      inputKeys.DimValues, newIndexVector, inputKeys.VectorCapacity,
+      outputLen, inputKeys.NumDimsPerDimWidth);
+
+  DimensionColumnOutputIterator iterOut(outputKeys.DimValues,
+                                        outputKeys.VectorCapacity, outputLen,
+                                        inputKeys.NumDimsPerDimWidth,
+                                        outputOccupiedLen);
+
+  int numDims = 0;
+  for (int i = 0; i < NUM_DIM_WIDTH; i++) {
+      numDims += inputKeys.NumDimsPerDimWidth[i];
+  }
+  // copy dim values into output
+  thrust::copy(HOST_DEVICE_STRATEGY(cudaStream), iterIn,
+                iterIn + numDims * 2 * outputLen, iterOut);
+  // return total count in the output dimensionVector
+  return outputLen + outputOccupiedLen;
 }
 
 }  // namespace ares

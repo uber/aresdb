@@ -53,6 +53,7 @@ const (
 	unsupportedInputType      = "unsupported input type for %s: %s"
 	defaultTimezoneTableAlias = "__timezone_lookup"
 	geoShapeLimit             = 100
+	nonAggregationQueryLimit  = 1000
 )
 
 // constants for call names.
@@ -1703,6 +1704,9 @@ func (qc *AQLQueryContext) processMeasure() {
 
 	if _, ok := qc.Query.Measures[0].expr.(*expr.NumberLiteral); ok {
 		qc.isNonAggregationQuery = true
+		if qc.Query.Limit <= 0 {
+			qc.Query.Limit = nonAggregationQueryLimit
+		}
 		return
 	}
 
@@ -1723,7 +1727,7 @@ func (qc *AQLQueryContext) processMeasure() {
 
 	if len(aggregate.Args) != 1 {
 		qc.Error = utils.StackError(nil,
-			"expect one parameter for aggregate function %s, but got %u",
+			"expect one parameter for aggregate function %s, but got %d",
 			aggregate.Name, len(aggregate.Args))
 		return
 	}
@@ -1795,9 +1799,11 @@ func (qc *AQLQueryContext) processMeasure() {
 func (qc *AQLQueryContext) getAllColumnsDimension() (columns []Dimension) {
 	// only main table columns wildcard match supported
 	for _, column := range qc.TableScanners[0].Schema.Schema.Columns {
-		columns = append(columns, Dimension{
-			expr: &expr.VarRef{Val: column.Name},
-		})
+		if !column.Deleted {
+			columns = append(columns, Dimension{
+				expr: &expr.VarRef{Val: column.Name},
+			})
+		}
 	}
 	return
 }
@@ -1907,9 +1913,13 @@ func (qc *AQLQueryContext) sortDimensionColumns() {
 	}
 	// plus one byte per dimension column for validity
 	qc.OOPK.DimRowBytes += numDimensions
-	if qc.OOPK.DimRowBytes > C.MAX_DIMENSION_BYTES {
-		qc.Error = utils.StackError(nil, "maximum dimension bytes: %d, got: %", C.MAX_DIMENSION_BYTES, qc.OOPK.DimRowBytes)
-		return
+
+	if !qc.isNonAggregationQuery {
+		// no dimension size checking for non-aggregation query
+		if qc.OOPK.DimRowBytes > C.MAX_DIMENSION_BYTES {
+			qc.Error = utils.StackError(nil, "maximum dimension bytes: %d, got: %d", C.MAX_DIMENSION_BYTES, qc.OOPK.DimRowBytes)
+			return
+		}
 	}
 }
 

@@ -1,0 +1,9 @@
+data_type: Uint32
+length: 5
+has_counts: true
+values:
+    - 0,1
+    - 10,2
+    - 20,3
+    - 30,4
+    - 40,5
