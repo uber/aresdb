@@ -1,0 +1,9 @@
+TODO:
+ - support namespace operations
+ - support table schema operations: SHOW TABLES, DESCRIBE, CREATE TABLE, DROP TABLE
+ - support write operations: INSERT, DELETE, ALTER, DROP/ADD COLUM
+ - support EXPLAIN
+ - support sub queries: WITH, VALUES + subquery
+ - SET operation: INTERSECT, UNIN, EXCEPT
+ - window function?
+ - support string operations: CONCAT, LIKE

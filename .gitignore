@@ -20,4 +20,5 @@ CMakeFiles/
 Makefile
 cmake-build-debug/
 bin/
+.bin/
 lib/
