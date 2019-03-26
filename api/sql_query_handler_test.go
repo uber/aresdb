@@ -80,9 +80,13 @@ var _ = ginkgo.Describe("QueryHandler SQL", func() {
 		// Invalid timeBucketizer days.
 		query := `
 			{
+<<<<<<< HEAD
 			  "queries": [
 				"SELECT count(*) AS value FROM trips WHERE status='completed' AND aql_time_filter(request_at, \"24 hours ago\", \"this quarter-hour\", America/New_York) GROUP BY aql_time_bucket_hour(request_at, \"\", America/New_York) "
 			  ]
+=======
+			  "query": "SELECT count(*) AS value FROM trips WHERE status='completed' AND aql_time_filter(request_at, \"24 hours ago\", \"this quarter-hour\", America/New_York) GROUP BY aql_time_bucket_hour(request_at, \"\", America/New_York) "	
+>>>>>>> fa85b0d... wip
 			}
 		`
 		resp, err := http.Post(fmt.Sprintf("http://%s/sql", hostPort), "application/json", bytes.NewBuffer([]byte(query)))
@@ -90,9 +94,13 @@ var _ = ginkgo.Describe("QueryHandler SQL", func() {
 		bs, err := ioutil.ReadAll(resp.Body)
 		Ω(err).Should(BeNil())
 		Ω(string(bs)).Should(MatchJSON(`{
+<<<<<<< HEAD
 				"results": [
 				  {}
 				]
+=======
+				"result": {}
+>>>>>>> fa85b0d... wip
 			  }`))
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 	})
@@ -113,8 +121,12 @@ var _ = ginkgo.Describe("QueryHandler SQL", func() {
 		hostPort := testServer.Listener.Addr().String()
 		query := `
 			{
+<<<<<<< HEAD
 			  "queries": [
 			  ]
+=======
+			  "query": ""
+>>>>>>> fa85b0d... wip
 			}
 		`
 		resp, err := http.Post(fmt.Sprintf("http://%s/sql", hostPort), "application/json", bytes.NewBuffer([]byte(query)))
@@ -124,6 +136,7 @@ var _ = ginkgo.Describe("QueryHandler SQL", func() {
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 		Ω(string(bs)).Should(MatchJSON(`
 			{
+<<<<<<< HEAD
 				"results": []
             }
 		`))
@@ -141,4 +154,10 @@ var _ = ginkgo.Describe("QueryHandler SQL", func() {
 		Ω(resp.StatusCode).Should(Equal(http.StatusBadRequest))
 		Ω(string(bs)).Should(ContainSubstring("Bad request: missing/invalid parameter"))
 	})
+=======
+				"result": null
+            }
+		`))
+	})
+>>>>>>> fa85b0d... wip
 })

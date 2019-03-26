@@ -75,6 +75,10 @@ type SQLRequest struct {
 	Origin string `header:"Rpc-Caller,optional" json:"origin"`
 	// in: body
 	Body struct {
+<<<<<<< HEAD
 		Queries []string `json:"queries"`
+=======
+		Query string `json:"query"`
+>>>>>>> fa85b0d... wip
 	} `body:""`
 }

@@ -177,26 +177,26 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 	})
 
 	ginkgo.It("ReportError should work", func() {
-		rw := NewHLLQueryResponseWriter()
+		rw := NewHLLMultiQueryResponseWriter()
 		Ω(rw.GetStatusCode()).Should(Equal(http.StatusOK))
 		rw.ReportError(0, "test", errors.New("test err"), http.StatusBadRequest)
 		Ω(rw.GetStatusCode()).Should(Equal(http.StatusBadRequest))
 
-		hllRW := rw.(*HLLQueryResponseWriter)
+		hllRW := rw.(*HLLMultiQueryResponseWriter)
 		Ω(hllRW.response.GetBytes()).Should(Equal([]byte{2, 1, 237, 172, 0, 0, 0, 0, 8, 0, 0, 0,
 			1, 0, 0, 0, 116, 101, 115, 116, 32, 101, 114, 114, 0, 0, 0, 0, 0, 0, 0, 0}))
 	})
 
 	ginkgo.It("ReportQueryContext should work", func() {
-		rw := NewHLLQueryResponseWriter()
+		rw := NewHLLMultiQueryResponseWriter()
 		Ω(func() { rw.ReportQueryContext(nil) }).ShouldNot(Panic())
 	})
 
 	ginkgo.It("ReportResult should work", func() {
-		rw := NewHLLQueryResponseWriter()
+		rw := NewHLLMultiQueryResponseWriter()
 		rw.ReportResult(0, &query.AQLQueryContext{HLLQueryResult: []byte{0, 0, 0, 0, 0, 0, 0, 0}})
 
-		hllRW := rw.(*HLLQueryResponseWriter)
+		hllRW := rw.(*HLLMultiQueryResponseWriter)
 		Ω(hllRW.response.GetBytes()).Should(Equal([]byte{2, 1, 237, 172, 0, 0, 0, 0, 8, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
 	})
@@ -213,7 +213,7 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 
 		data, err := ioutil.ReadFile("../testing/data/query/hll")
 		Ω(err).Should(BeNil())
-		rw := NewJSONQueryResponseWriter(2)
+		rw := NewJSONMultiQueryResponseWriter(2)
 		rw.ReportResult(0, &query.AQLQueryContext{
 			Query:          q,
 			OOPK:           oopk,
@@ -225,8 +225,8 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 			HLLQueryResult: data,
 		})
 
-		Ω(rw.(*JSONQueryResponseWriter).response.Results).Should(HaveLen(2))
-		resultJson, err := json.Marshal(rw.(*JSONQueryResponseWriter).response.Results)
+		Ω(rw.(*JSONMultiQueryResponseWriter).response.Results).Should(HaveLen(2))
+		resultJson, err := json.Marshal(rw.(*JSONMultiQueryResponseWriter).response.Results)
 		Ω(resultJson).Should(MatchJSON(`
 		[
 			null,
@@ -249,9 +249,9 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 			}
 		]
 		`))
-		Ω(rw.(*JSONQueryResponseWriter).response.Errors).Should(HaveLen(2))
-		Ω(rw.(*JSONQueryResponseWriter).response.Errors[0]).ShouldNot(BeNil())
-		Ω(rw.(*JSONQueryResponseWriter).response.Errors[1]).Should(BeNil())
+		Ω(rw.(*JSONMultiQueryResponseWriter).response.Errors).Should(HaveLen(2))
+		Ω(rw.(*JSONMultiQueryResponseWriter).response.Errors[0]).ShouldNot(BeNil())
+		Ω(rw.(*JSONMultiQueryResponseWriter).response.Errors[1]).Should(BeNil())
 	})
 
 	ginkgo.It("Verbose should work", func() {

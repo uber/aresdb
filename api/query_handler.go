@@ -96,20 +96,26 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 			errStr = err.Error()
 		}
 
-		l := utils.GetQueryLogger().With(
-			"error", errStr,
-			"request", aqlRequest,
-			"queries_enabled_", aqlRequest.Body.Queries,
-			"duration", duration,
-			"statusCode", statusCode,
-			"contexts_enabled_", qcs,
-			"headers", r.Header,
-		)
-
 		if statusCode == http.StatusOK {
-			l.Info("All queries succeeded")
+			utils.GetLogger().With(
+				"error", errStr,
+				"request", aqlRequest,
+				"queries_enabled_", aqlRequest.Body.Queries,
+				"duration", duration,
+				"statusCode", statusCode,
+				"contexts_enabled_", qcs,
+				"headers", r.Header,
+			).Info("All queries succeeded")
 		} else {
-			l.Error("Some of the queries finished with error")
+			utils.GetLogger().With(
+				"error", errStr,
+				"request", aqlRequest,
+				"queries_enabled_", aqlRequest.Body.Queries,
+				"duration", duration,
+				"statusCode", statusCode,
+				"contexts_enabled_", qcs,
+				"headers", r.Header,
+			).Error("Some of the queries finished with error")
 		}
 
 	}()
@@ -138,7 +144,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 	}
 
 	returnHLL := aqlRequest.Accept == ContentTypeHyperLogLog
-	requestResponseWriter := getReponseWriter(returnHLL, len(aqlRequest.Body.Queries))
+	requestResponseWriter := getMultiReponseWriter(returnHLL, len(aqlRequest.Body.Queries))
 
 	queryTimer := utils.GetRootReporter().GetTimer(utils.QueryLatency)
 	start := utils.Now()
@@ -220,15 +226,15 @@ func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager,
 	return
 }
 
-func getReponseWriter(returnHLL bool, nQueries int) QueryResponseWriter {
+func getMultiReponseWriter(returnHLL bool, nQueries int) MultiQueryResponseWriter {
 	if returnHLL {
-		return NewHLLQueryResponseWriter()
+		return NewHLLMultiQueryResponseWriter()
 	}
-	return NewJSONQueryResponseWriter(nQueries)
+	return NewJSONMultiQueryResponseWriter(nQueries)
 }
 
-// QueryResponseWriter defines the interface to write query result and error to final response.
-type QueryResponseWriter interface {
+// MultiQueryResponseWriter defines the interface to write query result and error to final response.
+type MultiQueryResponseWriter interface {
 	ReportError(queryIndex int, table string, err error, statusCode int)
 	ReportQueryContext(*query.AQLQueryContext)
 	ReportResult(int, *query.AQLQueryContext)
@@ -236,15 +242,15 @@ type QueryResponseWriter interface {
 	GetStatusCode() int
 }
 
-// JSONQueryResponseWriter writes query result as json.
-type JSONQueryResponseWriter struct {
+// JSONMultiQueryResponseWriter writes query result as json.
+type JSONMultiQueryResponseWriter struct {
 	response   query.AQLResponse
 	statusCode int
 }
 
-// NewJSONQueryResponseWriter creates a new JSONQueryResponseWriter.
-func NewJSONQueryResponseWriter(nQueries int) QueryResponseWriter {
-	return &JSONQueryResponseWriter{
+// NewJSONQueryResponseWriter creates a new JSONMultiQueryResponseWriter.
+func NewJSONMultiQueryResponseWriter(nQueries int) MultiQueryResponseWriter {
+	return &JSONMultiQueryResponseWriter{
 		response: query.AQLResponse{
 			Results: make([]queryCom.AQLQueryResult, nQueries),
 		},
@@ -253,7 +259,7 @@ func NewJSONQueryResponseWriter(nQueries int) QueryResponseWriter {
 }
 
 // ReportError writes the error of the query to the response.
-func (w *JSONQueryResponseWriter) ReportError(queryIndex int, table string, err error, statusCode int) {
+func (w *JSONMultiQueryResponseWriter) ReportError(queryIndex int, table string, err error, statusCode int) {
 	// Usually larger status code means more severe problem.
 	if statusCode > w.statusCode {
 		w.statusCode = statusCode
@@ -268,12 +274,12 @@ func (w *JSONQueryResponseWriter) ReportError(queryIndex int, table string, err 
 }
 
 // ReportQueryContext writes the query context to the response.
-func (w *JSONQueryResponseWriter) ReportQueryContext(qc *query.AQLQueryContext) {
+func (w *JSONMultiQueryResponseWriter) ReportQueryContext(qc *query.AQLQueryContext) {
 	w.response.QueryContext = append(w.response.QueryContext, qc)
 }
 
 // ReportResult writes the query result to the response.
-func (w *JSONQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQueryContext) {
+func (w *JSONMultiQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQueryContext) {
 	qc.Results = qc.Postprocess()
 	if qc.Error != nil {
 		w.ReportError(queryIndex, qc.Query.Table, qc.Error, http.StatusInternalServerError)
@@ -282,25 +288,25 @@ func (w *JSONQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQuer
 }
 
 // Respond writes the final response into ResponseWriter.
-func (w *JSONQueryResponseWriter) Respond(rw http.ResponseWriter) {
+func (w *JSONMultiQueryResponseWriter) Respond(rw http.ResponseWriter) {
 	RespondJSONObjectWithCode(rw, w.statusCode, w.response)
 }
 
 // GetStatusCode returns the status code written into response.
-func (w *JSONQueryResponseWriter) GetStatusCode() int {
+func (w *JSONMultiQueryResponseWriter) GetStatusCode() int {
 	return w.statusCode
 }
 
-// HLLQueryResponseWriter writes query result as application/hll. For more inforamtion, please refer to
+// HLLMultiQueryResponseWriter writes query result as application/hll. For more inforamtion, please refer to
 // https://github.com/uber/aresdb/wiki/HyperLogLog.
-type HLLQueryResponseWriter struct {
+type HLLMultiQueryResponseWriter struct {
 	response   *query.HLLQueryResults
 	statusCode int
 }
 
-// NewHLLQueryResponseWriter creates a new HLLQueryResponseWriter.
-func NewHLLQueryResponseWriter() QueryResponseWriter {
-	w := HLLQueryResponseWriter{
+// NewHLLQueryResponseWriter creates a new HLLMultiQueryResponseWriter.
+func NewHLLMultiQueryResponseWriter() MultiQueryResponseWriter {
+	w := HLLMultiQueryResponseWriter{
 		response:   query.NewHLLQueryResults(),
 		statusCode: http.StatusOK,
 	}
@@ -308,7 +314,7 @@ func NewHLLQueryResponseWriter() QueryResponseWriter {
 }
 
 // ReportError writes the error of the query to the response.
-func (w *HLLQueryResponseWriter) ReportError(queryIndex int, table string, err error, statusCode int) {
+func (w *HLLMultiQueryResponseWriter) ReportError(queryIndex int, table string, err error, statusCode int) {
 	if statusCode > w.statusCode {
 		w.statusCode = statusCode
 	}
@@ -317,21 +323,21 @@ func (w *HLLQueryResponseWriter) ReportError(queryIndex int, table string, err e
 
 // ReportQueryContext writes the query context to the response. Since the format of application/hll is not
 // designed for human reading, we will ignore storing query context in response for now.
-func (w *HLLQueryResponseWriter) ReportQueryContext(qc *query.AQLQueryContext) {
+func (w *HLLMultiQueryResponseWriter) ReportQueryContext(qc *query.AQLQueryContext) {
 }
 
 // ReportResult writes the query result to the response.
-func (w *HLLQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQueryContext) {
+func (w *HLLMultiQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQueryContext) {
 	w.response.WriteResult(qc.HLLQueryResult)
 }
 
 // Respond writes the final response into ResponseWriter.
-func (w *HLLQueryResponseWriter) Respond(rw http.ResponseWriter) {
+func (w *HLLMultiQueryResponseWriter) Respond(rw http.ResponseWriter) {
 	rw.Header().Set("Content-Type", ContentTypeHyperLogLog)
 	RespondBytesWithCode(rw, w.statusCode, w.response.GetBytes())
 }
 
 // GetStatusCode returns the status code written into response.
-func (w *HLLQueryResponseWriter) GetStatusCode() int {
+func (w *HLLMultiQueryResponseWriter) GetStatusCode() int {
 	return w.statusCode
 }
