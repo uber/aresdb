@@ -64,7 +64,7 @@ CGoCallResHandle Init() {
     cudaSetDevice(device);
     rmmOptions_t options = {
         PoolAllocation,
-        0, // Default to half ot total memory
+        0,  // Default to half ot total memory
         false  // Disable logging.
     };
     resHandle.pStrErr = checkRMMError(rmmInitialize(&options), "rmmInitialize");
