@@ -49,6 +49,8 @@ set(CMAKE_CUDA_FLAGS "-lineinfo -I. $ENV{NVCCFLAGS} ${CMAKE_CUDA_FLAGS}")
 set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,code=compute_60")
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
+link_directories(${CMAKE_BINARY_DIR}/lib)
+
 ################################
 # GTest
 ################################
@@ -69,7 +71,6 @@ enable_testing()
 set(RMM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/rmm)
 set(RMM_LIB_DIR ${RMM_SRC_DIR})
 if (QUERY_MODE STREQUAL "DEVICE" AND USE_RMM)
-    message(CMAKE_BINARY_DIR is ${CMAKE_BINARY_DIR})
     ExternalProject_Add(
             project_rmm
             SOURCE_DIR ${RMM_SRC_DIR}

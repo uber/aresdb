@@ -61,19 +61,10 @@ CGoCallResHandle Init() {
 
   size_t deviceCount = reinterpret_cast<size_t>(resHandle.res);
   for (size_t device = 0; device < deviceCount; device++) {
-    // Get current device memory in bytes and set
-    // as initial pool size.
-    resHandle = GetDeviceGlobalMemoryInMB(device);
-    if (resHandle.pStrErr != nullptr) {
-      return resHandle;
-    }
-
-    size_t memoryInBytes = reinterpret_cast<size_t>(resHandle.res)
-        * 1024 * 1024;
     cudaSetDevice(device);
     rmmOptions_t options = {
         PoolAllocation,
-        memoryInBytes,
+        0, // Default to half ot total memory
         false  // Disable logging.
     };
     resHandle.pStrErr = checkRMMError(rmmInitialize(&options), "rmmInitialize");
