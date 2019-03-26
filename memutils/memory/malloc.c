@@ -114,7 +114,10 @@ CGoCallResHandle CudaProfilerStop() {
 
 CGoCallResHandle GetDeviceMemoryInfo(size_t *freeSize, size_t *totalSize,
     int device){
-  CGoCallResHandle resHandle = {"Not supported", NULL};
+  char* pStrErr = (char *) malloc(sizeof(NOT_SUPPORTED_ERR_MSG));
+  snprintf(pStrErr, sizeof(NOT_SUPPORTED_ERR_MSG),
+      NOT_SUPPORTED_ERR_MSG);
+  CGoCallResHandle resHandle = {NULL, pStrErr};
   return resHandle;
 }
 

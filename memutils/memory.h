@@ -28,6 +28,8 @@ enum {
   POOLED_MEMORY_FLAG = 1 << 1
 };
 
+char NOT_SUPPORTED_ERR_MSG[] = "Not supported";
+
 // device_memory_flags_t & 0x1: HOST(0) or DEVICE(1) implementation
 // device_memory_flags_t & 0x2: USE POOLED MEMORY MANAGEMENT OR NOT
 typedef uint32_t DeviceMemoryFlags;

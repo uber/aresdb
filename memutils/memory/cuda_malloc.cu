@@ -20,8 +20,6 @@
 
 const int MAX_ERROR_LEN = 100;
 
-char NOT_SUPPORTED_ERR_MSG[] = "Not supported";
-
 // checkCUDAError checks the cuda error of last runtime calls and returns the
 // pointer to the buffer of error message. This buffer needs to be released
 // by caller or upper callers.
@@ -173,7 +171,7 @@ CGoCallResHandle GetDeviceMemoryInfo(size_t *freeSize, size_t *totalSize,
       malloc(sizeof(NOT_SUPPORTED_ERR_MSG)));
   snprintf(pStrErr, sizeof(NOT_SUPPORTED_ERR_MSG),
       NOT_SUPPORTED_ERR_MSG);
-  CGoCallResHandle resHandle = {pStrErr, NULL};
+  CGoCallResHandle resHandle = {NULL, pStrErr};
   return resHandle;
 }
 
