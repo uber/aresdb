@@ -53,15 +53,13 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 # GTest
 ################################
 set(GTEST_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest)
-set(GTEST_LIB_DIR ${GTEST_SRC_DIR}/lib)
 ExternalProject_Add(googletest
         SOURCE_DIR ${GTEST_SRC_DIR}
         BUILD_IN_SOURCE 1
+        CONFIGURE_COMMAND cmake -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} .
         # Ignore install command to avoid install lib and include
         # files to /usr/local where we might don't have permission to write to.
-        INSTALL_COMMAND ""
         )
-link_directories(${GTEST_LIB_DIR})
 enable_testing()
 ######################################################
 # RMM
@@ -154,6 +152,7 @@ include(rdkafka.cmake)
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 target_include_directories(all_unittest PRIVATE ${GTEST_SRC_DIR}/googletest/include)
+add_dependencies(all_unittest googletest)
 # Link test executable against gtest & gtest_main
 target_link_libraries(all_unittest gtest gtest_main algorithm mem pthread)
 if (USE_RMM)
