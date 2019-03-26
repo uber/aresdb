@@ -18,6 +18,17 @@ import (
 	"github.com/uber/aresdb/query"
 )
 
+// QueryContext contains settings common for all requests
+type RequestContext struct {
+	Device int
+	Verbose int
+	Debug int
+	Profiling string
+	DeviceChoosingTimeout int
+	Accept string
+	Origin string
+}
+
 // AQLRequest represents AQL query request. Debug mode will
 // run **each batch** in synchronized mode and report time
 // for each step.
@@ -41,4 +52,29 @@ type AQLRequest struct {
 	Origin string `header:"Rpc-Caller,optional" json:"origin"`
 	// in: body
 	Body query.AQLRequest `body:""`
+}
+
+// SQLRequest represents SQL query request. Debug mode will
+// run **each batch** in synchronized mode and report time
+// for each step.
+// swagger:parameters querySQL
+type SQLRequest struct {
+	// in: query
+	Device int `query:"device,optional" json:"device"`
+	// in: query
+	Verbose int `query:"verbose,optional" json:"verbose"`
+	// in: query
+	Debug int `query:"debug,optional" json:"debug"`
+	// in: query
+	Profiling string `query:"profiling,optional" json:"profiling"`
+	// in: query
+	DeviceChoosingTimeout int `query:"timeout,optional" json:"timeout"`
+	// in: header
+	Accept string `header:"Accept,optional" json:"accept"`
+	// in: header
+	Origin string `header:"Rpc-Caller,optional" json:"origin"`
+	// in: body
+	Body struct {
+		Queries []string `json:"queries"`
+	} `body:""`
 }

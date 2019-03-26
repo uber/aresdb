@@ -27,9 +27,104 @@ singleExpression
     ;
 
 statement
-    : queryNoWith                                                            #statementDefault
+    : query                                                            #statementDefault
+    | USE schema=identifier                                            #use
+    | USE catalog=identifier '.' schema=identifier                     #use
+    | CREATE SCHEMA (IF NOT EXISTS)? qualifiedName
+        (WITH properties)?                                             #createSchema
+    | DROP SCHEMA (IF EXISTS)? qualifiedName (CASCADE | RESTRICT)?     #dropSchema
+    | ALTER SCHEMA qualifiedName RENAME TO identifier                  #renameSchema
+    | CREATE TABLE (IF NOT EXISTS)? qualifiedName columnAliases?
+        (COMMENT sql_string)?
+        (WITH properties)? AS (query | '('query')')
+        (WITH (NO)? DATA)?                                             #createTableAsSelect
+    | CREATE TABLE (IF NOT EXISTS)? qualifiedName
+        '(' tableElement (',' tableElement)* ')'
+         (COMMENT sql_string)?
+         (WITH properties)?                                            #createTable
+    | DROP TABLE (IF EXISTS)? qualifiedName                            #dropTable
+    | INSERT INTO qualifiedName columnAliases? query                   #insertInto
+    | DELETE FROM qualifiedName (WHERE booleanExpression)?             #delete
+    | ALTER TABLE from=qualifiedName RENAME TO to=qualifiedName        #renameTable
+    | ALTER TABLE tableName=qualifiedName
+        RENAME COLUMN from=identifier TO to=identifier                 #renameColumn
+    | ALTER TABLE tableName=qualifiedName
+        DROP COLUMN column=qualifiedName                               #dropColumn
+    | ALTER TABLE tableName=qualifiedName
+        ADD COLUMN column=columnDefinition                             #addColumn
+    | CREATE (OR REPLACE)? VIEW qualifiedName AS query                 #createView
+    | DROP VIEW (IF EXISTS)? qualifiedName                             #dropView
+    | CALL qualifiedName '(' (callArgument (',' callArgument)*)? ')'   #call
+    | GRANT
+        (privilege (',' privilege)* | ALL PRIVILEGES)
+        ON TABLE? qualifiedName TO grantee=identifier
+        (WITH GRANT OPTION)?                                           #grant
+    | REVOKE
+        (GRANT OPTION FOR)?
+        (privilege (',' privilege)* | ALL PRIVILEGES)
+        ON TABLE? qualifiedName FROM grantee=identifier                #revoke
+    | SHOW GRANTS
+        (ON TABLE? qualifiedName)?                                     #showGrants
+    | EXPLAIN ANALYZE? VERBOSE?
+        ('(' explainOption (',' explainOption)* ')')? statement        #explain
+    | SHOW CREATE TABLE qualifiedName                                  #showCreateTable
+    | SHOW CREATE VIEW qualifiedName                                   #showCreateView
+    | SHOW TABLES ((FROM | IN) qualifiedName)?
+        (LIKE pattern=sql_string (ESCAPE escape=sql_string)?)?                 #showTables
+    | SHOW SCHEMAS ((FROM | IN) identifier)?
+        (LIKE pattern=sql_string (ESCAPE escape=sql_string)?)?                 #showSchemas
+    | SHOW CATALOGS (LIKE pattern=sql_string)?                             #showCatalogs
+    | SHOW COLUMNS (FROM | IN) qualifiedName                           #showColumns
+    | SHOW STATS (FOR | ON) qualifiedName                              #showStats
+    | SHOW STATS FOR '(' querySpecification ')'                        #showStatsForQuery
+    | DESCRIBE qualifiedName                                           #showColumns
+    | DESC qualifiedName                                               #showColumns
+    | SHOW FUNCTIONS                                                   #showFunctions
+    | SHOW SESSION                                                     #showSession
+    | SET SESSION qualifiedName EQ expression                          #setSession
+    | RESET SESSION qualifiedName                                      #resetSession
+    | START TRANSACTION (transactionMode (',' transactionMode)*)?      #startTransaction
+    | COMMIT WORK?                                                     #commit
+    | ROLLBACK WORK?                                                   #rollback
+    | SHOW PARTITIONS (FROM | IN) qualifiedName
+        (WHERE booleanExpression)?
+        (ORDER BY sortItem (',' sortItem)*)?
+        (LIMIT limit=(INTEGER_VALUE | ALL))?                           #showPartitions
+    | PREPARE identifier FROM statement                                #prepare
+    | DEALLOCATE PREPARE identifier                                    #deallocate
+    | EXECUTE identifier (USING expression (',' expression)*)?         #execute
+    | DESCRIBE INPUT identifier                                        #describeInput
+    | DESCRIBE OUTPUT identifier                                       #describeOutput
     ;
 
+query
+    :  with? queryNoWith
+    ;
+
+with
+    : WITH RECURSIVE? namedQuery (',' namedQuery)*
+    ;
+
+tableElement
+    : columnDefinition
+    | likeClause
+    ;
+
+columnDefinition
+    : identifier sqltype (COMMENT sql_string)?
+    ;
+
+likeClause
+    : LIKE qualifiedName (optionType=(INCLUDING | EXCLUDING) PROPERTIES)?
+    ;
+
+properties
+    : '(' property (',' property)* ')'
+    ;
+
+property
+    : identifier EQ expression
+    ;
 
 queryNoWith:
       queryTerm
@@ -39,10 +134,15 @@ queryNoWith:
 
 queryTerm
     : queryPrimary                                                             #queryTermDefault
+    | left=queryTerm operator=INTERSECT setQuantifier? right=queryTerm         #setOperation
+    | left=queryTerm operator=(UNION | EXCEPT) setQuantifier? right=queryTerm  #setOperation
     ;
 
 queryPrimary
     : querySpecification                   #queryPrimaryDefault
+    | TABLE qualifiedName                  #table
+    | VALUES expression (',' expression)*  #inlineTable
+    | '(' queryNoWith  ')'                 #subquery
     ;
 
 sortItem
@@ -54,6 +154,7 @@ querySpecification
       (FROM relation (',' relation)*)?
       (WHERE where=booleanExpression)?
       (GROUP BY groupBy)?
+      (HAVING having=booleanExpression)?
     ;
 
 groupBy
@@ -62,6 +163,9 @@ groupBy
 
 groupingElement
     : groupingExpressions                                               #singleGroupingSet
+    | ROLLUP '(' (qualifiedName (',' qualifiedName)*)? ')'              #rollup
+    | CUBE '(' (qualifiedName (',' qualifiedName)*)? ')'                #cube
+    | GROUPING SETS '(' groupingSet (',' groupingSet)* ')'              #multipleGroupingSets
     ;
 
 groupingExpressions
@@ -69,6 +173,14 @@ groupingExpressions
     | expression
     ;
 
+groupingSet
+    : '(' (qualifiedName (',' qualifiedName)*)? ')'
+    | qualifiedName
+    ;
+
+namedQuery
+    : name=identifier (columnAliases)? AS '(' query ')'
+    ;
 
 setQuantifier
     : DISTINCT
@@ -123,9 +235,9 @@ columnAliases
 
 relationPrimary
     : qualifiedName                                                   #tableName
-    | '(' queryNoWith ')'                                                   #subqueryRelation
+    | '(' query ')'                                                   #subqueryRelation
     | UNNEST '(' expression (',' expression)* ')' (WITH ORDINALITY)?  #unnest
-    | LATERAL '(' queryNoWith ')'                                           #lateral
+    | LATERAL '(' query ')'                                           #lateral
     | '(' relation ')'                                                #parenthesizedRelation
     ;
 
@@ -150,10 +262,11 @@ predicated
 // fix golang compiler error: no package name
 predicate[antlr.ParserRuleContext value]
     : comparisonOperator right=valueExpression                            #comparison
-    | comparisonOperator comparisonQuantifier '(' queryNoWith ')'               #quantifiedComparison
+    | comparisonOperator comparisonQuantifier '(' query ')'               #quantifiedComparison
     | NOT? BETWEEN lower=valueExpression AND upper=valueExpression        #between
     | NOT? IN '(' expression (',' expression)* ')'                        #inList
-    | NOT? IN '(' queryNoWith ')'                                               #inSubquery
+    | NOT? IN '(' query ')'                                               #inSubquery
+    | NOT? LIKE pattern=valueExpression (ESCAPE escape=valueExpression)?  #like
     | IS NOT? NULL                                                        #nullPredicate
     | IS NOT? DISTINCT FROM right=valueExpression                         #distinctFrom
     ;
@@ -164,6 +277,7 @@ valueExpression
     | operator=(MINUS | PLUS) valueExpression                                           #arithmeticUnary
     | left=valueExpression operator=(ASTERISK | SLASH | PERCENT) right=valueExpression  #arithmeticBinary
     | left=valueExpression operator=(PLUS | MINUS) right=valueExpression                #arithmeticBinary
+    | left=valueExpression CONCAT right=valueExpression                                 #concatenation
     ;
 
 primaryExpression
@@ -176,9 +290,21 @@ primaryExpression
     | sql_string                                                                              #stringLiteral
     | BINARY_LITERAL                                                                      #binaryLiteral
     | '?'                                                                                 #parameter
-    | qualifiedName '(' ASTERISK ')'                                                      #functionCall
-    | qualifiedName '(' (setQuantifier? expression (',' expression)*)?')'                 #functionCall
-    | '(' queryNoWith ')'                                                                       #subqueryExpression
+    | POSITION '(' valueExpression IN valueExpression ')'                                 #position
+    | '(' expression (',' expression)+ ')'                                                #rowConstructor
+    | ROW '(' expression (',' expression)* ')'                                            #rowConstructor
+    | qualifiedName '(' ASTERISK ')' filter? over?                                        #functionCall
+    | qualifiedName '(' (setQuantifier? expression (',' expression)*)?
+        (ORDER BY sortItem (',' sortItem)*)? ')' filter? over?                             #functionCall
+    | identifier '->' expression                                                          #lambda
+    | '(' (identifier (',' identifier)*)? ')' '->' expression                             #lambda
+    | '(' query ')'                                                                       #subqueryExpression
+    // This is an extension to ANSI SQL, which considers EXISTS to be a <boolean expression>
+    | EXISTS '(' query ')'                                                                #exists
+    | CASE valueExpression whenClause+ (ELSE elseExpression=expression)? END              #simpleCase
+    | CASE whenClause+ (ELSE elseExpression=expression)? END                              #searchedCase
+    | CAST '(' expression AS sqltype ')'                                                     #cast
+    | TRY_CAST '(' expression AS sqltype ')'                                                 #cast
     | ARRAY '[' (expression (',' expression)*)? ']'                                       #arrayConstructor
     | value=primaryExpression '[' index=valueExpression ']'                               #subscript
     | identifier                                                                          #columnReference
@@ -188,6 +314,10 @@ primaryExpression
     | name=CURRENT_TIMESTAMP ('(' precision=INTEGER_VALUE ')')?                           #specialDateTimeFunction
     | name=LOCALTIME ('(' precision=INTEGER_VALUE ')')?                                   #specialDateTimeFunction
     | name=LOCALTIMESTAMP ('(' precision=INTEGER_VALUE ')')?                              #specialDateTimeFunction
+    | name=CURRENT_USER                                                                   #currentUser
+    | SUBSTRING '(' valueExpression FROM valueExpression (FOR valueExpression)? ')'       #substring
+    | NORMALIZE '(' valueExpression (',' normalForm)? ')'                                 #normalize
+    | EXTRACT '(' identifier FROM valueExpression ')'                                     #extract
     | '(' expression ')'                                                                  #parenthesizedExpression
     | GROUPING '(' (qualifiedName (',' qualifiedName)*)? ')'                              #groupingOperation
     ;
@@ -222,6 +352,9 @@ intervalField
     : YEAR | MONTH | DAY | HOUR | MINUTE | SECOND
     ;
 
+normalForm
+    : NFD | NFC | NFKD | NFKC
+    ;
 
 // fix golang fmt error
 sqltype
@@ -248,9 +381,49 @@ whenClause
     : WHEN condition=expression THEN result=expression
     ;
 
+filter
+    : FILTER '(' WHERE booleanExpression ')'
+    ;
+
+over
+    : OVER '('
+        (PARTITION BY partition+=expression (',' partition+=expression)*)?
+        (ORDER BY sortItem (',' sortItem)*)?
+        windowFrame?
+      ')'
+    ;
+
+// fix method duplication error
+windowFrame
+    : frameType=RANGE wstart=frameBound
+    | frameType=ROWS wstart=frameBound
+    | frameType=RANGE BETWEEN wstart=frameBound AND end=frameBound
+    | frameType=ROWS BETWEEN wstart=frameBound AND end=frameBound
+    ;
+
+frameBound
+    : UNBOUNDED boundType=PRECEDING                 #unboundedFrame
+    | UNBOUNDED boundType=FOLLOWING                 #unboundedFrame
+    | CURRENT ROW                                   #currentRowBound
+    | expression boundType=(PRECEDING | FOLLOWING)  #boundedFrame // expression should be unsignedLiteral
+    ;
+
+
 explainOption
     : FORMAT value=(TEXT | GRAPHVIZ)                   #explainFormat
     | TYPE value=(LOGICAL | DISTRIBUTED | VALIDATE)    #explainType
+    ;
+
+transactionMode
+    : ISOLATION LEVEL levelOfIsolation    #isolationLevel
+    | READ accessMode=(ONLY | WRITE)      #transactionAccessMode
+    ;
+
+levelOfIsolation
+    : READ UNCOMMITTED                    #readUncommitted
+    | READ COMMITTED                      #readCommitted
+    | REPEATABLE READ                     #repeatableRead
+    | SERIALIZABLE                        #serializable
     ;
 
 callArgument
