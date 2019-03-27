@@ -173,7 +173,6 @@ var _ = Describe("streaming_processor", func() {
 	// extendedEnumIDs
 	column2extendedEnumIDs := []int{2}
 
-	var insertBytes []byte
 	BeforeEach(func() {
 		testServer = httptest.NewUnstartedServer(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +201,7 @@ var _ = Describe("streaming_processor", func() {
 					}
 				} else if strings.Contains(r.URL.Path, "data") && r.Method == http.MethodPost {
 					var err error
-					insertBytes, err = ioutil.ReadAll(r.Body)
+					_, err = ioutil.ReadAll(r.Body)
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
 					} else {

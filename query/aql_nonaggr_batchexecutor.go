@@ -40,7 +40,7 @@ func (e *NonAggrBatchExecutorImpl) project() {
 	memutils.WaitForCudaStream(e.stream, e.qc.Device)
 	e.qc.OOPK.currentBatch.cleanupBeforeAggregation()
 
-	if e.qc.OOPK.currentBatch.resultSize == e.qc.Query.Limit {
+	if e.qc.OOPK.currentBatch.resultSize >= e.qc.Query.Limit {
 		e.qc.OOPK.done = true
 	}
 }
@@ -56,22 +56,16 @@ func (e *NonAggrBatchExecutorImpl) expandDimensions(numDims queryCom.DimCountsPe
 		return
 	}
 
-	// maximum rows needed for this run as we may have results from previous run
-	lenWanted := bc.resultCapacity - bc.resultSize
-	if bc.size < lenWanted {
-		lenWanted = bc.size
-	}
-
 	if bc.baseCountD.isNull() {
 		// baseCountD is null, no uncompression is needed
-		asyncCopyDimensionVector(bc.dimensionVectorD[1].getPointer(), bc.dimensionVectorD[0].getPointer(), lenWanted, bc.resultSize,
+		asyncCopyDimensionVector(bc.dimensionVectorD[1].getPointer(), bc.dimensionVectorD[0].getPointer(), bc.size, bc.resultSize,
 			numDims, bc.resultCapacity, bc.resultCapacity, memutils.AsyncCopyDeviceToDevice, e.stream, e.qc.Device)
-		bc.resultSize += lenWanted
+		bc.resultSize += bc.size
 		return
 	}
 
 	e.qc.doProfile(func() {
-		e.qc.OOPK.currentBatch.expand(numDims, lenWanted, e.stream, e.qc.Device)
+		e.qc.OOPK.currentBatch.expand(numDims, bc.size, e.stream, e.qc.Device)
 		e.qc.reportTimingForCurrentBatch(e.stream, &e.start, expandEvalTiming)
 	}, "expand", e.stream)
 }
@@ -89,4 +83,9 @@ func (e *NonAggrBatchExecutorImpl) prepareForDimEval(
 	}
 	// to keep the consistency of the output dimension vector
 	bc.dimensionVectorD[0], bc.dimensionVectorD[1] = bc.dimensionVectorD[1], bc.dimensionVectorD[0]
+	// maximum rows needed from filter result
+	lenWanted := bc.resultCapacity - bc.resultSize
+	if bc.size > lenWanted {
+		bc.size = lenWanted
+	}
 }

@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
@@ -1799,9 +1800,11 @@ func (qc *AQLQueryContext) processMeasure() {
 func (qc *AQLQueryContext) getAllColumnsDimension() (columns []Dimension) {
 	// only main table columns wildcard match supported
 	for _, column := range qc.TableScanners[0].Schema.Schema.Columns {
-		if !column.Deleted {
+		// TODO we can add GeoPoint data type support
+		if !column.Deleted && column.Type != metaCom.GeoPoint && column.Type != metaCom.GeoShape {
 			columns = append(columns, Dimension{
 				expr: &expr.VarRef{Val: column.Name},
+				Expr: column.Name,
 			})
 		}
 	}
@@ -1814,6 +1817,11 @@ func (qc *AQLQueryContext) processDimensions() {
 	for i, dim := range qc.Query.Dimensions {
 		// TODO: support numeric bucketizer.
 		qc.OOPK.Dimensions[i] = dim.expr
+		if dim.expr.Type() == expr.GeoPoint || dim.expr.Type() == expr.GeoShape {
+			qc.Error = utils.StackError(nil,
+				"GeoPoint/GeoShape can not be used for dimension: %s", dim.Expr)
+			return
+		}
 	}
 
 	if qc.OOPK.geoIntersection != nil {
