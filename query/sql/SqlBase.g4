@@ -179,12 +179,6 @@ primaryExpression
     | qualifiedName '(' ASTERISK ')'                                                      #functionCall
     | qualifiedName '(' (setQuantifier? expression (',' expression)*)?')'                 #functionCall
     | '(' queryNoWith ')'                                                                       #subqueryExpression
-    // This is an extension to ANSI SQL, which considers EXISTS to be a <boolean expression>
-    | EXISTS '(' queryNoWith ')'                                                                #exists
-    | CASE valueExpression whenClause+ (ELSE elseExpression=expression)? END              #simpleCase
-    | CASE whenClause+ (ELSE elseExpression=expression)? END                              #searchedCase
-    | CAST '(' expression AS sqltype ')'                                                     #cast
-    | TRY_CAST '(' expression AS sqltype ')'                                                 #cast
     | ARRAY '[' (expression (',' expression)*)? ']'                                       #arrayConstructor
     | value=primaryExpression '[' index=valueExpression ']'                               #subscript
     | identifier                                                                          #columnReference
@@ -194,10 +188,6 @@ primaryExpression
     | name=CURRENT_TIMESTAMP ('(' precision=INTEGER_VALUE ')')?                           #specialDateTimeFunction
     | name=LOCALTIME ('(' precision=INTEGER_VALUE ')')?                                   #specialDateTimeFunction
     | name=LOCALTIMESTAMP ('(' precision=INTEGER_VALUE ')')?                              #specialDateTimeFunction
-    | name=CURRENT_USER                                                                   #currentUser
-    | SUBSTRING '(' valueExpression FROM valueExpression (FOR valueExpression)? ')'       #substring
-    | NORMALIZE '(' valueExpression (',' normalForm)? ')'                                 #normalize
-    | EXTRACT '(' identifier FROM valueExpression ')'                                     #extract
     | '(' expression ')'                                                                  #parenthesizedExpression
     | GROUPING '(' (qualifiedName (',' qualifiedName)*)? ')'                              #groupingOperation
     ;
@@ -232,9 +222,6 @@ intervalField
     : YEAR | MONTH | DAY | HOUR | MINUTE | SECOND
     ;
 
-normalForm
-    : NFD | NFC | NFKD | NFKC
-    ;
 
 // fix golang fmt error
 sqltype
@@ -261,49 +248,9 @@ whenClause
     : WHEN condition=expression THEN result=expression
     ;
 
-filter
-    : FILTER '(' WHERE booleanExpression ')'
-    ;
-
-over
-    : OVER '('
-        (PARTITION BY partition+=expression (',' partition+=expression)*)?
-        (ORDER BY sortItem (',' sortItem)*)?
-        windowFrame?
-      ')'
-    ;
-
-// fix method duplication error
-windowFrame
-    : frameType=RANGE wstart=frameBound
-    | frameType=ROWS wstart=frameBound
-    | frameType=RANGE BETWEEN wstart=frameBound AND end=frameBound
-    | frameType=ROWS BETWEEN wstart=frameBound AND end=frameBound
-    ;
-
-frameBound
-    : UNBOUNDED boundType=PRECEDING                 #unboundedFrame
-    | UNBOUNDED boundType=FOLLOWING                 #unboundedFrame
-    | CURRENT ROW                                   #currentRowBound
-    | expression boundType=(PRECEDING | FOLLOWING)  #boundedFrame // expression should be unsignedLiteral
-    ;
-
-
 explainOption
     : FORMAT value=(TEXT | GRAPHVIZ)                   #explainFormat
     | TYPE value=(LOGICAL | DISTRIBUTED | VALIDATE)    #explainType
-    ;
-
-transactionMode
-    : ISOLATION LEVEL levelOfIsolation    #isolationLevel
-    | READ accessMode=(ONLY | WRITE)      #transactionAccessMode
-    ;
-
-levelOfIsolation
-    : READ UNCOMMITTED                    #readUncommitted
-    | READ COMMITTED                      #readCommitted
-    | REPEATABLE READ                     #repeatableRead
-    | SERIALIZABLE                        #serializable
     ;
 
 callArgument

@@ -1,0 +1,4 @@
+SELECT  count(*)
+FROM trips 
+WHERE aql_time_filter(request_at, "96 quarter-hours ago", "1 quarter-hours ago", America/New_York) AND marketplace="agora"
+GROUP BY aql_time_bucket_day(request_at, "minute", America/New_York);

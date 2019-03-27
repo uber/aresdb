@@ -1,0 +1,3 @@
+SELECT count(*)
+FROM trips 
+GROUP BY aql_time_bucket_day("request_at", "minute", "America/New_York");
