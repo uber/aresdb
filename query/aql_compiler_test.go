@@ -2863,7 +2863,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 			Dimensions: []Dimension{
 				{
-					Expr: "g.shape",
+					Expr: "g.count",
 				},
 			},
 			Filters: []string{
@@ -3429,6 +3429,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 							},
 						},
 					},
+					ColumnUsages: map[int]columnUsage{},
 				},
 			},
 		}
@@ -3446,9 +3447,10 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		qc.processDimensions()
 		Ω(qc.Error).ShouldNot(BeNil())
+		Ω(qc.Error.Error()).Should(ContainSubstring("GeoPoint/GeoShape can not be used for dimension"))
 
 		qc.Error = nil
-		q = &AQLQuery{
+		qc.Query = &AQLQuery{
 			Table: "trips",
 			Dimensions: []Dimension{
 				{
@@ -3462,7 +3464,6 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 		qc.parseExprs()
-		Ω(qc.Error).Should(BeNil())
 		Ω(qc.Error).Should(BeNil())
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())

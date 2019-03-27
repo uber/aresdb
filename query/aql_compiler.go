@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
@@ -1800,7 +1801,7 @@ func (qc *AQLQueryContext) getAllColumnsDimension() (columns []Dimension) {
 	// only main table columns wildcard match supported
 	for _, column := range qc.TableScanners[0].Schema.Schema.Columns {
 		// TODO we can add GeoPoint data type support
-		if !column.Deleted && column.Type != "GeoPoint" && column.Type != "GeoShape" {
+		if !column.Deleted && column.Type != metaCom.GeoPoint && column.Type != metaCom.GeoShape {
 			columns = append(columns, Dimension{
 				expr: &expr.VarRef{Val: column.Name},
 			})
