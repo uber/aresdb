@@ -196,11 +196,11 @@ CGoCallResHandle deviceMemset(void *devPtr, int value, size_t count) {
   return resHandle;
 }
 
-CGoCallResHandle memcpyAsyncHostToDevice(void* dst, const void* src,
+CGoCallResHandle asyncCopyHostToDevice cudaStream(void* dst, const void* src,
     size_t count, void* stream) {
   CGoCallResHandle resHandle = {NULL, NULL};
   cudaMemcpyAsync(dst, src, count,
                   cudaMemcpyHostToDevice, (cudaStream_t) stream);
-  resHandle.pStrErr = checkCUDAError("memcpyAsyncHostToDevice");
+  resHandle.pStrErr = checkCUDAError("asyncCopyHostToDevice");
   return resHandle;
 }

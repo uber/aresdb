@@ -473,7 +473,7 @@ ForeignTableIterator<Value> *prepareForeignTableIterators(
   ValueIter *vpItersDevice;
   deviceMalloc(reinterpret_cast<void **>(
                  &vpItersDevice), totalSize);
-  ares::memcpyAsyncHostToDevice(reinterpret_cast<void *>(vpItersDevice),
+  ares::asyncCopyHostToDevice(reinterpret_cast<void *>(vpItersDevice),
                   reinterpret_cast<void *>(&batchesH[0]), totalSize, stream);
   batches = vpItersDevice;
   return batches;

@@ -140,8 +140,8 @@ CGoCallResHandle deviceMemset(void *devPtr, int value, size_t count) {
   return resHandle;
 }
 
-CGoCallResHandle memcpyAsyncHostToDevice( void* dst, const void* src,
-    size_t count, void* stream){
+CGoCallResHandle asyncCopyHostToDevice(void *dst, const void *src,
+                                       size_t count, void *stream){
   CGoCallResHandle resHandle = {NULL, NULL};
   memcpy(dst, src, count);
   return resHandle;

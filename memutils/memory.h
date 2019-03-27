@@ -80,8 +80,8 @@ CGoCallResHandle GetDeviceMemoryInfo(size_t *freeSize, size_t *totalSize,
 CGoCallResHandle deviceMalloc(void **devPtr, size_t size);
 CGoCallResHandle deviceFree(void *devPtr);
 CGoCallResHandle deviceMemset(void *devPtr, int value, size_t count);
-CGoCallResHandle memcpyAsyncHostToDevice( void* dst, const void* src,
-    size_t count, void* stream);
+CGoCallResHandle asyncCopyHostToDevice(void *dst, const void *src,
+                                       size_t count, void *stream);
 
 #ifdef __cplusplus
 }

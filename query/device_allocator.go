@@ -24,13 +24,13 @@ import (
 	"unsafe"
 )
 
-//// memoryTrackingDeviceAllocatorImpl virtually allocates devices to queries.
+//// DeviceAllocator virtually allocates devices to queries.
 //// It maintains device config and current query usage, allocates one or two
 //// devices to a query upon request. All requests to the GPU devices must go
 //// through this allocator in order for the virtual allocation to be effective.
 //// Two devices are allocated at the same time for a single query when consumer
 //// grade GPUs without ECC memory are used (to cross check for errors manually).
-//type memoryTrackingDeviceAllocatorImpl interface {
+//type DeviceAllocator interface {
 //	// Allocate a device (or two) for a query.
 //	// Returns the IDs of the allocated devices, or -1 in case of error.
 //	// Returns the same device ID if only one device is allocated.
@@ -51,7 +51,7 @@ import (
 //	//   }
 //	//   // Keep the query result only and free up most memory.
 //	//   DeviceRealloc(bytes=result_only)
-//	//   // memoryTrackingDeviceAllocatorImpl will remember this query's intent for bigger memory.
+//	//   // DeviceAllocator will remember this query's intent for bigger memory.
 //	//   if DeviceRealloc(bytes=new, failFast=false) {
 //	//     return success
 //	//   }
@@ -109,7 +109,7 @@ type deviceAllocator interface {
 var da deviceAllocator
 var deviceAllocatorOnce sync.Once
 
-// getDeviceAllocator returns singleton memoryTrackingDeviceAllocatorImpl instance.
+// getDeviceAllocator returns singleton deviceAllocator instance.
 func getDeviceAllocator() deviceAllocator {
 	deviceAllocatorOnce.Do(func() {
 		da = newDeviceAllocator()
@@ -117,7 +117,7 @@ func getDeviceAllocator() deviceAllocator {
 	return da
 }
 
-// deviceAllocate is the wrapper of deviceAllocate of memoryTrackingDeviceAllocatorImpl.
+// deviceAllocate is the wrapper of deviceAllocate of deviceAllocator.
 func deviceAllocate(bytes, device int) devicePointer {
 	return getDeviceAllocator().deviceAllocate(bytes, device)
 }

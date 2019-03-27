@@ -37,7 +37,7 @@ using device_vector = thrust::host_vector<V>;
 void deviceMalloc(void **devPtr, size_t size);
 void deviceFree(void *devPtr);
 void deviceMemset(void *devPtr, int value, size_t count);
-void memcpyAsyncHostToDevice(void* dst, const void* src, size_t count,
+void asyncCopyHostToDevice cudaStream(void* dst, const void* src, size_t count,
     cudaStream_t stream);
 }  // namespace ares
 #endif  // QUERY_MEMORY_HPP_

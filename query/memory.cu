@@ -49,9 +49,9 @@ void deviceMemset(void *devPtr, int value, size_t count) {
   checkMemoryError(::deviceMemset(devPtr, value, count));
 }
 
-void memcpyAsyncHostToDevice(void* dst, const void* src, size_t count,
+void asyncCopyHostToDevice cudaStream(void* dst, const void* src, size_t count,
     cudaStream_t stream) {
-  checkMemoryError(::memcpyAsyncHostToDevice(dst, src, count, stream));
+  checkMemoryError(::asyncCopyHostToDevice cudaStream(dst, src, count, stream));
 }
 
 }  // namespace ares
