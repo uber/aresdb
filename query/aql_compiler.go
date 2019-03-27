@@ -1804,6 +1804,7 @@ func (qc *AQLQueryContext) getAllColumnsDimension() (columns []Dimension) {
 		if !column.Deleted && column.Type != metaCom.GeoPoint && column.Type != metaCom.GeoShape {
 			columns = append(columns, Dimension{
 				expr: &expr.VarRef{Val: column.Name},
+				Expr: column.Name,
 			})
 		}
 	}
