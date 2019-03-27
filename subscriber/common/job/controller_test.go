@@ -111,7 +111,6 @@ var _ = Describe("controller", func() {
 	// extendedEnumIDs
 	column2extendedEnumIDs := []int{2}
 
-	var insertBytes []byte
 	// set up aresDB server
 	BeforeEach(func() {
 		testServer = httptest.NewUnstartedServer(
@@ -141,7 +140,7 @@ var _ = Describe("controller", func() {
 					}
 				} else if strings.Contains(r.URL.Path, "data") && r.Method == http.MethodPost {
 					var err error
-					insertBytes, err = ioutil.ReadAll(r.Body)
+					_, err = ioutil.ReadAll(r.Body)
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
 					} else {

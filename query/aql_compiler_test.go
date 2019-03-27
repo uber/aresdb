@@ -3392,6 +3392,91 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}))
 	})
 
+	ginkgo.It("parses query has geopoint as dimension", func() {
+		q := &AQLQuery{
+			Table: "trips",
+			Dimensions: []Dimension{
+				{
+					Expr: "request_point",
+				},
+			},
+			Measures: []Measure{
+				{
+					Expr: "count(*)",
+				},
+			},
+		}
+
+		qc := &AQLQueryContext{
+			TableIDByAlias: map[string]int{
+				"trips": 0,
+			},
+			TableScanners: []*TableScanner{
+				{
+					Schema: &memstore.TableSchema{
+						ValueTypeByColumn: []memCom.DataType{
+							memCom.Uint16,
+							memCom.GeoPoint,
+						},
+						ColumnIDs: map[string]int{
+							"city_id":       0,
+							"request_point": 1,
+						},
+						Schema: metaCom.Table{
+							Columns: []metaCom.Column{
+								{Name: "city_id", Type: metaCom.Uint16},
+								{Name: "request_point", Type: metaCom.GeoPoint},
+							},
+						},
+					},
+				},
+			},
+		}
+		qc.Query = q
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processJoinConditions()
+		Ω(qc.Error).Should(BeNil())
+		qc.matchPrefilters()
+		qc.processFilters()
+		Ω(qc.Error).Should(BeNil())
+		qc.processMeasure()
+		Ω(qc.Error).Should(BeNil())
+		qc.processDimensions()
+		Ω(qc.Error).ShouldNot(BeNil())
+
+		qc.Error = nil
+		q = &AQLQuery{
+			Table: "trips",
+			Dimensions: []Dimension{
+				{
+					Expr: "*",
+				},
+			},
+			Measures: []Measure{
+				{
+					Expr: "1",
+				},
+			},
+		}
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Error).Should(BeNil())
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processJoinConditions()
+		Ω(qc.Error).Should(BeNil())
+		qc.matchPrefilters()
+		qc.processFilters()
+		Ω(qc.Error).Should(BeNil())
+		qc.processMeasure()
+		Ω(qc.Error).Should(BeNil())
+		qc.processDimensions()
+		Ω(qc.Error).Should(BeNil())
+	})
+
 	ginkgo.It("adjust filter to time filters", func() {
 		schema := &memstore.TableSchema{
 			ValueTypeByColumn: []memCom.DataType{
