@@ -22,3 +22,4 @@ cmake-build-debug/
 bin/
 .bin/
 lib/
+.DS_Store

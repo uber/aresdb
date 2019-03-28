@@ -1,3 +1,0 @@
-SELECT status AS trip_status, count(*) 
-FROM trips 
-GROUP BY trip_status;

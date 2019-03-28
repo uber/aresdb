@@ -1,3 +1,0 @@
-SELECT count(*) AS completed_trips, sum(fare)
-FROM trips 
-WHERE status='completed' AND status = 'cancelled' OR marketplace='agora'
