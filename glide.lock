@@ -10,7 +10,7 @@ imports:
 - name: github.com/bkaradzic/go-lz4
   version: 7224d8d8f27ef618c0a95f1ae69dbb0488abc33a
 - name: github.com/confluentinc/confluent-kafka-go
-  version: 1a9ab56eab8af03680ebed609a7bb2700049814d
+  version: 213e7cd9dd311f2fb7586c02cb61b1b3aa5a5e48
   subpackages:
   - kafka
 - name: github.com/curator-go/curator
