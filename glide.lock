@@ -1,12 +1,8 @@
 hash: ef1379ff2edfdb007daa69f609bf61b685b32d145008f9ae7cf6bfd36f8982f2
-updated: 2019-03-26T12:08:56.439572-07:00
+updated: 2019-03-04T11:46:50.772704-08:00
 imports:
 - name: github.com/a8m/djson
-  version: afa66dc6bcfb823609f3c99135a8b6cc06738b9d
-- name: github.com/antlr/antlr4
-  version: be58ebffde8e29c154192c019608f0a5b8e6a064
-  subpackages:
-  - runtime/Go/antlr
+  version: c02c5aef757f1282dbe880f399ca5e30dbf33c15
 - name: github.com/bkaradzic/go-lz4
   version: 7224d8d8f27ef618c0a95f1ae69dbb0488abc33a
 - name: github.com/confluentinc/confluent-kafka-go
@@ -16,24 +12,26 @@ imports:
 - name: github.com/curator-go/curator
   version: 8a961ea3b25229b9b328724b8b2059ab58c1d16b
 - name: github.com/davecgh/go-spew
-  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
   - spew
 - name: github.com/emirpasic/gods
-  version: 7c131f6714175bd4ce484da1f348260c79db3069
+  version: b2394dfbb6314eeb616db55d1e01928f287da4b4
   subpackages:
   - containers
   - trees
   - trees/redblacktree
   - utils
 - name: github.com/fsnotify/fsnotify
-  version: ccc981bf80385c528a65fbfdd49bf2d8da22aa23
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: github.com/getlantern/deepcopy
   version: 7f45deb8130a0acc553242eb0e009e3f6f3d9ce3
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/handlers
-  version: 7e6a874cdc0efb71a260254cc0e30d5415b6a5bb
+  version: 90663712d74cb411cbef281bc1e08c19d1a76145
 - name: github.com/gorilla/mux
-  version: 08e7f807d38d6a870193019bb439056118661505
+  version: e3702bed27f0d39777b0b37b664b6280e8ef8fbf
 - name: github.com/hashicorp/hcl
   version: 65a6292f0157eff210d03ed1bf6c59b190b8b906
   subpackages:
@@ -53,7 +51,7 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/onsi/ginkgo
-  version: 505cc352255139defb7371000668063d1161e331
+  version: 2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f
   subpackages:
   - config
   - internal/codelocation
@@ -73,7 +71,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 5533ce8a0da374da682cd53d70ddcc54adf1a710
+  version: 65fb64232476ad9046e57c26cd0bff3d3a8dc6cd
   subpackages:
   - format
   - internal/assertion
@@ -89,9 +87,9 @@ imports:
 - name: github.com/pelletier/go-toml
   version: 27c6b39a135b7dc87a14afb068809132fb7a9a8f
 - name: github.com/pkg/errors
-  version: ba968bfe8b2f7e042a574c888954fccecfa385b4
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/pmezard/go-difflib
-  version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
 - name: github.com/samuel/go-zookeeper
@@ -99,9 +97,9 @@ imports:
   subpackages:
   - zk
 - name: github.com/satori/go.uuid
-  version: b2ce2384e17bbe0c6d34077efa39dbab3e09123b
+  version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/spf13/afero
-  version: a5d6946387efe7d64d09dcba68cdd523dc1273a3
+  version: f4711e4db9e9a1d3887343acb72b2bbfc2f686f5
   subpackages:
   - mem
 - name: github.com/spf13/cast
@@ -113,33 +111,36 @@ imports:
 - name: github.com/spf13/pflag
   version: 24fa6976df40757dce6aea913e7b81ade90530e1
 - name: github.com/spf13/viper
-  version: 6d33b5a963d922d182c91e8a1c88d81fd150cfd4
+  version: d104d259b3380cb653bb793756823c3c41b37b53
 - name: github.com/stretchr/objx
-  version: ef50b0de28773081167c97fc27cf29a0bf8b8c71
+  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
 - name: github.com/stretchr/testify
-  version: 363ebb24d041ccea8068222281c2e963e997b9dc
+  version: ffdc059bfe9ce6a4e144ba849dbedead332c6053
   subpackages:
   - assert
   - mock
   - require
   - suite
 - name: github.com/uber-go/tally
-  version: d0a004a77fc9f0b9733e3afe638994d18da13f3d
+  version: ff17f3c43c065c3c2991f571e740eee43ea3a14a
 - name: github.com/uber/jaeger-client-go
-  version: 6733ee486c780528f2c8088305e16fdb685134c7
+  version: 1a782e2da844727691fef1757c72eb190c2909f0
   subpackages:
   - config
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/config
-  version: 13f07c9f1403bf93fae59c057f2d66b16333d462
+  version: c9c3d11a88c1a266ced73d92e22e1d36d2bc2ed6
+  subpackages:
+  - internal/merge
+  - internal/unreachable
 - name: go.uber.org/dig
   version: 7ff117f761a3f1b3eb521945c17a1091438eb6de
   subpackages:
   - internal/digreflect
   - internal/dot
 - name: go.uber.org/fx
-  version: 3de044da969b90ad0a3e4a7867a74662f645f3f9
+  version: b7ed67fc3f046ecf4bc90a3f8bf16c4e70497ed4
   subpackages:
   - internal/fxlog
   - internal/fxreflect
@@ -155,18 +156,18 @@ imports:
   - internal/exit
   - zapcore
 - name: golang.org/x/net
-  version: 915654e7eabcea33ae277abbecf52f0d8b7a9fdc
+  version: 4cb1c02c05b0e749b0365f61ae859a8e0cfceed9
   subpackages:
   - html
   - html/atom
   - html/charset
   - netutil
 - name: golang.org/x/sys
-  version: 11f53e03133963fb11ae0588e08b5e0b85be8be5
+  version: 7138fd3d9dc8335c567ca206f4333fb75eb05d56
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: e6919f6577db79269a6443b9dc46d18f2238fb5d
+  version: f21a4dfb5e38f5895301dc265a8def02365cc3d0
   subpackages:
   - encoding
   - encoding/charmap
@@ -178,8 +179,6 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
-  - internal/language
-  - internal/language/compact
   - internal/tag
   - internal/utf8internal
   - language
@@ -187,9 +186,9 @@ imports:
   - transform
   - unicode/norm
 - name: gopkg.in/validator.v2
-  version: 135c24b11c19e52befcae2ec3fca5d9b78c4e98e
+  version: 59c90c7046f643cbe0d4e7c8776c42a84ce75910
 - name: gopkg.in/yaml.v2
-  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports:
 - name: github.com/hpcloud/tail
   version: a1dbeea552b7c8df4b542c66073e393de198a800
