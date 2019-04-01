@@ -20,7 +20,6 @@
 #include "query/algorithm.hpp"
 #include "query/binder.hpp"
 #include "query/memory.hpp"
-#include "../../../../../../../../../../../../../../usr/include/stdint.h"
 
 namespace ares {
 class GeoIntersectionContext {
