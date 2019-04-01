@@ -168,7 +168,6 @@ add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
 execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
   -e vendor -e go-build -e CMakeFiles \
   -e build \
-  -e include \
   -e thirdparty \
   -e '.*/\\..*' \
   -e '.*/_.*' \
