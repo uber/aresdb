@@ -23,6 +23,7 @@
 #include "query/algorithm.hpp"
 #include "query/functor.hpp"
 #include "query/iterator.hpp"
+#include "query/memory.hpp"
 #include "query/time_series_aggregate.h"
 
 namespace ares {
@@ -165,7 +166,7 @@ class InputVectorBinderBase {
                                     recordIDs, numBatches, baseBatchID, \
                                     vpIters, numRecordsInLastBatch, \
                                     timezoneLookup, timezoneLookupSize)); \
-          release(vpIters); \
+          deviceFree(vpIters); \
           return res;
 
         case Bool: {
@@ -345,7 +346,7 @@ class InputVectorBinderBase {
                                     recordIDs, numBatches, baseBatchID, \
                                     vpIters, numRecordsInLastBatch, \
                                     nullptr, 0)); \
-          release(vpIters); \
+          deviceFree(vpIters); \
           return res; \
           }
 
@@ -443,16 +444,16 @@ ForeignTableIterator<Value> *prepareForeignTableIterators(
     Value defaultValue, cudaStream_t stream) {
   typedef ForeignTableIterator<Value> ValueIter;
   int totalSize = sizeof(ValueIter) * numBatches;
-  ValueIter *batches =
-      reinterpret_cast<ValueIter *>(malloc(totalSize));
+  ValueIter* batches;
+  std::vector<ValueIter> batchesH(numBatches);
   for (int i = 0; i < numBatches; i++) {
     VectorPartySlice inputVP = vpSlices[i];
     if (inputVP.BasePtr == nullptr) {
-      batches[i] = ValueIter(
+      batchesH[i] = ValueIter(
           make_constant_iterator(defaultValue,
                                  hasDefault));
     } else {
-      batches[i] =
+      batchesH[i] =
           ValueIter(
               VectorPartyIterator<Value>(
                   nullptr,
@@ -465,18 +466,16 @@ ForeignTableIterator<Value> *prepareForeignTableIterators(
                   inputVP.StartingIndex));
     }
   }
-#ifdef RUN_ON_DEVICE
+
+  // In host mode we actually don't need to make another copy
+  // of the iterators but we still do here to keep the same code
+  // for host and device mode.
   ValueIter *vpItersDevice;
-  cudaMalloc(reinterpret_cast<void **>(
+  deviceMalloc(reinterpret_cast<void **>(
                  &vpItersDevice), totalSize);
-  cudaMemcpyAsync(reinterpret_cast<void *>(vpItersDevice),
-                  reinterpret_cast<void *>(batches),
-                  totalSize,
-                  cudaMemcpyHostToDevice,
-                  stream);
-  free(batches);
+  ares::asyncCopyHostToDevice(reinterpret_cast<void *>(vpItersDevice),
+                  reinterpret_cast<void *>(&batchesH[0]), totalSize, stream);
   batches = vpItersDevice;
-#endif
   return batches;
 }
 

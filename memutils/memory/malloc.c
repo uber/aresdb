@@ -12,10 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "../memory.h"
+
+DeviceMemoryFlags GetFlags(){
+  return 0x0;
+}
+
+CGoCallResHandle Init(){
+  CGoCallResHandle resHandle = {NULL, NULL};
+  return resHandle;
+}
 
 CGoCallResHandle HostAlloc(size_t bytes) {
   CGoCallResHandle resHandle = {NULL, NULL};
@@ -83,13 +93,11 @@ CGoCallResHandle AsyncCopyDeviceToHost(void *dst,
 }
 
 // Simulate on host side.
-// cppcheck-suppress *
 CGoCallResHandle GetDeviceCount() {
   CGoCallResHandle resHandle = {(void *)1, NULL};
   return resHandle;
 }
 
-// cppcheck-suppress *
 CGoCallResHandle GetDeviceGlobalMemoryInMB(int device) {
   // 24 GB
   CGoCallResHandle resHandle = {(void *)24392, NULL};
@@ -102,5 +110,39 @@ CGoCallResHandle CudaProfilerStart() {
 }
 CGoCallResHandle CudaProfilerStop() {
   CGoCallResHandle resHandle = {NULL, NULL};
+  return resHandle;
+}
+
+CGoCallResHandle GetDeviceMemoryInfo(size_t *freeSize, size_t *totalSize,
+    int device){
+  char* pStrErr = (char *) malloc(sizeof(NOT_SUPPORTED_ERR_MSG));
+  snprintf(pStrErr, sizeof(NOT_SUPPORTED_ERR_MSG),
+      NOT_SUPPORTED_ERR_MSG);
+  CGoCallResHandle resHandle = {NULL, pStrErr};
+  return resHandle;
+}
+
+CGoCallResHandle deviceMalloc(void **devPtr, size_t size){
+  CGoCallResHandle resHandle = {NULL, NULL};
+  *devPtr = malloc(size);
+  return resHandle;
+}
+
+CGoCallResHandle deviceFree(void *devPtr){
+  CGoCallResHandle resHandle = {NULL, NULL};
+  free(devPtr);
+  return resHandle;
+}
+
+CGoCallResHandle deviceMemset(void *devPtr, int value, size_t count) {
+  CGoCallResHandle resHandle = {NULL, NULL};
+  memset(devPtr, value, count);
+  return resHandle;
+}
+
+CGoCallResHandle asyncCopyHostToDevice(void *dst, const void *src,
+                                       size_t count, void *stream){
+  CGoCallResHandle resHandle = {NULL, NULL};
+  memcpy(dst, src, count);
   return resHandle;
 }

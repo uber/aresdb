@@ -18,6 +18,7 @@
 #include <vector>
 #include "query/algorithm.hpp"
 #include "query/binder.hpp"
+#include "query/memory.hpp"
 
 namespace ares {
 class GeoIntersectionContext {
@@ -122,9 +123,9 @@ CGoCallResHandle WriteGeoShapeDim(
     cudaSetDevice(device);
 #endif
     ares::write_geo_shape_dim(shapeTotalWords, dimOut,
-                                    indexVectorLengthBeforeGeo,
-                                    outputPredicate,
-                                    cudaStream);
+                              indexVectorLengthBeforeGeo,
+                              outputPredicate,
+                              reinterpret_cast<cudaStream_t>(cudaStream));
     CheckCUDAError("WriteGeoShapeDim");
     return resHandle;
   } catch (const std::exception &e) {
@@ -200,7 +201,7 @@ int InputVectorBinder<GeoIntersectionContext, 1>::bind(
             vpIters,
             numRecordsInLastBatch,
             nullptr, 0));
-    release(vpIters);
+    deviceFree(vpIters);
     return res;
   }
   throw std::invalid_argument(
@@ -227,17 +228,12 @@ struct GeoRemoveFilter {
 template<typename IndexZipIterator>
 int GeoIntersectionContext::executeRemoveIf(IndexZipIterator indexZipIterator) {
   GeoPredicateIterator predIter(outputPredicate, geoShapes.TotalWords);
-  GeoRemoveFilter<typename IndexZipIterator::value_type> removeFilter(predIter,
-                                                                      inOrOut);
-#ifdef RUN_ON_DEVICE
-  return thrust::remove_if(thrust::cuda::par.on(cudaStream), indexZipIterator,
-                           indexZipIterator + indexVectorLength, removeFilter) -
-         indexZipIterator;
-#else
-  return thrust::remove_if(thrust::host, indexZipIterator,
+  GeoRemoveFilter<
+      typename IndexZipIterator::value_type> removeFilter(predIter, inOrOut);
+
+  return thrust::remove_if(GET_EXECUTION_POLICY(cudaStream), indexZipIterator,
                            indexZipIterator + indexVectorLength, removeFilter) -
       indexZipIterator;
-#endif
 }
 
 // run intersection algorithm for points and 1 geoshape, side effect is
@@ -252,13 +248,8 @@ void calculateBatchIntersection(GeoShapeBatch geoShapes,
                                                    outputPredicate, inOrOut);
   int64_t iterLength = (int64_t) indexVectorLength * geoShapes.TotalNumPoints;
 
-  thrust::for_each(
-#ifdef RUN_ON_DEVICE
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
-#else
-      thrust::host,
-#endif
-      geoIter, geoIter + iterLength, VoidFunctor());
+  thrust::for_each(GET_EXECUTION_POLICY(cudaStream), geoIter,
+      geoIter + iterLength, VoidFunctor());
 }
 
 template<typename InputIterator>
@@ -299,7 +290,7 @@ struct is_non_negative {
 void write_geo_shape_dim(
     int shapeTotalWords,
     DimensionOutputVector dimOut, int indexVectorLengthBeforeGeo,
-    uint32_t *outputPredicate, void* cudaStream) {
+    uint32_t *outputPredicate, cudaStream_t cudaStream) {
   typedef thrust::tuple<int8_t, uint8_t> DimensionOutputIterValue;
   GeoPredicateIterator geoPredicateIter(outputPredicate, shapeTotalWords);
 
@@ -307,11 +298,7 @@ void write_geo_shape_dim(
       geoPredicateIter, thrust::constant_iterator<uint8_t>(1)));
 
   thrust::copy_if(
-#ifdef RUN_ON_DEVICE
-      thrust::cuda::par.on(reinterpret_cast<cudaStream_t>(cudaStream)),
-#else
-      thrust::host,
-#endif
+      GET_EXECUTION_POLICY(cudaStream),
       zippedShapeIndexIter, zippedShapeIndexIter + indexVectorLengthBeforeGeo,
       geoPredicateIter,
       ares::make_dimension_output_iterator<uint8_t>(dimOut.DimValues,

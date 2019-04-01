@@ -75,14 +75,14 @@ func addFlags(cmd *cobra.Command) {
 
 func newDefaultEnvironmentCtx() utils.EnvironmentContext {
 	return utils.EnvironmentContext{
-		os.Getenv(utils.EnvironmentKey),
-		os.Getenv(utils.RuntimeEnvironmentKey),
-		os.Getenv(utils.ZoneKey),
-		os.Getenv(utils.HostnameKey),
-		os.Getenv(utils.DeploymentKey),
-		os.Getenv(utils.PortSystemKey),
-		os.Getenv(utils.AppIDKey),
-		os.Getenv(utils.InstanceIDKey),
+		Environment:        os.Getenv(utils.EnvironmentKey),
+		RuntimeEnvironment: os.Getenv(utils.RuntimeEnvironmentKey),
+		Zone:               os.Getenv(utils.ZoneKey),
+		Hostname:           os.Getenv(utils.HostnameKey),
+		Deployment:         os.Getenv(utils.DeploymentKey),
+		SystemPort:         os.Getenv(utils.PortSystemKey),
+		ApplicationID:      os.Getenv(utils.AppIDKey),
+		InstanceID:         os.Getenv(utils.InstanceIDKey),
 	}
 }
 

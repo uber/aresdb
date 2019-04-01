@@ -15,7 +15,6 @@
 #include "query/utils.hpp"
 #include <cuda_runtime.h>
 #include <iostream>
-#include <exception>
 #include <string>
 
 const int MAX_CUDA_ERROR_LEN = 80;
@@ -38,18 +37,6 @@ uint16_t DAYS_BEFORE_MONTH_HOST[13] = {
 
 __constant__ uint16_t DAYS_BEFORE_MONTH_DEVICE[13];
 
-// CUDAError represents a exception class that contains a error message.
-class CUDAError : public std::exception {
- private:
-  std::string message_;
- public:
-  explicit CUDAError(const std::string &message) : message_(message) {
-  }
-  virtual const char *what() const throw() {
-    return message_.c_str();
-  }
-};
-
 // CheckCUDAError implementation. Notes for host we don't throw the exception
 // on purpose since we will always receive error messages like "insufficient
 // driver version".
@@ -63,7 +50,7 @@ void CheckCUDAError(const char *message) {
              message,
              cudaGetErrorString(error));
 #ifdef RUN_ON_DEVICE
-    throw CUDAError(buf);
+    throw AlgorithmError(buf);
 #else
     printf("%s\n", buf);
 #endif
@@ -94,6 +81,14 @@ CGoCallResHandle BootstrapDevice() {
     resHandle.pStrErr = strdup(e.what());
   }
   return resHandle;
+}
+
+const char * AlgorithmError::what() const throw() {
+    return message_.c_str();
+}
+
+AlgorithmError::AlgorithmError(const std::string &message) {
+  message_ = message;
 }
 
 namespace ares {

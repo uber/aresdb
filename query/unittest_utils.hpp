@@ -24,6 +24,7 @@
 #include <cmath>
 #include <functional>
 #include <tuple>
+#include "query/memory.hpp"
 #include "query/utils.hpp"
 
 typedef typename thrust::host_vector<unsigned char>::iterator charIter;
@@ -64,7 +65,7 @@ inline bool compare_tuple(Iterator1 begin,
 #ifdef RUN_ON_DEVICE
   int size = end - begin;
   typedef typename thrust::iterator_traits<Iterator1>::value_type V;
-  thrust::device_vector<V> actualD(size);
+  ares::device_vector<V> actualD(size);
   thrust::copy(thrust::device, begin, end, actualD.begin());
   thrust::host_vector<V> actualH(size);
   cudaMemcpy(actualH.data(), thrust::raw_pointer_cast(actualD.data()),
@@ -93,8 +94,7 @@ inline V *allocate(V *input, int size) {
   size_t totalSize = sizeof(V) * size;
   V *ptr;
 #ifdef RUN_ON_DEVICE
-  cudaMalloc(&ptr, totalSize);
-  CheckCUDAError("cudaMalloc");
+  ares::deviceMalloc(reinterpret_cast<void **>(&ptr), totalSize);
   cudaMemcpy(ptr, input, totalSize, cudaMemcpyHostToDevice);
   CheckCUDAError("cudaMemcpy");
 #else
@@ -127,8 +127,7 @@ allocate_column(uint32_t *counts,
   int alignedValuesBytes = align_offset(valuesBytes, 8);
   int totalBytes = alignedCountsBytes + alignedNullsBytes + alignedValuesBytes;
 #ifdef RUN_ON_DEVICE
-  cudaMalloc(reinterpret_cast<void **>(&ptr), totalBytes);
-  CheckCUDAError("cudaMalloc");
+  ares::deviceMalloc(reinterpret_cast<void **>(&ptr), totalBytes);
   if (counts != nullptr) {
     cudaMemcpy(ptr, counts, countsBytes, cudaMemcpyHostToDevice);
     CheckCUDAError("cudaMemcpy counts");
@@ -255,25 +254,18 @@ inline GeoShape get_geo_shape(const float *shapeLatH,
   return geoShape;
 }
 
+template<typename V>
+inline void release(V* devPtr) {
+  ares::deviceFree(devPtr);
+}
+
 inline void release(GeoShapeBatch shapes) {
-#ifdef RUN_ON_DEVICE
-  cudaFree(shapes.LatLongs);
-  CheckCUDAError("cudaFree");
-#else
-  free(shapes.LatLongs);
-#endif
+  ares::deviceFree(shapes.LatLongs);
 }
 
 inline void release(GeoShape shape) {
-#ifdef RUN_ON_DEVICE
-  cudaFree(shape.Lats);
-  CheckCUDAError("cudaFree");
-  cudaFree(shape.Longs);
-  CheckCUDAError("cudaFree");
-#else
-  free(shape.Lats);
-  free(shape.Longs);
-#endif
+  ares::deviceFree(shape.Lats);
+  ares::deviceFree(shape.Longs);
 }
 
 #endif  // QUERY_UNITTEST_UTILS_HPP_

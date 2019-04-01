@@ -55,10 +55,10 @@ int filter(TransformContext ctx, InputVector input,
 int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
            DimensionColumnVector outputKeys, uint8_t *outputValues,
            int valueBytes, int length, AggregateFunction aggFunc,
-           void *cudaStream);
+           cudaStream_t cudaStream);
 
 // sort binds KeyIter type from keys.
-void sort(DimensionColumnVector keys, int length, void *cudaStream);
+void sort(DimensionColumnVector keys, int length, cudaStream_t cudaStream);
 
 // expand function is used to uncompress the compressed dimension keys and
 // append to outputKeys.
@@ -68,7 +68,7 @@ int expand(DimensionColumnVector inputKeys,
            uint32_t *indexVector,
            int indexVectorLen,
            int outputOccupiedLen,
-           void *cudaStream);
+           cudaStream_t cudaStream);
 
 // hyperloglog.
 int hyperloglog(DimensionColumnVector prevDimOut,
@@ -76,12 +76,12 @@ int hyperloglog(DimensionColumnVector prevDimOut,
                 uint32_t *curValuesOut, int prevResultSize, int curBatchSize,
                 bool isLastBatch, uint8_t **hllVectorPtr,
                 size_t *hllVectorSizePtr, uint16_t **hllDimRegIDCountPtr,
-                void *cudaStream);
+                cudaStream_t cudaStream);
 
 // write geo shape index to dim output.
 void write_geo_shape_dim(int shapeTotalWords,
     DimensionOutputVector dimOut, int indexVectorLength,
-    uint32_t *outputPredicate, void * cudaStream);
+    uint32_t *outputPredicate, cudaStream_t cudaStream);
 
 }  // namespace ares
 

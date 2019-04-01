@@ -159,21 +159,13 @@ int FilterContext<FunctorType>::executeRemoveIf(
   UnaryPredicateFunctor<bool, InputValueType> f(functorType);
   RemoveFilter<typename IndexZipIterator::value_type, uint8_t> removeFilter(
       predicateVector);
-#ifdef RUN_ON_DEVICE
   // first compute the predicate values.
-  thrust::transform(thrust::cuda::par.on(cudaStream), inputIter,
+  thrust::transform(GET_EXECUTION_POLICY(cudaStream), inputIter,
                     inputIter + indexVectorLength, predicateVector, f);
   // then we use the predicate values to remove indexes in place.
-  return thrust::remove_if(thrust::cuda::par.on(cudaStream), indexZipIterator,
+  return thrust::remove_if(GET_EXECUTION_POLICY(cudaStream), indexZipIterator,
                            indexZipIterator + indexVectorLength, removeFilter) -
          indexZipIterator;
-#else
-  thrust::transform(thrust::host, inputIter, inputIter + indexVectorLength,
-                    predicateVector, f);
-  return thrust::remove_if(thrust::host, indexZipIterator,
-                           indexZipIterator + indexVectorLength, removeFilter) -
-      indexZipIterator;
-#endif
 }
 
 // run unary filter.
@@ -217,21 +209,13 @@ int FilterContext<FunctorType>::executeRemoveIf(
   RemoveFilter<typename IndexZipIterator::value_type, uint8_t> removeFilter(
       predicateVector);
 
-#ifdef RUN_ON_DEVICE
   // first compute the predicate values.
-  thrust::transform(thrust::cuda::par.on(cudaStream), lhsIter,
+  thrust::transform(GET_EXECUTION_POLICY(cudaStream), lhsIter,
       lhsIter + indexVectorLength, rhsIter, predicateVector, f);
   // then we use the predicate values to remove indexes in place.
-  return thrust::remove_if(thrust::cuda::par.on(cudaStream), indexZipIterator,
+  return thrust::remove_if(GET_EXECUTION_POLICY(cudaStream), indexZipIterator,
                            indexZipIterator + indexVectorLength, removeFilter) -
          indexZipIterator;
-#else
-  thrust::transform(thrust::host, lhsIter, lhsIter + indexVectorLength, rhsIter,
-                    predicateVector, f);
-  return thrust::remove_if(thrust::host, indexZipIterator,
-                           indexZipIterator + indexVectorLength, removeFilter) -
-      indexZipIterator;
-#endif
 }
 
 // template partial specialization with output iterator as uint8_t* for binary

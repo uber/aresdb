@@ -23,6 +23,26 @@ import (
 	"unsafe"
 )
 
+// GetFlags return flags about the memory management.
+func GetFlags() C.DeviceMemoryFlags {
+	return C.GetFlags()
+}
+
+func IsDeviceMemoryImplementation() bool {
+	return (GetFlags() & C.DEVICE_MEMORY_IMPLEMENTATION_FLAG) != 0
+}
+
+func IsPooledMemory() bool {
+	return (GetFlags() & C.POOLED_MEMORY_FLAG) != 0
+}
+
+// Init will initialize the memory management.
+func Init() {
+	doCGoCall(func() C.CGoCallResHandle {
+		return C.Init()
+	})
+}
+
 // HostAlloc allocates memory in C.
 func HostAlloc(bytes int) unsafe.Pointer {
 	return unsafe.Pointer(doCGoCall(func() C.CGoCallResHandle {
@@ -181,6 +201,16 @@ func CudaProfilerStop() {
 	doCGoCall(func() C.CGoCallResHandle {
 		return C.CudaProfilerStop()
 	})
+}
+
+// GetDeviceMemoryInfo returns information about total size and free size of device memory in bytes for a specfic
+// device.
+func GetDeviceMemoryInfo(device int) (int, int) {
+	var freeSize, totalSize C.size_t
+	doCGoCall(func() C.CGoCallResHandle {
+		return C.GetDeviceMemoryInfo(&freeSize, &totalSize, C.int(device))
+	})
+	return int(freeSize), int(totalSize)
 }
 
 // doCGoCall does the cgo call by converting CGoCallResHandle to C.int and *C.char and calls doCGoCall.
