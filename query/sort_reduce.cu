@@ -22,7 +22,7 @@
 #include "query/algorithm.hpp"
 #include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
-
+#include "memory.hpp"
 
 CGoCallResHandle Sort(DimensionColumnVector keys,
                       int length,
@@ -86,12 +86,13 @@ CGoCallResHandle Expand(DimensionColumnVector inputKeys,
                         uint32_t *indexVector,
                         int indexVectorLen,
                         int outputOccupiedLen,
-                        void *cudaStream,
+                        void *stream,
                         int device) {
   CGoCallResHandle resHandle = {nullptr, nullptr};
 
   try {
     SET_DEVICE(device);
+    cudaStream_t cudaStream = reinterpret_cast<cudaStream_t>(stream);
     resHandle.res = reinterpret_cast<void *>(ares::expand(inputKeys,
                                                           outputKeys,
                                                           baseCounts,
@@ -278,25 +279,25 @@ int expand(DimensionColumnVector inputKeys,
            uint32_t *indexVector,
            int indexVectorLen,
            int outputOccupiedLen,
-           void *cudaStream) {
+           cudaStream_t cudaStream) {
   // create count interator from baseCount and indexVector
   IndexCountIterator countIter = IndexCountIterator(baseCounts, indexVector);
 
   // total item counts by adding counts together
-  uint32_t totalCount = thrust::reduce(HOST_DEVICE_STRATEGY(cudaStream),
+  uint32_t totalCount = thrust::reduce(GET_EXECUTION_POLICY(cudaStream),
                                        countIter,
                                        countIter+indexVectorLen);
 
   // scan the counts to obtain output offsets for each input element
-  HOST_DEVICE_VECTOR(uint32_t) offsets(indexVectorLen);
-  thrust::exclusive_scan(HOST_DEVICE_STRATEGY(cudaStream),
+  ares::device_vector<uint32_t> offsets(indexVectorLen);
+  thrust::exclusive_scan(GET_EXECUTION_POLICY(cudaStream),
                          countIter,
                          countIter+indexVectorLen,
                          offsets.begin());
 
   // scatter the nonzero counts into their corresponding output positions
-  HOST_DEVICE_VECTOR(uint32_t) indices(totalCount);
-  thrust::scatter_if(HOST_DEVICE_STRATEGY(cudaStream),
+  ares::device_vector<uint32_t> indices(totalCount);
+  thrust::scatter_if(GET_EXECUTION_POLICY(cudaStream),
                      thrust::counting_iterator<uint32_t>(0),
                      thrust::counting_iterator<uint32_t>(indexVectorLen),
                      offsets.begin(),
@@ -304,7 +305,7 @@ int expand(DimensionColumnVector inputKeys,
                      indices.begin());
 
   // compute max-scan over the indices, filling in the holes
-  thrust::inclusive_scan(HOST_DEVICE_STRATEGY(cudaStream),
+  thrust::inclusive_scan(GET_EXECUTION_POLICY(cudaStream),
                          indices.begin(),
                          indices.end(),
                          indices.begin(),
@@ -330,7 +331,7 @@ int expand(DimensionColumnVector inputKeys,
       numDims += inputKeys.NumDimsPerDimWidth[i];
   }
   // copy dim values into output
-  thrust::copy(HOST_DEVICE_STRATEGY(cudaStream), iterIn,
+  thrust::copy(GET_EXECUTION_POLICY(cudaStream), iterIn,
                 iterIn + numDims * 2 * outputLen, iterOut);
   // return total count in the output dimensionVector
   return outputLen + outputOccupiedLen;

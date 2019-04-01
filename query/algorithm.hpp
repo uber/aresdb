@@ -68,7 +68,7 @@ int expand(DimensionColumnVector inputKeys,
            uint32_t *indexVector,
            int indexVectorLen,
            int outputOccupiedLen,
-           void *cudaStream);
+           cudaStream_t cudaStream);
 
 // hyperloglog.
 int hyperloglog(DimensionColumnVector prevDimOut,
