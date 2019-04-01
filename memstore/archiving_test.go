@@ -136,12 +136,12 @@ var _ = ginkgo.Describe("archiving", func() {
 		m.TableShards[table] = shardMap
 
 		/*
-		archivingJob = &ArchivingJob{
-			tableName: table,
-			shardID:   shardID,
-			cutoff:    cutoff,
-			memStore:  m,
-		}
+			archivingJob = &ArchivingJob{
+				tableName: table,
+				shardID:   shardID,
+				cutoff:    cutoff,
+				memStore:  m,
+			}
 		*/
 
 		scheduler = newScheduler(m)

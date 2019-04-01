@@ -594,6 +594,7 @@ TEST(DimensionColumnPermutateIteratorTest, CheckIterator) {
   release(valuesOut);
 }
 
+/*
 // cppcheck-suppress *
 TEST(GeoBatchIntersectIteratorTest, CheckIterator) {
   // A square with (1,1), (1,-1), (-1,-1), (-1, 1) as points.
@@ -662,6 +663,7 @@ TEST(GeoPredicateIteratorTest, CheckIterator) {
   EXPECT_EQ(geoIter + 1 - geoIter, 1);
   EXPECT_EQ(geoIter + 2 - geoIter, 2);
 }
+*/
 
 TEST(IndexCountIterator, checkCount) {
   uint32_t counts[10] = {1, 3, 5, 8, 9, 10, 15, 16, 18, 20};

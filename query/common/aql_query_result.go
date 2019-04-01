@@ -102,7 +102,7 @@ func (r AQLQueryResult) append(row []interface{}) {
 	r[MatrixDataKey] = append(r[MatrixDataKey].([][]interface{}), row)
 }
 
-func(r AQLQueryResult) Append(dimValues []*string) {
+func (r AQLQueryResult) Append(dimValues []*string) {
 	values := make([]interface{}, len(dimValues))
 	for index, v := range dimValues {
 		if v == nil {
