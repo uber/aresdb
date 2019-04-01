@@ -196,7 +196,7 @@ CGoCallResHandle deviceMemset(void *devPtr, int value, size_t count) {
   return resHandle;
 }
 
-CGoCallResHandle asyncCopyHostToDevice cudaStream(void* dst, const void* src,
+CGoCallResHandle asyncCopyHostToDevice(void* dst, const void* src,
     size_t count, void* stream) {
   CGoCallResHandle resHandle = {NULL, NULL};
   cudaMemcpyAsync(dst, src, count,
