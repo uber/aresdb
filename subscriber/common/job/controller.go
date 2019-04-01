@@ -10,6 +10,10 @@ import (
 	"time"
 
 	"github.com/curator-go/curator"
+	"github.com/m3db/m3/src/cluster/client"
+	"github.com/m3db/m3/src/cluster/placement"
+	"github.com/m3db/m3/src/cluster/services"
+	"github.com/m3db/m3x/instrument"
 	"github.com/uber/aresdb/gateway"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
@@ -67,6 +71,8 @@ type Controller struct {
 	assignmentHashCode string
 	// zkClient is zookeeper client
 	zkClient curator.CuratorFramework
+	// etcdServices is etcd services client
+	etcdServices services.Services
 	// consumerInitFunc is func of NewConsumer
 	consumerInitFunc NewConsumer
 	// decoderInitFunc is func of NewDecoder
@@ -115,6 +121,12 @@ func NewController(params Params) *Controller {
 
 	if params.ServiceConfig.ControllerConfig.Enable {
 		params.ServiceConfig.Logger.Info("aresDB Controller is enabled")
+
+		if *params.ServiceConfig.HeartbeatConfig.Enabled {
+			controller.etcdServices = createEtcdServices(params)
+			registerHeartBeatService(params, controller.etcdServices)
+		}
+
 		controller.zkClient = createZKClient(params)
 		err = controller.zkClient.Start()
 		if err != nil {
@@ -134,6 +146,50 @@ func NewController(params Params) *Controller {
 	params.ServiceConfig.Logger.Info("Controller created",
 		zap.Any("controller", controller))
 	return controller
+}
+
+func createEtcdServices(params Params) services.Services {
+	iopts := instrument.NewOptions().
+		SetZapLogger(params.ServiceConfig.Logger).
+		SetMetricsScope(params.ServiceConfig.Scope)
+
+	// create a config service client to access to the etcd cluster services.
+	csClient, err := params.ServiceConfig.EtcdConfig.NewClient(iopts)
+	if err != nil {
+		panic(utils.StackError(err, "Failed to create etcd ConfigServiceClient"))
+	}
+
+	servicesClient, err := csClient.Services(nil)
+	if err != nil {
+		panic(utils.StackError(err, "Failed to create etcd services"))
+	}
+
+	return servicesClient
+}
+
+func registerHeartBeatService(params Params, servicesClient services.Services) {
+	sid := services.NewServiceID().
+		SetEnvironment(params.ServiceConfig.EtcdConfig.Env).
+		SetZone(params.ServiceConfig.EtcdConfig.Zone).
+		SetName(params.ServiceConfig.EtcdConfig.Service)
+
+	pInstance := placement.NewInstance().SetID(params.ServiceConfig.Environment.InstanceID)
+
+	ad := services.NewAdvertisement().
+		SetServiceID(sid).
+		SetPlacementInstance(pInstance)
+
+	err := servicesClient.SetMetadata(sid, services.NewMetadata().
+		SetHeartbeatInterval(*params.ServiceConfig.HeartbeatConfig.Interval).
+		SetLivenessInterval(*params.ServiceConfig.HeartbeatConfig.Timeout))
+	if err != nil {
+		panic(utils.StackError(err, "Failed to set servicesClient metadata"))
+	}
+
+	err = servicesClient.Advertise(ad)
+	if err != nil {
+		panic(utils.StackError(err, "Failed to advertise services based on etcd"))
+	}
 }
 
 func createZKClient(params Params) curator.CuratorFramework {

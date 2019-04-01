@@ -35,3 +35,29 @@ controller:
 
 zookeeper:
   server: "localhost:2181"
+
+etcd:
+  # KV environment, zone, and service from which to write/read KV data (placement
+  # and configuration). Leave these as the default values unless you know what
+  # you're doing.
+  env: test
+  zone: local
+  service: ares-subscriber
+  # Directory to store cached etcd data in.
+  cacheDir: /var/lib/areskv
+  # Configuration to identify the etcd hosts this node should connect to.
+  etcdClusters:
+    - zone: local
+      endpoints:
+        - 127.0.0.1:2379
+
+heartbeat:
+  enabled: true
+  # heartbeatTimeout in second
+  timeout: 30
+  # checkInterval in second
+  checkInterval: 2
+  # heartbeatInterval in second
+  interval: 10
+
+

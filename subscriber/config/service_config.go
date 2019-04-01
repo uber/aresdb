@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/m3db/m3/src/cluster/client/etcd"
+	"github.com/m3db/m3/src/m3em/node"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
 	"github.com/uber/aresdb/utils"
@@ -66,6 +68,8 @@ type ServiceConfig struct {
 	ActiveJobs         []string                          `yaml:"-"`
 	ControllerConfig   *ControllerConfig                 `yaml:"controller"`
 	ZooKeeperConfig    ZooKeeperConfig                   `yaml:"zookeeper"`
+	EtcdConfig         *etcd.Configuration               `yaml:"etcd"`
+	HeartbeatConfig    *node.HeartbeatConfiguration      `yaml:"heartbeat`
 }
 
 // AresNSConfig defines the mapping b/w ares namespace and its clusters
