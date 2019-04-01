@@ -228,3 +228,15 @@ add_custom_command(
         DEPENDS api/ui/package.json
         VERBATIM
 )
+
+# antlr
+set(ANTLR_BIN "${CMAKE_SOURCE_DIR}/.bin/antlr-4.7.1-complete.jar")
+set(ANTLR_URL "http://www.antlr.org/download/antlr-4.7.1-complete.jar")
+add_custom_target(antlr DEPENDS ANTLR_BIN
+        COMMAND java -jar ${ANTLR_BIN} -Dlanguage=Go -package antlrgen -Xexact-output-dir -o query/sql/antlrgen -visitor -no-listener query/sql/SqlBase.g4
+)
+add_custom_command(
+        OUTPUT ANTLR_BIN
+        COMMAND mkdir -p .bin && curl -L -o ${ANTLR_BIN} ${ANTLR_URL}
+        VERBATIM
+)

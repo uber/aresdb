@@ -1,3 +1,17 @@
+//  Copyright (c) 2017-2018 Uber Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package message
 
 import (
@@ -15,17 +29,9 @@ const (
 	MsgMetaDataUUID = "uuid"
 	// MsgMetaDataTS is message metadata timestamp keyword
 	MsgMetaDataTS = "ts"
-
-	// MsgTypeHeatpipe is heatpipe message type
-	MsgTypeHeatpipe = "heatpipe"
-	// MsgTypeStreamio is streamio message type
-	MsgTypeStreamio = "streamio"
-	// MsgTypeJSON is json message type
-	MsgTypeJSON = "json"
 )
 
-// Decoder is a interface that Kafka message decoders like
-// heatpipe and streamio has to implement
+// Decoder is a interface that Kafka message decoders
 type Decoder interface {
 	// DecodeMsg will decode the given message into out variable
 	DecodeMsg(msg consumer.Message) (*Message, error)
@@ -81,17 +87,13 @@ func (m *stringMessage) Cluster() string {
 	return ""
 }
 
-// NewDefaultDecoder will initialize the heatpipe decoder, streamio decoder and json decoder based on the job type
+// NewDefaultDecoder will initialize the json decoder based on the job type
 func NewDefaultDecoder(
 	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (decoder Decoder, err error) {
 	switch jobConfig.StreamingConfig.TopicType {
-	case MsgTypeStreamio:
-		key := serviceConfig.Config.Get("streamio.key").String()
-		decoder, err = NewStreamioDecoder(
-			[]byte(key), serviceConfig.Logger, jobConfig.Name, jobConfig.AresTableConfig.Cluster)
 	default:
 		decoder = &JSONDecoder{}
 	}
 
-	return decoder, err
+	return
 }
