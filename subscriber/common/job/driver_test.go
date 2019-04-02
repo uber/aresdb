@@ -23,6 +23,7 @@ import (
 	"github.com/uber/aresdb/subscriber/common/consumer"
 
 	"encoding/json"
+	"fmt"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
@@ -37,7 +38,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"fmt"
 )
 
 var _ = Describe("driver", func() {
@@ -214,7 +214,7 @@ var _ = Describe("driver", func() {
 			int64(12345),
 			fmt.Errorf("this is error"),
 		}
-	
+
 		close(driver.processorMsgSizes)
 		driver.Stop()
 	})

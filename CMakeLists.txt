@@ -184,6 +184,7 @@ execute_process(COMMAND bash -c "find .  -type f \
      | grep -v \
   -e vendor -e go-build -e CMakeFiles \
   -e build \
+  -e include \
   -e thirdparty \
   -e '.*/\\..*' \
   -e '.*/_.*' \

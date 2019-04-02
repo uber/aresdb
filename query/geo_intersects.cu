@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cuda_runtime.h>
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/transform.h>
 #include <algorithm>
@@ -236,6 +237,19 @@ int GeoIntersectionContext::executeRemoveIf(IndexZipIterator indexZipIterator) {
       indexZipIterator;
 }
 
+template<typename GeoIter>
+__global__
+void geo_for_each_kernel(GeoIter iter, int64_t count) {
+  int64_t start = threadIdx.x + blockIdx.x * blockDim.x;
+  int64_t step = blockDim.x * gridDim.x;
+  iter += start;
+  for (int64_t i = start; i < count; i += step, iter += step) {
+    // call dereference of GeoIter will do the actual geo intersection
+    // algorithm.
+    *iter;
+  }
+}
+
 // run intersection algorithm for points and 1 geoshape, side effect is
 // modifying output predicate vector
 template<typename InputIterator>
@@ -248,8 +262,28 @@ void calculateBatchIntersection(GeoShapeBatch geoShapes,
                                                    outputPredicate, inOrOut);
   int64_t iterLength = (int64_t) indexVectorLength * geoShapes.TotalNumPoints;
 
+#ifdef RUN_ON_DEVICE
+  int min_grid_size, block_size;
+  cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
+                                     &block_size,
+                                     geo_for_each_kernel<decltype(geoIter)>);
+  CheckCUDAError("cudaOccupancyMaxPotentialBlockSize");
+  // find needed gridsize
+  int64_t needed_grid_size = (iterLength + block_size - 1) / block_size;
+  int64_t grid_size = std::min(static_cast<int64_t>(min_grid_size),
+      needed_grid_size);
+  geo_for_each_kernel<<<grid_size, block_size, 0, cudaStream>>>(
+      geoIter, iterLength);
+  CheckCUDAError("geo_for_each_kernel");
+  // Wait for kernel to finish.
+  cudaStreamSynchronize(cudaStream);
+  CheckCUDAError("cudaStreamSynchronize");
+#else
+  // In host mode, thrust for_each is just doing a sequential
+  // loop, so there is no overflow issue as in device mode.
   thrust::for_each(GET_EXECUTION_POLICY(cudaStream), geoIter,
       geoIter + iterLength, VoidFunctor());
+#endif
 }
 
 template<typename InputIterator>
