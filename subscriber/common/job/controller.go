@@ -136,8 +136,13 @@ func NewController(params Params) *Controller {
 		params.ServiceConfig.Logger.Info("aresDB Controller is enabled")
 
 		if *params.ServiceConfig.HeartbeatConfig.Enabled {
-			controller.etcdServices = createEtcdServices(params)
-			registerHeartBeatService(params, controller.etcdServices)
+			controller.etcdServices, err = createEtcdServices(params)
+			if err != nil {
+				panic(utils.StackError(err, "Failed to createEtcdServices"))
+			}
+			if registerHeartBeatService(params, controller.etcdServices) != nil {
+				panic(utils.StackError(err, "Failed to registerHeartBeatService"))
+			}
 		}
 
 		controller.zkClient = createZKClient(params)
@@ -161,26 +166,28 @@ func NewController(params Params) *Controller {
 	return controller
 }
 
-func createEtcdServices(params Params) services.Services {
+func createEtcdServices(params Params) (services.Services, error) {
 	iopts := instrument.NewOptions().
 		SetZapLogger(params.ServiceConfig.Logger).
 		SetMetricsScope(params.ServiceConfig.Scope)
 
+	params.ServiceConfig.EtcdConfig.Service = fmt.Sprint("%s/%s",
+		config.ActiveAresNameSpace, params.ServiceConfig.EtcdConfig.Service)
 	// create a config service client to access to the etcd cluster services.
 	csClient, err := params.ServiceConfig.EtcdConfig.NewClient(iopts)
 	if err != nil {
-		panic(utils.StackError(err, "Failed to create etcd ConfigServiceClient"))
+		return nil, err
 	}
 
 	servicesClient, err := csClient.Services(nil)
 	if err != nil {
-		panic(utils.StackError(err, "Failed to create etcd services"))
+		return nil, err
 	}
 
-	return servicesClient
+	return servicesClient, nil
 }
 
-func registerHeartBeatService(params Params, servicesClient services.Services) {
+func registerHeartBeatService(params Params, servicesClient services.Services) error {
 	sid := services.NewServiceID().
 		SetEnvironment(params.ServiceConfig.EtcdConfig.Env).
 		SetZone(params.ServiceConfig.EtcdConfig.Zone).
@@ -196,13 +203,11 @@ func registerHeartBeatService(params Params, servicesClient services.Services) {
 		SetHeartbeatInterval(*params.ServiceConfig.HeartbeatConfig.Interval).
 		SetLivenessInterval(*params.ServiceConfig.HeartbeatConfig.Timeout))
 	if err != nil {
-		panic(utils.StackError(err, "Failed to set servicesClient metadata"))
+		return err
 	}
 
 	err = servicesClient.Advertise(ad)
-	if err != nil {
-		panic(utils.StackError(err, "Failed to advertise services based on etcd"))
-	}
+	return err
 }
 
 func createZKClient(params Params) curator.CuratorFramework {

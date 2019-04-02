@@ -17,6 +17,8 @@ package job
 import (
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"github.com/m3db/m3/src/cluster/client/etcd"
+	"github.com/m3db/m3/src/m3em/node"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -33,6 +35,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var _ = Describe("controller", func() {
@@ -249,8 +252,7 @@ var _ = Describe("controller", func() {
 		testServer.Close()
 	})
 
-	It("NewController", func() {
-
+	It("NewController etcd disabled", func() {
 		paramsR := rules.Params{
 			ServiceConfig: serviceConfig}
 
@@ -260,6 +262,65 @@ var _ = Describe("controller", func() {
 			JobConfigs:       rst.JobConfigs,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
+		}
+
+		controller := NewController(params)
+		Ω(controller).ShouldNot(BeNil())
+		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
+		Ω(controller.Drivers["job1"]["dev-ares01"]).ShouldNot(BeNil())
+		controller.deleteDriver(controller.Drivers["job1"]["dev-ares01"],
+			"dev-ares01", controller.Drivers["job1"])
+		Ω(controller.Drivers["job1"]["dev-ares01"]).Should(BeNil())
+		ok := controller.addDriver(params.JobConfigs["job1"]["dev-ares01"], "dev-ares01",
+			controller.Drivers["job1"], true)
+		Ω(ok).Should(Equal(true))
+
+		controller.jobNS = "dev01"
+		update, newHash := controller.updateAssignmentHash()
+		Ω(update).Should(Equal(true))
+		Ω(newHash).Should(Equal("12345"))
+
+		controller.SyncUpJobConfigs()
+		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
+		Ω(controller.Drivers["job1"]["dev-ares01"]).Should(BeNil())
+
+	})
+
+	It("NewController etcd enabled succeed", func() {
+		paramsR := rules.Params{
+			ServiceConfig: serviceConfig}
+
+		rst, _ := rules.NewJobConfigs(paramsR)
+		params := Params{
+			ServiceConfig:    serviceConfig,
+			JobConfigs:       rst.JobConfigs,
+			ConsumerInitFunc: consumer.NewKafkaConsumer,
+			DecoderInitFunc:  message.NewDefaultDecoder,
+		}
+
+		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
+			Zone: "local",
+			Env: "test",
+			Service: "ares-subscriber",
+			CacheDir: "/var/lib/areskv",
+			ETCDClusters: []etcd.ClusterConfig{
+				{
+					Zone: "local",
+					Endpoints: []string{
+						"i1",
+					},
+				},
+			},
+		}
+		enabled := true
+		timeout := 30 * time.Second
+		interval := 10 * time.Second
+		checkInterval := 2 * time.Second
+		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration {
+			Enabled: &enabled,
+			Timeout: &timeout,
+			Interval: &interval,
+			CheckInterval: &checkInterval,
 		}
 		controller := NewController(params)
 		Ω(controller).ShouldNot(BeNil())
@@ -281,5 +342,90 @@ var _ = Describe("controller", func() {
 		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
 		Ω(controller.Drivers["job1"]["dev-ares01"]).Should(BeNil())
 
+	})
+
+	It("NewController etcd enabled failed case 1", func() {
+		defer func() {
+			GinkgoRecover()
+		}()
+
+		paramsR := rules.Params{
+			ServiceConfig: serviceConfig}
+
+		rst, _ := rules.NewJobConfigs(paramsR)
+		params := Params{
+			ServiceConfig:    serviceConfig,
+			JobConfigs:       rst.JobConfigs,
+			ConsumerInitFunc: consumer.NewKafkaConsumer,
+			DecoderInitFunc:  message.NewDefaultDecoder,
+		}
+
+		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
+			Zone: "local",
+			Env: "test",
+			Service: "",
+			CacheDir: "/var/lib/areskv",
+			ETCDClusters: []etcd.ClusterConfig{
+				{
+					Zone: "local",
+					Endpoints: []string{
+						"i1",
+					},
+				},
+			},
+		}
+		enabled := true
+		timeout := 30 * time.Second
+		interval := 10 * time.Second
+		checkInterval := 2 * time.Second
+		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration {
+			Enabled: &enabled,
+			Timeout: &timeout,
+			Interval: &interval,
+			CheckInterval: &checkInterval,
+		}
+		NewController(params)
+	})
+
+	It("NewController etcd enabled failed case2", func() {
+		defer func() {
+			GinkgoRecover()
+		}()
+
+		paramsR := rules.Params{
+			ServiceConfig: serviceConfig}
+
+		rst, _ := rules.NewJobConfigs(paramsR)
+		params := Params{
+			ServiceConfig:    serviceConfig,
+			JobConfigs:       rst.JobConfigs,
+			ConsumerInitFunc: consumer.NewKafkaConsumer,
+			DecoderInitFunc:  message.NewDefaultDecoder,
+		}
+
+		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
+			Zone: "local",
+			Env: "test",
+			Service: "ares-subscriber",
+			ETCDClusters: []etcd.ClusterConfig{
+				{
+					Zone: "local",
+					Endpoints: []string{
+						"i1",
+					},
+				},
+			},
+		}
+		enabled := true
+		timeout := 30 * time.Second
+		interval := 10 * time.Second
+		checkInterval := 2 * time.Second
+		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration {
+			Enabled: &enabled,
+			Timeout: &timeout,
+			Interval: &interval,
+			CheckInterval: &checkInterval,
+		}
+		NewController(params)
 	})
 })
