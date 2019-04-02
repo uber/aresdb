@@ -134,16 +134,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardMap[shardID].LiveStore.BackfillManager.LastRedoFile = 2
 		shardMap[shardID].LiveStore.BackfillManager.LastBatchOffset = 1
 		m.TableShards[table] = shardMap
-
-		/*
-			archivingJob = &ArchivingJob{
-				tableName: table,
-				shardID:   shardID,
-				cutoff:    cutoff,
-				memStore:  m,
-			}
-		*/
-
+		
 		scheduler = newScheduler(m)
 		jobManager = scheduler.jobManagers[memCom.ArchivingJobType].(*archiveJobManager)
 	})

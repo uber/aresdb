@@ -72,10 +72,10 @@ var _ = Describe("message_parser", func() {
 		}
 
 		dst := database.Destination{
-			"table",
-			[]string{"project"},
-			map[string]interface{}{"1": "project"},
-			[]memCom.ColumnUpdateMode{memCom.UpdateOverwriteNotNull},
+			Table:           "table",
+			ColumnNames:     []string{"project"},
+			PrimaryKeys:     map[string]interface{}{"1": "project"},
+			AresUpdateModes: []memCom.ColumnUpdateMode{memCom.UpdateOverwriteNotNull},
 		}
 		mp.Transformations = map[string]*rules.TransformationConfig{
 			"project": &rules.TransformationConfig{},

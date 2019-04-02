@@ -15,14 +15,19 @@
 #ifndef QUERY_UTILS_HPP_
 #define QUERY_UTILS_HPP_
 #include <cuda_runtime.h>
+#ifdef USE_RMM
+#include <rmm/thrust_rmm_allocator.h>
+#endif
 #include <cfloat>
+#include <cmath>
 #include <cstdint>
+#include <exception>
 #include <type_traits>
 #include <stdexcept>
-#include <cmath>
+#include <string>
 #include "query/time_series_aggregate.h"
 
-// we need this macro to define functions that can only be called in host
+// We need this macro to define functions that can only be called in host
 // mode or device mode, but not both. The reason to have this mode is because
 // a "device and host" function can only call "device and host" function. They
 // cannot call device-only functions like "atomicAdd" even we call them under
@@ -33,9 +38,33 @@
 #define __host_or_device__ __host__
 #endif
 
+// This macro is for setting the correct thrust execution policy given whether
+// RUN_ON_DEVICE and USE_RMM
+#ifdef RUN_ON_DEVICE
+#  ifdef USE_RMM
+#    define GET_EXECUTION_POLICY(cudaStream) \
+       rmm::exec_policy(cudaStream)->on(cudaStream)
+#  else
+#    define GET_EXECUTION_POLICY(cudaStream) \
+        thrust::cuda::par.on(cudaStream)
+#  endif
+#else
+#  define GET_EXECUTION_POLICY(cudaStream) thrust::host
+#endif
+
+
 // This function will check the cuda error of current thread and throw an
 // exception if any.
 void CheckCUDAError(const char *message);
+
+// AlgorithmError represents a exception class that contains a error message.
+class AlgorithmError : public std::exception {
+ protected:
+  std::string message_;
+ public:
+  explicit AlgorithmError(const std::string &message);
+  virtual const char *what() const throw();
+};
 
 namespace ares {
 
@@ -117,16 +146,6 @@ inline __host__ __device__ bool memequal(const uint8_t *lhs, const uint8_t *rhs,
     }
   }
   return true;
-}
-
-template<typename V>
-inline void release(V *ptr) {
-#ifdef RUN_ON_DEVICE
-  cudaFree(ptr);
-  CheckCUDAError("cudaFree");
-#else
-  free(ptr);
-#endif
 }
 
 __host__ __device__ uint32_t murmur3sum32(const uint8_t *key, int bytes,

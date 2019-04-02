@@ -14,8 +14,11 @@
 
 #include <cuda_runtime.h>
 #include <cuda_profiler_api.h>
+#include <rmm/rmm.h>
+#include <rmm/rmm_api.h>
 #include <cstdio>
 #include <cstring>
+
 #include "../memory.h"
 
 const int MAX_ERROR_LEN = 100;
@@ -28,21 +31,81 @@ char *checkCUDAError(const char *message) {
   if (error != cudaSuccess) {
     char *buffer = reinterpret_cast<char *>(malloc(MAX_ERROR_LEN));
     snprintf(buffer, MAX_ERROR_LEN,
-             "ERROR when calling CUDA functions: %s: %s\n",
+             "ERROR when calling CUDA functions from host: %s: %s\n",
              message, cudaGetErrorString(error));
     return buffer;
   }
   return NULL;
 }
 
+char *checkRMMError(rmmError_t rmmError, const char* message) {
+  if (rmmError != RMM_SUCCESS) {
+    char *buffer = reinterpret_cast<char *>(malloc(MAX_ERROR_LEN));
+    snprintf(buffer, MAX_ERROR_LEN,
+             "ERROR when calling RMM functions: %s: %s\n",
+             message, rmmGetErrorString(rmmError));
+    return buffer;
+  }
+  return NULL;
+}
+
 DeviceMemoryFlags GetFlags() {
-  return DEVICE_MEMORY_IMPLEMENTATION_FLAG;
+  return DEVICE_MEMORY_IMPLEMENTATION_FLAG & POOLED_MEMORY_FLAG;
 }
 
 CGoCallResHandle Init() {
-  CGoCallResHandle resHandle = {NULL, NULL};
+  CGoCallResHandle resHandle = GetDeviceCount();
+  if (resHandle.pStrErr != nullptr) {
+    return resHandle;
+  }
+
+  size_t deviceCount = reinterpret_cast<size_t>(resHandle.res);
+  for (size_t device = 0; device < deviceCount; device++) {
+    cudaSetDevice(device);
+    rmmOptions_t options = {
+        PoolAllocation,
+        0,  // Default to half ot total memory
+        false  // Disable logging.
+    };
+    resHandle.pStrErr = checkRMMError(rmmInitialize(&options), "rmmInitialize");
+    if (resHandle.pStrErr != nullptr) {
+      return resHandle;
+    }
+  }
   return resHandle;
 }
+
+CGoCallResHandle DeviceAllocate(size_t bytes, int device) {
+  CGoCallResHandle resHandle = {NULL, NULL};
+  cudaSetDevice(device);
+  // For now use default stream to avoid changing the memory allocation
+  // interface.
+  // TODO(lucafuji): use the stream of current execution pipeline for
+  // allocation and free.
+  resHandle.pStrErr = checkRMMError(RMM_ALLOC(&resHandle.res, bytes, 0),
+      "DeviceAllocate");
+  if (resHandle.pStrErr == nullptr) {
+    cudaMemset(resHandle.res, 0, bytes);
+    resHandle.pStrErr = checkCUDAError("DeviceAllocate");
+  }
+  return resHandle;
+}
+
+CGoCallResHandle DeviceFree(void *p, int device) {
+  CGoCallResHandle resHandle = {NULL, NULL};
+  cudaSetDevice(device);
+  // For now use default stream to avoid changing the memory allocation
+  // interface.
+  // TODO(lucafuji): use the stream of current execution pipeline for
+  // allocation and free.
+  resHandle.pStrErr = checkRMMError(RMM_FREE(resHandle.res, 0),
+      "DeviceFree");
+  return resHandle;
+}
+
+// All following function implementation is the same as cuda_malloc.cu.
+// We might remove cuda_malloc.cu file after RMM is proven to be working
+// in production environment
 
 CGoCallResHandle HostAlloc(size_t bytes) {
   CGoCallResHandle resHandle = {NULL, NULL};
@@ -84,23 +147,6 @@ CGoCallResHandle DestroyCudaStream(void *s, int device) {
   cudaSetDevice(device);
   cudaStreamDestroy((cudaStream_t) s);
   resHandle.pStrErr = checkCUDAError("DestroyCudaStream");
-  return resHandle;
-}
-
-CGoCallResHandle DeviceAllocate(size_t bytes, int device) {
-  CGoCallResHandle resHandle = {NULL, NULL};
-  cudaSetDevice(device);
-  cudaMalloc(&resHandle.res, bytes);
-  cudaMemset(resHandle.res, 0, bytes);
-  resHandle.pStrErr = checkCUDAError("DeviceAllocate");
-  return resHandle;
-}
-
-CGoCallResHandle DeviceFree(void *p, int device) {
-  CGoCallResHandle resHandle = {NULL, NULL};
-  cudaSetDevice(device);
-  cudaFree(p);
-  resHandle.pStrErr = checkCUDAError("DeviceFree");
   return resHandle;
 }
 
@@ -167,25 +213,31 @@ CGoCallResHandle CudaProfilerStop() {
 
 CGoCallResHandle GetDeviceMemoryInfo(size_t *freeSize, size_t *totalSize,
                                      int device) {
-  char* pStrErr = reinterpret_cast<char *>(
-      malloc(sizeof(NOT_SUPPORTED_ERR_MSG)));
-  snprintf(pStrErr, sizeof(NOT_SUPPORTED_ERR_MSG),
-      NOT_SUPPORTED_ERR_MSG);
-  CGoCallResHandle resHandle = {NULL, pStrErr};
+  CGoCallResHandle resHandle = {NULL, NULL};
+  cudaSetDevice(device);
+  resHandle.pStrErr = checkRMMError(rmmGetInfo(freeSize, totalSize, 0),
+      "GetDeviceMemoryInfo");
   return resHandle;
 }
 
 CGoCallResHandle deviceMalloc(void **devPtr, size_t size) {
   CGoCallResHandle resHandle = {NULL, NULL};
-  cudaMalloc(devPtr, size);
-  resHandle.pStrErr = checkCUDAError("deviceMalloc");
+  // For now use default stream to avoid changing the memory allocation
+  // interface.
+  // TODO(lucafuji): use the stream of current execution pipeline for
+  // allocation and free.
+  resHandle.pStrErr = checkRMMError(RMM_ALLOC(devPtr, size, 0),
+      "deviceMalloc");
   return resHandle;
 }
 
 CGoCallResHandle deviceFree(void *devPtr) {
   CGoCallResHandle resHandle = {NULL, NULL};
-  cudaFree(devPtr);
-  resHandle.pStrErr = checkCUDAError("deviceFree");
+  // For now use default stream to avoid changing the memory allocation
+  // interface.
+  // TODO(lucafuji): use the stream of current execution pipeline for
+  // allocation and free.
+  resHandle.pStrErr = checkRMMError(RMM_FREE(devPtr, 0), "deviceFree");
   return resHandle;
 }
 

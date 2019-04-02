@@ -151,16 +151,9 @@ int HashLookupContext::run(uint32_t *indexVector, InputIterator inputIter) {
   HashLookupFunctor<InputValueType> f(hashIndex.buckets, hashIndex.seeds,
                                       hashIndex.keyBytes, hashIndex.numHashes,
                                       hashIndex.numBuckets);
-
-#ifdef RUN_ON_DEVICE
-  return thrust::transform(thrust::cuda::par.on(cudaStream), inputIter,
+  return thrust::transform(GET_EXECUTION_POLICY(cudaStream), inputIter,
       inputIter + indexVectorLength, recordIDVector, f) -
   recordIDVector;
-#else
-  return thrust::transform(thrust::host, inputIter,
-      inputIter + indexVectorLength,
-                           recordIDVector, f) - recordIDVector;
-#endif
 }
 
 }  // namespace ares

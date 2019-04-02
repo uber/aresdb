@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -ex
-
 if [ "$(ls -A $CUDA_LIB_LOCAL)" ]; then
     echo "Fetched cuda deps from cache"
 else

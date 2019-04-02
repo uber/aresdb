@@ -7,8 +7,8 @@ if (CMAKE_CUDA_FLAGS)
 endif ()
 string(APPEND CMAKE_CUDA_FLAGS -cudart=shared)
 
-project(aresdb LANGUAGES CUDA C CXX)
-
+project(aresdb LANGUAGES CUDA C CXX VERSION 0.0.1)
+include(ExternalProject)
 
 # Also needs to be fixed after the find_package.
 # https://gitlab.kitware.com/cmake/cmake/issues/17559
@@ -19,20 +19,9 @@ if (CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES)
     list(REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart_static")
 endif ()
 
-include(ExternalProject)
-include_directories(${PROJECT_SOURCE_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
-set(QUERY_MODE $ENV{QUERY_MODE})
-
-# set C_FLAGS and NVCC FLAGS
-set(CMAKE_C_FLAGS -fPIC)
-set(CMAKE_SHARED_LIBRARY_SUFFIX_C .so)
-set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX .so)
-set(CMAKE_CUDA_FLAGS "-lineinfo -I. -std=c++11 $ENV{NVCCFLAGS} ${CMAKE_CUDA_FLAGS}")
-set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,code=compute_60")
-set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
-
+################################
+# Options and variables
+################################
 if (NOT QUERY_MODE)
     execute_process(COMMAND which nvidia-smi && nvidia-smi | grep "Driver Version:" RESULT_VARIABLE ret)
     if (NOT ${ret})
@@ -42,13 +31,79 @@ if (NOT QUERY_MODE)
     endif ()
 endif ()
 
+################################
+# Compiler and linker flags
+################################
+set(CMAKE_CUDA_STANDARD 14)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+include_directories(${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
+# set C_FLAGS and NVCC FLAGS
+set(CMAKE_C_FLAGS -fPIC)
+set(CMAKE_SHARED_LIBRARY_SUFFIX_C .so)
+set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX .so)
+set(CMAKE_CUDA_FLAGS "-lineinfo -I. $ENV{NVCCFLAGS} ${CMAKE_CUDA_FLAGS}")
+set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,code=compute_60")
+set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+
+link_directories(${CMAKE_BINARY_DIR}/lib)
+
+################################
+# GTest
+################################
+set(GTEST_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest)
+ExternalProject_Add(googletest
+        SOURCE_DIR ${GTEST_SRC_DIR}
+        BUILD_IN_SOURCE 1
+        CONFIGURE_COMMAND cmake -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} .
+        # Ignore install command to avoid install lib and include
+        # files to /usr/local where we might don't have permission to write to.
+        )
+enable_testing()
+######################################################
+# RMM
+# Can only be built in a machine installed with
+# cuda driver api.
+######################################################
+set(RMM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/rmm)
+set(RMM_LIB_DIR ${RMM_SRC_DIR})
+if (QUERY_MODE STREQUAL "DEVICE" AND USE_RMM)
+    ExternalProject_Add(
+            project_rmm
+            SOURCE_DIR ${RMM_SRC_DIR}
+            BUILD_IN_SOURCE 1
+            CONFIGURE_COMMAND cmake -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DCMAKE_CXX11_ABI=ON -DBUILD_TESTS=OFF .
+            # librmm.so will be in ${RMM_SRC_DIR} by default.
+            BUILD_COMMAND make -j
+            BUILD_BYPRODUCTS ${RMM_LIB_DIR}/librmm.so
+            BYPRODUCTS ${CMAKE_BINARY_DIR}/librmm.so
+    )
+    add_library(rmm SHARED IMPORTED)
+    set_target_properties(rmm PROPERTIES IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/librmm.so)
+    add_dependencies(rmm project_rmm)
+endif ()
+################################
+# Mem
+################################
+
 if (QUERY_MODE STREQUAL "DEVICE")
     list(APPEND MARCROS "RUN_ON_DEVICE=1")
-    add_library(mem SHARED memutils/memory.h memutils/memory/cuda_malloc.cu)
+    if (USE_RMM)
+        list(APPEND MARCROS "USE_RMM=1")
+        add_library(mem SHARED memutils/memory.h memutils/memory/rmm_alloc.cu)
+        target_link_libraries(mem rmm)
+    else ()
+        add_library(mem SHARED memutils/memory.h memutils/memory/cuda_malloc.cu)
+    endif ()
 else ()
     add_library(mem SHARED memutils/memory.h memutils/memory/malloc.c)
 endif ()
-
+################################
+# Algorithm
+################################
 # based on DEBUG and QUERY_MODE, transform CMAKE_CUDA_FLAGS
 if (DEBUG STREQUAL "y")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -G --compiler-options='-g -ggdb'")
@@ -61,6 +116,7 @@ list(TRANSFORM CUDA_XCOMPILER_FLAGS PREPEND " -Xcompiler ")
 string(REPLACE ";" " " CUDA_XCOMPILER_FLAGS ${CUDA_XCOMPILER_FLAGS})
 # transform macro to prepend -D prefix
 list(TRANSFORM MARCROS PREPEND "-D ")
+string(REPLACE ";" " " MARCROS "${MARCROS}")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_XCOMPILER_FLAGS} ${GENCODE_FLAGS} ${MARCROS}")
 file(MAKE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
@@ -76,6 +132,8 @@ add_library(algorithm SHARED
         query/hash_lookup.cu
         query/hll.cu
         query/iterator.hpp
+        query/memory.cu
+        query/memory.hpp
         query/measure_transform.cu
         query/scratch_space_transform.cu
         query/sort_reduce.cu
@@ -84,53 +142,23 @@ add_library(algorithm SHARED
         query/utils.cu
         query/utils.hpp)
 
+target_link_libraries(algorithm mem)
 ################################
 # rdkafka 
 ################################
 include(rdkafka.cmake)
-
-################################
-# GTest
-################################
-set(GTEST_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/googletest)
-set(GTEST_LIB_DIR ${GTEST_SRC_DIR}/lib)
-ExternalProject_Add(googletest
-        SOURCE_DIR ${GTEST_SRC_DIR}
-        BUILD_IN_SOURCE    1
-        # Ignore install command to avoid install lib and include
-        # files to /usr/local where we might don't have permission to write to.
-        INSTALL_COMMAND ""
-        )
-link_directories(${GTEST_LIB_DIR})
-enable_testing()
-######################################################
-# RMM
-# Can only be built in a machine installed with
-# cuda driver api.
-######################################################
-if (QUERY_MODE STREQUAL "DEVICE")
-    set(RMM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/rmm)
-    set(RMM_LIB_DIR ${RMM_SRC_DIR})
-    ExternalProject_Add(rmm
-            SOURCE_DIR ${RMM_SRC_DIR}
-            BUILD_IN_SOURCE    1
-            CONFIGURE_COMMAND cmake -DBUILD_TESTS=OFF .
-            # librmm.so will be in ${RMM_SRC_DIR} by default.
-            BUILD_COMMAND make -j
-            BYPRODUCTS ${RMM_LIB_DIR}/librmm.so
-            INSTALL_COMMAND ""
-            )
-    link_directories(${RMM_LIB_DIR})
-endif ()
 ################################
 # Unit Tests
 ################################
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
-target_include_directories(all_unittest PRIVATE ${GTEST_SRC_DIR}/googletest/include)
-add_dependencies(all_unittest algorithm googletest)
+add_dependencies(all_unittest googletest)
 # Link test executable against gtest & gtest_main
-target_link_libraries(all_unittest gtest gtest_main algorithm pthread)
+target_link_libraries(all_unittest gtest gtest_main algorithm mem pthread)
+if (USE_RMM)
+    target_link_libraries(all_unittest rmm)
+endif ()
+
 add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
 
 ###############################
@@ -140,6 +168,7 @@ add_test(all_unittest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/all_unittest)
 execute_process(COMMAND bash -c "find . -name '*.go' | grep -v \
   -e vendor -e go-build -e CMakeFiles \
   -e build \
+  -e thirdparty \
   -e '.*/\\..*' \
   -e '.*/_.*' \
   -e '.*/mocks.*' | tr \"\n\" \" \""
@@ -155,6 +184,8 @@ execute_process(COMMAND bash -c "find .  -type f \
      | grep -v \
   -e vendor -e go-build -e CMakeFiles \
   -e build \
+  -e include \
+  -e thirdparty \
   -e '.*/\\..*' \
   -e '.*/_.*' \
   -e '.*/mocks.*' | tr \"\n\" \" \""

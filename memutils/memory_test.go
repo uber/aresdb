@@ -135,12 +135,29 @@ var _ = ginkgo.Describe("memory utils", func() {
 		Ω(func() { CudaProfilerStop() }).ShouldNot(Panic())
 	})
 
-	ginkgo.It("GetDeviceCount and GetDeviceGlobalMemoryInMB should work", func() {
+	ginkgo.It("GetDeviceCount, GetDeviceMemoryInfo and GetDeviceGlobalMemoryInMB should work", func() {
 		deviceCount := GetDeviceCount()
 		Ω(deviceCount).Should(BeNumerically(">", 0))
-		for i := 0; i < deviceCount; i++ {
-			Ω(GetDeviceGlobalMemoryInMB(i)).Should(BeNumerically(">", 0))
+		for device := 0; device < deviceCount; device++ {
+			Ω(GetDeviceGlobalMemoryInMB(device)).Should(BeNumerically(">", 0))
+			if IsPooledMemory() {
+				free, total := GetDeviceMemoryInfo(device)
+				Ω(free).Should(BeNumerically(">", 0))
+				Ω(total).Should(BeNumerically(">", 0))
+			} else {
+				Ω(func() { GetDeviceMemoryInfo(device) }).Should(Panic())
+			}
 		}
+	})
+
+	ginkgo.It("GetFlags should work", func() {
+		Ω(func() { GetFlags() }).ShouldNot(Panic())
+		Ω(func() { IsDeviceMemoryImplementation() }).ShouldNot(Panic())
+		Ω(func() { IsPooledMemory() }).ShouldNot(Panic())
+	})
+
+	ginkgo.It("Init should work", func() {
+		Ω(func() { Init() }).ShouldNot(Panic())
 	})
 
 	ginkgo.It("CudaMemCopies should work", func() {

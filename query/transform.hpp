@@ -59,17 +59,8 @@ class TransformContext {
     typedef typename OutputIterator::value_type::head_type OutputValueType;
 
     UnaryFunctor<OutputValueType, InputValueType> f(functorType);
-
-#ifdef RUN_ON_DEVICE
-    return thrust::transform(thrust::cuda::par.on(cudaStream), inputIter,
+    return thrust::transform(GET_EXECUTION_POLICY(cudaStream), inputIter,
         inputIter + indexVectorLength, outputIter, f) - outputIter;
-#else
-    return thrust::transform(thrust::host,
-                             inputIter,
-                             inputIter + indexVectorLength,
-                             outputIter,
-                             f) - outputIter;
-#endif
   }
 
   template<typename LHSIterator, typename RHSIterator>
@@ -82,13 +73,8 @@ class TransformContext {
 
     BinaryFunctor<OutputValueType, InputValueType> f(functorType);
 
-#ifdef RUN_ON_DEVICE
-    return thrust::transform(thrust::cuda::par.on(cudaStream), lhsIter,
+    return thrust::transform(GET_EXECUTION_POLICY(cudaStream), lhsIter,
         lhsIter + indexVectorLength, rhsIter, outputIter, f) - outputIter;
-#else
-    return thrust::transform(thrust::host, lhsIter, lhsIter + indexVectorLength,
-                             rhsIter, outputIter, f) - outputIter;
-#endif
   }
 
  protected:

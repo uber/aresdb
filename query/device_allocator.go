@@ -20,16 +20,17 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 )
 
-//// deviceAllocatorImpl virtually allocates devices to queries.
+//// DeviceAllocator virtually allocates devices to queries.
 //// It maintains device config and current query usage, allocates one or two
 //// devices to a query upon request. All requests to the GPU devices must go
 //// through this allocator in order for the virtual allocation to be effective.
 //// Two devices are allocated at the same time for a single query when consumer
 //// grade GPUs without ECC memory are used (to cross check for errors manually).
-//type deviceAllocatorImpl interface {
+//type DeviceAllocator interface {
 //	// Allocate a device (or two) for a query.
 //	// Returns the IDs of the allocated devices, or -1 in case of error.
 //	// Returns the same device ID if only one device is allocated.
@@ -50,7 +51,7 @@ import (
 //	//   }
 //	//   // Keep the query result only and free up most memory.
 //	//   DeviceRealloc(bytes=result_only)
-//	//   // deviceAllocatorImpl will remember this query's intent for bigger memory.
+//	//   // DeviceAllocator will remember this query's intent for bigger memory.
 //	//   if DeviceRealloc(bytes=new, failFast=false) {
 //	//     return success
 //	//   }
@@ -63,7 +64,8 @@ import (
 //	deviceFree(queryHandle int)
 //}
 var (
-	nullDevicePointer = devicePointer{}
+	nullDevicePointer       = devicePointer{}
+	memoryReportingInterval = time.Second * 10
 )
 
 // devicePointer is the wrapper of actual device memory pointer plus the size it points to and which device
@@ -91,7 +93,7 @@ func (p devicePointer) offset(offset int) devicePointer {
 	}
 }
 
-// deviceAllocatorImpl is the interface to allocate and deallocate device memory for a specific device.
+// deviceAllocator is the interface to allocate and deallocate device memory for a specific device.
 // Note this allocator only tracks memory usage as golang side. Any memory allocation/deallocation at
 // cuda side (either thrust code or our own code) is not tracked. So it's preferred to allocate the memory
 // at golang side and pass on the pointer to cuda code.
@@ -100,12 +102,14 @@ type deviceAllocator interface {
 	deviceAllocate(bytes, device int) devicePointer
 	// deviceFree frees the specified memory from the device.
 	deviceFree(dp devicePointer)
+	// getAllocatedMemory returns allocated memory for a specific device.
+	getAllocatedMemory(device int) int64
 }
 
 var da deviceAllocator
 var deviceAllocatorOnce sync.Once
 
-// getDeviceAllocator returns singleton deviceAllocatorImpl instance.
+// getDeviceAllocator returns singleton deviceAllocator instance.
 func getDeviceAllocator() deviceAllocator {
 	deviceAllocatorOnce.Do(func() {
 		da = newDeviceAllocator()
@@ -113,7 +117,7 @@ func getDeviceAllocator() deviceAllocator {
 	return da
 }
 
-// deviceAllocate is the wrapper of deviceAllocate of deviceAllocatorImpl.
+// deviceAllocate is the wrapper of deviceAllocate of deviceAllocator.
 func deviceAllocate(bytes, device int) devicePointer {
 	return getDeviceAllocator().deviceAllocate(bytes, device)
 }
@@ -126,39 +130,116 @@ func deviceFreeAndSetNil(dp *devicePointer) {
 	}
 }
 
-// newDeviceAllocator returns a new device allocator instances.
-func newDeviceAllocator() deviceAllocator {
-	return &deviceAllocatorImpl{
-		memoryUsage: make([]int64, memutils.GetDeviceCount()),
+func reportAllocatedMemory(deviceCount int, da deviceAllocator) {
+	// getAllocatedMemory may panic, therefore we should recover here
+	defer func() {
+		if r := recover(); r != nil {
+			var err error
+			switch x := r.(type) {
+			case string:
+				err = utils.StackError(nil, x)
+			case error:
+				err = utils.StackError(x, "Panic happens when reporting allocated memory")
+			default:
+				err = utils.StackError(nil, "Panic happens when reporting allocated memory %v", x)
+			}
+			utils.GetLogger().With("err", err).Error("Failed to report allocated memory")
+		}
+	}()
+
+	for device := 0; device < deviceCount; device++ {
+		utils.GetRootReporter().GetChildGauge(map[string]string{
+			"device": strconv.Itoa(device),
+		}, utils.AllocatedDeviceMemory).Update(float64(da.getAllocatedMemory(device)))
 	}
 }
 
-// deviceAllocatorImpl maintains the memory space for each device and reports the updated memory every time an
+// newDeviceAllocator returns a new device allocator instances.
+func newDeviceAllocator() deviceAllocator {
+	// init may panic and crash the service. This is expected.
+	memutils.Init()
+	var da deviceAllocator
+	deviceCount := memutils.GetDeviceCount()
+	if memutils.IsPooledMemory() {
+		utils.GetLogger().Info("Using pooled device memory manager")
+		da = &pooledDeviceAllocatorImpl{}
+	} else {
+		utils.GetLogger().Info("Using memory tracking device memory manager")
+		da = &memoryTrackingDeviceAllocatorImpl{
+			memoryUsage: make([]int64, deviceCount),
+		}
+	}
+
+	// Start memory usage reporting go routine.
+	// Report the allocated memory of each device per memoryReportingInterval.
+	timer := time.NewTimer(memoryReportingInterval)
+	go func() {
+		for {
+			select {
+			case <-timer.C:
+				reportAllocatedMemory(deviceCount, da)
+				// Since we already receive the event from channel,
+				// there is no need to stop it and we can directly reset the timer.
+				timer.Reset(memoryReportingInterval)
+			}
+		}
+	}()
+	return da
+}
+
+// memoryTrackingDeviceAllocatorImpl maintains the memory space for each device and reports the updated memory every time an
 // allocation/free request is issued.
-type deviceAllocatorImpl struct {
+type memoryTrackingDeviceAllocatorImpl struct {
 	memoryUsage []int64
 }
 
 // deviceAllocate allocates the specified amount of memory on the device. **Slice bound is not checked!!**
-func (d *deviceAllocatorImpl) deviceAllocate(bytes, device int) devicePointer {
+func (d *memoryTrackingDeviceAllocatorImpl) deviceAllocate(bytes, device int) devicePointer {
 	dp := devicePointer{
 		device:    device,
 		bytes:     bytes,
 		pointer:   memutils.DeviceAllocate(bytes, device),
 		allocated: true,
 	}
-	utils.GetRootReporter().GetChildGauge(map[string]string{
-		"device": strconv.Itoa(device),
-	}, utils.AllocatedDeviceMemory).Update(float64(
-		atomic.AddInt64(&d.memoryUsage[device], int64(bytes))))
+	atomic.AddInt64(&d.memoryUsage[device], int64(bytes))
 	return dp
 }
 
 // deviceFree frees the specified memory from the device. **Slice bound is not checked!!**
-func (d *deviceAllocatorImpl) deviceFree(dp devicePointer) {
+func (d *memoryTrackingDeviceAllocatorImpl) deviceFree(dp devicePointer) {
 	memutils.DeviceFree(dp.pointer, dp.device)
-	utils.GetRootReporter().GetChildGauge(map[string]string{
-		"device": strconv.Itoa(dp.device),
-	}, utils.AllocatedDeviceMemory).Update(float64(
-		atomic.AddInt64(&d.memoryUsage[dp.device], int64(-dp.bytes))))
+	atomic.AddInt64(&d.memoryUsage[dp.device], int64(-dp.bytes))
+}
+
+// getAllocatedMemory returns memory allocated by this device allocator. Note this
+// might be different from the actual device allocated for this device. As thrust
+// memory allocation is not tracked here.
+func (d *memoryTrackingDeviceAllocatorImpl) getAllocatedMemory(device int) int64 {
+	return d.memoryUsage[device]
+}
+
+// pooledDeviceAllocatorImpl just delegates every call to underlying pooled memory manager.
+type pooledDeviceAllocatorImpl struct {
+}
+
+// deviceAllocate allocates the specified amount of memory on the device. **Slice bound is not checked!!**
+func (d *pooledDeviceAllocatorImpl) deviceAllocate(bytes, device int) devicePointer {
+	dp := devicePointer{
+		device:    device,
+		bytes:     bytes,
+		pointer:   memutils.DeviceAllocate(bytes, device),
+		allocated: true,
+	}
+	return dp
+}
+
+// deviceFree frees the specified memory from the device. **Slice bound is not checked!!**
+func (d *pooledDeviceAllocatorImpl) deviceFree(dp devicePointer) {
+	memutils.DeviceFree(dp.pointer, dp.device)
+}
+
+// getAllocatedMemory returns memory allocated for a specific device.
+func (d *pooledDeviceAllocatorImpl) getAllocatedMemory(device int) int64 {
+	free, total := memutils.GetDeviceMemoryInfo(device)
+	return int64(total - free)
 }
