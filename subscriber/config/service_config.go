@@ -83,7 +83,7 @@ type ServiceConfig struct {
 	ControllerConfig   *ControllerConfig                 `yaml:"controller"`
 	ZooKeeperConfig    ZooKeeperConfig                   `yaml:"zookeeper"`
 	EtcdConfig         *etcd.Configuration               `yaml:"etcd"`
-	HeartbeatConfig    *node.HeartbeatConfiguration      `yaml:"heartbeat`
+	HeartbeatConfig    *node.HeartbeatConfiguration      `yaml:"heartbeat"`
 }
 
 // AresNSConfig defines the mapping b/w ares namespace and its clusters
