@@ -299,9 +299,9 @@ var _ = Describe("controller", func() {
 		}
 
 		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
-			Zone: "local",
-			Env: "test",
-			Service: "ares-subscriber",
+			Zone:     "local",
+			Env:      "test",
+			Service:  "ares-subscriber",
 			CacheDir: "/var/lib/areskv",
 			ETCDClusters: []etcd.ClusterConfig{
 				{
@@ -316,10 +316,10 @@ var _ = Describe("controller", func() {
 		timeout := 30 * time.Second
 		interval := 10 * time.Second
 		checkInterval := 2 * time.Second
-		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration {
-			Enabled: &enabled,
-			Timeout: &timeout,
-			Interval: &interval,
+		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration{
+			Enabled:       &enabled,
+			Timeout:       &timeout,
+			Interval:      &interval,
 			CheckInterval: &checkInterval,
 		}
 		controller := NewController(params)
@@ -361,9 +361,9 @@ var _ = Describe("controller", func() {
 		}
 
 		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
-			Zone: "local",
-			Env: "test",
-			Service: "",
+			Zone:     "local",
+			Env:      "test",
+			Service:  "",
 			CacheDir: "/var/lib/areskv",
 			ETCDClusters: []etcd.ClusterConfig{
 				{
@@ -378,10 +378,10 @@ var _ = Describe("controller", func() {
 		timeout := 30 * time.Second
 		interval := 10 * time.Second
 		checkInterval := 2 * time.Second
-		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration {
-			Enabled: &enabled,
-			Timeout: &timeout,
-			Interval: &interval,
+		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration{
+			Enabled:       &enabled,
+			Timeout:       &timeout,
+			Interval:      &interval,
 			CheckInterval: &checkInterval,
 		}
 		NewController(params)
@@ -404,8 +404,8 @@ var _ = Describe("controller", func() {
 		}
 
 		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
-			Zone: "local",
-			Env: "test",
+			Zone:    "local",
+			Env:     "test",
 			Service: "ares-subscriber",
 			ETCDClusters: []etcd.ClusterConfig{
 				{
@@ -420,10 +420,10 @@ var _ = Describe("controller", func() {
 		timeout := 30 * time.Second
 		interval := 10 * time.Second
 		checkInterval := 2 * time.Second
-		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration {
-			Enabled: &enabled,
-			Timeout: &timeout,
-			Interval: &interval,
+		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration{
+			Enabled:       &enabled,
+			Timeout:       &timeout,
+			Interval:      &interval,
 			CheckInterval: &checkInterval,
 		}
 		NewController(params)
