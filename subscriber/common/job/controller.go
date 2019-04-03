@@ -171,7 +171,7 @@ func createEtcdServices(params Params) (services.Services, error) {
 		SetZapLogger(params.ServiceConfig.Logger).
 		SetMetricsScope(params.ServiceConfig.Scope)
 
-	params.ServiceConfig.EtcdConfig.Service = fmt.Sprint("%s/%s",
+	params.ServiceConfig.EtcdConfig.Service = fmt.Sprintf("%s/%s",
 		config.ActiveAresNameSpace, params.ServiceConfig.EtcdConfig.Service)
 	// create a config service client to access to the etcd cluster services.
 	csClient, err := params.ServiceConfig.EtcdConfig.NewClient(iopts)
