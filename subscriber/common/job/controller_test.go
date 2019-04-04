@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/m3db/m3/src/cluster/services"
+	"github.com/m3db/m3/src/m3em/node"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -36,6 +37,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var _ = Describe("controller", func() {
@@ -341,6 +343,16 @@ var _ = Describe("controller", func() {
 					},
 				},
 			},
+		}
+		enabled := true
+		timeout := 30 * time.Second
+		interval := 10 * time.Second
+		checkInterval := 2 * time.Second
+		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration{
+			Enabled:       &enabled,
+			Timeout:       &timeout,
+			Interval:      &interval,
+			CheckInterval: &checkInterval,
 		}
 
 		ctrl := gomock.NewController(GinkgoT())
