@@ -16,6 +16,7 @@ package job
 
 import (
 	"encoding/json"
+	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/m3db/m3/src/cluster/services"
@@ -35,7 +36,6 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
-	"github.com/golang/mock/gomock"
 )
 
 var _ = Describe("controller", func() {
@@ -299,9 +299,9 @@ var _ = Describe("controller", func() {
 		}
 
 		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
-			Zone:     "local",
-			Env:      "test",
-			Service:  "ares-subscriber",
+			Zone:    "local",
+			Env:     "test",
+			Service: "ares-subscriber",
 			ETCDClusters: []etcd.ClusterConfig{
 				{
 					Zone: "local",
@@ -330,9 +330,9 @@ var _ = Describe("controller", func() {
 		}
 
 		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
-			Zone:     "local",
-			Env:      "test",
-			Service:  "",
+			Zone:    "local",
+			Env:     "test",
+			Service: "",
 			ETCDClusters: []etcd.ClusterConfig{
 				{
 					Zone: "local",
