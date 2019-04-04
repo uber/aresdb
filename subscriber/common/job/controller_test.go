@@ -252,7 +252,7 @@ var _ = Describe("controller", func() {
 		testServer.Close()
 	})
 
-	It("NewController etcd disabled", func() {
+	It("NewController without zk and etcd", func() {
 		paramsR := rules.Params{
 			ServiceConfig: serviceConfig}
 
@@ -286,7 +286,11 @@ var _ = Describe("controller", func() {
 
 	})
 
-	It("NewController etcd enabled succeed", func() {
+	It("NewController with correct etcd config", func() {
+		defer func() {
+			GinkgoRecover()
+		}()
+
 		paramsR := rules.Params{
 			ServiceConfig: serviceConfig}
 
@@ -302,7 +306,6 @@ var _ = Describe("controller", func() {
 			Zone:     "local",
 			Env:      "test",
 			Service:  "ares-subscriber",
-			CacheDir: "/var/lib/areskv",
 			ETCDClusters: []etcd.ClusterConfig{
 				{
 					Zone: "local",
@@ -322,29 +325,11 @@ var _ = Describe("controller", func() {
 			Interval:      &interval,
 			CheckInterval: &checkInterval,
 		}
-		controller := NewController(params)
-		Ω(controller).ShouldNot(BeNil())
-		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
-		Ω(controller.Drivers["job1"]["dev-ares01"]).ShouldNot(BeNil())
-		controller.deleteDriver(controller.Drivers["job1"]["dev-ares01"],
-			"dev-ares01", controller.Drivers["job1"])
-		Ω(controller.Drivers["job1"]["dev-ares01"]).Should(BeNil())
-		ok := controller.addDriver(params.JobConfigs["job1"]["dev-ares01"], "dev-ares01",
-			controller.Drivers["job1"], true)
-		Ω(ok).Should(Equal(true))
-
-		controller.jobNS = "dev01"
-		update, newHash := controller.updateAssignmentHash()
-		Ω(update).Should(Equal(true))
-		Ω(newHash).Should(Equal("12345"))
-
-		controller.SyncUpJobConfigs()
-		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
-		Ω(controller.Drivers["job1"]["dev-ares01"]).Should(BeNil())
-
+		params.ServiceConfig.ControllerConfig.Enable = true
+		NewController(params)
 	})
 
-	It("NewController etcd enabled failed case 1", func() {
+	It("NewController with wrong etcd config", func() {
 		defer func() {
 			GinkgoRecover()
 		}()
@@ -364,7 +349,6 @@ var _ = Describe("controller", func() {
 			Zone:     "local",
 			Env:      "test",
 			Service:  "",
-			CacheDir: "/var/lib/areskv",
 			ETCDClusters: []etcd.ClusterConfig{
 				{
 					Zone: "local",
@@ -384,48 +368,8 @@ var _ = Describe("controller", func() {
 			Interval:      &interval,
 			CheckInterval: &checkInterval,
 		}
-		NewController(params)
-	})
 
-	It("NewController etcd enabled failed case2", func() {
-		defer func() {
-			GinkgoRecover()
-		}()
-
-		paramsR := rules.Params{
-			ServiceConfig: serviceConfig}
-
-		rst, _ := rules.NewJobConfigs(paramsR)
-		params := Params{
-			ServiceConfig:    serviceConfig,
-			JobConfigs:       rst.JobConfigs,
-			ConsumerInitFunc: consumer.NewKafkaConsumer,
-			DecoderInitFunc:  message.NewDefaultDecoder,
-		}
-
-		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
-			Zone:    "local",
-			Env:     "test",
-			Service: "ares-subscriber",
-			ETCDClusters: []etcd.ClusterConfig{
-				{
-					Zone: "local",
-					Endpoints: []string{
-						"i1",
-					},
-				},
-			},
-		}
-		enabled := true
-		timeout := 30 * time.Second
-		interval := 10 * time.Second
-		checkInterval := 2 * time.Second
-		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration{
-			Enabled:       &enabled,
-			Timeout:       &timeout,
-			Interval:      &interval,
-			CheckInterval: &checkInterval,
-		}
+		params.ServiceConfig.ControllerConfig.Enable = true
 		NewController(params)
 	})
 })
