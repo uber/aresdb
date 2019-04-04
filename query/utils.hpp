@@ -15,9 +15,6 @@
 #ifndef QUERY_UTILS_HPP_
 #define QUERY_UTILS_HPP_
 #include <cuda_runtime.h>
-#ifdef USE_RMM
-#include <rmm/thrust_rmm_allocator.h>
-#endif
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
@@ -26,6 +23,9 @@
 #include <stdexcept>
 #include <string>
 #include "query/time_series_aggregate.h"
+#ifdef USE_RMM
+#include "query/thrust_rmm_allocator.hpp"
+#endif
 
 // We need this macro to define functions that can only be called in host
 // mode or device mode, but not both. The reason to have this mode is because
