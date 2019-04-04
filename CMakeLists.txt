@@ -34,9 +34,9 @@ endif ()
 ################################
 # Compiler and linker flags
 ################################
-set(CMAKE_CUDA_STANDARD 14)
+set(CMAKE_CUDA_STANDARD 11)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
@@ -137,6 +137,7 @@ add_library(algorithm SHARED
         query/measure_transform.cu
         query/scratch_space_transform.cu
         query/sort_reduce.cu
+        query/thrust_rmm_allocator.hpp
         query/transform.cu
         query/transform.hpp
         query/utils.cu
