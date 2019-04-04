@@ -1,5 +1,5 @@
 hash: ef1379ff2edfdb007daa69f609bf61b685b32d145008f9ae7cf6bfd36f8982f2
-updated: 2019-04-01T10:49:14.531630631-07:00
+updated: 2019-04-04T15:38:37.162490113-07:00
 imports:
 - name: github.com/antlr/antlr4
   version: 837aa60e2c4736e242432c2ac93ed2de3b9eff3b
@@ -33,7 +33,7 @@ imports:
 - name: github.com/curator-go/curator
   version: 8a961ea3b25229b9b328724b8b2059ab58c1d16b
 - name: github.com/davecgh/go-spew
-  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
 - name: github.com/emirpasic/gods
@@ -200,7 +200,7 @@ imports:
 - name: github.com/pkg/errors
   version: ba968bfe8b2f7e042a574c888954fccecfa385b4
 - name: github.com/pmezard/go-difflib
-  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
   - difflib
 - name: github.com/samuel/go-zookeeper
@@ -224,7 +224,7 @@ imports:
 - name: github.com/spf13/viper
   version: d104d259b3380cb653bb793756823c3c41b37b53
 - name: github.com/stretchr/objx
-  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
+  version: cbeaeb16a013161a98496fad62933b1d21786672
 - name: github.com/stretchr/testify
   version: 6fe211e493929a8aac0469b93f28b1d0688a9a3a
   subpackages:

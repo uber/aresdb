@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/client/etcd"
-	"github.com/m3db/m3/src/m3em/node"
+	"github.com/m3db/m3/src/cluster/services"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -35,7 +35,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
-	"time"
+	"github.com/golang/mock/gomock"
 )
 
 var _ = Describe("controller", func() {
@@ -286,11 +286,7 @@ var _ = Describe("controller", func() {
 
 	})
 
-	It("NewController with correct etcd config", func() {
-		defer func() {
-			GinkgoRecover()
-		}()
-
+	It("createEtcdServices", func() {
 		paramsR := rules.Params{
 			ServiceConfig: serviceConfig}
 
@@ -315,25 +311,13 @@ var _ = Describe("controller", func() {
 				},
 			},
 		}
-		enabled := true
-		timeout := 30 * time.Second
-		interval := 10 * time.Second
-		checkInterval := 2 * time.Second
-		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration{
-			Enabled:       &enabled,
-			Timeout:       &timeout,
-			Interval:      &interval,
-			CheckInterval: &checkInterval,
-		}
-		params.ServiceConfig.ControllerConfig.Enable = true
-		NewController(params)
+
+		etcdServices, err := createEtcdServices(params)
+		Ω(etcdServices).ShouldNot(BeNil())
+		Ω(err).Should(BeNil())
 	})
 
-	It("NewController with wrong etcd config", func() {
-		defer func() {
-			GinkgoRecover()
-		}()
-
+	It("registerHeartBeatService", func() {
 		paramsR := rules.Params{
 			ServiceConfig: serviceConfig}
 
@@ -358,18 +342,13 @@ var _ = Describe("controller", func() {
 				},
 			},
 		}
-		enabled := true
-		timeout := 30 * time.Second
-		interval := 10 * time.Second
-		checkInterval := 2 * time.Second
-		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration{
-			Enabled:       &enabled,
-			Timeout:       &timeout,
-			Interval:      &interval,
-			CheckInterval: &checkInterval,
-		}
 
-		params.ServiceConfig.ControllerConfig.Enable = true
-		NewController(params)
+		ctrl := gomock.NewController(GinkgoT())
+		defer ctrl.Finish()
+
+		mockServices := services.NewMockServices(ctrl)
+		err := registerHeartBeatService(params, mockServices)
+		Ω(err).Should(BeNil())
+
 	})
 })
