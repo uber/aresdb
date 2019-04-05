@@ -360,6 +360,7 @@ var _ = Describe("controller", func() {
 
 		mockServices := services.NewMockServices(ctrl)
 		mockServices.EXPECT().SetMetadata(gomock.Any(), gomock.Any()).Return( nil).AnyTimes()
+		mockServices.EXPECT().Advertise(gomock.Any()).Return( nil).AnyTimes()
 		err := registerHeartBeatService(params, mockServices)
 		Ω(err).Should(BeNil())
 
