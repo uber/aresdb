@@ -288,7 +288,7 @@ var _ = Describe("controller", func() {
 
 	})
 
-	It("createEtcdServices", func() {
+	It("connectEtcdServices", func() {
 		paramsR := rules.Params{
 			ServiceConfig: serviceConfig}
 
@@ -314,7 +314,7 @@ var _ = Describe("controller", func() {
 			},
 		}
 
-		etcdServices, err := createEtcdServices(params)
+		etcdServices, err := connectEtcdServices(params)
 		Ω(etcdServices).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
 	})
@@ -359,8 +359,8 @@ var _ = Describe("controller", func() {
 		defer ctrl.Finish()
 
 		mockServices := services.NewMockServices(ctrl)
-		mockServices.EXPECT().SetMetadata(gomock.Any(), gomock.Any()).Return( nil).AnyTimes()
-		mockServices.EXPECT().Advertise(gomock.Any()).Return( nil).AnyTimes()
+		mockServices.EXPECT().SetMetadata(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		mockServices.EXPECT().Advertise(gomock.Any()).Return(nil).AnyTimes()
 		err := registerHeartBeatService(params, mockServices)
 		Ω(err).Should(BeNil())
 

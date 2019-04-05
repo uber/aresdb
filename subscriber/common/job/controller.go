@@ -136,7 +136,7 @@ func NewController(params Params) *Controller {
 		params.ServiceConfig.Logger.Info("aresDB Controller is enabled")
 
 		if *params.ServiceConfig.HeartbeatConfig.Enabled {
-			controller.etcdServices, err = createEtcdServices(params)
+			controller.etcdServices, err = connectEtcdServices(params)
 			if err != nil {
 				panic(utils.StackError(err, "Failed to createEtcdServices"))
 			}
@@ -166,7 +166,7 @@ func NewController(params Params) *Controller {
 	return controller
 }
 
-func createEtcdServices(params Params) (services.Services, error) {
+func connectEtcdServices(params Params) (services.Services, error) {
 	iopts := instrument.NewOptions().
 		SetZapLogger(params.ServiceConfig.Logger).
 		SetMetricsScope(params.ServiceConfig.Scope)
