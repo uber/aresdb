@@ -359,6 +359,13 @@ var _ = Describe("controller", func() {
 		defer ctrl.Finish()
 
 		mockServices := services.NewMockServices(ctrl)
+		sid := services.NewServiceID().
+			SetEnvironment(params.ServiceConfig.EtcdConfig.Env).
+			SetZone(params.ServiceConfig.EtcdConfig.Zone).
+			SetName(params.ServiceConfig.EtcdConfig.Service)
+		mockServices.EXPECT().SetMetadata(sid, services.NewMetadata().
+			SetHeartbeatInterval(*params.ServiceConfig.HeartbeatConfig.Interval).
+			SetLivenessInterval(*params.ServiceConfig.HeartbeatConfig.Timeout))
 		err := registerHeartBeatService(params, mockServices)
 		Ω(err).Should(BeNil())
 
