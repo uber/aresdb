@@ -16,7 +16,11 @@ package job
 
 import (
 	"encoding/json"
+	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
+	"github.com/m3db/m3/src/cluster/client/etcd"
+	"github.com/m3db/m3/src/cluster/services"
+	"github.com/m3db/m3/src/m3em/node"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -33,6 +37,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var _ = Describe("controller", func() {
@@ -249,8 +254,7 @@ var _ = Describe("controller", func() {
 		testServer.Close()
 	})
 
-	It("NewController", func() {
-
+	It("NewController without zk and etcd", func() {
 		paramsR := rules.Params{
 			ServiceConfig: serviceConfig}
 
@@ -261,6 +265,7 @@ var _ = Describe("controller", func() {
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
+
 		controller := NewController(params)
 		Ω(controller).ShouldNot(BeNil())
 		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
@@ -280,6 +285,84 @@ var _ = Describe("controller", func() {
 		controller.SyncUpJobConfigs()
 		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
 		Ω(controller.Drivers["job1"]["dev-ares01"]).Should(BeNil())
+
+	})
+
+	It("connectEtcdServices", func() {
+		paramsR := rules.Params{
+			ServiceConfig: serviceConfig}
+
+		rst, _ := rules.NewJobConfigs(paramsR)
+		params := Params{
+			ServiceConfig:    serviceConfig,
+			JobConfigs:       rst.JobConfigs,
+			ConsumerInitFunc: consumer.NewKafkaConsumer,
+			DecoderInitFunc:  message.NewDefaultDecoder,
+		}
+
+		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
+			Zone:    "local",
+			Env:     "test",
+			Service: "ares-subscriber",
+			ETCDClusters: []etcd.ClusterConfig{
+				{
+					Zone: "local",
+					Endpoints: []string{
+						"i1",
+					},
+				},
+			},
+		}
+
+		etcdServices, err := connectEtcdServices(params)
+		Ω(etcdServices).ShouldNot(BeNil())
+		Ω(err).Should(BeNil())
+	})
+
+	It("registerHeartBeatService", func() {
+		paramsR := rules.Params{
+			ServiceConfig: serviceConfig}
+
+		rst, _ := rules.NewJobConfigs(paramsR)
+		params := Params{
+			ServiceConfig:    serviceConfig,
+			JobConfigs:       rst.JobConfigs,
+			ConsumerInitFunc: consumer.NewKafkaConsumer,
+			DecoderInitFunc:  message.NewDefaultDecoder,
+		}
+
+		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
+			Zone:    "local",
+			Env:     "test",
+			Service: "",
+			ETCDClusters: []etcd.ClusterConfig{
+				{
+					Zone: "local",
+					Endpoints: []string{
+						"i1",
+					},
+				},
+			},
+		}
+		enabled := true
+		timeout := 30 * time.Second
+		interval := 10 * time.Second
+		checkInterval := 2 * time.Second
+		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration{
+			Enabled:       &enabled,
+			Timeout:       &timeout,
+			Interval:      &interval,
+			CheckInterval: &checkInterval,
+		}
+
+		ctrl := gomock.NewController(GinkgoT())
+		defer ctrl.Finish()
+
+		mockServices := services.NewMockServices(ctrl)
+		mockServices.EXPECT().SetMetadata(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		mockServices.EXPECT().Advertise(gomock.Any()).Return(nil).AnyTimes()
+		err := registerHeartBeatService(params, mockServices)
+		Ω(err).Should(BeNil())
 
 	})
 })
