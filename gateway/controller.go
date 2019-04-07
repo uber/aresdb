@@ -54,8 +54,14 @@ func (c *ControllerHTTPClient) buildRequest(method, path string) (req *http.Requ
 		return
 	}
 
-	req.Header = c.headers
-	req.Header.Add("RPC-Procedure", path)
+	headersCopy := http.Header{}
+	for k, vs := range c.headers {
+		for _, v := range vs {
+			headersCopy.Add(k, v)
+		}
+	}
+	headersCopy.Add("RPC-Procedure", path)
+	req.Header = headersCopy
 	return
 }
 
