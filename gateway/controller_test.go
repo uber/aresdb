@@ -139,4 +139,13 @@ var _ = ginkgo.Describe("Controller", func() {
 		_, err = c.GetAllSchema("ns_baddata")
 		Ω(err).ShouldNot(BeNil())
 	})
+
+	ginkgo.It("buildRequest should work", func() {
+		c := NewControllerHTTPClient(hostPort, 20*time.Second, headers)
+		headerLen := len(c.headers)
+		req, err := c.buildRequest(http.MethodGet, "somepath")
+		Ω(err).Should(BeNil())
+		Ω(req.Header).Should(HaveLen(2))
+		Ω(c.headers).Should(HaveLen(headerLen))
+	})
 })
