@@ -98,7 +98,7 @@ CGoCallResHandle DeviceFree(void *p, int device) {
   // interface.
   // TODO(lucafuji): use the stream of current execution pipeline for
   // allocation and free.
-  resHandle.pStrErr = checkRMMError(RMM_FREE(resHandle.res, 0),
+  resHandle.pStrErr = checkRMMError(RMM_FREE(p, 0),
       "DeviceFree");
   return resHandle;
 }
