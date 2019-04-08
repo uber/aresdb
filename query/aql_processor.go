@@ -173,7 +173,7 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 	}
 
 	// Process live batches.
-	if cutoff < uint32(qc.toTime.Time.Unix()) {
+	if qc.toTime == nil || cutoff < uint32(qc.toTime.Time.Unix()) {
 		batchIDs, numRecordsInLastBatch := shard.LiveStore.GetBatchIDs()
 		for i, batchID := range batchIDs {
 			if qc.OOPK.done {
@@ -209,7 +209,7 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 	}
 
 	// Process archive batches.
-	if archiveStore != nil && cutoff > uint32(qc.fromTime.Time.Unix()) {
+	if archiveStore != nil && (qc.fromTime == nil || cutoff > uint32(qc.fromTime.Time.Unix())) {
 		scanner := qc.TableScanners[0]
 		for batchID := scanner.ArchiveBatchIDStart; batchID < scanner.ArchiveBatchIDEnd; batchID++ {
 			if qc.OOPK.done {
@@ -993,7 +993,7 @@ func (qc *AQLQueryContext) calculateMemoryRequirement(memStore memstore.MemStore
 		}
 
 		// estimate live batch memory usage
-		if cutoff < uint32(qc.toTime.Time.Unix()) {
+		if qc.toTime == nil || cutoff < uint32(qc.toTime.Time.Unix()) {
 			batchIDs, _ := shard.LiveStore.GetBatchIDs()
 
 			// find first non null batch and estimate.
@@ -1012,7 +1012,7 @@ func (qc *AQLQueryContext) calculateMemoryRequirement(memStore memstore.MemStore
 		}
 
 		// estimate archive batch memory usage
-		if archiveStore != nil && cutoff > uint32(qc.fromTime.Time.Unix()) {
+		if archiveStore != nil && (qc.fromTime == nil || cutoff > uint32(qc.fromTime.Time.Unix())) {
 			scanner := qc.TableScanners[0]
 			for batchID := scanner.ArchiveBatchIDStart; batchID < scanner.ArchiveBatchIDEnd; batchID++ {
 				archiveBatch := archiveStore.RequestBatch(int32(batchID))
