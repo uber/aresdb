@@ -10,16 +10,16 @@ import:
 - package: golang.org/x/text
 - package: github.com/emirpasic/gods
 - package: github.com/satori/go.uuid
-- package: github.com/uber/jaeger-client-go
-  subpackages:
-  - config
-  version: 1a782e2da844727691fef1757c72eb190c2909f0
 - package: github.com/spf13/viper
 - package: github.com/spf13/cobra
 - package: github.com/spf13/pflag
 - package: gopkg.in/validator.v2
 - package: github.com/m3db/m3
   subpackages:
-    - cluster
-  version: v0.7.0
+  - cluster
+  version: 0.7.0
+- package: github.com/uber/jaeger-client-go
+  version: 2.15.0
+- package: github.com/uber/jaeger-lib
+  version: 1.5.0
 

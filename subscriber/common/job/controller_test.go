@@ -20,7 +20,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/m3db/m3/src/cluster/services"
-	"github.com/m3db/m3/src/m3em/node"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -348,7 +347,7 @@ var _ = Describe("controller", func() {
 		timeout := 30 * time.Second
 		interval := 10 * time.Second
 		checkInterval := 2 * time.Second
-		params.ServiceConfig.HeartbeatConfig = &node.HeartbeatConfiguration{
+		params.ServiceConfig.HeartbeatConfig = &config.HeartBeatConfig{
 			Enabled:       &enabled,
 			Timeout:       &timeout,
 			Interval:      &interval,

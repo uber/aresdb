@@ -1,5 +1,5 @@
-hash: f03aef9a7601bdfeb89d76ecfc3d51b034123ae567dbec984ae611aa0406fd91
-updated: 2019-04-09T10:58:31.180783-07:00
+hash: 04977d189ca1cff7d48044700745455cfae3bd7eca3cdd1cdd708bfb6af6bf98
+updated: 2019-04-09T16:31:11.919408-07:00
 imports:
 - name: github.com/antlr/antlr4
   version: 837aa60e2c4736e242432c2ac93ed2de3b9eff3b
@@ -37,14 +37,14 @@ imports:
   subpackages:
   - spew
 - name: github.com/emirpasic/gods
-  version: 7c131f6714175bd4ce484da1f348260c79db3069
+  version: 729073a73ce2057955fafa2a8f0ac62b99e950c9
   subpackages:
   - containers
   - trees
   - trees/redblacktree
   - utils
 - name: github.com/fsnotify/fsnotify
-  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
+  version: 1485a34d5d5723fea214f5710708e19a831720e4
 - name: github.com/getlantern/deepcopy
   version: 7f45deb8130a0acc553242eb0e009e3f6f3d9ce3
 - name: github.com/gogo/protobuf
@@ -65,9 +65,9 @@ imports:
   - ptypes/duration
   - ptypes/timestamp
 - name: github.com/gorilla/handlers
-  version: 7e6a874cdc0efb71a260254cc0e30d5415b6a5bb
+  version: ac6d24f88de4584385a0cb3a88f953d08a2f7a05
 - name: github.com/gorilla/mux
-  version: a7962380ca08b5a188038c69871b8d3fbdf31e89
+  version: c5c6c98bc25355028a63748a498942a6398ccd22
 - name: github.com/hashicorp/hcl
   version: 65a6292f0157eff210d03ed1bf6c59b190b8b906
   subpackages:
@@ -105,12 +105,6 @@ imports:
   - src/cluster/services/leader/campaign
   - src/cluster/services/leader/election
   - src/cluster/shard
-  - src/m3em/build
-  - src/m3em/checksum
-  - src/m3em/generated/proto/heartbeat
-  - src/m3em/generated/proto/m3em
-  - src/m3em/node
-  - src/m3em/os/fs
 - name: github.com/m3db/m3x
   version: b66c9c466c4726e3c9b47b1f837abbbe0f14be81
   vcs: git
@@ -125,7 +119,6 @@ imports:
   - pool
   - process
   - retry
-  - sync
   - time
   - watch
 - name: github.com/m3db/prometheus_client_golang
@@ -151,12 +144,10 @@ imports:
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
-- name: github.com/MichaelTJones/pcg
-  version: df440c6ed7ed8897ac98a408365e5e89c7becf1a
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/onsi/ginkgo
-  version: 505cc352255139defb7371000668063d1161e331
+  version: eea6ad008b96acdaa524f5b409513bf062b500ad
   subpackages:
   - config
   - internal/codelocation
@@ -176,7 +167,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 5533ce8a0da374da682cd53d70ddcc54adf1a710
+  version: 90e289841c1ed79b7a598a7cd9959750cb5e89e2
   subpackages:
   - format
   - internal/assertion
@@ -195,9 +186,9 @@ imports:
   - ext
   - log
 - name: github.com/pelletier/go-toml
-  version: 27c6b39a135b7dc87a14afb068809132fb7a9a8f
+  version: 63909f0a90ab0f36909e8e044e46ace10cf13ba2
 - name: github.com/pkg/errors
-  version: ba968bfe8b2f7e042a574c888954fccecfa385b4
+  version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
@@ -207,21 +198,21 @@ imports:
   subpackages:
   - zk
 - name: github.com/satori/go.uuid
-  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
+  version: b2ce2384e17bbe0c6d34077efa39dbab3e09123b
 - name: github.com/spf13/afero
-  version: f4711e4db9e9a1d3887343acb72b2bbfc2f686f5
+  version: 588a75ec4f32903aa5e39a2619ba6a4631e28424
   subpackages:
   - mem
 - name: github.com/spf13/cast
   version: 8c9545af88b134710ab1cd196795e7f2388358d7
 - name: github.com/spf13/cobra
-  version: 7c674d9e72017ed25f6d2b5e497a1368086b6a6f
+  version: 67fc4837d267bc9bfd6e47f77783fcc3dffc68de
 - name: github.com/spf13/jwalterweatherman
   version: 94f6ae3ed3bceceafa716478c5fbf8d29ca601a1
 - name: github.com/spf13/pflag
-  version: 4f9190456aed1c2113ca51ea9b89219747458dc1
+  version: 24fa6976df40757dce6aea913e7b81ade90530e1
 - name: github.com/spf13/viper
-  version: 6d33b5a963d922d182c91e8a1c88d81fd150cfd4
+  version: 7a605a50e69cd1ea431c4a1e6eebe9b287ef6de4
 - name: github.com/stretchr/objx
   version: cbeaeb16a013161a98496fad62933b1d21786672
 - name: github.com/stretchr/testify
@@ -310,7 +301,7 @@ imports:
   - netutil
   - trace
 - name: golang.org/x/sys
-  version: 2b024373dcd9800f0cae693839fac6ede8d64a8c
+  version: 4b34438f7a67ee5f45cc6132e2bad873a20324e9
   subpackages:
   - unix
 - name: golang.org/x/text

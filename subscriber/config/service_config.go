@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/m3db/m3/src/cluster/client/etcd"
-	"github.com/m3db/m3/src/m3em/node"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
 	"github.com/uber/aresdb/utils"
@@ -83,7 +82,15 @@ type ServiceConfig struct {
 	ControllerConfig   *ControllerConfig                 `yaml:"controller"`
 	ZooKeeperConfig    ZooKeeperConfig                   `yaml:"zookeeper"`
 	EtcdConfig         *etcd.Configuration               `yaml:"etcd"`
-	HeartbeatConfig    *node.HeartbeatConfiguration      `yaml:"heartbeat"`
+	HeartbeatConfig    *HeartBeatConfig                  `yaml:"heartbeat"`
+}
+
+// HeartBeatConfig represents heartbeat config
+type HeartBeatConfig struct {
+	Enabled       *bool          `yaml:"enabled"`
+	Timeout       *time.Duration `yaml:"timeout"`
+	Interval      *time.Duration `yaml:"interval"`
+	CheckInterval *time.Duration `yaml:"checkInterval"`
 }
 
 // AresNSConfig defines the mapping b/w ares namespace and its clusters
