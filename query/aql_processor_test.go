@@ -22,6 +22,7 @@ import (
 	"math"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -1513,6 +1514,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					dimIndex:      -1,
 				},
 			},
+			fromTime: &alignedTime{time.Unix(0, 0), "s"},
+			toTime: &alignedTime{time.Unix(86400, 0), "s"},
 		}
 
 		qc.ProcessQuery(mockMemStore)
@@ -1788,6 +1791,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					inOrOut:       true,
 				},
 			},
+			fromTime: &alignedTime{time.Unix(0, 0), "s"},
+			toTime: &alignedTime{time.Unix(86400, 0), "s"},
 		}
 
 		qc.ProcessQuery(mockMemStore)
@@ -2039,6 +2044,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					ExprType: expr.Unsigned,
 				},
 			},
+			fromTime: &alignedTime{time.Unix(0, 0), "s"},
+			toTime: &alignedTime{time.Unix(86400, 0), "s"},
 		}
 
 		qc.ProcessQuery(mockMemStore)
