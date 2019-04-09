@@ -1,5 +1,5 @@
-hash: ef1379ff2edfdb007daa69f609bf61b685b32d145008f9ae7cf6bfd36f8982f2
-updated: 2019-04-04T15:38:37.162490113-07:00
+hash: f03aef9a7601bdfeb89d76ecfc3d51b034123ae567dbec984ae611aa0406fd91
+updated: 2019-04-09T10:58:31.180783-07:00
 imports:
 - name: github.com/antlr/antlr4
   version: 837aa60e2c4736e242432c2ac93ed2de3b9eff3b
@@ -18,7 +18,7 @@ imports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/confluentinc/confluent-kafka-go
-  version: 213e7cd9dd311f2fb7586c02cb61b1b3aa5a5e48
+  version: 63fc1b2805628346a10311be80bb1ce70d3f4a90
   subpackages:
   - kafka
 - name: github.com/coreos/etcd
@@ -37,7 +37,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/emirpasic/gods
-  version: b2394dfbb6314eeb616db55d1e01928f287da4b4
+  version: 7c131f6714175bd4ce484da1f348260c79db3069
   subpackages:
   - containers
   - trees
@@ -64,12 +64,10 @@ imports:
   - ptypes/any
   - ptypes/duration
   - ptypes/timestamp
-- name: github.com/gorilla/context
-  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/handlers
-  version: 90663712d74cb411cbef281bc1e08c19d1a76145
+  version: 7e6a874cdc0efb71a260254cc0e30d5415b6a5bb
 - name: github.com/gorilla/mux
-  version: e3702bed27f0d39777b0b37b664b6280e8ef8fbf
+  version: a7962380ca08b5a188038c69871b8d3fbdf31e89
 - name: github.com/hashicorp/hcl
   version: 65a6292f0157eff210d03ed1bf6c59b190b8b906
   subpackages:
@@ -85,8 +83,9 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/m3db/m3
-  version: fe221ef309a585e82e44366c9553aec49a585c08
+  version: 3315714561af37dcbb4a61f8bcccd6711e2a36a9
   subpackages:
+  - cluster
   - src/cluster/client
   - src/cluster/client/etcd
   - src/cluster/etcd/watchmanager
@@ -157,7 +156,7 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/onsi/ginkgo
-  version: 2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f
+  version: 505cc352255139defb7371000668063d1161e331
   subpackages:
   - config
   - internal/codelocation
@@ -177,7 +176,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 65fb64232476ad9046e57c26cd0bff3d3a8dc6cd
+  version: 5533ce8a0da374da682cd53d70ddcc54adf1a710
   subpackages:
   - format
   - internal/assertion
@@ -216,13 +215,13 @@ imports:
 - name: github.com/spf13/cast
   version: 8c9545af88b134710ab1cd196795e7f2388358d7
 - name: github.com/spf13/cobra
-  version: 7547e83b2d85fd1893c7d76916f67689d761fecb
+  version: 7c674d9e72017ed25f6d2b5e497a1368086b6a6f
 - name: github.com/spf13/jwalterweatherman
   version: 94f6ae3ed3bceceafa716478c5fbf8d29ca601a1
 - name: github.com/spf13/pflag
-  version: 24fa6976df40757dce6aea913e7b81ade90530e1
+  version: 4f9190456aed1c2113ca51ea9b89219747458dc1
 - name: github.com/spf13/viper
-  version: d104d259b3380cb653bb793756823c3c41b37b53
+  version: 6d33b5a963d922d182c91e8a1c88d81fd150cfd4
 - name: github.com/stretchr/objx
   version: cbeaeb16a013161a98496fad62933b1d21786672
 - name: github.com/stretchr/testify
@@ -311,7 +310,7 @@ imports:
   - netutil
   - trace
 - name: golang.org/x/sys
-  version: e48874b42435b4347fc52bdee0424a52abc974d7
+  version: 2b024373dcd9800f0cae693839fac6ede8d64a8c
   subpackages:
   - unix
 - name: golang.org/x/text
@@ -361,7 +360,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/validator.v2
-  version: 59c90c7046f643cbe0d4e7c8776c42a84ce75910
+  version: 135c24b11c19e52befcae2ec3fca5d9b78c4e98e
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 testImports:
