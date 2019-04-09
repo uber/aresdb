@@ -1,5 +1,5 @@
-hash: ef1379ff2edfdb007daa69f609bf61b685b32d145008f9ae7cf6bfd36f8982f2
-updated: 2019-04-04T15:38:37.162490113-07:00
+hash: 60844ffb03c6bd4a65c56fdc99ed9f5d9459639c13e956d9cffc7018588853b2
+updated: 2019-04-08T17:04:36.729916-07:00
 imports:
 - name: github.com/antlr/antlr4
   version: 837aa60e2c4736e242432c2ac93ed2de3b9eff3b
@@ -10,30 +10,33 @@ imports:
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/bkaradzic/go-lz4
   version: 7224d8d8f27ef618c0a95f1ae69dbb0488abc33a
-- name: github.com/codahale/hdrhistogram
-  version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/confluentinc/confluent-kafka-go
   version: 213e7cd9dd311f2fb7586c02cb61b1b3aa5a5e48
   subpackages:
   - kafka
 - name: github.com/coreos/etcd
-  version: 694728c496e22dfa5719c78ff23cc982e15bcb2f
+  version: a621d807f061e1dd635033a8d6bc261461429e27
   subpackages:
-  - auth/authpb
   - clientv3
   - clientv3/concurrency
   - etcdserver/api/v3rpc/rpctypes
-  - etcdserver/etcdserverpb
-  - mvcc/mvccpb
+- name: github.com/coreos/go-systemd
+  version: 95778dfbb74eb7e4dbaf43bf7d71809650ef8076
+  subpackages:
+  - journal
+- name: github.com/coreos/pkg
+  version: 399ea9e2e55f791b6e3d920860dbecb99c3692f0
+  subpackages:
+  - capnslog
 - name: github.com/curator-go/curator
   version: 8a961ea3b25229b9b328724b8b2059ab58c1d16b
 - name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
   - spew
 - name: github.com/emirpasic/gods
@@ -48,9 +51,11 @@ imports:
 - name: github.com/getlantern/deepcopy
   version: 7f45deb8130a0acc553242eb0e009e3f6f3d9ce3
 - name: github.com/gogo/protobuf
-  version: ba06b47c162d49f2af050fb4c75bcbc86a159d5c
+  version: 1adfc126b41513cc696b209667c8656ea7aac67c
   subpackages:
+  - gogoproto
   - proto
+  - protoc-gen-gogo/descriptor
 - name: github.com/golang/mock
   version: 51421b967af1f557f93a59e0057aaf15ca02e29c
   subpackages:
@@ -59,11 +64,12 @@ imports:
   version: b5d812f8a3706043e23a9cd5babf2e5423744d30
   subpackages:
   - proto
-  - protoc-gen-go/descriptor
   - ptypes
   - ptypes/any
   - ptypes/duration
   - ptypes/timestamp
+- name: github.com/google/uuid
+  version: 0cd6bf5da1e1c83f8b45653022c74f71af0538a4
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/handlers
@@ -85,8 +91,9 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/m3db/m3
-  version: fe221ef309a585e82e44366c9553aec49a585c08
+  version: 3315714561af37dcbb4a61f8bcccd6711e2a36a9
   subpackages:
+  - cluster
   - src/cluster/client
   - src/cluster/client/etcd
   - src/cluster/etcd/watchmanager
@@ -113,21 +120,16 @@ imports:
   - src/m3em/node
   - src/m3em/os/fs
 - name: github.com/m3db/m3x
-  version: b66c9c466c4726e3c9b47b1f837abbbe0f14be81
-  vcs: git
+  version: ebf3c7b94afd62bad2aaa3ad20bb2d4142aa342e
   subpackages:
-  - checked
   - clock
   - close
   - errors
-  - ident
   - instrument
   - log
-  - pool
   - process
   - retry
   - sync
-  - time
   - watch
 - name: github.com/m3db/prometheus_client_golang
   version: 8ae269d24972b8695572fa6b2e3718b5ea82d6b4
@@ -149,7 +151,7 @@ imports:
 - name: github.com/magiconair/properties
   version: 7757cc9fdb852f7579b24170bcacda2c7471bb6a
 - name: github.com/matttproud/golang_protobuf_extensions
-  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  version: c182affec369e30f25d3eb8cd8a478dee585ae7d
   subpackages:
   - pbutil
 - name: github.com/MichaelTJones/pcg
@@ -157,7 +159,7 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/onsi/ginkgo
-  version: 2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f
+  version: eea6ad008b96acdaa524f5b409513bf062b500ad
   subpackages:
   - config
   - internal/codelocation
@@ -177,7 +179,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 65fb64232476ad9046e57c26cd0bff3d3a8dc6cd
+  version: 90e289841c1ed79b7a598a7cd9959750cb5e89e2
   subpackages:
   - format
   - internal/assertion
@@ -191,16 +193,15 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: 1949ddbfd147afd4d964a9f00b24eb291e0e7c38
+  version: 659c90643e714681897ec2521c60567dd21da733
   subpackages:
-  - ext
   - log
 - name: github.com/pelletier/go-toml
   version: 27c6b39a135b7dc87a14afb068809132fb7a9a8f
 - name: github.com/pkg/errors
-  version: ba968bfe8b2f7e042a574c888954fccecfa385b4
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
 - name: github.com/samuel/go-zookeeper
@@ -208,7 +209,7 @@ imports:
   subpackages:
   - zk
 - name: github.com/satori/go.uuid
-  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
+  version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/spf13/afero
   version: f4711e4db9e9a1d3887343acb72b2bbfc2f686f5
   subpackages:
@@ -224,9 +225,9 @@ imports:
 - name: github.com/spf13/viper
   version: d104d259b3380cb653bb793756823c3c41b37b53
 - name: github.com/stretchr/objx
-  version: cbeaeb16a013161a98496fad62933b1d21786672
+  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
 - name: github.com/stretchr/testify
-  version: 6fe211e493929a8aac0469b93f28b1d0688a9a3a
+  version: ffdc059bfe9ce6a4e144ba849dbedead332c6053
   subpackages:
   - assert
   - mock
@@ -245,27 +246,22 @@ imports:
   version: 1a782e2da844727691fef1757c72eb190c2909f0
   subpackages:
   - config
-  - internal/baggage
-  - internal/baggage/remote
-  - internal/spanlog
-  - internal/throttler
-  - internal/throttler/remote
-  - log
-  - log/zap
-  - rpcmetrics
-  - thrift
-  - thrift-gen/agent
-  - thrift-gen/baggage
-  - thrift-gen/jaeger
-  - thrift-gen/sampling
-  - thrift-gen/zipkincore
-  - transport
-  - utils
-- name: github.com/uber/jaeger-lib
-  version: ed3a127ec5fef7ae9ea95b01b542c47fbd999ce5
+- name: go.etcd.io/etcd
+  version: a621d807f061e1dd635033a8d6bc261461429e27
   subpackages:
-  - metrics
-  - metrics/tally
+  - auth/authpb
+  - clientv3
+  - clientv3/balancer
+  - clientv3/balancer/picker
+  - clientv3/balancer/resolver/endpoint
+  - etcdserver/api/v3rpc/rpctypes
+  - etcdserver/etcdserverpb
+  - mvcc/mvccpb
+  - pkg/logutil
+  - pkg/systemd
+  - pkg/types
+  - raft
+  - raft/raftpb
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/config
@@ -279,7 +275,7 @@ imports:
   - internal/digreflect
   - internal/dot
 - name: go.uber.org/fx
-  version: b7ed67fc3f046ecf4bc90a3f8bf16c4e70497ed4
+  version: 3de044da969b90ad0a3e4a7867a74662f645f3f9
   subpackages:
   - internal/fxlog
   - internal/fxreflect
@@ -287,7 +283,7 @@ imports:
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/zap
-  version: f85c78b1dd998214c5f2138155b320a4a43fbe36
+  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
   subpackages:
   - buffer
   - internal/bufferpool
@@ -295,23 +291,21 @@ imports:
   - internal/exit
   - zapcore
 - name: golang.org/x/net
-  version: ab5485076ff3407ad2d02db054635913f017b0ed
-  repo: https://github.com/golang/net
-  vcs: git
+  version: 4cb1c02c05b0e749b0365f61ae859a8e0cfceed9
   subpackages:
   - context
   - html
   - html/atom
   - html/charset
+  - http/httpguts
   - http2
   - http2/hpack
   - idna
   - internal/timeseries
-  - lex/httplex
   - netutil
   - trace
 - name: golang.org/x/sys
-  version: e48874b42435b4347fc52bdee0424a52abc974d7
+  version: 7138fd3d9dc8335c567ca206f4333fb75eb05d56
   subpackages:
   - unix
 - name: golang.org/x/text
@@ -336,30 +330,44 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
+  version: 64821d5d210748c883cd2b809589555ae4654203
   subpackages:
-  - googleapis/api/annotations
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
+  version: 4abb3622b0fb97df222670b189869b44d0c2454d
   subpackages:
   - balancer
+  - balancer/base
+  - balancer/roundrobin
+  - binarylog/grpc_binarylog_v1
   - codes
   - connectivity
   - credentials
-  - grpclb/grpc_lb_v1/messages
+  - credentials/internal
+  - encoding
+  - encoding/proto
   - grpclog
   - health/grpc_health_v1
   - internal
+  - internal/backoff
+  - internal/balancerload
+  - internal/binarylog
+  - internal/channelz
+  - internal/envconfig
+  - internal/grpcrand
+  - internal/grpcsync
+  - internal/syscall
+  - internal/transport
   - keepalive
   - metadata
   - naming
   - peer
   - resolver
+  - resolver/dns
+  - resolver/passthrough
   - stats
   - status
   - tap
-  - transport
 - name: gopkg.in/validator.v2
   version: 59c90c7046f643cbe0d4e7c8776c42a84ce75910
 - name: gopkg.in/yaml.v2
