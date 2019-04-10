@@ -15,10 +15,13 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/metastore"
+	"strings"
 	"unsafe"
 
 	"bytes"
-	"github.com/uber/aresdb/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 	"math"
@@ -29,11 +32,11 @@ type columnReader struct {
 	// The logic id of the column.
 	columnID int
 	// The column mode.
-	columnMode common.ColumnMode
+	columnMode memCom.ColumnMode
 	// The column update mode
-	columnUpdateMode common.ColumnUpdateMode
+	columnUpdateMode memCom.ColumnUpdateMode
 	// DataType of the column.
-	dataType common.DataType
+	dataType memCom.DataType
 	// The value vector. can be empty depending on column mode.
 	valueVector []byte
 	// The null vector. can be empty depending on column mode.
@@ -43,17 +46,17 @@ type columnReader struct {
 	// The offset vector. Only used for variable length values. Not used yet.
 	offsetVector []byte
 	// Compare function if any.
-	cmpFunc common.CompareFunc
+	cmpFunc memCom.CompareFunc
 }
 
 // ReadGoValue returns the GoDataValue from upsert batch at given row
-func (c *columnReader) ReadGoValue(row int) common.GoDataValue {
+func (c *columnReader) ReadGoValue(row int) memCom.GoDataValue {
 	offset := c.readOffset(row)
 	nextOffset := c.readOffset(row + 1)
 	if offset == nextOffset {
 		return nil
 	}
-	goValue := common.GetGoDataValue(c.dataType)
+	goValue := memCom.GetGoDataValue(c.dataType)
 	dataReader := utils.NewStreamDataReader(bytes.NewReader(c.valueVector[offset:]))
 	err := goValue.Read(&dataReader)
 	if err != nil {
@@ -69,7 +72,36 @@ func (c *columnReader) ReadValue(row int) (unsafe.Pointer, bool) {
 	if !validity {
 		return nil, false
 	}
-	return unsafe.Pointer(&c.valueVector[row*common.DataTypeBits(c.dataType)/8]), true
+	return unsafe.Pointer(&c.valueVector[row*memCom.DataTypeBits(c.dataType)/8]), true
+}
+
+// GetEnumReverseDict returns the reverse local enum dict in upsert batch
+func (c *columnReader) GetEnumReverseDict() []string {
+	if len(c.enumDictVector) == 0 {
+		return nil
+	}
+	return strings.Split(string(c.enumDictVector), metaCom.EnumDelimiter)
+}
+
+// RewriteEnumValues rewrite values vector based on enum value mapping
+func (c *columnReader) RewriteEnumValues(numRows int, mapping []int) {
+	if len(mapping) == 0 || len(c.valueVector) == 0 {
+		return
+	}
+
+	for r := 0; r < numRows; r++ {
+		if c.dataType == memCom.SmallEnum {
+			oldVal := *(*uint8)(unsafe.Pointer(&c.valueVector[r*memCom.DataTypeBits(c.dataType)/8]))
+			if int(oldVal) < len(mapping) {
+				*(*uint8)(unsafe.Pointer(&c.valueVector[r*memCom.DataTypeBits(c.dataType)/8])) = uint8(mapping[oldVal])
+			}
+		} else if c.dataType == memCom.BigEnum {
+			oldVal := *(*uint16)(unsafe.Pointer(&c.valueVector[r*memCom.DataTypeBits(c.dataType)/8]))
+			if int(oldVal) < len(mapping) {
+				*(*uint16)(unsafe.Pointer(&c.valueVector[r*memCom.DataTypeBits(c.dataType)/8])) = uint16(mapping[oldVal])
+			}
+		}
+	}
 }
 
 // ReadValue returns the row data (boolean type) for a column, and its validity.
@@ -88,9 +120,9 @@ func (c *columnReader) readOffset(row int) uint32 {
 // readValidity return the validity value of a row in a column.
 func (c *columnReader) readValidity(row int) bool {
 	switch c.columnMode {
-	case common.AllValuesDefault:
+	case memCom.AllValuesDefault:
 		return false
-	case common.AllValuesPresent:
+	case memCom.AllValuesPresent:
 		return true
 	}
 	return readBool(c.nullVector, row)
@@ -181,7 +213,7 @@ func (u *UpsertBatch) GetColumnID(col int) (int, error) {
 }
 
 // GetColumnType returns the data type of a column.
-func (u *UpsertBatch) GetColumnType(col int) (common.DataType, error) {
+func (u *UpsertBatch) GetColumnType(col int) (memCom.DataType, error) {
 	if col >= len(u.columns) {
 		return 0, utils.StackError(nil, "Column index %d out of range %d", col, len(u.columns))
 	}
@@ -226,8 +258,8 @@ func (u *UpsertBatch) GetBool(row int, col int) (bool, bool, error) {
 // It first check validity of the value, then it check whether it's a
 // boolean column to decide whether to load bool value or other value
 // type.
-func (u *UpsertBatch) GetDataValue(row, col int) (common.DataValue, error) {
-	val := common.DataValue{}
+func (u *UpsertBatch) GetDataValue(row, col int) (memCom.DataValue, error) {
+	val := memCom.DataValue{}
 	if col >= len(u.columns) {
 		return val, utils.StackError(nil, "Column index %d out of range %d", col, u.columns)
 	}
@@ -239,20 +271,20 @@ func (u *UpsertBatch) GetDataValue(row, col int) (common.DataValue, error) {
 
 	val.DataType = dataType
 
-	if dataType == common.Bool {
+	if dataType == memCom.Bool {
 		val.IsBool = true
 		val.BoolVal, val.Valid = u.columns[col].ReadBool(row)
 		return val, nil
 	}
 
-	if common.IsGoType(dataType) {
+	if memCom.IsGoType(dataType) {
 		val.GoVal = u.columns[col].ReadGoValue(row)
 		val.Valid = val.GoVal != nil
 		return val, nil
 	}
 
 	val.OtherVal, val.Valid = u.columns[col].ReadValue(row)
-	val.CmpFunc = common.GetCompareFunc(dataType)
+	val.CmpFunc = memCom.GetCompareFunc(dataType)
 	return val, nil
 }
 
@@ -286,7 +318,7 @@ func (u *UpsertBatch) GetPrimaryKeyCols(primaryKeyColumnIDs []int) ([]int, error
 // GetPrimaryKeyBytes returns primary key bytes for a given row. Note primaryKeyCol is not list of primary key
 // columnIDs.
 func (u *UpsertBatch) GetPrimaryKeyBytes(row int, primaryKeyCols []int, key []byte) error {
-	primaryKeyValues := make([]common.DataValue, len(primaryKeyCols))
+	primaryKeyValues := make([]memCom.DataValue, len(primaryKeyCols))
 	var err error
 	for i, col := range primaryKeyCols {
 		primaryKeyValues[i], err = u.GetDataValue(row, col)
@@ -317,7 +349,7 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 	newBatch.columns = make([]*columnReader, 0, len(u.columns))
 	for _, oldCol := range u.columns {
 		newCol := *oldCol
-		if newCol.columnUpdateMode > common.UpdateForceOverwrite {
+		if newCol.columnUpdateMode > memCom.UpdateForceOverwrite {
 			// ignore those columns with conditional updates from backfill
 			// clean up the column data
 			colID := newCol.columnID
@@ -334,8 +366,8 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 		newCol.offsetVector = nil
 
 		switch newCol.columnMode {
-		case common.AllValuesDefault:
-		case common.HasNullVector:
+		case memCom.AllValuesDefault:
+		case memCom.HasNullVector:
 			nullVectorLength := utils.AlignOffset(newBatch.NumRows, 8) / 8
 			newCol.nullVector = make([]byte, nullVectorLength)
 			newBatch.alternativeBytes += nullVectorLength
@@ -345,8 +377,8 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 				writeBool(newCol.nullVector, newRow, validity)
 			}
 			fallthrough
-		case common.AllValuesPresent:
-			valueBits := common.DataTypeBits(newCol.dataType)
+		case memCom.AllValuesPresent:
+			valueBits := memCom.DataTypeBits(newCol.dataType)
 			valueVectorLength := utils.AlignOffset(newBatch.NumRows*valueBits, 8) / 8
 			newCol.valueVector = make([]byte, valueVectorLength)
 			newBatch.alternativeBytes += valueVectorLength
@@ -456,11 +488,11 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 	batch.ArrivalTime = arrivalTime
 
 	// Header too small, error out.
-	if len(buffer) < 28+common.ColumnHeaderSize(batch.NumColumns) {
+	if len(buffer) < 28+memCom.ColumnHeaderSize(batch.NumColumns) {
 		return nil, utils.StackError(nil, "Invalid upsert batch data with incomplete header section")
 	}
 
-	header := common.NewUpsertBatchHeader(buffer[28:], batch.NumColumns)
+	header := memCom.NewUpsertBatchHeader(buffer[28:], batch.NumColumns)
 
 	columns := make([]*columnReader, batch.NumColumns)
 	for i := range columns {
@@ -481,7 +513,7 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 		}
 
 		columns[i] = &columnReader{columnID: columnID, columnMode: columnMode, columnUpdateMode: columnUpdateMode, dataType: columnType,
-			cmpFunc: common.GetCompareFunc(columnType)}
+			cmpFunc: memCom.GetCompareFunc(columnType)}
 
 		columnStartOffset, err := header.ReadColumnOffset(i)
 		if err != nil {
@@ -494,18 +526,18 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 		}
 
 		enumDictLength := 0
-		if isEnumType := common.IsEnumType(columnType); isEnumType {
+		if isEnumType := memCom.IsEnumType(columnType); isEnumType {
 			enumDictLength, err = header.ReadEnumDictLength(i)
 			if err != nil {
 				return nil, utils.StackError(err, "Failed to read enum dict length for column %d", i)
 			}
 		}
 
-		isGoType := common.IsGoType(columnType)
+		isGoType := memCom.IsGoType(columnType)
 		currentOffset := columnStartOffset
 		switch columnMode {
-		case common.AllValuesDefault:
-		case common.HasNullVector:
+		case memCom.AllValuesDefault:
+		case memCom.HasNullVector:
 			if !isGoType {
 				// Null vector points to the beginning of the column data section.
 				nullVectorLength := utils.AlignOffset(batch.NumRows, 8) / 8
@@ -513,7 +545,7 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 				currentOffset += nullVectorLength
 			}
 			fallthrough
-		case common.AllValuesPresent:
+		case memCom.AllValuesPresent:
 			// read enum dict vector
 			columns[i].enumDictVector = buffer[currentOffset : currentOffset+enumDictLength]
 			currentOffset += enumDictLength
@@ -534,6 +566,59 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 
 }
 
+// ResolveEnumDict resolves upsert batch level enum dict with instance level enum dictionary
+func (u *UpsertBatch) ResolveEnumDict(table string, tableSchema *TableSchema, metaStore metastore.MetaStore) error {
+	tableSchema.RLock()
+	columns := tableSchema.Schema.Columns
+	enumDicts := tableSchema.EnumDicts
+	tableSchema.RUnlock()
+
+	for _, columnReader := range u.columns {
+		if !memCom.IsEnumType(columnReader.dataType) {
+			continue
+		}
+		columnID := columnReader.columnID
+		if columnID > len(columns) || columns[columnID].Deleted {
+			continue
+		}
+		columnName := columns[columnID].Name
+		enumDict := enumDicts[columnName]
+		upsertBatchReverseEnumDict := columnReader.GetEnumReverseDict()
+		// mapping from inputEnumID to resolvedEnumID
+		enumIDMapping := make([]int, len(upsertBatchReverseEnumDict))
+		unresolvedEnums := make([]string, 0)
+		for inputEnumID, str := range upsertBatchReverseEnumDict {
+			if resolvedEnumID, exist := enumDict.Dict[str]; exist {
+				enumIDMapping[inputEnumID] = resolvedEnumID
+			} else {
+				// use -1 to indicate unresolved inputEnumID
+				enumIDMapping[inputEnumID] = -1
+				unresolvedEnums = append(unresolvedEnums, str)
+			}
+		}
+		if len(unresolvedEnums) > 0 {
+			resolvedEnumIDs, err := metaStore.ExtendEnumDict(table, columnName, unresolvedEnums)
+			if err == metastore.ErrTableDoesNotExist || err == metastore.ErrColumnDoesNotExist {
+				continue
+			} else if err != nil {
+				return err
+			}
+			index := 0
+			// the order of unresolved enum values in enumIDMapping
+			// should match order of unresolved enums in unresolvedEnums which is the same order in resolvedEnumIDs
+			for i, resolvedValue := range enumIDMapping {
+				if resolvedValue < 0 {
+					enumIDMapping[i] = resolvedEnumIDs[index]
+					index++
+				}
+			}
+
+		}
+		columnReader.RewriteEnumValues(u.NumRows, enumIDMapping)
+	}
+	return nil
+}
+
 // NewUpsertBatch deserializes an upsert batch on the server.
 // buffer does not contain the 4-byte buffer size.
 func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
@@ -544,7 +629,7 @@ func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 		return nil, utils.StackError(err, "Failed to read upsert batch version number")
 	}
 
-	if version == common.UpsertBatchVersion1 {
+	if version == memCom.UpsertBatchVersion1 {
 		// skip version number bytes for new version
 		return readUpsertBatch(buffer)
 	}
