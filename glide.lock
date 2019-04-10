@@ -1,5 +1,5 @@
-hash: 04977d189ca1cff7d48044700745455cfae3bd7eca3cdd1cdd708bfb6af6bf98
-updated: 2019-04-09T16:31:11.919408-07:00
+hash: 622c72997054d338c6398aa25349849b208e5f1aa2b263b676c97fa49bc439ac
+updated: 2019-04-10T09:01:08.295856-07:00
 imports:
 - name: github.com/antlr/antlr4
   version: 837aa60e2c4736e242432c2ac93ed2de3b9eff3b
@@ -18,7 +18,7 @@ imports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/confluentinc/confluent-kafka-go
-  version: 63fc1b2805628346a10311be80bb1ce70d3f4a90
+  version: 213e7cd9dd311f2fb7586c02cb61b1b3aa5a5e48
   subpackages:
   - kafka
 - name: github.com/coreos/etcd
@@ -186,7 +186,7 @@ imports:
   - ext
   - log
 - name: github.com/pelletier/go-toml
-  version: 63909f0a90ab0f36909e8e044e46ace10cf13ba2
+  version: d95bfe020e0c72df368b4368a4bf61d95eb4416c
 - name: github.com/pkg/errors
   version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/pmezard/go-difflib
