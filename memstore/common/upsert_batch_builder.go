@@ -18,8 +18,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/uber/aresdb/utils"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/utils"
 	"unsafe"
 )
 
@@ -61,6 +61,11 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 	if value == nil {
 		c.values[row] = nil
 	} else {
+		if IsEnumType(c.dataType) {
+			if strVal, ok := value.(string); ok {
+				value = c.GetOrAppendEnumCase(strVal)
+			}
+		}
 		var err error
 		c.values[row], err = ConvertValueForType(c.dataType, value)
 		if err != nil {
@@ -77,17 +82,14 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 	return nil
 }
 
-// AppendEnumCases append a list of enum cases to the column
-func (c *columnBuilder) AppendEnumCases(strs []string) error {
-	if !IsEnumType(c.dataType) {
-		return utils.StackError(nil, "column is not enum column")
+// GetOrAppendEnumCase add an enum cases to the column, caller should make sure the column is a enum column
+func (c *columnBuilder) GetOrAppendEnumCase(str string) int {
+	index := len(c.enumDict)
+	var exist bool
+	if index, exist = c.enumDict[str]; !exist {
+		c.enumDict[str] = index
 	}
-	for _, str := range strs {
-		if _, exist := c.enumDict[str]; !exist {
-			c.enumDict[str] = len(c.enumDict) + 1
-		}
-	}
-	return nil
+	return index
 }
 
 // AddRow grow the value array by 1.
@@ -189,7 +191,9 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 		fallthrough
 	case AllValuesPresent:
 		if enumDictVector := c.getEnumDictVector(); len(enumDictVector) > 0 {
-			writer.Append(enumDictVector)
+			if err := writer.Append(enumDictVector); err != nil {
+				return utils.StackError(err, "Failed to write enum dict vector")
+			}
 		}
 		var offsetWriter, valueWriter *utils.BufferWriter
 		// only goType needs to write offsetVector

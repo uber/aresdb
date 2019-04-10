@@ -42,10 +42,10 @@ type UpsertBatchHeader struct {
 func NewUpsertBatchHeader(buffer []byte, numCols int) UpsertBatchHeader {
 	offset := 0
 	// Offset vector is of size numCols + 1.
-	offsetVector := buffer[offset : (numCols+1)*4]
+	offsetVector := buffer[offset : offset+(numCols+1)*4]
 	offset += len(offsetVector)
 
-	enumDictLength := buffer[offset : numCols*4]
+	enumDictLength := buffer[offset : offset+numCols*4]
 	offset += len(enumDictLength) +
 		numCols*4 // reserved extra space
 
