@@ -16,8 +16,10 @@ package common
 
 import (
 	"math"
+	"strings"
 
 	"github.com/uber/aresdb/utils"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"unsafe"
 )
 
@@ -40,13 +42,14 @@ const (
 )
 
 const (
-	UpsertBatchVersion uint32 = 0xFEED0001
+	UpsertBatchVersion1 uint32 = 0xFEED0001
 )
 
 type columnBuilder struct {
 	columnID       int
 	dataType       DataType
 	values         []interface{}
+	enumDict       map[string]int
 	numValidValues int
 	updateMode     ColumnUpdateMode
 }
@@ -74,6 +77,19 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 	return nil
 }
 
+// AppendEnumCases append a list of enum cases to the column
+func (c *columnBuilder) AppendEnumCases(strs []string) error {
+	if !IsEnumType(c.dataType) {
+		return utils.StackError(nil, "column is not enum column")
+	}
+	for _, str := range strs {
+		if _, exist := c.enumDict[str]; !exist {
+			c.enumDict[str] = len(c.enumDict) + 1
+		}
+	}
+	return nil
+}
+
 // AddRow grow the value array by 1.
 func (c *columnBuilder) AddRow() {
 	c.values = append(c.values, nil)
@@ -95,6 +111,25 @@ func (c *columnBuilder) ResetRows() {
 	c.numValidValues = 0
 }
 
+func (c *columnBuilder) getEnumDictLength() int {
+	length := 0
+	for enum := range c.enumDict {
+		length += len(enum) + len(metaCom.EnumDelimiter)
+	}
+	if length > 0 {
+		length -= len(metaCom.EnumDelimiter)
+	}
+	return length
+}
+
+func (c *columnBuilder) getEnumDictVector() []byte {
+	enumReverseMap := make([]string, len(c.enumDict))
+	for enum, id := range c.enumDict {
+		enumReverseMap[id] = enum
+	}
+	return []byte(strings.Join(enumReverseMap, metaCom.EnumDelimiter))
+}
+
 // Calculated BufferSize returns the size of the column data in serialized format.
 func (c *columnBuilder) CalculateBufferSize(offset *int) {
 	isGoType := IsGoType(c.dataType)
@@ -107,6 +142,9 @@ func (c *columnBuilder) CalculateBufferSize(offset *int) {
 		}
 		fallthrough
 	case AllValuesPresent:
+		// write enum buffer if exists
+		enumDictLength := c.getEnumDictLength()
+		*offset += enumDictLength
 		// if golang memory, align to 4 bytes for offset vector
 		if isGoType {
 			*offset = utils.AlignOffset(*offset, 4)
@@ -150,6 +188,9 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 		}
 		fallthrough
 	case AllValuesPresent:
+		if enumDictVector := c.getEnumDictVector(); len(enumDictVector) > 0 {
+			writer.Append(enumDictVector)
+		}
 		var offsetWriter, valueWriter *utils.BufferWriter
 		// only goType needs to write offsetVector
 		if isGoType {
@@ -374,7 +415,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	// <reserve 14 bytes>
 	// [uint32] arrival_time (4 bytes)
 	fixedHeaderSize := 24
-	columnHeaderSize := ColumnHeaderSizeNew(numCols)
+	columnHeaderSize := ColumnHeaderSize(numCols)
 	headerSize := versionHeaderSize + fixedHeaderSize + columnHeaderSize
 	size := headerSize
 	for _, column := range u.columns {
@@ -385,7 +426,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	writer := utils.NewBufferWriter(buffer)
 
 	// Write upsert batch version.
-	if err := writer.AppendUint32(UpsertBatchVersion); err != nil {
+	if err := writer.AppendUint32(UpsertBatchVersion1); err != nil {
 		return nil, utils.StackError(err, "Failed to write version number")
 	}
 	// Write fixed headers.
@@ -399,7 +440,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	if err := writer.AppendUint32(uint32(utils.Now().Unix())); err != nil {
 		return nil, utils.StackError(err, "Failed to write arrival time")
 	}
-	columnHeader := NewUpsertBatchHeaderNew(buffer[writer.GetOffset():headerSize], numCols)
+	columnHeader := NewUpsertBatchHeader(buffer[writer.GetOffset():headerSize], numCols)
 	// skip to data offset
 	writer.SkipBytes(columnHeaderSize)
 
@@ -415,6 +456,9 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 			return nil, err
 		}
 		if err := columnHeader.WriteColumnOffset(writer.GetOffset(), i); err != nil {
+			return nil, err
+		}
+		if err := columnHeader.WriteEnumDictLength(column.getEnumDictLength(), i); err != nil {
 			return nil, err
 		}
 		if err := column.AppendToBuffer(&writer); err != nil {

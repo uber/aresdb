@@ -18,66 +18,51 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-// ColumnHeaderSizeNew returns the total size of the column headers.
-func ColumnHeaderSizeNew(numCols int) int {
-	// offset (4 bytes), reserved (8 bytes), data_type (4 bytes), column_id (2 bytes), column mode (1 byte)
-	return (numCols+1)*4 + numCols*8 + numCols*4 + numCols*2 + numCols
-}
-
 // ColumnHeaderSize returns the total size of the column headers.
-// TODO: delete after migration of new upsert batch version
 func ColumnHeaderSize(numCols int) int {
-	// offset (4 bytes), data_type (4 bytes), column_id (2 bytes), column mode (1 byte)
-	return (numCols+1)*4 + numCols*4 + numCols*2 + numCols
+	return (numCols+1)*4 + // offset (4 bytes)
+		numCols*4 + // enum dict length (4 bytes)
+		numCols*4 + // reserved (4 bytes)
+		numCols*4 + // data_type (4 bytes)
+		numCols*2 + // column_id (2 bytes)
+		numCols // column mode (1 byte)
 }
 
 // UpsertBatchHeader is a helper class used by upsert batch reader and writer to access the column
 // header info.
 type UpsertBatchHeader struct {
-	offsetVector []byte
-	typeVector   []byte
-	idVector     []byte
-	modeVector   []byte
-}
-
-// NewUpsertBatchHeaderNew create upsert batch header from buffer
-func NewUpsertBatchHeaderNew(buffer []byte, numCols int) UpsertBatchHeader {
-	offset := 0
-	// Offset vector is of size numCols + 1.
-	offsetVector := buffer[0 : (numCols+1)*4]
-	offset += len(offsetVector) + numCols*8
-	typeVector := buffer[offset : offset+numCols*4]
-	offset += len(typeVector)
-	idVector := buffer[offset : offset+numCols*2]
-	offset += len(idVector)
-	modeVector := buffer[offset : offset+numCols]
-
-	return UpsertBatchHeader{
-		offsetVector: offsetVector,
-		typeVector:   typeVector,
-		idVector:     idVector,
-		modeVector:   modeVector,
-	}
+	offsetVector   []byte
+	enumDictLength []byte
+	typeVector     []byte
+	idVector       []byte
+	modeVector     []byte
 }
 
 // NewUpsertBatchHeader create upsert batch header from buffer
-// TODO: delete after migration of new upsert batch version
 func NewUpsertBatchHeader(buffer []byte, numCols int) UpsertBatchHeader {
 	offset := 0
 	// Offset vector is of size numCols + 1.
-	offsetVector := buffer[0 : (numCols+1)*4]
+	offsetVector := buffer[offset : (numCols+1)*4]
 	offset += len(offsetVector)
+
+	enumDictLength := buffer[offset : numCols*4]
+	offset += len(enumDictLength) +
+		numCols*4 // reserved extra space
+
 	typeVector := buffer[offset : offset+numCols*4]
 	offset += len(typeVector)
+
 	idVector := buffer[offset : offset+numCols*2]
 	offset += len(idVector)
+
 	modeVector := buffer[offset : offset+numCols]
 
 	return UpsertBatchHeader{
-		offsetVector: offsetVector,
-		typeVector:   typeVector,
-		idVector:     idVector,
-		modeVector:   modeVector,
+		offsetVector:   offsetVector,
+		enumDictLength: enumDictLength,
+		typeVector:     typeVector,
+		idVector:       idVector,
+		modeVector:     modeVector,
 	}
 }
 
@@ -87,6 +72,16 @@ func (u *UpsertBatchHeader) WriteColumnOffset(value int, col int) error {
 	err := writer.WriteUint32(uint32(value), col*4)
 	if err != nil {
 		return utils.StackError(err, "Failed to write start offset for column %d", col)
+	}
+	return nil
+}
+
+// WriteEnumDictLength writes the offset of a column. It can take col index from 0 to numCols - 1.
+func (u *UpsertBatchHeader) WriteEnumDictLength(value int, col int) error {
+	writer := utils.NewBufferWriter(u.enumDictLength)
+	err := writer.WriteUint32(uint32(value), col*4)
+	if err != nil {
+		return utils.StackError(err, "Failed to write enum dict length for column %d", col)
 	}
 	return nil
 }
@@ -125,6 +120,15 @@ func (u *UpsertBatchHeader) WriteColumnFlag(columnMode ColumnMode, columnUpdateM
 // ReadColumnOffset takes col index from 0 to numCols + 1 and returns the value stored.
 func (u UpsertBatchHeader) ReadColumnOffset(col int) (int, error) {
 	result, err := utils.NewBufferReader(u.offsetVector).ReadUint32(col * 4)
+	if err != nil {
+		return 0, err
+	}
+	return int(result), err
+}
+
+// ReadEnumDictLength takes col index from 0 to numCols - 1 and returns the value stored.
+func (u UpsertBatchHeader) ReadEnumDictLength(col int) (int, error) {
+	result, err := utils.NewBufferReader(u.enumDictLength).ReadUint32(col * 4)
 	if err != nil {
 		return 0, err
 	}

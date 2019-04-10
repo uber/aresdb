@@ -30,10 +30,6 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-const (
-	enumDelimiter = "\u0000\n"
-)
-
 // meaningful defaults of table configurations.
 const (
 	DefaultBatchSize                      = 2097152
@@ -1006,7 +1002,7 @@ func (dm *diskMetaStore) readEnumFile(tableName, columnName string) ([]string, e
 				columnName,
 			)
 	}
-	return strings.Split(strings.TrimSuffix(string(enumBytes), enumDelimiter), enumDelimiter), nil
+	return strings.Split(strings.TrimSuffix(string(enumBytes), common.EnumDelimiter), common.EnumDelimiter), nil
 }
 
 // writeEnumFile append enum cases to existing file
@@ -1029,7 +1025,7 @@ func (dm *diskMetaStore) writeEnumFile(tableName, columnName string, enumCases [
 	}
 	defer writer.Close()
 
-	_, err = io.WriteString(writer, fmt.Sprintf("%s%s", strings.Join(enumCases, enumDelimiter), enumDelimiter))
+	_, err = io.WriteString(writer, fmt.Sprintf("%s%s", strings.Join(enumCases, common.EnumDelimiter), common.EnumDelimiter))
 	if err != nil {
 		return utils.StackError(err, "Failed to write enum cases, table: %s, column: %s", tableName, columnName)
 	}

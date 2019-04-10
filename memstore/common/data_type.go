@@ -453,6 +453,11 @@ func IsGoType(dataType DataType) bool {
 	return dataType == GeoShape
 }
 
+// IsEnumType determines whether a data type is enum type
+func IsEnumType(dataType DataType) bool {
+	return dataType == SmallEnum || dataType == BigEnum
+}
+
 // GetGoDataValue return GoDataValue
 func GetGoDataValue(dataType DataType) GoDataValue {
 	switch dataType {
