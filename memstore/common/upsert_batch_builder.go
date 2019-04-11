@@ -84,12 +84,12 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 
 // GetOrAppendEnumCase add an enum cases to the column, caller should make sure the column is a enum column
 func (c *columnBuilder) GetOrAppendEnumCase(str string) int {
-	index := len(c.enumDict)
-	var exist bool
-	if index, exist = c.enumDict[str]; !exist {
-		c.enumDict[str] = index
+	newIndex := len(c.enumDict)
+	if index, exist := c.enumDict[str]; exist {
+		return index
 	}
-	return index
+	c.enumDict[str] = newIndex
+	return newIndex
 }
 
 // AddRow grow the value array by 1.
@@ -351,6 +351,7 @@ func (u *UpsertBatchBuilder) AddColumn(columnID int, dataType DataType) error {
 		dataType:       dataType,
 		numValidValues: 0,
 		values:         values,
+		enumDict:       make(map[string]int),
 	}
 	u.columns = append(u.columns, column)
 	return nil

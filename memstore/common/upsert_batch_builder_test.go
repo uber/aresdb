@@ -15,9 +15,11 @@
 package common
 
 import (
+	"bytes"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/utils"
+	"io/ioutil"
 	"time"
 )
 
@@ -424,5 +426,30 @@ var _ = ginkgo.Describe("upsert batch builder", func() {
 		Ω(err).Should(BeNil())
 		Ω(needUpdate).Should(BeTrue())
 		Ω(finalVal).Should(Equal(&newValue))
+	})
+
+	ginkgo.It("update test redolog", func() {
+		utils.SetClockImplementation(func() time.Time {
+			return time.Unix(1501869573, 0)
+		})
+		builder := NewUpsertBatchBuilder()
+		builder.AddColumn(0, Uint8)
+		builder.AddColumn(1, SmallEnum)
+
+		builder.AddRow()
+		builder.SetValue(0, 0, 123)
+		builder.SetValue(0, 1, 0)
+
+		builder.AddRow()
+		builder.SetValue(1, 0, 234)
+		builder.SetValue(1, 1, 1)
+
+		usb, _ := builder.ToByteArray()
+		bf := &bytes.Buffer{}
+		writer := utils.NewStreamDataWriter(bf)
+		writer.WriteUint32(0xADDAFEED)
+		writer.WriteUint32(uint32(len(usb)))
+		writer.Write(usb)
+		_ = ioutil.WriteFile("../../testing/data/integration/sample-ares-root/data/abc_0/redologs/1501869573.redolog", bf.Bytes(), 0755)
 	})
 })
