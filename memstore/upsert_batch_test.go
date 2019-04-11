@@ -632,9 +632,10 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		upsertBatchBytes, _ := builder.ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(upsertBatchBytes)
 
+		tableName := "test"
 		tableSchema := &TableSchema{
 			Schema: metaCom.Table{
-				Name: "test",
+				Name: tableName,
 				Columns: []metaCom.Column{
 					{
 						Name: "col1",
@@ -660,14 +661,14 @@ var _ = ginkgo.Describe("upsert batch", func() {
 				"col3": {
 					Dict: map[string]int{
 						"b1": 6,
-						"b2": 7,
 					},
 				},
 			},
 		}
 
 		metaStore := &metaMocks.MetaStore{}
-		err := upsertBatch.ResolveEnumDict("table", tableSchema, metaStore)
+		metaStore.On("ExtendEnumDict", tableName, "col3", []string{"b2"}).Return([]int{7}, nil).Once()
+		err := upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
 		Ω(err).Should(BeNil())
 
 		// col1
