@@ -119,7 +119,10 @@ func (c *columnBuilder) getEnumDictLength() int {
 		length += len(enum) + len(metaCom.EnumDelimiter)
 	}
 	if length > 0 {
+		// remove last eum delimiter
 		length -= len(metaCom.EnumDelimiter)
+		// plus one byte for validity
+		length += 1
 	}
 	return length
 }
@@ -127,7 +130,12 @@ func (c *columnBuilder) getEnumDictLength() int {
 func (c *columnBuilder) getEnumDictVector() []byte {
 	enumReverseMap := make([]string, len(c.enumDict))
 	for enum, id := range c.enumDict {
-		enumReverseMap[id] = enum
+		if id == 0 {
+			// prepend the validity byte to the first enum case
+			enumReverseMap[id] = string([]byte{1}) + enum
+		} else {
+			enumReverseMap[id] = enum
+		}
 	}
 	return []byte(strings.Join(enumReverseMap, metaCom.EnumDelimiter))
 }

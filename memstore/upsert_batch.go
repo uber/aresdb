@@ -42,6 +42,7 @@ type columnReader struct {
 	// The null vector. can be empty depending on column mode.
 	nullVector []byte
 	// The enum dictionary vector
+	// first byte indicates whether the vector is valid (1 vs. 0)
 	enumDictVector []byte
 	// The offset vector. Only used for variable length values. Not used yet.
 	offsetVector []byte
@@ -77,10 +78,16 @@ func (c *columnReader) ReadValue(row int) (unsafe.Pointer, bool) {
 
 // GetEnumReverseDict returns the reverse local enum dict in upsert batch
 func (c *columnReader) GetEnumReverseDict() []string {
-	if len(c.enumDictVector) == 0 {
+	if len(c.enumDictVector) < 1 || c.enumDictVector[0] == 0 {
 		return nil
 	}
-	return strings.Split(string(c.enumDictVector), metaCom.EnumDelimiter)
+	return strings.Split(string(c.enumDictVector[1:]), metaCom.EnumDelimiter)
+}
+
+func (c *columnReader) InvalidateEnumDict() {
+	if len(c.enumDictVector) >= 1 {
+		c.enumDictVector[0] = 0
+	}
 }
 
 // RewriteEnumValues rewrite values vector based on enum value mapping
@@ -569,8 +576,8 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 // ResolveEnumDict resolves upsert batch level enum dict with instance level enum dictionary
 func (u *UpsertBatch) ResolveEnumDict(table string, tableSchema *TableSchema, metaStore metastore.MetaStore) error {
 	tableSchema.RLock()
-	columns := tableSchema.Schema.Columns
 	enumDicts := tableSchema.EnumDicts
+	columnDeletions := tableSchema.GetColumnDeletions()
 	tableSchema.RUnlock()
 
 	for _, columnReader := range u.columns {
@@ -578,10 +585,10 @@ func (u *UpsertBatch) ResolveEnumDict(table string, tableSchema *TableSchema, me
 			continue
 		}
 		columnID := columnReader.columnID
-		if columnID > len(columns) || columns[columnID].Deleted {
+		if columnID > len(columnDeletions) || columnDeletions[columnID] {
 			continue
 		}
-		columnName := columns[columnID].Name
+		columnName := tableSchema.Schema.Columns[columnID].Name
 		enumDict := enumDicts[columnName]
 		upsertBatchReverseEnumDict := columnReader.GetEnumReverseDict()
 		// mapping from inputEnumID to resolvedEnumID
@@ -598,7 +605,7 @@ func (u *UpsertBatch) ResolveEnumDict(table string, tableSchema *TableSchema, me
 		}
 		if len(unresolvedEnums) > 0 {
 			resolvedEnumIDs, err := metaStore.ExtendEnumDict(table, columnName, unresolvedEnums)
-			if err == metastore.ErrTableDoesNotExist || err == metastore.ErrColumnDoesNotExist {
+			if err == metastore.ErrColumnDoesNotExist {
 				continue
 			} else if err != nil {
 				return err
@@ -615,6 +622,7 @@ func (u *UpsertBatch) ResolveEnumDict(table string, tableSchema *TableSchema, me
 
 		}
 		columnReader.RewriteEnumValues(u.NumRows, enumIDMapping)
+		columnReader.InvalidateEnumDict()
 	}
 	return nil
 }

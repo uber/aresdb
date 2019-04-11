@@ -16,14 +16,15 @@ package memstore
 
 import (
 	"encoding/hex"
+	"github.com/uber/aresdb/metastore"
 	"strings"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 	"time"
 )
@@ -709,5 +710,13 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(value.Valid).Should(BeTrue())
 		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(7)))
 
+		// failure scenario
+		upsertBatchBytes, _ = builder.ToByteArray()
+		upsertBatch, _ = NewUpsertBatch(upsertBatchBytes)
+		metaStore.On("ExtendEnumDict", tableName, "col3", []string{"b2"}).
+			Return(nil, metastore.ErrTableDoesNotExist).Once()
+
+		err = upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
+		Ω(err).ShouldNot(BeNil())
 	})
 })
