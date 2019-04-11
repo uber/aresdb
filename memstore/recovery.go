@@ -52,10 +52,6 @@ func (shard *TableShard) ReplayRedoLogs() {
 			break
 		}
 
-		if err := upsertBatch.ResolveEnumDict(shard.Schema.Schema.Name, shard.Schema, shard.metaStore); err != nil {
-			utils.GetLogger().With("err", err).Panic("Failed to resolve enum dictionary in upsert batch during recovery")
-		}
-
 		shard.LiveStore.WriterLock.Lock()
 
 		// Put a 0 in maxEventTimePerFile in case this is redolog is full of backfill batches.
