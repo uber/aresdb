@@ -710,12 +710,53 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(value.Valid).Should(BeTrue())
 		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(7)))
 
-		// failure scenario
+		// second call should do nothing
+		err = upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
+		Ω(err).Should(BeNil())
+
+		// col1
+		value, err = upsertBatch.GetDataValue(0, 0)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint32)(value.OtherVal)).Should(Equal(uint32(2)))
+
+		value, err = upsertBatch.GetDataValue(1, 0)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeFalse())
+
+		// col2
+		value, err = upsertBatch.GetDataValue(0, 1)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(4)))
+
+		value, err = upsertBatch.GetDataValue(1, 1)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(5)))
+
+		// col3
+		value, err = upsertBatch.GetDataValue(0, 2)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(6)))
+
+		value, err = upsertBatch.GetDataValue(1, 2)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(7)))
+
+		// recreate buffer and call third time with failure
 		upsertBatchBytes, _ = builder.ToByteArray()
 		upsertBatch, _ = NewUpsertBatch(upsertBatchBytes)
 		metaStore.On("ExtendEnumDict", tableName, "col3", []string{"b2"}).
 			Return(nil, metastore.ErrTableDoesNotExist).Once()
-
 		err = upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
 		Ω(err).ShouldNot(BeNil())
 	})
