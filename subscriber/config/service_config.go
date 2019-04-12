@@ -122,11 +122,11 @@ type ControllerConfig struct {
 type ZooKeeperConfig struct {
 	// Server defines zookeeper server addresses
 	Server                   string        `yaml:"server"`
-	SessionTimeoutSeconds    time.Duration `yaml:"sessionTimeoutSeconds" default:"60"`
-	ConnectionTimeoutSeconds time.Duration `yaml:"connectionTimeoutSeconds" default:"15"`
-	BaseSleepTimeSeconds     time.Duration `yaml:"exponentialBackoffRetryPolicy.baseSleepTimeSeconds" default:"1"`
+	SessionTimeoutSeconds    *time.Duration `yaml:"sessionTimeoutSeconds" default:"60"`
+	ConnectionTimeoutSeconds *time.Duration `yaml:"connectionTimeoutSeconds" default:"15"`
+	BaseSleepTimeSeconds     *time.Duration `yaml:"exponentialBackoffRetryPolicy.baseSleepTimeSeconds" default:"1"`
 	MaxRetries               int           `yaml:"exponentialBackoffRetryPolicy.maxRetries" default:"3"`
-	MaxSleepSeconds          time.Duration `yaml:"exponentialBackoffRetryPolicy.maxSleepSeconds" default:"15"`
+	MaxSleepSeconds          *time.Duration `yaml:"exponentialBackoffRetryPolicy.maxSleepSeconds" default:"15"`
 }
 
 // NewServiceConfig constructs ServiceConfig.

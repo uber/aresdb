@@ -215,14 +215,14 @@ func createZKClient(params Params) curator.CuratorFramework {
 	zkConfig := params.ServiceConfig.ZooKeeperConfig
 	lc := params.LifeCycle
 	retryPolicy := curator.NewExponentialBackoffRetry(
-		zkConfig.BaseSleepTimeSeconds*time.Second,
+		*zkConfig.BaseSleepTimeSeconds*time.Second,
 		zkConfig.MaxRetries,
-		zkConfig.MaxSleepSeconds*time.Second)
+		*zkConfig.MaxSleepSeconds*time.Second)
 
 	// Using the CuratorFrameworkBuilder gives fine grained control over creation options
 	builder := &curator.CuratorFrameworkBuilder{
-		ConnectionTimeout: zkConfig.ConnectionTimeoutSeconds * time.Second,
-		SessionTimeout:    zkConfig.SessionTimeoutSeconds * time.Second,
+		ConnectionTimeout: *zkConfig.ConnectionTimeoutSeconds * time.Second,
+		SessionTimeout:    *zkConfig.SessionTimeoutSeconds * time.Second,
 		RetryPolicy:       retryPolicy,
 	}
 	zkClient := builder.ConnectString(zkConfig.Server).Build()
