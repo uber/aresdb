@@ -24,3 +24,4 @@ import:
   version: 1.5.0
 - package: github.com/confluentinc/confluent-kafka-go
   version: 213e7cd9dd311f2fb7586c02cb61b1b3aa5a5e48 
+- package: github.com/antlr/antlr4
