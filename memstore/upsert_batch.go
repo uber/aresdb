@@ -588,6 +588,11 @@ func (u *UpsertBatch) ResolveEnumDict(table string, tableSchema *TableSchema, me
 		if columnID > len(columnDeletions) || columnDeletions[columnID] {
 			continue
 		}
+		if tableSchema.Schema.Columns[columnID].DisableAutoExpand {
+			// no enum resolution needed, in this case, enum will be part of table schema
+			// and translation will be done by ingestion client or subscriber
+			continue
+		}
 		columnName := tableSchema.Schema.Columns[columnID].Name
 		enumDict := enumDicts[columnName]
 		upsertBatchReverseEnumDict := columnReader.GetEnumReverseDict()
