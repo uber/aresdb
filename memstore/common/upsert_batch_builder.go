@@ -25,6 +25,8 @@ import (
 
 // ColumnUpdateMode represents how to update data from UpsertBatch
 type ColumnUpdateMode int
+// UpsertBatchVersion represents the version of upsert batch
+type UpsertBatchVersion uint32
 
 const (
 	// UpdateOverwriteNotNull (default) will overwrite existing value if new value is NOT null, otherwise just skip
@@ -42,7 +44,7 @@ const (
 )
 
 const (
-	UpsertBatchVersion1 uint32 = 0xFEED0001
+	V1 UpsertBatchVersion = 0xFEED0001
 )
 
 type columnBuilder struct {
@@ -50,8 +52,12 @@ type columnBuilder struct {
 	dataType       DataType
 	values         []interface{}
 	enumDict       map[string]int
-	numValidValues int
-	updateMode     ColumnUpdateMode
+	// enumDictLengthInBytes is final length in bytes for enum dict vector
+	// first byte represent validity
+	// 1+len(enum)+len(delimiter)+len(enum)+...
+	enumDictLengthInBytes int
+	numValidValues        int
+	updateMode            ColumnUpdateMode
 }
 
 // SetValue write a value into the column at given row.
@@ -82,14 +88,22 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 	return nil
 }
 
-// GetOrAppendEnumCase add an enum cases to the column, caller should make sure the column is a enum column
+// GetOrAppendEnumCase add an enum cases to the column
+// and returns the enumID
+// caller should make sure the column is a enum column
 func (c *columnBuilder) GetOrAppendEnumCase(str string) int {
-	newIndex := len(c.enumDict)
+	newID := len(c.enumDict)
 	if index, exist := c.enumDict[str]; exist {
 		return index
 	}
-	c.enumDict[str] = newIndex
-	return newIndex
+	if newID == 0 {
+		// first byte represent the validity
+		c.enumDictLengthInBytes += 1 + len(str)
+	} else {
+		c.enumDictLengthInBytes += len(metaCom.EnumDelimiter) + len(str)
+	}
+	c.enumDict[str] = newID
+	return newID
 }
 
 // AddRow grow the value array by 1.
@@ -111,20 +125,6 @@ func (c *columnBuilder) RemoveRow() {
 func (c *columnBuilder) ResetRows() {
 	c.values = c.values[0:0]
 	c.numValidValues = 0
-}
-
-func (c *columnBuilder) getEnumDictLength() int {
-	length := 0
-	for enum := range c.enumDict {
-		length += len(enum) + len(metaCom.EnumDelimiter)
-	}
-	if length > 0 {
-		// remove last eum delimiter
-		length -= len(metaCom.EnumDelimiter)
-		// plus one byte for validity
-		length += 1
-	}
-	return length
 }
 
 func (c *columnBuilder) getEnumDictVector() []byte {
@@ -153,7 +153,7 @@ func (c *columnBuilder) CalculateBufferSize(offset *int) {
 		fallthrough
 	case AllValuesPresent:
 		// write enum buffer if exists
-		enumDictLength := c.getEnumDictLength()
+		enumDictLength := c.enumDictLengthInBytes
 		*offset += enumDictLength
 		// if golang memory, align to 4 bytes for offset vector
 		if isGoType {
@@ -198,8 +198,8 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 		}
 		fallthrough
 	case AllValuesPresent:
-		if enumDictVector := c.getEnumDictVector(); len(enumDictVector) > 0 {
-			if err := writer.Append(enumDictVector); err != nil {
+		if c.enumDictLengthInBytes > 0 {
+			if err := writer.Append(c.getEnumDictVector()); err != nil {
 				return utils.StackError(err, "Failed to write enum dict vector")
 			}
 		}
@@ -439,7 +439,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	writer := utils.NewBufferWriter(buffer)
 
 	// Write upsert batch version.
-	if err := writer.AppendUint32(UpsertBatchVersion1); err != nil {
+	if err := writer.AppendUint32(uint32(V1)); err != nil {
 		return nil, utils.StackError(err, "Failed to write version number")
 	}
 	// Write fixed headers.
@@ -471,7 +471,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 		if err := columnHeader.WriteColumnOffset(writer.GetOffset(), i); err != nil {
 			return nil, err
 		}
-		if err := columnHeader.WriteEnumDictLength(column.getEnumDictLength(), i); err != nil {
+		if err := columnHeader.WriteEnumDictLength(column.enumDictLengthInBytes, i); err != nil {
 			return nil, err
 		}
 		if err := column.AppendToBuffer(&writer); err != nil {

@@ -637,7 +637,7 @@ func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 		return nil, utils.StackError(err, "Failed to read upsert batch version number")
 	}
 
-	if version == memCom.UpsertBatchVersion1 {
+	if memCom.UpsertBatchVersion(version) == memCom.V1 {
 		// skip version number bytes for new version
 		return readUpsertBatch(buffer)
 	}
