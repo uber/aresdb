@@ -576,7 +576,6 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 // ResolveEnumDict resolves upsert batch level enum dict with instance level enum dictionary
 func (u *UpsertBatch) ResolveEnumDict(table string, tableSchema *TableSchema, metaStore metastore.MetaStore) error {
 	tableSchema.RLock()
-	enumDicts := tableSchema.EnumDicts
 	columnDeletions := tableSchema.GetColumnDeletions()
 	tableSchema.RUnlock()
 
@@ -588,17 +587,25 @@ func (u *UpsertBatch) ResolveEnumDict(table string, tableSchema *TableSchema, me
 		if columnID > len(columnDeletions) || columnDeletions[columnID] {
 			continue
 		}
+		// DisableAutoExpand is immutable
 		if tableSchema.Schema.Columns[columnID].DisableAutoExpand {
 			// no enum resolution needed, in this case, enum will be part of table schema
 			// and translation will be done by ingestion client or subscriber
 			continue
 		}
 		columnName := tableSchema.Schema.Columns[columnID].Name
-		enumDict := enumDicts[columnName]
 		upsertBatchReverseEnumDict := columnReader.GetEnumReverseDict()
 		// mapping from inputEnumID to resolvedEnumID
 		enumIDMapping := make([]int, len(upsertBatchReverseEnumDict))
 		unresolvedEnums := make([]string, 0)
+
+		tableSchema.RLock()
+		enumDict, columnExist := tableSchema.EnumDicts[columnName]
+		if !columnExist {
+			tableSchema.RUnlock()
+			continue
+		}
+
 		for inputEnumID, str := range upsertBatchReverseEnumDict {
 			if resolvedEnumID, exist := enumDict.Dict[str]; exist {
 				enumIDMapping[inputEnumID] = resolvedEnumID
@@ -608,6 +615,8 @@ func (u *UpsertBatch) ResolveEnumDict(table string, tableSchema *TableSchema, me
 				unresolvedEnums = append(unresolvedEnums, str)
 			}
 		}
+		tableSchema.RUnlock()
+
 		if len(unresolvedEnums) > 0 {
 			resolvedEnumIDs, err := metaStore.ExtendEnumDict(table, columnName, unresolvedEnums)
 			if err == metastore.ErrColumnDoesNotExist {
