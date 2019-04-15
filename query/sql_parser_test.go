@@ -38,13 +38,13 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 		sqls := []string{
 			`SELECT count(*) AS completed_trips, sum(fare)
 			FROM trips
-			WHERE status='completed' AND status = 'cancelled' OR marketplace='agora'
+			WHERE status='completed' AND NOT status = 'cancelled' OR marketplace='agora'
 			GROUP BY status`,
 		}
 		res := AQLQuery{
 			Table:      "trips",
 			Measures:   []Measure{{Alias: "completed_trips", Expr: "count(*)"}, {Expr: "sum(fare)"}},
-			Filters: []string{"status='completed' AND status = 'cancelled' OR marketplace='agora'"},
+			Filters: []string{"status='completed' AND NOT status = 'cancelled' OR marketplace='agora'"},
 			Dimensions: []Dimension{{Expr: "status"}},
 		}
 		runTest(sqls, res, logger)
@@ -73,6 +73,23 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			Table:      "trips",
 			Measures:   []Measure{{Expr: "1"}},
 			Dimensions: []Dimension{{Expr: "field1"}, {Expr: "*"}},
+		}
+		runTest(sqls, res, logger)
+	})
+
+	ginkgo.It("parse sort by should work", func() {
+		sqls := []string{
+			`SELECT field1
+			FROM trips
+			ORDER BY field1;`,
+		}
+		res := AQLQuery{
+			Table: "trips",
+			Measures: []Measure{{Expr: "1"}},
+			Dimensions: []Dimension{{Expr: "field1"}},
+			Sorts: []SortField{
+				{Name: "field1", Order: "ASC"},
+			},
 		}
 		runTest(sqls, res, logger)
 	})
@@ -275,19 +292,6 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			SupportingMeasures:   []Measure{},
 			TimeFilter:           TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
 			Timezone:             "America/New_York",
-		}
-		runTest(sqls, res, logger)
-	})
-
-	ginkgo.It("non aggregate query should work", func(){
-		sqls := []string{
-			`SELECT foo, * FROM trips WHERE bar = 1234`,
-		}
-		res := AQLQuery{
-			Table: "trips",
-			Measures: []Measure{{Expr: "1"}},
-			Dimensions: []Dimension{{Expr: "foo"}, {Expr: "*"}},
-			Filters: []string{"bar = 1234"},
 		}
 		runTest(sqls, res, logger)
 	})

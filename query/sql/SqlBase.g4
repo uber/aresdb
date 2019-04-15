@@ -83,9 +83,6 @@ statement
     | SHOW SESSION                                                     #showSession
     | SET SESSION qualifiedName EQ expression                          #setSession
     | RESET SESSION qualifiedName                                      #resetSession
-    | START TRANSACTION (transactionMode (',' transactionMode)*)?      #startTransaction
-    | COMMIT WORK?                                                     #commit
-    | ROLLBACK WORK?                                                   #rollback
     | SHOW PARTITIONS (FROM | IN) qualifiedName
         (WHERE booleanExpression)?
         (ORDER BY sortItem (',' sortItem)*)?
@@ -414,17 +411,6 @@ explainOption
     | TYPE value=(LOGICAL | DISTRIBUTED | VALIDATE)    #explainType
     ;
 
-transactionMode
-    : ISOLATION LEVEL levelOfIsolation    #isolationLevel
-    | READ accessMode=(ONLY | WRITE)      #transactionAccessMode
-    ;
-
-levelOfIsolation
-    : READ UNCOMMITTED                    #readUncommitted
-    | READ COMMITTED                      #readCommitted
-    | REPEATABLE READ                     #repeatableRead
-    | SERIALIZABLE                        #serializable
-    ;
 
 callArgument
     : expression                    #positionalArgument
@@ -502,7 +488,6 @@ COALESCE: 'COALESCE';
 COLUMN: 'COLUMN';
 COLUMNS: 'COLUMNS';
 COMMENT: 'COMMENT';
-COMMIT: 'COMMIT';
 COMMITTED: 'COMMITTED';
 CONSTRAINT: 'CONSTRAINT';
 CREATE: 'CREATE';
@@ -559,7 +544,6 @@ INTERSECT: 'INTERSECT';
 INTERVAL: 'INTERVAL';
 INTO: 'INTO';
 IS: 'IS';
-ISOLATION: 'ISOLATION';
 JOIN: 'JOIN';
 LAST: 'LAST';
 LATERAL: 'LATERAL';
@@ -639,7 +623,6 @@ TIME: 'TIME';
 TIMESTAMP: 'TIMESTAMP';
 TINYINT: 'TINYINT';
 TO: 'TO';
-TRANSACTION: 'TRANSACTION';
 TRUE: 'TRUE';
 TRY_CAST: 'TRY_CAST';
 TYPE: 'TYPE';

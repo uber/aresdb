@@ -640,11 +640,8 @@ func (v *ASTBuilder) VisitSortItem(ctx *antlrgen.SortItemContext) interface{} {
 				Order: tree.OrderTypes[ordering],
 			})
 
-	sortItem := &tree.SortItem{
-		Expr:  expr,
-		Order: ordering,
-	}
-	sortItem.SetValue(fmt.Sprintf("SortItem: (%v)", v.getText(ctx.BaseParserRuleContext)))
+	sortItem := tree.NewSortItem(v.getLocation(ctx), expr, ordering)
+	sortItem.SetValue(fmt.Sprintf("SortItem: (%s)", v.getText(ctx.BaseParserRuleContext)))
 
 	v.setCtxLevels(v.SQL2AqlCtx, level-1, levelWith, levelQuery)
 	return sortItem
@@ -1228,21 +1225,6 @@ func (v *ASTBuilder) VisitResetSession(ctx *antlrgen.ResetSessionContext) interf
 	return v.VisitChildren(ctx)
 }
 
-// VisitStartTransaction visits the node
-func (v *ASTBuilder) VisitStartTransaction(ctx *antlrgen.StartTransactionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitCommit visits the node
-func (v *ASTBuilder) VisitCommit(ctx *antlrgen.CommitContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitRollback visits the node
-func (v *ASTBuilder) VisitRollback(ctx *antlrgen.RollbackContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 // VisitShowPartitions visits the node
 func (v *ASTBuilder) VisitShowPartitions(ctx *antlrgen.ShowPartitionsContext) interface{} {
 	return v.VisitChildren(ctx)
@@ -1722,36 +1704,6 @@ func (v *ASTBuilder) VisitExplainFormat(ctx *antlrgen.ExplainFormatContext) inte
 
 // VisitExplainType visits the node
 func (v *ASTBuilder) VisitExplainType(ctx *antlrgen.ExplainTypeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitIsolationLevel visits the node
-func (v *ASTBuilder) VisitIsolationLevel(ctx *antlrgen.IsolationLevelContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitTransactionAccessMode visits the node
-func (v *ASTBuilder) VisitTransactionAccessMode(ctx *antlrgen.TransactionAccessModeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitReadUncommitted visits the node
-func (v *ASTBuilder) VisitReadUncommitted(ctx *antlrgen.ReadUncommittedContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitReadCommitted visits the node
-func (v *ASTBuilder) VisitReadCommitted(ctx *antlrgen.ReadCommittedContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitRepeatableRead visits the node
-func (v *ASTBuilder) VisitRepeatableRead(ctx *antlrgen.RepeatableReadContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitSerializable visits the node
-func (v *ASTBuilder) VisitSerializable(ctx *antlrgen.SerializableContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 

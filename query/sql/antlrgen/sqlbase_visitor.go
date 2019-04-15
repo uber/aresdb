@@ -112,15 +112,6 @@ type SqlBaseVisitor interface {
 	// Visit a parse tree produced by SqlBaseParser#resetSession.
 	VisitResetSession(ctx *ResetSessionContext) interface{}
 
-	// Visit a parse tree produced by SqlBaseParser#startTransaction.
-	VisitStartTransaction(ctx *StartTransactionContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#commit.
-	VisitCommit(ctx *CommitContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#rollback.
-	VisitRollback(ctx *RollbackContext) interface{}
-
 	// Visit a parse tree produced by SqlBaseParser#showPartitions.
 	VisitShowPartitions(ctx *ShowPartitionsContext) interface{}
 
@@ -462,24 +453,6 @@ type SqlBaseVisitor interface {
 
 	// Visit a parse tree produced by SqlBaseParser#explainType.
 	VisitExplainType(ctx *ExplainTypeContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#isolationLevel.
-	VisitIsolationLevel(ctx *IsolationLevelContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#transactionAccessMode.
-	VisitTransactionAccessMode(ctx *TransactionAccessModeContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#readUncommitted.
-	VisitReadUncommitted(ctx *ReadUncommittedContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#readCommitted.
-	VisitReadCommitted(ctx *ReadCommittedContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#repeatableRead.
-	VisitRepeatableRead(ctx *RepeatableReadContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#serializable.
-	VisitSerializable(ctx *SerializableContext) interface{}
 
 	// Visit a parse tree produced by SqlBaseParser#positionalArgument.
 	VisitPositionalArgument(ctx *PositionalArgumentContext) interface{}
