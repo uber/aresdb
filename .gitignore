@@ -23,3 +23,11 @@ bin/
 .bin/
 lib/
 .DS_Store
+thirdparty/
+CTestTestfile.cmake
+cmake_install.cmake
+googletest-prefix/
+include/
+rdkafka-prefix/
+rmm-prefix/
+testing/
