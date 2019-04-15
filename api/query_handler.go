@@ -71,6 +71,20 @@ func (handler *QueryHandler) Register(router *mux.Router, wrappers ...utils.HTTP
 func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 	// default device to negative value to differentiate 0 from empty
 	aqlRequest := AQLRequest{Device: -1}
+
+	if err := ReadRequest(r, &aqlRequest); err != nil {
+		RespondWithBadRequest(w, err)
+		utils.GetLogger().With(
+			"error", err,
+			"statusCode", http.StatusBadRequest,
+		).Error("failed to parse query")
+		return
+	}
+
+	handler.handleAQLInternal(aqlRequest, w, r)
+}
+
+func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.ResponseWriter, r *http.Request) {
 	var err error
 	var duration time.Duration
 	var qcs []*query.AQLQueryContext
@@ -100,22 +114,6 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 
 	}()
 
-	if err = ReadRequest(r, &aqlRequest); err != nil {
-		statusCode = http.StatusBadRequest
-		RespondWithBadRequest(w, err)
-		return
-	}
-
-	reqContext := RequestContext{
-		Device: aqlRequest.Device,
-		Verbose: aqlRequest.Verbose,
-		Debug: aqlRequest.Debug,
-		Profiling: aqlRequest.Profiling,
-		DeviceChoosingTimeout: aqlRequest.DeviceChoosingTimeout,
-		Accept: aqlRequest.Accept,
-		Origin: aqlRequest.Origin,
-	}
-
 	if aqlRequest.Query != "" {
 		// Override from query parameter
 		err = json.Unmarshal([]byte(aqlRequest.Query), &aqlRequest.Body)
@@ -139,15 +137,15 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	returnHLL := reqContext.Accept == ContentTypeHyperLogLog
+	returnHLL := aqlRequest.Accept == ContentTypeHyperLogLog
 	requestResponseWriter := getReponseWriter(returnHLL, len(aqlRequest.Body.Queries))
 
 	queryTimer := utils.GetRootReporter().GetTimer(utils.QueryLatency)
 	start := utils.Now()
 	var qc *query.AQLQueryContext
 	for i, aqlQuery := range aqlRequest.Body.Queries {
-		qc, statusCode = handleQuery(handler.memStore, handler.deviceManager, reqContext, aqlQuery)
-		if reqContext.Verbose > 0 {
+		qc, statusCode = handleQuery(handler.memStore, handler.deviceManager, aqlRequest, aqlQuery)
+		if aqlRequest.Verbose > 0 {
 			requestResponseWriter.ReportQueryContext(qc)
 		}
 		if qc.Error != nil {
@@ -166,10 +164,11 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 	queryTimer.Record(duration)
 	requestResponseWriter.Respond(w)
 	statusCode = requestResponseWriter.GetStatusCode()
+	return
 }
 
-func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager, reqContext RequestContext, aqlQuery query.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
-	qc = aqlQuery.Compile(memStore, reqContext.Accept == ContentTypeHyperLogLog)
+func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager, aqlRequest AQLRequest, aqlQuery query.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
+	qc = aqlQuery.Compile(memStore, aqlRequest.Accept == ContentTypeHyperLogLog)
 
 
 	for tableName := range qc.TableSchemaByName {
@@ -178,10 +177,10 @@ func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager,
 		}, utils.QueryReceived).Inc(1)
 	}
 
-	if reqContext.Debug > 0 || reqContext.Profiling != "" {
+	if aqlRequest.Debug > 0 || aqlRequest.Profiling != "" {
 		qc.Debug = true
 	}
-	qc.Profiling = reqContext.Profiling
+	qc.Profiling = aqlRequest.Profiling
 
 	// Compilation error, should be bad request
 	if qc.Error != nil {
@@ -190,12 +189,12 @@ func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager,
 	}
 
 	deviceChoosingTimeout := -1
-	if reqContext.DeviceChoosingTimeout > 0 {
-		deviceChoosingTimeout = reqContext.DeviceChoosingTimeout
+	if aqlRequest.DeviceChoosingTimeout > 0 {
+		deviceChoosingTimeout = aqlRequest.DeviceChoosingTimeout
 	}
 	// Find a device that meets the resource requirement of this query
 	// Use query specified device as hint
-	qc.FindDeviceForQuery(memStore, reqContext.Device, deviceManager, int(deviceChoosingTimeout))
+	qc.FindDeviceForQuery(memStore, aqlRequest.Device, deviceManager, int(deviceChoosingTimeout))
 	// Unable to find a device for the query.
 	if qc.Error != nil {
 		// Unable to fulfill this request due to resource not available, clients need to try sometimes later.
