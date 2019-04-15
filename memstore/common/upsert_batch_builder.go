@@ -16,13 +16,17 @@ package common
 
 import (
 	"math"
+	"strings"
 
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"unsafe"
 )
 
 // ColumnUpdateMode represents how to update data from UpsertBatch
 type ColumnUpdateMode int
+// UpsertBatchVersion represents the version of upsert batch
+type UpsertBatchVersion uint32
 
 const (
 	// UpdateOverwriteNotNull (default) will overwrite existing value if new value is NOT null, otherwise just skip
@@ -40,15 +44,20 @@ const (
 )
 
 const (
-	UpsertBatchVersion uint32 = 0xFEED0001
+	V1 UpsertBatchVersion = 0xFEED0001
 )
 
 type columnBuilder struct {
 	columnID       int
 	dataType       DataType
 	values         []interface{}
-	numValidValues int
-	updateMode     ColumnUpdateMode
+	enumDict       map[string]int
+	// enumDictLengthInBytes is final length in bytes for enum dict vector
+	// first byte represent validity
+	// 1+len(enum)+len(delimiter)+len(enum)+...
+	enumDictLengthInBytes int
+	numValidValues        int
+	updateMode            ColumnUpdateMode
 }
 
 // SetValue write a value into the column at given row.
@@ -58,6 +67,11 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 	if value == nil {
 		c.values[row] = nil
 	} else {
+		if IsEnumType(c.dataType) {
+			if strVal, ok := value.(string); ok {
+				value = c.GetOrAppendEnumCase(strVal)
+			}
+		}
 		var err error
 		c.values[row], err = ConvertValueForType(c.dataType, value)
 		if err != nil {
@@ -72,6 +86,24 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 	}
 
 	return nil
+}
+
+// GetOrAppendEnumCase add an enum cases to the column
+// and returns the enumID
+// caller should make sure the column is a enum column
+func (c *columnBuilder) GetOrAppendEnumCase(str string) int {
+	newID := len(c.enumDict)
+	if index, exist := c.enumDict[str]; exist {
+		return index
+	}
+	if newID == 0 {
+		// first byte represent the validity
+		c.enumDictLengthInBytes += 1 + len(str)
+	} else {
+		c.enumDictLengthInBytes += len(metaCom.EnumDelimiter) + len(str)
+	}
+	c.enumDict[str] = newID
+	return newID
 }
 
 // AddRow grow the value array by 1.
@@ -95,6 +127,19 @@ func (c *columnBuilder) ResetRows() {
 	c.numValidValues = 0
 }
 
+func (c *columnBuilder) getEnumDictVector() []byte {
+	enumReverseMap := make([]string, len(c.enumDict))
+	for enum, id := range c.enumDict {
+		if id == 0 {
+			// prepend the validity byte to the first enum case
+			enumReverseMap[id] = string([]byte{1}) + enum
+		} else {
+			enumReverseMap[id] = enum
+		}
+	}
+	return []byte(strings.Join(enumReverseMap, metaCom.EnumDelimiter))
+}
+
 // Calculated BufferSize returns the size of the column data in serialized format.
 func (c *columnBuilder) CalculateBufferSize(offset *int) {
 	isGoType := IsGoType(c.dataType)
@@ -107,6 +152,9 @@ func (c *columnBuilder) CalculateBufferSize(offset *int) {
 		}
 		fallthrough
 	case AllValuesPresent:
+		// write enum buffer if exists
+		enumDictLength := c.enumDictLengthInBytes
+		*offset += enumDictLength
 		// if golang memory, align to 4 bytes for offset vector
 		if isGoType {
 			*offset = utils.AlignOffset(*offset, 4)
@@ -150,6 +198,11 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 		}
 		fallthrough
 	case AllValuesPresent:
+		if c.enumDictLengthInBytes > 0 {
+			if err := writer.Append(c.getEnumDictVector()); err != nil {
+				return utils.StackError(err, "Failed to write enum dict vector")
+			}
+		}
 		var offsetWriter, valueWriter *utils.BufferWriter
 		// only goType needs to write offsetVector
 		if isGoType {
@@ -306,6 +359,7 @@ func (u *UpsertBatchBuilder) AddColumn(columnID int, dataType DataType) error {
 		dataType:       dataType,
 		numValidValues: 0,
 		values:         values,
+		enumDict:       make(map[string]int),
 	}
 	u.columns = append(u.columns, column)
 	return nil
@@ -374,7 +428,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	// <reserve 14 bytes>
 	// [uint32] arrival_time (4 bytes)
 	fixedHeaderSize := 24
-	columnHeaderSize := ColumnHeaderSizeNew(numCols)
+	columnHeaderSize := ColumnHeaderSize(numCols)
 	headerSize := versionHeaderSize + fixedHeaderSize + columnHeaderSize
 	size := headerSize
 	for _, column := range u.columns {
@@ -385,7 +439,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	writer := utils.NewBufferWriter(buffer)
 
 	// Write upsert batch version.
-	if err := writer.AppendUint32(UpsertBatchVersion); err != nil {
+	if err := writer.AppendUint32(uint32(V1)); err != nil {
 		return nil, utils.StackError(err, "Failed to write version number")
 	}
 	// Write fixed headers.
@@ -399,7 +453,7 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	if err := writer.AppendUint32(uint32(utils.Now().Unix())); err != nil {
 		return nil, utils.StackError(err, "Failed to write arrival time")
 	}
-	columnHeader := NewUpsertBatchHeaderNew(buffer[writer.GetOffset():headerSize], numCols)
+	columnHeader := NewUpsertBatchHeader(buffer[writer.GetOffset():headerSize], numCols)
 	// skip to data offset
 	writer.SkipBytes(columnHeaderSize)
 
@@ -415,6 +469,9 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 			return nil, err
 		}
 		if err := columnHeader.WriteColumnOffset(writer.GetOffset(), i); err != nil {
+			return nil, err
+		}
+		if err := columnHeader.WriteEnumDictLength(column.enumDictLengthInBytes, i); err != nil {
 			return nil, err
 		}
 		if err := column.AppendToBuffer(&writer); err != nil {

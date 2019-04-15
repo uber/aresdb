@@ -87,7 +87,7 @@ var _ = ginkgo.Describe("redo_log_browser", func() {
 		Ω(rows).Should(BeNil())
 		Ω(numRows).Should(Equal(0))
 
-		rows, _, numRows, err = rb.ReadData(redoLogFile, 8, 0, 1)
+		rows, _, numRows, err = rb.ReadData(redoLogFile, 12, 0, 1)
 		Ω(err).ShouldNot(BeNil())
 		Ω(err.Error()).Should(ContainSubstring("Failed to read upsert batch version number"))
 		Ω(rows).Should(BeNil())

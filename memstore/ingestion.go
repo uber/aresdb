@@ -24,6 +24,14 @@ import (
 // HandleIngestion logs an upsert batch and applies it to the in-memory store.
 func (m *memStoreImpl) HandleIngestion(table string, shardID int, upsertBatch *UpsertBatch) error {
 	utils.GetReporter(table, shardID).GetCounter(utils.IngestedUpsertBatches).Inc(1)
+	schema, err := m.GetSchema(table)
+	if err != nil {
+		return err
+	}
+	if err = upsertBatch.ResolveEnumDict(table, schema, m.metaStore); err != nil {
+		return err
+	}
+
 	shard, err := m.GetTableShard(table, shardID)
 	if err != nil {
 		return utils.StackError(nil, "Failed to get shard %d for table %s for upsert batch", shardID, table)

@@ -16,12 +16,15 @@ package memstore
 
 import (
 	"encoding/hex"
+	"github.com/uber/aresdb/metastore"
 	"strings"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/utils"
 	"time"
 )
@@ -37,7 +40,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("works for empty batch", func() {
-		builder := common.NewUpsertBatchBuilder()
+		builder := memCom.NewUpsertBatchBuilder()
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
 
@@ -53,8 +56,8 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("works for empty row", func() {
-		builder := common.NewUpsertBatchBuilder()
-		builder.AddColumn(123, common.Uint8)
+		builder := memCom.NewUpsertBatchBuilder()
+		builder.AddColumn(123, memCom.Uint8)
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
 
@@ -69,7 +72,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("works for empty column", func() {
-		builder := common.NewUpsertBatchBuilder()
+		builder := memCom.NewUpsertBatchBuilder()
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
 
@@ -83,9 +86,9 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("works for one row, one col, no value", func() {
-		builder := common.NewUpsertBatchBuilder()
+		builder := memCom.NewUpsertBatchBuilder()
 		builder.AddRow()
-		err := builder.AddColumn(123, common.Uint8)
+		err := builder.AddColumn(123, memCom.Uint8)
 		Ω(err).Should(BeNil())
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
@@ -105,9 +108,9 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("works for one row, one col, one value", func() {
-		builder := common.NewUpsertBatchBuilder()
+		builder := memCom.NewUpsertBatchBuilder()
 		builder.AddRow()
-		err := builder.AddColumn(123, common.Uint8)
+		err := builder.AddColumn(123, memCom.Uint8)
 		builder.SetValue(0, 0, uint8(135))
 		utils.SetCurrentTime(time.Unix(10, 0))
 		buffer, err := builder.ToByteArray()
@@ -144,9 +147,9 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("reset row works", func() {
-		builder := common.NewUpsertBatchBuilder()
+		builder := memCom.NewUpsertBatchBuilder()
 		builder.AddRow()
-		err := builder.AddColumn(123, common.Uint8)
+		err := builder.AddColumn(123, memCom.Uint8)
 		builder.SetValue(0, 0, uint8(135))
 		builder.ResetRows()
 		buffer, err := builder.ToByteArray()
@@ -166,9 +169,9 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("raises error when setting wrong value type", func() {
-		builder := common.NewUpsertBatchBuilder()
+		builder := memCom.NewUpsertBatchBuilder()
 		builder.AddRow()
-		builder.AddColumn(123, common.Uint8)
+		builder.AddColumn(123, memCom.Uint8)
 		err := builder.SetValue(0, 0, "a")
 		Ω(err).ShouldNot(BeNil())
 	})
@@ -180,10 +183,10 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("last value wins", func() {
-		builder := common.NewUpsertBatchBuilder()
+		builder := memCom.NewUpsertBatchBuilder()
 		builder.AddRow()
 		builder.AddRow()
-		builder.AddColumn(123, common.Bool)
+		builder.AddColumn(123, memCom.Bool)
 		err := builder.SetValue(0, 0, false)
 		Ω(err).Should(BeNil())
 
@@ -223,20 +226,20 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("works for bool type", func() {
-		builder := common.NewUpsertBatchBuilder()
+		builder := memCom.NewUpsertBatchBuilder()
 
 		// All null bools.
-		err := builder.AddColumn(123, common.Bool)
+		err := builder.AddColumn(123, memCom.Bool)
 		Ω(err).Should(BeNil())
 
 		// Half valid bools.
-		err = builder.AddColumn(456, common.Bool)
+		err = builder.AddColumn(456, memCom.Bool)
 		builder.AddRow()
 		Ω(err).Should(BeNil())
 		err = builder.SetValue(0, 1, true)
 
 		// All valid bools.
-		err = builder.AddColumn(789, common.Bool)
+		err = builder.AddColumn(789, memCom.Bool)
 		builder.AddRow()
 		Ω(err).Should(BeNil())
 		err = builder.SetValue(0, 2, true)
@@ -292,19 +295,19 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("works for mixed types", func() {
-		builder := common.NewUpsertBatchBuilder()
+		builder := memCom.NewUpsertBatchBuilder()
 
-		builder.AddColumn(0, common.Bool)
-		builder.AddColumn(1, common.Int8)
-		builder.AddColumn(2, common.Uint8)
-		builder.AddColumn(3, common.Int16)
-		builder.AddColumn(4, common.Uint16)
-		builder.AddColumn(5, common.Int32)
-		builder.AddColumn(6, common.Uint32)
-		builder.AddColumn(7, common.Float32)
-		builder.AddColumn(8, common.SmallEnum)
-		builder.AddColumn(9, common.BigEnum)
-		builder.AddColumn(10, common.UUID)
+		builder.AddColumn(0, memCom.Bool)
+		builder.AddColumn(1, memCom.Int8)
+		builder.AddColumn(2, memCom.Uint8)
+		builder.AddColumn(3, memCom.Int16)
+		builder.AddColumn(4, memCom.Uint16)
+		builder.AddColumn(5, memCom.Int32)
+		builder.AddColumn(6, memCom.Uint32)
+		builder.AddColumn(7, memCom.Float32)
+		builder.AddColumn(8, memCom.SmallEnum)
+		builder.AddColumn(9, memCom.BigEnum)
+		builder.AddColumn(10, memCom.UUID)
 		builder.AddRow()
 		builder.AddRow()
 
@@ -441,11 +444,11 @@ var _ = ginkgo.Describe("upsert batch", func() {
 	})
 
 	ginkgo.It("Test batch extra bytes", func() {
-		builder := common.NewUpsertBatchBuilder()
-		builder.AddColumn(0, common.Float32)
-		builder.AddColumn(1, common.Uint32)
-		builder.AddColumn(2, common.Float32)
-		builder.AddColumn(3, common.UUID)
+		builder := memCom.NewUpsertBatchBuilder()
+		builder.AddColumn(0, memCom.Float32)
+		builder.AddColumn(1, memCom.Uint32)
+		builder.AddColumn(2, memCom.Float32)
+		builder.AddColumn(3, memCom.UUID)
 		uuidStr := "fbcc47fa-e635-412e-a882-4dff843dbd87"
 		uuidBytes, _ := hex.DecodeString(strings.Replace(uuidStr, "-", "", -1))
 		for r := 0; r < 416; r++ {
@@ -460,14 +463,14 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		upsertBatch, _ := NewUpsertBatch(upsertBatchBytes)
 
 		dv, _ := upsertBatch.GetDataValue(0, 3)
-		Ω(dv.ConvertToHumanReadable(common.UUID)).Should(Equal(uuidStr))
+		Ω(dv.ConvertToHumanReadable(memCom.UUID)).Should(Equal(uuidStr))
 	})
 
 	ginkgo.It("Test ExtractBackfillBatch", func() {
-		builder := common.NewUpsertBatchBuilder()
-		builder.AddColumn(0, common.Float32)
-		builder.AddColumn(1, common.Bool)
-		builder.AddColumn(2, common.UUID)
+		builder := memCom.NewUpsertBatchBuilder()
+		builder.AddColumn(0, memCom.Float32)
+		builder.AddColumn(1, memCom.Bool)
+		builder.AddColumn(2, memCom.UUID)
 		uuidStr := "fbcc47fa-e635-412e-a882-4dff843dbd87"
 		uuidBytes, _ := hex.DecodeString(strings.Replace(uuidStr, "-", "", -1))
 
@@ -492,19 +495,19 @@ var _ = ginkgo.Describe("upsert batch", func() {
 
 		Ω(newBatch.NumRows).Should(Equal(1))
 		dv, _ := newBatch.GetDataValue(0, 2)
-		Ω(dv.ConvertToHumanReadable(common.UUID)).Should(Equal(uuidStr))
+		Ω(dv.ConvertToHumanReadable(memCom.UUID)).Should(Equal(uuidStr))
 		dv, _ = newBatch.GetDataValue(0, 0)
-		Ω(dv.ConvertToHumanReadable(common.Float32)).Should(Equal(float32(1.2)))
+		Ω(dv.ConvertToHumanReadable(memCom.Float32)).Should(Equal(float32(1.2)))
 		dv, _ = newBatch.GetDataValue(0, 1)
-		Ω(dv.ConvertToHumanReadable(common.Bool)).Should(Equal(false))
+		Ω(dv.ConvertToHumanReadable(memCom.Bool)).Should(Equal(false))
 	})
 
 	ginkgo.It("Test ExtractBackfillBatch remove invalid columns", func() {
-		builder := common.NewUpsertBatchBuilder()
-		builder.AddColumn(0, common.Float32)
-		builder.AddColumnWithUpdateMode(1, common.Int16, common.UpdateWithAddition)
-		builder.AddColumn(2, common.Bool)
-		builder.AddColumn(3, common.UUID)
+		builder := memCom.NewUpsertBatchBuilder()
+		builder.AddColumn(0, memCom.Float32)
+		builder.AddColumnWithUpdateMode(1, memCom.Int16, memCom.UpdateWithAddition)
+		builder.AddColumn(2, memCom.Bool)
+		builder.AddColumn(3, memCom.UUID)
 
 		uuidStr := "fbcc47fa-e635-412e-a882-4dff843dbd87"
 		uuidBytes, _ := hex.DecodeString(strings.Replace(uuidStr, "-", "", -1))
@@ -533,20 +536,20 @@ var _ = ginkgo.Describe("upsert batch", func() {
 
 		Ω(newBatch.NumRows).Should(Equal(1))
 		dv, _ := newBatch.GetDataValue(0, 0)
-		Ω(dv.ConvertToHumanReadable(common.Float32)).Should(Equal(float32(1.2)))
+		Ω(dv.ConvertToHumanReadable(memCom.Float32)).Should(Equal(float32(1.2)))
 		dv, _ = newBatch.GetDataValue(0, 1)
-		Ω(dv.ConvertToHumanReadable(common.Bool)).Should(Equal(false))
+		Ω(dv.ConvertToHumanReadable(memCom.Bool)).Should(Equal(false))
 		dv, _ = newBatch.GetDataValue(0, 2)
-		Ω(dv.ConvertToHumanReadable(common.UUID)).Should(Equal(uuidStr))
+		Ω(dv.ConvertToHumanReadable(memCom.UUID)).Should(Equal(uuidStr))
 		Ω(upsertBatch.NumColumns).Should(Equal(4))
 		Ω(newBatch.NumColumns).Should(Equal(3))
 	})
 
 	ginkgo.It("works for geoshape", func() {
-		builder := common.NewUpsertBatchBuilder()
-		builder.AddColumn(0, common.Uint32)
-		builder.AddColumn(1, common.GeoShape)
-		builder.AddColumn(2, common.Bool)
+		builder := memCom.NewUpsertBatchBuilder()
+		builder.AddColumn(0, memCom.Uint32)
+		builder.AddColumn(1, memCom.GeoShape)
+		builder.AddColumn(2, memCom.Bool)
 
 		builder.AddRow()
 		builder.SetValue(0, 0, 2)
@@ -571,8 +574,8 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		value, err = upsertBatch.GetDataValue(0, 1)
 		Ω(err).Should(BeNil())
 		Ω(value).ShouldNot(BeNil())
-		expectedShape := &common.GeoShapeGo{
-			Polygons: [][]common.GeoPointGo{
+		expectedShape := &memCom.GeoShapeGo{
+			Polygons: [][]memCom.GeoPointGo{
 				{
 					{
 						90.0,
@@ -609,5 +612,152 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(err).Should(BeNil())
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeFalse())
+	})
+
+	ginkgo.It("resolve enum dictionary", func() {
+		builder := memCom.NewUpsertBatchBuilder()
+		builder.AddColumn(0, memCom.Uint32)
+		builder.AddColumn(1, memCom.SmallEnum)
+		builder.AddColumn(2, memCom.BigEnum)
+
+		builder.AddRow()
+		builder.SetValue(0, 0, 2)
+		builder.SetValue(0, 1, "s1")
+		builder.SetValue(0, 2, "b1")
+
+		builder.AddRow()
+		builder.SetValue(1, 0, nil)
+		builder.SetValue(1, 1, "s2")
+		builder.SetValue(1, 2, "b2")
+
+		upsertBatchBytes, _ := builder.ToByteArray()
+		upsertBatch, _ := NewUpsertBatch(upsertBatchBytes)
+
+		tableName := "test"
+		tableSchema := &TableSchema{
+			Schema: metaCom.Table{
+				Name: tableName,
+				Columns: []metaCom.Column{
+					{
+						Name: "col1",
+						Type: metaCom.Uint32,
+					},
+					{
+						Name: "col2",
+						Type: metaCom.SmallEnum,
+					},
+					{
+						Name: "col3",
+						Type: metaCom.BigEnum,
+					},
+				},
+			},
+			EnumDicts: map[string]EnumDict{
+				"col2": {
+					Dict: map[string]int{
+						"s1": 4,
+						"s2": 5,
+					},
+				},
+				"col3": {
+					Dict: map[string]int{
+						"b1": 6,
+					},
+				},
+			},
+		}
+
+		metaStore := &metaMocks.MetaStore{}
+		metaStore.On("ExtendEnumDict", tableName, "col3", []string{"b2"}).Return([]int{7}, nil).Once()
+		err := upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
+		Ω(err).Should(BeNil())
+
+		// col1
+		value, err := upsertBatch.GetDataValue(0, 0)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint32)(value.OtherVal)).Should(Equal(uint32(2)))
+
+		value, err = upsertBatch.GetDataValue(1, 0)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeFalse())
+
+		// col2
+		value, err = upsertBatch.GetDataValue(0, 1)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(4)))
+
+		value, err = upsertBatch.GetDataValue(1, 1)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(5)))
+
+		// col3
+		value, err = upsertBatch.GetDataValue(0, 2)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(6)))
+
+		value, err = upsertBatch.GetDataValue(1, 2)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(7)))
+
+		// second call should do nothing
+		err = upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
+		Ω(err).Should(BeNil())
+
+		// col1
+		value, err = upsertBatch.GetDataValue(0, 0)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint32)(value.OtherVal)).Should(Equal(uint32(2)))
+
+		value, err = upsertBatch.GetDataValue(1, 0)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeFalse())
+
+		// col2
+		value, err = upsertBatch.GetDataValue(0, 1)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(4)))
+
+		value, err = upsertBatch.GetDataValue(1, 1)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(5)))
+
+		// col3
+		value, err = upsertBatch.GetDataValue(0, 2)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(6)))
+
+		value, err = upsertBatch.GetDataValue(1, 2)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(7)))
+
+		// recreate buffer and call third time with failure
+		upsertBatchBytes, _ = builder.ToByteArray()
+		upsertBatch, _ = NewUpsertBatch(upsertBatchBytes)
+		metaStore.On("ExtendEnumDict", tableName, "col3", []string{"b2"}).
+			Return(nil, metastore.ErrTableDoesNotExist).Once()
+		err = upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
+		Ω(err).ShouldNot(BeNil())
 	})
 })
