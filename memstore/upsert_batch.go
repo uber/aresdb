@@ -461,6 +461,99 @@ func (u *UpsertBatch) ReadData(start int, length int) ([][]interface{}, error) {
 	return rows, nil
 }
 
+// TODO: deprecated, remove after functional test updated
+func readUpsertBatchV0(buffer []byte) (*UpsertBatch, error) {
+	batch := &UpsertBatch{
+		buffer:      buffer,
+		columnsByID: make(map[int]int),
+	}
+
+	// numRows.
+	reader := utils.NewBufferReader(buffer)
+
+	numRows, err := reader.ReadInt32(0)
+	if err != nil {
+		return nil, utils.StackError(err, "Failed to read number of rows")
+	}
+	if numRows < 0 {
+		return nil, utils.StackError(err, "Number of rows %d should be >= 0", numRows)
+	}
+
+	batch.NumRows = int(numRows)
+	// numColumns.
+	numColumns, err := reader.ReadUint16(4)
+	if err != nil {
+		return nil, utils.StackError(err, "Failed to read number of columns")
+	}
+	batch.NumColumns = int(numColumns)
+
+	// Header too small, error out.
+	if len(buffer) < 8+memCom.ColumnHeaderSizeV0(batch.NumColumns) {
+		return nil, utils.StackError(nil, "Invalid upsert batch data with incomplete header section")
+	}
+
+	header := memCom.NewUpsertBatchHeaderV0(buffer[8:], batch.NumColumns)
+
+	columns := make([]*columnReader, batch.NumColumns)
+	for i := range columns {
+		columnType, err := header.ReadColumnType(i)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read type for column %d", i)
+		}
+
+		columnID, err := header.ReadColumnID(i)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read id for column %d", i)
+		}
+		batch.columnsByID[columnID] = i
+
+		columnMode, columnUpdateMode, err := header.ReadColumnFlag(i)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read mode for column %d", i)
+		}
+
+		columns[i] = &columnReader{columnID: columnID, columnMode: columnMode, columnUpdateMode: columnUpdateMode, dataType: columnType,
+			cmpFunc: memCom.GetCompareFunc(columnType)}
+
+		columnStartOffset, err := header.ReadColumnOffset(i)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read start offset for column %d", i)
+		}
+
+		columnEndOffset, err := header.ReadColumnOffset(i + 1)
+		if err != nil {
+			return nil, utils.StackError(err, "Failed to read end offset for column %d", i)
+		}
+
+		currentOffset := columnStartOffset
+		isGoType := memCom.IsGoType(columnType)
+		switch columnMode {
+		case memCom.AllValuesDefault:
+		case memCom.HasNullVector:
+			if !isGoType {
+				// Null vector points to the beginning of the column data section.
+				nullVectorLength := utils.AlignOffset(batch.NumRows, 8) / 8
+				columns[i].nullVector = buffer[currentOffset : currentOffset+nullVectorLength]
+				currentOffset += nullVectorLength
+			}
+			fallthrough
+		case memCom.AllValuesPresent:
+			if isGoType {
+				currentOffset = utils.AlignOffset(currentOffset, 4)
+				offsetVectorLength := (batch.NumRows + 1) * 4
+				columns[i].offsetVector = buffer[currentOffset : currentOffset+offsetVectorLength]
+				currentOffset += offsetVectorLength
+			}
+			// Round up to 8 byte padding.
+			currentOffset = utils.AlignOffset(currentOffset, 8)
+			columns[i].valueVector = buffer[currentOffset:columnEndOffset]
+		}
+	}
+	batch.columns = columns
+
+	return batch, nil
+}
+
 func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 	batch := &UpsertBatch{
 		buffer:      buffer,
@@ -655,5 +748,6 @@ func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 		// skip version number bytes for new version
 		return readUpsertBatch(buffer)
 	}
-	return nil, utils.StackError(err, "Invalid upsert batch version")
+	// TODO: deprecated, remove after functional test updated
+	return readUpsertBatchV0(buffer)
 }
