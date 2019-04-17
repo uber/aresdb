@@ -83,10 +83,12 @@ type connector struct {
 	// use columnID instead of name since column name can be reused
 	// table names can be reused as well, deleting and adding a new table
 	// will anyway requires job restart
+	// enum mapping is only needed for enum columns with auto expand disabled for enum translation
 	enumMappings map[string]map[int]enumDict
 
 	// map from table to columnID to default enum id. Initialized during bootstrap
 	// and will be set only if default value is non nil.
+	// enumDefaultValueMappings is only needed for enum columns with auto expand disabled
 	enumDefaultValueMappings map[string]map[int]int
 }
 
@@ -125,11 +127,6 @@ func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope t
 	connector.initHTTPClient()
 
 	err := connector.fetchAllTables()
-	if err != nil {
-		return nil, err
-	}
-
-	err = connector.fetchAllEnumDicts()
 	if err != nil {
 		return nil, err
 	}
@@ -275,12 +272,6 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 		if err = upsertBatchBuilder.AddColumnWithUpdateMode(columnID, dataType, updateModes[colIndex]); err != nil {
 			return nil, 0, err
 		}
-
-		if column.IsEnumColumn() {
-			if err = c.prepareEnumCases(tableName, columnName, colIndex, columnID, rows, abandonRows, column.CaseInsensitive, column.DisableAutoExpand); err != nil {
-				return nil, 0, err
-			}
-		}
 	}
 
 	for rowIndex, row := range rows {
@@ -321,22 +312,36 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 				break
 			}
 
-			if column.IsEnumColumn() {
-				value, err = c.translateEnum(tableName, columnID, value, column.CaseInsensitive)
-				if err != nil {
+			if column.IsEnumColumn() && value != nil {
+				enumCase, isStr := value.(string)
+				if !isStr {
 					upsertBatchBuilder.RemoveRow()
-					c.logger.With(
-						"name", "prepareUpsertBatch",
-						"error", err.Error(),
-						"table", tableName,
-						"columnID", columnID,
-						"value", value).Error("Failed to translate enum")
+					c.logger.With("name", "prepareUpsertBatch", "error", "enum value is not string", "table", tableName, "columnID", columnID, "value", value).Error("Failed to set value")
 					break
 				}
+				if column.CaseInsensitive {
+					enumCase = strings.ToLower(enumCase)
+				}
 
-				// If enum value is not found from predefined enum cases and default value is not set, we set it to nil.
-				if value == -1 {
-					value = nil
+				value = enumCase
+				// only translate enum case to enum id when auto expand for column is disabled
+				if column.DisableAutoExpand {
+					value, err = c.translateEnum(tableName, columnID, enumCase, column.CaseInsensitive)
+					if err != nil {
+						upsertBatchBuilder.RemoveRow()
+						c.logger.With(
+							"name", "prepareUpsertBatch",
+							"error", err.Error(),
+							"table", tableName,
+							"columnID", columnID,
+							"value", value).Error("Failed to translate enum")
+						break
+					}
+
+					// If enum value is not found from predefined enum cases and default value is not set, we set it to nil.
+					if value == -1 {
+						value = nil
+					}
 				}
 			}
 
@@ -402,87 +407,10 @@ func (c *connector) checkTimeColumnExistence(schema *tableSchema, columnNames []
 	return utils.StackError(nil, "Missing time column")
 }
 
-// prepareEnumCases makes sure all needed enum cases have their enumIDs in cache for later translation,
-// abandonRows record the rows that needs to be abandoned due to invalid data, so the next column can skip it.
-func (c *connector) prepareEnumCases(tableName, columnName string, colIndex, columnID int, rows []Row, abandonRows map[int]interface{}, caseInsensitive bool, disableAutoExpand bool) error {
-	newEnumCasesSet := map[string]interface{}{}
-	for rowIndex, row := range rows {
-		if _, exist := abandonRows[rowIndex]; exist {
-			continue
-		}
-		value := row[colIndex]
-
-		if value == nil {
-			continue
-		}
-
-		if enumCase, ok := value.(string); ok {
-			convertedEnumCase := enumCase
-			if caseInsensitive {
-				convertedEnumCase = strings.ToLower(convertedEnumCase)
-			}
-			c.RLock()
-			// pre creation should make sure the mapping all exists
-			if _, valueExist := c.enumMappings[tableName][columnID][convertedEnumCase]; !valueExist {
-				newEnumCasesSet[enumCase] = nil
-			}
-			c.RUnlock()
-		} else {
-			c.logger.With(
-				"name", "prepareEnumCases",
-				"error", "Enum value should be string",
-				"table", tableName,
-				"columnID", columnID,
-				"value", value).Debug("Enum value is not string")
-			c.metricScope.Tagged(map[string]string{"table": tableName, "columnID": strconv.Itoa(columnID)}).
-				Counter("abandoned_rows").Inc(1)
-			abandonRows[rowIndex] = nil
-		}
-	}
-
-	if len(newEnumCasesSet) == 0 {
-		return nil
-	}
-
-	if disableAutoExpand {
-		// It's recommended to set up elk or sentry logging to catch this error.
-		c.logger.With(
-			"TableName", tableName,
-			"ColumnName", columnName,
-			"ColumnID", columnID,
-			"newEnumCasesSet", newEnumCasesSet,
-			"caseInsensitive", caseInsensitive,
-		).Error("Finding new enum cases during ingestion but enum auto expansion is disabled")
-		c.metricScope.Tagged(
-			map[string]string{
-				"TableName": tableName,
-				"ColumnID":  strconv.Itoa(columnID),
-			},
-		).Counter("new_enum_cases_ignored").Inc(int64(len(newEnumCasesSet)))
-		return nil
-	}
-
-	newEnumCases := make([]string, 0, len(newEnumCasesSet))
-	for enumCase := range newEnumCasesSet {
-		newEnumCases = append(newEnumCases, enumCase)
-	}
-	return c.extendEnumDict(tableName, columnName, columnID, newEnumCases, caseInsensitive)
-}
-
-func (c *connector) translateEnum(tableName string, columnID int, value interface{}, caseInsensitive bool) (enumID int, err error) {
-	if value == nil {
-		return -1, nil
-	}
-	enumCase, ok := value.(string)
-	if !ok {
-		return 0, utils.StackError(nil, "Enum value should be string, but got: %T", value)
-	}
-	if caseInsensitive {
-		enumCase = strings.ToLower(enumCase)
-	}
+func (c *connector) translateEnum(tableName string, columnID int, enumCase string, caseInsensitive bool) (enumID int, err error) {
 	c.RLock()
 	// here it already make sure the enum dictionary exists in cache
-	enumID, ok = c.enumMappings[tableName][columnID][enumCase]
+	enumID, ok := c.enumMappings[tableName][columnID][enumCase]
 	c.RUnlock()
 	if !ok {
 		c.metricScope.Tagged(
@@ -510,54 +438,6 @@ func (c *connector) getTableSchema(tableName string) (*tableSchema, error) {
 	return c.fetchTableSchema(tableName)
 }
 
-// fetchAllEnumDicts fetches all enum dictionaries for enum columns in current cached schemas,
-// this is called during connector initialization.
-func (c *connector) fetchAllEnumDicts() error {
-	c.Lock()
-	defer c.Unlock()
-	for tableName, schema := range c.schemas {
-		for columnID, column := range schema.Table.Columns {
-			caseInsensitive := column.CaseInsensitive
-			var defValuePtr *string
-
-			if column.DefaultValue != nil {
-				var defValue = *column.DefaultValue
-				if caseInsensitive {
-					defValue = strings.ToLower(defValue)
-				}
-				defValuePtr = &defValue
-			}
-
-			if column.IsEnumColumn() {
-				enumCases, err := c.fetchEnumDict(tableName, column.Name)
-				if err == nil {
-					for enumID, enumCase := range enumCases {
-						// Convert to lower case for comparison during ingestion.
-						if caseInsensitive {
-							enumCase = strings.ToLower(enumCase)
-						}
-						// all mapping should be pre created
-						c.enumMappings[tableName][columnID][enumCase] = enumID
-
-						if defValuePtr != nil {
-							if *defValuePtr == enumCase {
-								c.enumDefaultValueMappings[tableName][columnID] = enumID
-							}
-						}
-					}
-				} else {
-					c.metricScope.Tagged(map[string]string{
-						"table":    tableName,
-						"columnID": strconv.Itoa(columnID),
-					}).Counter("err_fetch_enum_dict").Inc(1)
-					return utils.StackError(err, "Failed to fetch enum cases for table: %s, column: %d", tableName, columnID)
-				}
-			}
-		}
-	}
-	return nil
-}
-
 // fetchAllTables fetches all table schemas from ares,
 // this is called during connector initialization.
 func (c *connector) fetchAllTables() error {
@@ -580,7 +460,7 @@ func (c *connector) fetchAllTables() error {
 	return nil
 }
 
-func (c *connector) fetchEnumDict(tableName, columnName string) ([]string, error) {
+func (c *connector) fetchEnumCases(tableName, columnName string) ([]string, error) {
 	var enumDictReponse []string
 
 	resp, err := c.httpClient.Get(c.enumDictPath(tableName, columnName))
@@ -645,6 +525,8 @@ func (c *connector) fetchTableSchema(tableName string) (*tableSchema, error) {
 	}
 
 	c.Lock()
+	defer c.Unlock()
+
 	c.schemas[tableName] = schema
 	// pre-create all enum mappings
 	if _, tableExist := c.enumMappings[tableName]; !tableExist {
@@ -652,15 +534,54 @@ func (c *connector) fetchTableSchema(tableName string) (*tableSchema, error) {
 		c.enumDefaultValueMappings[tableName] = make(map[int]int)
 	}
 	for columnID, column := range table.Columns {
-		if !column.Deleted && column.IsEnumColumn() {
+		if !column.Deleted && column.IsEnumColumn() &&
+			// only fetch enum dict for column with auto expand disabled
+			// for those enums will be provided by user
+			// when auto expansion is not disabled, we just send enum case directly
+			column.DisableAutoExpand {
 			if _, columnExist := c.enumMappings[tableName][columnID]; !columnExist {
 				c.enumMappings[tableName][columnID] = make(enumDict)
+				// fetch enum cases for new column
+				err = c.fetchAndSetEnumDictWithLock(tableName, column.Name, columnID, column.CaseInsensitive, column.DefaultValue)
+				if err != nil {
+					return schema, err
+				}
 			}
 		}
 	}
-	c.Unlock()
-
 	return schema, err
+}
+
+func (c *connector) fetchAndSetEnumDictWithLock(tableName, columnName string, columnID int, caseInsensitive bool, defValuePtr *string) error {
+	if defValuePtr != nil {
+		defValue := *defValuePtr
+		if caseInsensitive {
+			defValue = strings.ToLower(defValue)
+		}
+		defValuePtr = &defValue
+	}
+	enumCases, err := c.fetchEnumCases(tableName, columnName)
+	if err != nil {
+		c.metricScope.Tagged(map[string]string{
+			"table":    tableName,
+			"columnID": strconv.Itoa(columnID),
+		}).Counter("err_fetch_enum_dict").Inc(1)
+		return utils.StackError(err, "Failed to fetch enum cases for table: %s, column: %d", tableName, columnID)
+	}
+	for enumID, enumCase := range enumCases {
+		// Convert to lower case for comparison during ingestion.
+		if caseInsensitive {
+			enumCase = strings.ToLower(enumCase)
+		}
+		// all mapping should be pre created
+		c.enumMappings[tableName][columnID][enumCase] = enumID
+		if defValuePtr != nil {
+			if *defValuePtr == enumCase {
+				c.enumDefaultValueMappings[tableName][columnID] = enumID
+			}
+		}
+	}
+	return nil
 }
 
 func (c *connector) readJSONResponse(response *http.Response, err error, data interface{}) error {

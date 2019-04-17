@@ -84,13 +84,9 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 
 	// this is the enum cases at first
 	initialColumn2EnumCases := map[string][]string{
-		"col2": {"1"},
 		"col4": {"a"},
 		"col5": {"A"},
 	}
-
-	// extendedEnumIDs
-	column2extendedEnumIDs := []int{2}
 
 	var insertBytes []byte
 	ginkgo.BeforeEach(func() {
@@ -114,10 +110,6 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 
 						w.WriteHeader(http.StatusOK)
 						w.Write(enumBytes)
-					} else if r.Method == http.MethodPost {
-						enumIDBytes, _ := json.Marshal(column2extendedEnumIDs)
-						w.WriteHeader(http.StatusOK)
-						w.Write(enumIDBytes)
 					}
 				} else if strings.Contains(r.URL.Path, "data") && r.Method == http.MethodPost {
 					var err error
@@ -155,6 +147,9 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(err).Should(BeNil())
 
 		insertBytes = nil
+		utils.SetClockImplementation(func() time.Time {
+			return time.Unix(10, 0)
+		})
 		n, err := connector.Insert("a", []string{"col0", "col1", "col2", "col3", "col4", "col5"}, []Row{
 			{100, 1, "1", true, "a", "A"},
 			{200, int64(2), "2", false, "A", "a"},
@@ -165,9 +160,6 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(n).Should(Equal(4))
 
 		insertBytes = nil
-		utils.SetClockImplementation(func() time.Time {
-			return time.Unix(10, 0)
-		})
 		n, err = connector.Insert("a", []string{"col0", "col1", "col1_hll"}, []Row{
 			{100, 1, []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
 		})
