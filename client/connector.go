@@ -39,7 +39,6 @@ const (
 	// default schema refresh interval in seconds
 	defaultSchemaRefreshInterval = 600
 	dataIngestionHeader          = "application/upsert-data"
-	applicationJSONHeader        = "application/json"
 )
 
 // Row represents a row of insert data.
@@ -52,11 +51,6 @@ type Connector interface {
 	// updateModes are optional, if ignored for all columns, no need to set
 	// if set, then all columns needs to be set
 	Insert(tableName string, columnNames []string, rows []Row, updateModes ...memCom.ColumnUpdateMode) (int, error)
-}
-
-// enumCasesWrapper is a response/request body which wraps enum cases
-type enumCasesWrapper struct {
-	EnumCases []string
 }
 
 type tableSchema struct {
@@ -274,6 +268,7 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 		}
 	}
 
+	missingEnumCasesByColumnIDs := make(map[int]map[string]struct{})
 	for rowIndex, row := range rows {
 		if _, exist := abandonRows[rowIndex]; exist {
 			continue
@@ -326,7 +321,7 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 				value = enumCase
 				// only translate enum case to enum id when auto expand for column is disabled
 				if column.DisableAutoExpand {
-					value, err = c.translateEnum(tableName, columnID, enumCase, column.CaseInsensitive)
+					value, err = c.translateEnum(tableName, columnID, enumCase, missingEnumCasesByColumnIDs)
 					if err != nil {
 						upsertBatchBuilder.RemoveRow()
 						c.logger.With(
@@ -371,9 +366,35 @@ func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, u
 			upsertBatchColumnIndex++
 		}
 	}
+	c.reportMissingEnums(schema, missingEnumCasesByColumnIDs)
 
 	batchBytes, err := upsertBatchBuilder.ToByteArray()
 	return batchBytes, upsertBatchBuilder.NumRows, err
+}
+
+func (c *connector) reportMissingEnums(schema *tableSchema, missingEnumCasesByColumnIDs map[int]map[string]struct{}) {
+	for columnID, missingCasesSet := range missingEnumCasesByColumnIDs {
+		if len(missingCasesSet) > 0 {
+			missingCasesSlice := make([]string, 0, len(missingCasesSet))
+			for c := range missingCasesSet {
+				missingCasesSlice = append(missingCasesSlice, c)
+			}
+			// It's recommended to set up elk or sentry logging to catch this error.
+			c.logger.With(
+				"TableName", schema.Table.Name,
+				"ColumnName", schema.Table.Columns[columnID],
+				"ColumnID", columnID,
+				"newEnumCasesSet", missingCasesSlice,
+				"caseInsensitive", schema.Table.Columns[columnID].CaseInsensitive,
+			).Error("Finding new enum cases during ingestion but enum auto expansion is disabled")
+			c.metricScope.Tagged(
+				map[string]string{
+					"TableName": schema.Table.Name,
+					"ColumnID":  strconv.Itoa(columnID),
+				},
+			).Counter("new_enum_cases_ignored").Inc(int64(len(missingCasesSlice)))
+		}
+	}
 }
 
 // checkPrimaryKeys checks whether primary key is missing
@@ -407,7 +428,7 @@ func (c *connector) checkTimeColumnExistence(schema *tableSchema, columnNames []
 	return utils.StackError(nil, "Missing time column")
 }
 
-func (c *connector) translateEnum(tableName string, columnID int, enumCase string, caseInsensitive bool) (enumID int, err error) {
+func (c *connector) translateEnum(tableName string, columnID int, enumCase string, missingEnumCasesByColumnIDs map[int]map[string]struct{}) (enumID int, err error) {
 	c.RLock()
 	// here it already make sure the enum dictionary exists in cache
 	enumID, ok := c.enumMappings[tableName][columnID][enumCase]
@@ -419,6 +440,10 @@ func (c *connector) translateEnum(tableName string, columnID int, enumCase strin
 				"ColumnID":  strconv.Itoa(columnID),
 			},
 		).Counter("new_enum_case_rows_ignored").Inc(int64(1))
+		if _, ok := missingEnumCasesByColumnIDs[columnID]; !ok {
+			missingEnumCasesByColumnIDs[columnID] = make(map[string]struct{})
+		}
+		missingEnumCasesByColumnIDs[columnID][enumCase] = struct{}{}
 		if defaultValue, ok := c.enumDefaultValueMappings[tableName][columnID]; ok {
 			return defaultValue, nil
 		}
@@ -470,39 +495,6 @@ func (c *connector) fetchEnumCases(tableName, columnName string) ([]string, erro
 	return enumDictReponse, err
 }
 
-func (c *connector) extendEnumDict(tableName, columnName string, columnID int, enumCases []string, caseInsensitive bool) error {
-	if len(enumCases) == 0 {
-		return nil
-	}
-
-	enumCasesRequest := enumCasesWrapper{
-		EnumCases: enumCases,
-	}
-
-	enumCasesBytes, err := json.Marshal(enumCasesRequest)
-	if err != nil {
-		return utils.StackError(err, "Failed to marshal enum cases")
-	}
-
-	var enumIDs []int
-	resp, err := c.httpClient.Post(c.enumDictPath(tableName, columnName), applicationJSONHeader, bytes.NewReader(enumCasesBytes))
-	err = c.readJSONResponse(resp, err, &enumIDs)
-	if err != nil {
-		return err
-	}
-
-	c.Lock()
-	for index, enumCase := range enumCases {
-		if caseInsensitive {
-			enumCase = strings.ToLower(enumCase)
-		}
-		c.enumMappings[tableName][columnID][enumCase] = enumIDs[index]
-	}
-	c.Unlock()
-
-	return nil
-}
-
 func (c *connector) fetchTableSchema(tableName string) (*tableSchema, error) {
 	var table metaCom.Table
 
@@ -542,7 +534,7 @@ func (c *connector) fetchTableSchema(tableName string) (*tableSchema, error) {
 			if _, columnExist := c.enumMappings[tableName][columnID]; !columnExist {
 				c.enumMappings[tableName][columnID] = make(enumDict)
 				// fetch enum cases for new column
-				err = c.fetchAndSetEnumDictWithLock(tableName, column.Name, columnID, column.CaseInsensitive, column.DefaultValue)
+				err = c.fetchAndSetEnumCasesWithLock(tableName, column.Name, columnID, column.CaseInsensitive, column.DefaultValue)
 				if err != nil {
 					return schema, err
 				}
@@ -552,7 +544,7 @@ func (c *connector) fetchTableSchema(tableName string) (*tableSchema, error) {
 	return schema, err
 }
 
-func (c *connector) fetchAndSetEnumDictWithLock(tableName, columnName string, columnID int, caseInsensitive bool, defValuePtr *string) error {
+func (c *connector) fetchAndSetEnumCasesWithLock(tableName, columnName string, columnID int, caseInsensitive bool, defValuePtr *string) error {
 	if defValuePtr != nil {
 		defValue := *defValuePtr
 		if caseInsensitive {
