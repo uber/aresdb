@@ -1,5 +1,5 @@
 hash: a9437fdcb624a8c5f1071ca1faccdb0065b413c1741dec54ecabd802c6d033cd
-updated: 2019-04-12T12:37:19.201941-07:00
+updated: 2019-04-17T15:00:04.822418-07:00
 imports:
 - name: github.com/antlr/antlr4
   version: be58ebffde8e29c154192c019608f0a5b8e6a064
@@ -254,7 +254,10 @@ imports:
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/config
-  version: 13f07c9f1403bf93fae59c057f2d66b16333d462
+  version: c9c3d11a88c1a266ced73d92e22e1d36d2bc2ed6
+  subpackages:
+  - internal/merge
+  - internal/unreachable
 - name: go.uber.org/dig
   version: 7ff117f761a3f1b3eb521945c17a1091438eb6de
   subpackages:
@@ -295,7 +298,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: e6919f6577db79269a6443b9dc46d18f2238fb5d
+  version: f21a4dfb5e38f5895301dc265a8def02365cc3d0
   subpackages:
   - encoding
   - encoding/charmap
@@ -307,8 +310,6 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
-  - internal/language
-  - internal/language/compact
   - internal/tag
   - internal/utf8internal
   - language
