@@ -478,6 +478,28 @@ func (c *connector) fetchEnumDict(tableName, columnName string) ([]string, error
 	return enumDictReponse, err
 }
 
+func (cc *ConnectorCommon) extendEnumDictLocal(tableName string, columnID int, enumCases []string, caseInsensitive bool) error {
+	if len(enumCases) == 0 {
+		return nil
+	}
+
+	cc.Lock()
+	newEnumID := len(cc.enumMappings[tableName][columnID])
+	for _, enumCase := range enumCases {
+		if caseInsensitive {
+			enumCase = strings.ToLower(enumCase)
+		}
+		if _, exist := cc.enumMappings[tableName][columnID][enumCase]; !exist {
+			cc.enumMappings[tableName][columnID][enumCase] = newEnumID
+			newEnumID++
+		}
+	}
+	cc.Unlock()
+
+	return nil
+}
+
+// TBD: this function should be removed once server side merge is implemented
 func (c *connector) extendEnumDict(tableName, columnName string, columnID int, enumCases []string, caseInsensitive bool) error {
 	if len(enumCases) == 0 {
 		return nil
