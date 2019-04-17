@@ -17,6 +17,7 @@ import:
 - package: github.com/m3db/m3
   subpackages:
   - cluster
+  version: 0.7.0
 - package: github.com/uber/jaeger-client-go
   version: 2.15.0
 - package: github.com/uber/jaeger-lib
