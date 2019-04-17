@@ -354,7 +354,7 @@ func (cc *ConnectorCommon) prepareEnumCases(tableName, columnName string, colInd
 	for enumCase := range newEnumCasesSet {
 		newEnumCases = append(newEnumCases, enumCase)
 	}
-	return cc.extendEnumDict(tableName, columnName, columnID, newEnumCases, caseInsensitive)
+	return cc.extendEnumDictLocal(tableName, columnID, newEnumCases, caseInsensitive)
 }
 
 func (cc *ConnectorCommon) translateEnum(tableName string, columnID int, value interface{}, caseInsensitive bool) (enumID int, err error) {
