@@ -15,7 +15,6 @@ import:
 - package: github.com/spf13/pflag
 - package: gopkg.in/validator.v2
 - package: github.com/m3db/m3
-  version: 0.7.0
   subpackages:
   - cluster
 - package: github.com/uber/jaeger-client-go

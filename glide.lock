@@ -1,8 +1,10 @@
-hash: e12c0cddcf6163f4253fd90e1836ae84a11ef71240ff08ceaecf043bf9ca4d4c
-updated: 2019-04-16T15:34:18.256654-07:00
+hash: df8fbd5456820fae20131163296ad8761c1b5260f3635dbc1ba109f5313f1cb1
+updated: 2019-04-17T14:48:00.397489-07:00
 imports:
 - name: github.com/abiosoft/ishell
   version: 0a6b1640e32638dd433ee7e57ec325a7bdd79561
+- name: github.com/abiosoft/readline
+  version: 155bce2042db95a783081fab225e74dd879055b0
 - name: github.com/antlr/antlr4
   version: be58ebffde8e29c154192c019608f0a5b8e6a064
   subpackages:
@@ -45,6 +47,10 @@ imports:
   - trees
   - trees/redblacktree
   - utils
+- name: github.com/fatih/color
+  version: 3f9d52f7176a6927daacff70a3e8d1dc2025c53e
+- name: github.com/flynn-archive/go-shlex
+  version: 3f9db97f856818214da2e1057f8ad84803971cff
 - name: github.com/fsnotify/fsnotify
   version: ccc981bf80385c528a65fbfdd49bf2d8da22aa23
 - name: github.com/getlantern/deepcopy
@@ -137,6 +143,10 @@ imports:
   version: 1878d9fbb537119d24b21ca07effd591627cd160
 - name: github.com/magiconair/properties
   version: 7757cc9fdb852f7579b24170bcacda2c7471bb6a
+- name: github.com/mattn/go-colorable
+  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
+- name: github.com/mattn/go-isatty
+  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -256,7 +266,10 @@ imports:
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/config
-  version: 13f07c9f1403bf93fae59c057f2d66b16333d462
+  version: c9c3d11a88c1a266ced73d92e22e1d36d2bc2ed6
+  subpackages:
+  - internal/merge
+  - internal/unreachable
 - name: go.uber.org/dig
   version: 7ff117f761a3f1b3eb521945c17a1091438eb6de
   subpackages:
@@ -297,7 +310,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: e6919f6577db79269a6443b9dc46d18f2238fb5d
+  version: f21a4dfb5e38f5895301dc265a8def02365cc3d0
   subpackages:
   - encoding
   - encoding/charmap
@@ -309,8 +322,6 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
-  - internal/language
-  - internal/language/compact
   - internal/tag
   - internal/utf8internal
   - language
