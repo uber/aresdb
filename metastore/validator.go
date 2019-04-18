@@ -101,7 +101,7 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 
 		// validate enum case
 		if len(column.EnumCases) > 0 {
-			if column.DisableAutoExpand {
+			if !column.DisableAutoExpand {
 				return ErrEnumCasesNotSupported
 			}
 			enumCaseSet := make(map[string]struct{})

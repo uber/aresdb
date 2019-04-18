@@ -806,12 +806,13 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
 			Version:           0,
+			Config:            DefaultTableConfig,
 		}
 
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table1)
 		err := validator.Validate()
-		Ω(err).ShouldNot(MatchError(ErrEnumCasesNotSupported))
+		Ω(err).Should(MatchError(ErrEnumCasesNotSupported))
 	})
 
 	ginkgo.It("should fail when enum cases are duplicate", func() {
@@ -833,12 +834,13 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
 			Version:           0,
+			Config:            DefaultTableConfig,
 		}
 
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table1)
 		err := validator.Validate()
-		Ω(err).ShouldNot(MatchError(ErrDuplicateEnumCases))
+		Ω(err).Should(MatchError(ErrDuplicateEnumCases))
 	})
 
 	ginkgo.It("should fail when old enum cases are modified", func() {
@@ -859,6 +861,7 @@ var _ = ginkgo.Describe("Validator", func() {
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
 			Version:           0,
+			Config:            DefaultTableConfig,
 		}
 
 		table2 := common.Table{
@@ -872,19 +875,19 @@ var _ = ginkgo.Describe("Validator", func() {
 					Name:              "col2",
 					Type:              "SmallEnum",
 					DisableAutoExpand: true,
-					CaseInsensitive:   true,
 					EnumCases:         []string{"b"},
 				},
 			},
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
 			Version:           0,
+			Config:            DefaultTableConfig,
 		}
 
 		validator := NewTableSchameValidator()
 		validator.SetOldTable(table1)
 		validator.SetNewTable(table2)
 		err := validator.Validate()
-		Ω(err).ShouldNot(MatchError(ErrIllegalChangeToEnumCases))
+		Ω(err).Should(MatchError(ErrIllegalChangeToEnumCases))
 	})
 })
