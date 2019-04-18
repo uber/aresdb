@@ -572,7 +572,6 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 					upsertBatchBuilder.RemoveRow()
 					u.logger.With(
 						"name", "PrepareUpsertBatch",
-						"error", err.Error(),
 						"table", tableName,
 						"columnID", columnID,
 						"value", value).Error("Enum value should be string")
