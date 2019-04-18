@@ -128,7 +128,7 @@ func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope t
 		cfg.Timeout = defaultRequestTimeout
 	}
 
-	connectorCommon := UpsertBatchBuilderImpl{
+	upsertBatchBuilderImpl := UpsertBatchBuilderImpl{
 		cfg:                      cfg,
 		logger:                   logger,
 		metricScope:              metricScope,
@@ -137,7 +137,7 @@ func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope t
 		enumDefaultValueMappings: make(map[string]map[int]int),
 	}
 	connector := &connector{
-		UpsertBatchBuilderImpl: &connectorCommon,
+		UpsertBatchBuilderImpl: &upsertBatchBuilderImpl,
 	}
 
 	connector.initHTTPClient()
@@ -348,6 +348,7 @@ func (c *connector) fetchAllTables() error {
 }
 
 // fetchEnumDicts fetches all enum dictionaries for enum columns.
+// TODO: this part needs to be cleaned up once schema including enum is implemented
 func (c *connector) fetchEnumDicts(table metaCom.Table) (map[int]enumDict, map[int]int, error) {
 	enumMappings := make(map[int]enumDict)
 	enumDefaultValueMappings := make(map[int]int)
