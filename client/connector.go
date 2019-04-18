@@ -469,7 +469,7 @@ func (c *connector) enumDictPath(tableName, columnName string) string {
 	return fmt.Sprintf("%s/%s/columns/%s/enum-cases", c.listTablesPath(), tableName, columnName)
 }
 
-// FetchTableSchema fetches table schemas from ares.
+// SetTableSchema fetches table schemas from ares.
 func (u *UpsertBatchBuilderImpl) SetTableSchema(table metaCom.Table, enumMappings map[int]enumDict, enumDefaultValueMappings map[int]int) *TableSchema {
 	tableName := table.Name
 	columnDict := make(map[string]int)
