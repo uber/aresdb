@@ -57,6 +57,10 @@ type Column struct {
 	// Whether disable enum cases auto expansion.
 	DisableAutoExpand bool `json:"disableAutoExpand,omitempty"`
 
+	// EnumCases contains enum cases created/expanded by user
+	// only when disableAutoExpand flag is true
+	EnumCases []string `json:"enumCases,omitempty"`
+
 	// Mutable column configs.
 	Config ColumnConfig `json:"config,omitempty"`
 

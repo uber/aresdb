@@ -787,4 +787,104 @@ var _ = ginkgo.Describe("Validator", func() {
 		err := validator.Validate()
 		Ω(err).ShouldNot(BeNil())
 	})
+
+	ginkgo.It("should fail when enum cases are defined for enum column with auto expand enabled", func() {
+		table1 := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Uint32",
+				},
+				{
+					Name:              "col2",
+					Type:              "SmallEnum",
+					DisableAutoExpand: false,
+					EnumCases:         []string{"test"},
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+			Version:           0,
+		}
+
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table1)
+		err := validator.Validate()
+		Ω(err).ShouldNot(MatchError(ErrEnumCasesNotSupported))
+	})
+
+	ginkgo.It("should fail when enum cases are duplicate", func() {
+		table1 := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Uint32",
+				},
+				{
+					Name:              "col2",
+					Type:              "SmallEnum",
+					DisableAutoExpand: true,
+					CaseInsensitive:   true,
+					EnumCases:         []string{"test", "TEST"},
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+			Version:           0,
+		}
+
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table1)
+		err := validator.Validate()
+		Ω(err).ShouldNot(MatchError(ErrDuplicateEnumCases))
+	})
+
+	ginkgo.It("should fail when old enum cases are modified", func() {
+		table1 := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Uint32",
+				},
+				{
+					Name:              "col2",
+					Type:              "SmallEnum",
+					DisableAutoExpand: true,
+					EnumCases:         []string{"a"},
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+			Version:           0,
+		}
+
+		table2 := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Uint32",
+				},
+				{
+					Name:              "col2",
+					Type:              "SmallEnum",
+					DisableAutoExpand: true,
+					CaseInsensitive:   true,
+					EnumCases:         []string{"b"},
+				},
+			},
+			PrimaryKeyColumns: []int{1},
+			IsFactTable:       true,
+			Version:           0,
+		}
+
+		validator := NewTableSchameValidator()
+		validator.SetOldTable(table1)
+		validator.SetNewTable(table2)
+		err := validator.Validate()
+		Ω(err).ShouldNot(MatchError(ErrIllegalChangeToEnumCases))
+	})
 })

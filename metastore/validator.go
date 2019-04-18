@@ -7,6 +7,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	"gopkg.in/validator.v2"
 	"reflect"
+	"strings"
 )
 
 // TableSchemaValidator validates it a new table schema is valid, given existing schema
@@ -96,6 +97,23 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		// time column does not allow hll config
 		if table.IsFactTable && columnID == 0 && column.HLLConfig.IsHLLColumn {
 			return ErrTimeColumnDoesNotAllowHLLConfig
+		}
+
+		// validate enum case
+		if len(column.EnumCases) > 0 {
+			if column.DisableAutoExpand {
+				return ErrEnumCasesNotSupported
+			}
+			enumCaseSet := make(map[string]struct{})
+			for _, enumCase := range column.EnumCases {
+				if column.CaseInsensitive {
+					enumCase = strings.ToLower(enumCase)
+				}
+				if _, exist := enumCaseSet[enumCase]; exist {
+					return ErrDuplicateEnumCases
+				}
+				enumCaseSet[enumCase] = struct{}{}
+			}
 		}
 
 		if column.DefaultValue != nil {
@@ -206,6 +224,23 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 			oldCol.DisableAutoExpand != newCol.DisableAutoExpand ||
 			oldCol.HLLConfig != newCol.HLLConfig {
 			return ErrSchemaUpdateNotAllowed
+		}
+
+		// check enum case change
+		if len(newCol.EnumCases) < len(oldCol.EnumCases) {
+			return ErrIllegalChangeToEnumCases
+		}
+		for i, enumCase := range newCol.EnumCases {
+			if i < len(oldCol.EnumCases) {
+				oldEnumCase := oldCol.EnumCases[i]
+				if oldCol.CaseInsensitive {
+					oldEnumCase = strings.ToLower(oldEnumCase)
+					enumCase = strings.ToLower(enumCase)
+				}
+				if oldEnumCase != enumCase {
+					return ErrIllegalChangeToEnumCases
+				}
+			}
 		}
 	}
 

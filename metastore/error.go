@@ -79,4 +79,7 @@ var (
 	ErrHLLColumnDoesNotAllowDefaultValue = errors.New("hll column does not allow default value")
 	ErrInvalidTableBatchSize             = errors.New("Table batch size should be larger than zero")
 	ErrInvalidPrimaryKeyBucketSize       = errors.New("Table primary key bucket size should be larger than zero")
+	ErrEnumCasesNotSupported             = errors.New("Enum cases only supported for column with enum auto expand disabled")
+	ErrDuplicateEnumCases                = errors.New("Enum cases must be unique")
+	ErrIllegalChangeToEnumCases          = errors.New("Illegae change to enum cases")
 )
