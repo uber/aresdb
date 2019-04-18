@@ -230,16 +230,14 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 		if len(newCol.EnumCases) < len(oldCol.EnumCases) {
 			return ErrIllegalChangeToEnumCases
 		}
-		for i, enumCase := range newCol.EnumCases {
-			if i < len(oldCol.EnumCases) {
-				oldEnumCase := oldCol.EnumCases[i]
-				if oldCol.CaseInsensitive {
-					oldEnumCase = strings.ToLower(oldEnumCase)
-					enumCase = strings.ToLower(enumCase)
-				}
-				if oldEnumCase != enumCase {
-					return ErrIllegalChangeToEnumCases
-				}
+		for i, oldEnumCase := range oldCol.EnumCases {
+			newEnumCase := newCol.EnumCases[i]
+			if oldCol.CaseInsensitive {
+				oldEnumCase = strings.ToLower(oldEnumCase)
+				newEnumCase = strings.ToLower(newEnumCase)
+			}
+			if oldEnumCase != newEnumCase {
+				return ErrIllegalChangeToEnumCases
 			}
 		}
 	}
