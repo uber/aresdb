@@ -20,8 +20,85 @@ type shellContext struct {
 	client http.Client
 }
 
+// script global context
+var ctx shellContext
+
+func show(c *ishell.Context) {
+	if len(c.Args) != 1 {
+		c.Println(color.New(color.FgRed).Println("invalid argument for show command"))
+	} else {
+		arg := c.Args[0]
+		switch arg {
+		case "tables":
+			if ctx.clusterMode {
+				// TODO: @shz implement cluster mode with gateway.controller
+				c.Println("Not Implemented yet")
+			} else {
+				// local mode
+				resp, err := http.Get(fmt.Sprintf("http://%s:%d/schema/tables", ctx.host, ctx.port))
+				if err != nil {
+					c.Println(color.New(color.FgRed).Sprintf(err.Error()))
+					return
+				}
+				if resp.StatusCode != http.StatusOK {
+					c.Println(color.New(color.FgRed).Sprintf("Got code %d from aresdb server", resp.StatusCode))
+					return
+				}
+				var tables []string
+				var data []byte
+				data, err = ioutil.ReadAll(resp.Body)
+				if err != nil {
+					c.Println(color.New(color.FgRed).Sprintf("error reading response: %s", err))
+					return
+				}
+				err = json.Unmarshal(data, &tables)
+				if err != nil {
+					c.Println(color.New(color.FgRed).Sprintf("error decoding response: %s", err))
+					return
+				}
+				c.Println(strings.Join(tables, " "))
+			}
+		case "configs":
+			c.Printf("%+v\n",ctx)
+		}
+	}
+}
+
+func aql(c *ishell.Context) {
+	c.Println("aql query ending with semicolon ';':")
+	lines := c.ReadMultiLines(";")
+	lines = strings.Trim(lines, ";")
+	resp, err := http.Post(fmt.Sprintf("http://%s:%d/query/aql", ctx.host, ctx.port), contentType, strings.NewReader(lines))
+	if err != nil {
+		c.Println(color.New(color.FgRed).Sprintf(err.Error()))
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		c.Println(color.New(color.FgRed).Sprintf("Got code %d from aresdb server", resp.StatusCode))
+		return
+	}
+	var data []byte
+	data, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		c.Println(color.New(color.FgRed).Sprintf("error reading response: %s", err))
+		return
+	}
+
+	var result map[string]interface{}
+	err = json.Unmarshal(data, &result)
+	if err != nil {
+		c.Println(color.New(color.FgRed).Sprintf("error decoding response: %s", err))
+		return
+	}
+	data, err = json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		c.Println(color.New(color.FgRed).Sprintf("error formatting response: %s", err))
+		return
+	}
+	c.ShowPaged(string(data))
+}
+
 func Execute() {
-	var ctx shellContext
 
 	// ishell shell
 	shell := ishell.New()
@@ -30,47 +107,7 @@ func Execute() {
 	shell.AddCmd(&ishell.Cmd{
 		Name: "show",
 		Help: "`show tables` will show all tables in current cluster",
-		Func: func(c *ishell.Context) {
-			hint := "did you mean `show tables`?"
-			if len(c.Args) != 1 {
-				c.Println(hint)
-			} else {
-				arg := c.Args[0]
-				switch arg {
-				case "tables":
-					if ctx.clusterMode {
-						// TODO: @shz implement cluster mode with gateway.controller
-						c.Println("Not Implemented yet")
-					} else {
-						// local mode
-						resp, err := http.Get(fmt.Sprintf("http://%s:%d/schema/tables", ctx.host, ctx.port))
-						if err != nil {
-							c.Println(color.New(color.FgRed).Sprintf(err.Error()))
-							return
-						}
-						if resp.StatusCode != http.StatusOK {
-							c.Println(color.New(color.FgRed).Sprintf("Got code %d from aresdb server", resp.StatusCode))
-							return
-						}
-						var tables []string
-						var data []byte
-						data, err = ioutil.ReadAll(resp.Body)
-						if err != nil {
-							c.Println(color.New(color.FgRed).Sprintf("error reading response: %s", err))
-							return
-						}
-						err = json.Unmarshal(data, &tables)
-						if err != nil {
-							c.Println(color.New(color.FgRed).Sprintf("error decoding response: %s", err))
-							return
-						}
-						c.Println(strings.Join(tables, " "))
-					}
-				case "configs":
-					c.Printf("%+v\n",ctx)
-				}
-			}
-		},
+		Func: show,
 		Completer: func(args []string) []string {
 			return []string{"tables", "configs"}
 		},
@@ -79,39 +116,7 @@ func Execute() {
 	shell.AddCmd(&ishell.Cmd{
 		Name: "aql",
 		Help: "start a new aql query",
-		Func: func(c *ishell.Context) {
-			c.Println("sql query ending with semicolon ';':")
-			lines := c.ReadMultiLines(";")
-			lines = strings.Trim(lines, ";")
-			resp, err := http.Post(fmt.Sprintf("http://%s:%d/query/aql", ctx.host, ctx.port), contentType, strings.NewReader(lines))
-			if err != nil {
-				c.Println(color.New(color.FgRed).Sprintf(err.Error()))
-				return
-			}
-			if resp.StatusCode != http.StatusOK {
-				c.Println(color.New(color.FgRed).Sprintf("Got code %d from aresdb server", resp.StatusCode))
-				return
-			}
-			var data []byte
-			data, err = ioutil.ReadAll(resp.Body)
-			if err != nil {
-				c.Println(color.New(color.FgRed).Sprintf("error reading response: %s", err))
-				return
-			}
-
-			var result map[string]interface{}
-			err = json.Unmarshal(data, &result)
-			if err != nil {
-				c.Println(color.New(color.FgRed).Sprintf("error decoding response: %s", err))
-				return
-			}
-			data, err = json.MarshalIndent(result, "", "  ")
-			if err != nil {
-				c.Println(color.New(color.FgRed).Sprintf("error formatting response: %s", err))
-				return
-			}
-			c.ShowPaged(string(data))
-		},
+		Func: aql,
 	})
 
 	//TODO: add sql cmd
@@ -155,7 +160,6 @@ func Execute() {
 	cmd.Flags().BoolP("cluster", "c", false, "whether to use cluster mode")
 	cmd.Execute()
 }
-
 
 
 func main() {
