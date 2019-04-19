@@ -21,6 +21,9 @@ import (
 	"regexp"
 	"strings"
 
+	"io/ioutil"
+	"time"
+
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/common"
@@ -28,8 +31,6 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"io/ioutil"
-	"time"
 )
 
 var _ = ginkgo.Describe("AresDB connector", func() {

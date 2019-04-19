@@ -16,21 +16,20 @@ package client
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
+
+	"strconv"
+	"strings"
+	"unsafe"
 
 	"github.com/uber-go/tally"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"strconv"
-	"strings"
-	"unsafe"
 )
 
 const (
@@ -56,10 +55,6 @@ type Connector interface {
 
 // UpsertBatchBuilder is an interface of upsertBatch on client side
 type UpsertBatchBuilder interface {
-	// SetTableSchema sets table schema.
-	SetTableSchema(table metaCom.Table, enumMappings map[int]enumDict, enumDefaultValueMappings map[int]int) *TableSchema
-
-	// PrepareUpsertBatch prepares the upsert batch for upsert, returns upsertBatch byte array, number of rows in upsert batch and error.
 	PrepareUpsertBatch(tableName string, columnNames []string, updateModes []memCom.ColumnUpdateMode, rows []Row) ([]byte, int, error)
 }
 
@@ -81,28 +76,17 @@ type enumDict map[string]int
 type UpsertBatchBuilderImpl struct {
 	sync.RWMutex
 
-	cfg         ConnectorConfig
-	logger      *zap.SugaredLogger
-	metricScope tally.Scope
-
-	// mapping from table name to table schema
-	schemas map[string]*TableSchema
-	// map from table to columnID to enum dictionary
-	// use columnID instead of name since column name can be reused
-	// table names can be reused as well, deleting and adding a new table
-	// will anyway requires job restart
-	enumMappings map[string]map[int]enumDict
-
-	// map from table to columnID to default enum id. Initialized during bootstrap
-	// and will be set only if default value is non nil.
-	enumDefaultValueMappings map[string]map[int]int
+	logger        *zap.SugaredLogger
+	metricScope   tally.Scope
+	schemaHandler *CachedSchemaHandler
 }
 
 // connector is the ares connector implementation
 type connector struct {
-	*UpsertBatchBuilderImpl
-
-	httpClient http.Client
+	cfg                ConnectorConfig
+	httpClient         http.Client
+	upsertBatchBuilder UpsertBatchBuilder
+	schemaHandler      *CachedSchemaHandler
 }
 
 // ConnectorConfig holds the configurations for ares Connector.
@@ -128,43 +112,28 @@ func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope t
 		cfg.Timeout = defaultRequestTimeout
 	}
 
-	upsertBatchBuilderImpl := UpsertBatchBuilderImpl{
-		cfg:                      cfg,
-		logger:                   logger,
-		metricScope:              metricScope,
-		schemas:                  make(map[string]*TableSchema),
-		enumMappings:             make(map[string]map[int]enumDict),
-		enumDefaultValueMappings: make(map[string]map[int]int),
-	}
-	connector := &connector{
-		UpsertBatchBuilderImpl: &upsertBatchBuilderImpl,
+	httpClient := http.Client{
+		Timeout: time.Duration(cfg.Timeout) * time.Second,
 	}
 
-	connector.initHTTPClient()
-
-	err := connector.fetchAllTables()
+	httpSchemaFetcher := NewHttpSchemaFetcher(httpClient, cfg.Address, metricScope)
+	cachedSchemaHandler := NewCachedSchemaHandler(logger, metricScope, httpSchemaFetcher)
+	err := cachedSchemaHandler.Start(cfg.SchemaRefreshInterval)
 	if err != nil {
 		return nil, err
 	}
 
-	go func(refreshInterval int) {
-		ticks := time.Tick(time.Duration(refreshInterval) * time.Second)
-		for range ticks {
-			err = connector.fetchAllTables()
-			if err != nil {
-				logger.With(
-					"error", err.Error()).Errorf("Failed to fetch table schema")
-			}
-		}
-	}(cfg.SchemaRefreshInterval)
-
-	return connector, nil
-}
-
-func (c *connector) initHTTPClient() {
-	c.httpClient = http.Client{
-		Timeout: time.Duration(c.cfg.Timeout) * time.Second,
+	connector := &connector{
+		cfg:        cfg,
+		httpClient: httpClient,
+		upsertBatchBuilder: &UpsertBatchBuilderImpl{
+			logger:        logger,
+			metricScope:   metricScope,
+			schemaHandler: cachedSchemaHandler,
+		},
+		schemaHandler: cachedSchemaHandler,
 	}
+	return connector, nil
 }
 
 // Insert inserts a batch of rows into ares
@@ -245,26 +214,26 @@ func computeHLLValue(dataType memCom.DataType, value interface{}) (uint32, error
 // prepareUpsertBatch prepares the upsert batch for upsert,
 // returns upsertBatch byte array, number of rows in upsert batch and error.
 func (c *connector) prepareUpsertBatch(tableName string, columnNames []string, updateModes []memCom.ColumnUpdateMode, rows []Row) ([]byte, int, error) {
-	schema, err := c.getTableSchema(tableName)
+	schema, err := c.schemaHandler.FetchSchema(tableName)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// return error if primary key is missing
-	if err = c.checkPrimaryKeys(schema, columnNames); err != nil {
+	if err = checkPrimaryKeys(schema, columnNames); err != nil {
 		return nil, 0, err
 	}
 
 	// return error if time column is missing
-	if err = c.checkTimeColumnExistence(schema, columnNames); err != nil {
+	if err = checkTimeColumnExistence(schema, columnNames); err != nil {
 		return nil, 0, err
 	}
 
-	return c.PrepareUpsertBatch(tableName, columnNames, updateModes, rows)
+	return c.upsertBatchBuilder.PrepareUpsertBatch(tableName, columnNames, updateModes, rows)
 }
 
 // checkPrimaryKeys checks whether primary key is missing
-func (u *UpsertBatchBuilderImpl) checkPrimaryKeys(schema *TableSchema, columnNames []string) error {
+func checkPrimaryKeys(schema *TableSchema, columnNames []string) error {
 	for _, columnID := range schema.Table.PrimaryKeyColumns {
 		pkColumn := schema.Table.Columns[columnID]
 		index := utils.IndexOfStr(columnNames, pkColumn.Name)
@@ -276,7 +245,7 @@ func (u *UpsertBatchBuilderImpl) checkPrimaryKeys(schema *TableSchema, columnNam
 }
 
 // checkTimeColumnExistence checks if time column is missing for fact table
-func (u *UpsertBatchBuilderImpl) checkTimeColumnExistence(schema *TableSchema, columnNames []string) error {
+func checkTimeColumnExistence(schema *TableSchema, columnNames []string) error {
 	if !schema.Table.IsFactTable || schema.Table.Config.AllowMissingEventTime {
 		return nil
 	}
@@ -294,203 +263,51 @@ func (u *UpsertBatchBuilderImpl) checkTimeColumnExistence(schema *TableSchema, c
 	return utils.StackError(nil, "Missing time column")
 }
 
-func (u *UpsertBatchBuilderImpl) translateEnum(tableName string, columnID int, enumCase string, caseInsensitive bool) (enumID int, err error) {
-	u.RLock()
-	// here it already make sure the enum dictionary exists in cache
-	enumID, ok := u.enumMappings[tableName][columnID][enumCase]
-	u.RUnlock()
-	if !ok {
-		u.metricScope.Tagged(
-			map[string]string{
-				"TableName": tableName,
-				"ColumnID":  strconv.Itoa(columnID),
-			},
-		).Counter("new_enum_case_rows_ignored").Inc(int64(1))
-		if defaultValue, ok := u.enumDefaultValueMappings[tableName][columnID]; ok {
-			return defaultValue, nil
-		}
-		return -1, nil
-	}
-	return enumID, nil
-}
-
-func (c *connector) getTableSchema(tableName string) (*TableSchema, error) {
-	c.RLock()
-	schema, exist := c.schemas[tableName]
-	c.RUnlock()
-	if exist {
-		return schema, nil
-	}
-
-	return c.fetchTableSchema(tableName)
-}
-
-// fetchAllTables fetches all table schemas from ares,
-// this is called during connector initialization.
-func (c *connector) fetchAllTables() error {
-	var tables []string
-	resp, err := c.httpClient.Get(c.listTablesPath())
-	err = c.readJSONResponse(resp, err, &tables)
-	if err != nil {
-		return utils.StackError(err, "Failed to fetch table list")
-	}
-
-	for _, tableName := range tables {
-		_, err := c.fetchTableSchema(tableName)
-		if err != nil {
-			c.metricScope.Tagged(map[string]string{
-				"table": tableName,
-			}).Counter("err_fetch_table").Inc(1)
-			return utils.StackError(err, "Failed to fetch schema error")
-		}
-	}
-	return nil
-}
-
-// fetchEnumDicts fetches all enum dictionaries for enum columns.
-// TODO: this part needs to be cleaned up once schema including enum is implemented
-func (c *connector) fetchEnumDicts(table metaCom.Table) (map[int]enumDict, map[int]int, error) {
-	enumMappings := make(map[int]enumDict)
-	enumDefaultValueMappings := make(map[int]int)
-	for columnID, column := range table.Columns {
-		if column.Deleted {
-			continue
-		}
-		enumMappings[columnID] = make(enumDict)
-		caseInsensitive := column.CaseInsensitive
-		var defValuePtr *string
-
-		if column.DefaultValue != nil {
-			var defValue = *column.DefaultValue
-			if caseInsensitive {
-				defValue = strings.ToLower(defValue)
-			}
-			defValuePtr = &defValue
-		}
-
-		if column.IsEnumColumn() && column.DisableAutoExpand {
-			enumCases, err := c.fetchEnumDict(table.Name, column.Name)
-			if err == nil {
-				for enumID, enumCase := range enumCases {
-					// Convert to lower case for comparison during ingestion.
-					if caseInsensitive {
-						enumCase = strings.ToLower(enumCase)
-					}
-					// all mapping should be pre created
-					enumMappings[columnID][enumCase] = enumID
-
-					if defValuePtr != nil {
-						if *defValuePtr == enumCase {
-							enumDefaultValueMappings[columnID] = enumID
-						}
-					}
-				}
-			} else {
-				c.metricScope.Tagged(map[string]string{
-					"table":    table.Name,
-					"columnID": strconv.Itoa(columnID),
-				}).Counter("err_fetch_enum_dict").Inc(1)
-				return nil, nil, utils.StackError(err, "Failed to fetch enum cases for table: %s, column: %d", table.Name, columnID)
-			}
-		}
-	}
-	return enumMappings, enumDefaultValueMappings, nil
-}
-
-func (c *connector) fetchEnumDict(tableName, columnName string) ([]string, error) {
-	var enumDictReponse []string
-
-	resp, err := c.httpClient.Get(c.enumDictPath(tableName, columnName))
-
-	err = c.readJSONResponse(resp, err, &enumDictReponse)
-
-	return enumDictReponse, err
-}
-
-func (c *connector) fetchTableSchema(tableName string) (*TableSchema, error) {
-	var table metaCom.Table
-
-	resp, err := c.httpClient.Get(c.tablePath(tableName))
-	err = c.readJSONResponse(resp, err, &table)
-	if err != nil {
-		return nil, err
-	}
-	enumMappings, enumDefaultValueMappings, err := c.fetchEnumDicts(table)
-	if err != nil {
-		return nil, err
-	}
-	return c.SetTableSchema(table, enumMappings, enumDefaultValueMappings), nil
-}
-
-func (c *connector) fetchEnumCases(tableName, columnName string) ([]string, error) {
-	var enumDictReponse []string
-
-	resp, err := c.httpClient.Get(c.enumDictPath(tableName, columnName))
-
-	err = c.readJSONResponse(resp, err, &enumDictReponse)
-
-	return enumDictReponse, err
-}
-
-func (c *connector) readJSONResponse(response *http.Response, err error, data interface{}) error {
-	if err != nil {
-		return utils.StackError(err, "Failed call remote endpoint")
-	}
-
-	respBytes, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return utils.StackError(err, "Failed to read response body")
-	}
-
-	if response.StatusCode != http.StatusOK {
-		return utils.StackError(nil, "Received error response %d:%s from remote endpoint", response.StatusCode, respBytes)
-	}
-
-	err = json.Unmarshal(respBytes, data)
-	if err != nil {
-		return utils.StackError(err, "Failed to unmarshal json")
-	}
-	return nil
-}
-
-func (c *connector) listTablesPath() string {
-	return fmt.Sprintf("http://%s/schema/tables", c.cfg.Address)
-}
-
-func (c *connector) tablePath(tableName string) string {
-	return fmt.Sprintf("%s/%s", c.listTablesPath(), tableName)
-}
-
 func (c *connector) dataPath(tableName string, shard int) string {
 	return fmt.Sprintf("http://%s/data/%s/%d", c.cfg.Address, tableName, shard)
 }
 
-func (c *connector) enumDictPath(tableName, columnName string) string {
-	return fmt.Sprintf("%s/%s/columns/%s/enum-cases", c.listTablesPath(), tableName, columnName)
-}
+func (u *UpsertBatchBuilderImpl) prepareEnumCases(tableName, columnName string, colIndex, columnID int, rows []Row, abandonRows map[int]struct{}, caseInsensitive bool, disableAutoExpand bool) error {
+	enumCaseSet := make(map[string]struct{})
+	for rowIndex, row := range rows {
+		if _, exist := abandonRows[rowIndex]; exist {
+			continue
+		}
+		value := row[colIndex]
 
-// SetTableSchema fetches table schemas from ares.
-func (u *UpsertBatchBuilderImpl) SetTableSchema(table metaCom.Table, enumMappings map[int]enumDict, enumDefaultValueMappings map[int]int) *TableSchema {
-	tableName := table.Name
-	columnDict := make(map[string]int)
-	for columnID, column := range table.Columns {
-		if !column.Deleted {
-			columnDict[column.Name] = columnID
+		if value == nil {
+			continue
+		}
+
+		if enumCase, ok := value.(string); ok {
+			if caseInsensitive {
+				enumCase = strings.ToLower(enumCase)
+			}
+			enumCaseSet[enumCase] = struct{}{}
+		} else {
+			u.logger.With(
+				"name", "prepareEnumCases",
+				"error", "Enum value should be string",
+				"table", tableName,
+				"columnID", columnID,
+				"value", value).Debug("Enum value is not string")
+			u.metricScope.Tagged(map[string]string{"table": tableName, "columnID": strconv.Itoa(columnID)}).
+				Counter("abandoned_rows").Inc(1)
+			abandonRows[rowIndex] = struct{}{}
 		}
 	}
 
-	schema := &TableSchema{
-		Table:      &table,
-		ColumnDict: columnDict,
+	if len(enumCaseSet) > 0 {
+		enumCases := make([]string, 0, len(enumCaseSet))
+		for enumCase := range enumCaseSet {
+			enumCases = append(enumCases, enumCase)
+		}
+		err := u.schemaHandler.PrepareEnumCases(tableName, columnName, enumCases)
+		if err != nil {
+			return err
+		}
 	}
-
-	u.Lock()
-	defer u.Unlock()
-	u.schemas[tableName] = schema
-	u.enumMappings[tableName] = enumMappings
-	u.enumDefaultValueMappings[tableName] = enumDefaultValueMappings
-
-	return schema
+	return nil
 }
 
 // PrepareUpsertBatch prepares the upsert batch for upsert,
@@ -500,25 +317,30 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 	var err error
 	upsertBatchBuilder := memCom.NewUpsertBatchBuilder()
 
+	schema, err := u.schemaHandler.FetchSchema(tableName)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	// use abandonRows to record abandoned row index due to invalid data
-	abandonRows := map[int]interface{}{}
+	abandonRows := make(map[int]struct{})
 
 	for colIndex, columnName := range columnNames {
-		columnID, exist := u.schemas[tableName].ColumnDict[columnName]
+		columnID, exist := schema.ColumnDict[columnName]
 		if !exist {
 			continue
 		}
-		column := u.schemas[tableName].Table.Columns[columnID]
+		column := schema.Table.Columns[columnID]
 
 		// following conditions only overwrite is supported:
 		// 1. dimension table (TODO: might support min/max in the future if needed)
 		// 2. primary key column
 		// 3. archiving sort column
 		// 4. data type not in uint8, int8, uint16, int16, uint32, int32, float32
-		if (!u.schemas[tableName].Table.IsFactTable ||
-			utils.IndexOfInt(u.schemas[tableName].Table.PrimaryKeyColumns, columnID) >= 0 ||
-			utils.IndexOfInt(u.schemas[tableName].Table.ArchivingSortColumns, columnID) >= 0 ||
-			u.schemas[tableName].Table.Columns[columnID].IsOverwriteOnlyDataType()) &&
+		if (!schema.Table.IsFactTable ||
+			utils.IndexOfInt(schema.Table.PrimaryKeyColumns, columnID) >= 0 ||
+			utils.IndexOfInt(schema.Table.ArchivingSortColumns, columnID) >= 0 ||
+			schema.Table.Columns[columnID].IsOverwriteOnlyDataType()) &&
 			updateModes[colIndex] > memCom.UpdateForceOverwrite {
 			return nil, 0, utils.StackError(nil, "column %s only supports overwrite", columnName)
 		}
@@ -526,6 +348,12 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 		dataType := memCom.DataTypeForColumn(column)
 		if err = upsertBatchBuilder.AddColumnWithUpdateMode(columnID, dataType, updateModes[colIndex]); err != nil {
 			return nil, 0, err
+		}
+
+		if column.IsEnumColumn() {
+			if err = u.prepareEnumCases(tableName, columnName, colIndex, columnID, rows, abandonRows, column.CaseInsensitive, column.DisableAutoExpand); err != nil {
+				return nil, 0, err
+			}
 		}
 	}
 
@@ -537,16 +365,16 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 
 		upsertBatchColumnIndex := 0
 		for inputColIndex, columnName := range columnNames {
-			columnID, exist := u.schemas[tableName].ColumnDict[columnName]
+			columnID, exist := schema.ColumnDict[columnName]
 			if !exist {
 				continue
 			}
-			column := u.schemas[tableName].Table.Columns[columnID]
+			column := schema.Table.Columns[columnID]
 
 			value := row[inputColIndex]
 
 			// prevent primary key being nil
-			if value == nil && utils.IndexOfInt(u.schemas[tableName].Table.PrimaryKeyColumns, columnID) >= 0 {
+			if value == nil && utils.IndexOfInt(schema.Table.PrimaryKeyColumns, columnID) >= 0 {
 				upsertBatchBuilder.RemoveRow()
 				u.logger.With(
 					"name", "PrepareUpsertBatch",
@@ -557,7 +385,7 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 			}
 
 			// skip rows if time column is nil for fact table
-			if value == nil && u.schemas[tableName].Table.IsFactTable && !u.schemas[tableName].Table.Config.AllowMissingEventTime && columnID == 0 {
+			if value == nil && schema.Table.IsFactTable && !schema.Table.Config.AllowMissingEventTime && columnID == 0 {
 				upsertBatchBuilder.RemoveRow()
 				u.logger.With(
 					"name", "PrepareUpsertBatch",
@@ -567,38 +395,22 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 				break
 			}
 
-			if column.IsEnumColumn() && value != nil {
-				enumCase, ok := value.(string)
-				if !ok {
+			if column.IsEnumColumn() {
+				value, err = u.schemaHandler.TranslateEnum(tableName, columnID, value, column.CaseInsensitive)
+				if err != nil {
 					upsertBatchBuilder.RemoveRow()
 					u.logger.With(
-						"name", "PrepareUpsertBatch",
+						"name", "prepareUpsertBatch",
+						"error", err.Error(),
 						"table", tableName,
 						"columnID", columnID,
-						"value", value).Error("Enum value should be string")
+						"value", value).Error("Failed to translate enum")
 					break
 				}
-				if column.CaseInsensitive {
-					enumCase = strings.ToLower(enumCase)
-				}
-				value = enumCase
-				if column.DisableAutoExpand {
-					value, err = u.translateEnum(tableName, columnID, enumCase, column.CaseInsensitive)
-					if err != nil {
-						upsertBatchBuilder.RemoveRow()
-						u.logger.With(
-							"name", "PrepareUpsertBatch",
-							"error", err.Error(),
-							"table", tableName,
-							"columnID", columnID,
-							"value", value).Error("Failed to translate enum")
-						break
-					}
 
-					// If enum value is not found from predefined enum cases and default value is not set, we set it to nil.
-					if value == -1 {
-						value = nil
-					}
+				// If enum value is not found from predefined enum cases and default value is not set, we set it to nil.
+				if value == -1 {
+					value = nil
 				}
 			}
 
