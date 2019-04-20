@@ -51,8 +51,11 @@ var _ = Describe("driver", func() {
 		Scope:  tally.NoopScope,
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
-	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
+	sinkConfig := config.SinkConfig{
+		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
+	}
+	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+		"dev01": sinkConfig,
 	}
 
 	rootPath := tools.GetModulePath("")
@@ -166,8 +169,11 @@ var _ = Describe("driver", func() {
 			}))
 		testServer.Start()
 		address = testServer.Listener.Addr().String()
-		serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-			"dev01": client.ConnectorConfig{Address: address},
+		sinkConfig := config.SinkConfig{
+			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
+		}
+		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+			"dev01": sinkConfig,
 		}
 	})
 

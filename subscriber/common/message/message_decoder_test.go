@@ -55,8 +55,11 @@ var _ = Describe("message decoder tests", func() {
 			Scope:  tally.NoopScope,
 		}
 		serviceConfig.ActiveJobs = []string{"job1"}
-		serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-			"dev01": client.ConnectorConfig{Address: "localhost:8888"},
+		sinkConfig := config.SinkConfig{
+			AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
+		}
+		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+			"dev01": sinkConfig,
 		}
 
 		rootPath := tools.GetModulePath("")

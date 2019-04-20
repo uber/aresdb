@@ -69,8 +69,8 @@ type TableSchema struct {
 	ColumnDict map[string]int
 }
 
-// enumDict maps from enum value to enumID
-type enumDict map[string]int
+// EnumDict maps from enum value to enumID
+type EnumDict map[string]int
 
 // UpsertBatchBuilderImpl implements interface UpsertBatchBuilder
 type UpsertBatchBuilderImpl struct {

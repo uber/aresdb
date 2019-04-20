@@ -22,8 +22,8 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/rules"
+	"github.com/uber/aresdb/subscriber/common/sink"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
@@ -39,9 +39,13 @@ var _ = Describe("message_parser", func() {
 		Scope:  tally.NoopScope,
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
-	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
+	sinkConfig := config.SinkConfig{
+		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
 	}
+	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+		"dev01": sinkConfig,
+	}
+
 	jobConfigs := make(rules.JobConfigs)
 	serviceConfig.Environment.RuntimeEnvironment = "test"
 	serviceConfig.Environment.Zone = "local"
@@ -71,10 +75,10 @@ var _ = Describe("message_parser", func() {
 			"project": "ares-subscriber",
 		}
 
-		dst := database.Destination{
+		dst := sink.Destination{
 			Table:           "table",
 			ColumnNames:     []string{"project"},
-			PrimaryKeys:     map[string]interface{}{"1": "project"},
+			PrimaryKeys:     map[string]int{"project": 1},
 			AresUpdateModes: []memCom.ColumnUpdateMode{memCom.UpdateOverwriteNotNull},
 		}
 		mp.Transformations = map[string]*rules.TransformationConfig{

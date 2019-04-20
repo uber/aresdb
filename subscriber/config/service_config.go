@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
@@ -73,16 +74,16 @@ type ServiceConfig struct {
 	Scope       tally.Scope
 	Config      cfgfx.Provider
 
-	Service            string                            `yaml:"service.name"`
-	BackendPort        int                               `yaml:"rest.http.address"`
-	AresNSConfig       AresNSConfig                      `yaml:"ares"`
-	JobNSConfig        JobNSConfig                       `yaml:"jobs"`
-	ActiveAresClusters map[string]client.ConnectorConfig `yaml:"-"`
-	ActiveJobs         []string                          `yaml:"-"`
-	ControllerConfig   *ControllerConfig                 `yaml:"controller"`
-	ZooKeeperConfig    ZooKeeperConfig                   `yaml:"zookeeper"`
-	EtcdConfig         *etcd.Configuration               `yaml:"etcd"`
-	HeartbeatConfig    *HeartBeatConfig                  `yaml:"heartbeat"`
+	Service            string                `yaml:"service.name"`
+	BackendPort        int                   `yaml:"rest.http.address"`
+	AresNSConfig       AresNSConfig          `yaml:"ares"`
+	JobNSConfig        JobNSConfig           `yaml:"jobs"`
+	ActiveAresClusters map[string]SinkConfig `yaml:"-"`
+	ActiveJobs         []string              `yaml:"-"`
+	ControllerConfig   *ControllerConfig     `yaml:"controller"`
+	ZooKeeperConfig    ZooKeeperConfig       `yaml:"zookeeper"`
+	EtcdConfig         *etcd.Configuration   `yaml:"etcd"`
+	HeartbeatConfig    *HeartBeatConfig      `yaml:"heartbeat"`
 }
 
 // HeartBeatConfig represents heartbeat config
@@ -93,10 +94,29 @@ type HeartBeatConfig struct {
 	CheckInterval *time.Duration `yaml:"checkInterval"`
 }
 
+// SinkConfig wraps sink configurations
+type SinkConfig struct {
+	// AresDBConnectorConfig defines aresDB client config
+	AresDBConnectorConfig client.ConnectorConfig `yaml:"aresDB"`
+	// KafkaProducerConfig defines Kafka producer config
+	KafkaProducerConfig KafkaProducerConfig `yaml:"kafkaProducer"`
+}
+
+// KafkaProducerConfig represents Kafka producer configuration
+type KafkaProducerConfig struct {
+	// Brokers defines a list of broker addresses separated by comma
+	Brokers string `yaml:"brokers"`
+	// RetryMax is the max number of times to retry sending a message (default 3).
+	RetryMax int `yaml:"retryMax"`
+	// TimeoutInMSec is the max duration the broker will wait
+	// the receipt of the number of RequiredAcks (defaults to 10 seconds)
+	TimeoutInSec int `yaml:"timeoutInSec"`
+}
+
 // AresNSConfig defines the mapping b/w ares namespace and its clusters
 type AresNSConfig struct {
-	AresNameSpaces map[string][]string               `yaml:"namespaces"`
-	AresClusters   map[string]client.ConnectorConfig `yaml:"clusters"`
+	AresNameSpaces map[string][]string   `yaml:"namespaces"`
+	AresClusters   map[string]SinkConfig `yaml:"clusters"`
 }
 
 // JobNSConfig defines the mapping b/w job namespace and its clusters
@@ -147,7 +167,7 @@ func NewServiceConfig(p Params) (Result, error) {
 		"application": p.Environment.ApplicationID,
 	})
 	serviceConfig.Config = p.Config
-	serviceConfig.ActiveAresClusters = make(map[string]client.ConnectorConfig)
+	serviceConfig.ActiveAresClusters = make(map[string]SinkConfig)
 
 	// Skip local job and aresCluster config if controller is enabled
 	if serviceConfig.ControllerConfig.Enable {

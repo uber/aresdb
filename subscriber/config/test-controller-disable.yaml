@@ -11,11 +11,13 @@ ares:
   clusters:
     clusters:
       dev-ares01:
-        address: "ares01:9000"
-        timeout: 20
+        aresDB:
+          address: "ares01:9000"
+          timeout: 20
       dev-ares02:
-        address: "ares02:9000"
-        timeout: 20
+        aresDB:
+          address: "ares02:9000"
+          timeout: 20
 
 # A list of jobs which are defined in config/jobs
 jobs:

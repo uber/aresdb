@@ -52,8 +52,11 @@ var _ = Describe("controller", func() {
 		ControllerConfig: &config.ControllerConfig{},
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
-	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-		"dev-ares01": client.ConnectorConfig{Address: "localhost:8888"},
+	sinkConfig := config.SinkConfig{
+		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
+	}
+	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+		"dev01": sinkConfig,
 	}
 
 	var testServer *httptest.Server
@@ -168,8 +171,11 @@ var _ = Describe("controller", func() {
 			}))
 		testServer.Start()
 		address = testServer.Listener.Addr().String()
-		serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-			"dev-ares01": client.ConnectorConfig{Address: address},
+		sinkConfig := config.SinkConfig{
+			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
+		}
+		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+			"dev01": sinkConfig,
 		}
 	})
 
