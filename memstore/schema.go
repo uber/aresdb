@@ -233,6 +233,16 @@ func (t *TableSchema) GetColumnDeletions() []bool {
 	return deletedByColumn
 }
 
+// GetColumnDeletions returns a boolean slice that indicates whether a column has non nil default value. Callers
+// need to hold a read lock.
+func (t *TableSchema) GetColumnNonNilDefault() []bool {
+	nonNilDefaultByColumn := make([]bool, len(t.Schema.Columns))
+	for columnID, column := range t.Schema.Columns {
+		nonNilDefaultByColumn[columnID] = column.DefaultValue != nil
+	}
+	return nonNilDefaultByColumn
+}
+
 // GetArchivingSortColumns makes a copy of the Schema.ArchivingSortColumns so
 // callers don't have to hold a read lock to access it.
 func (t *TableSchema) GetArchivingSortColumns() []int {

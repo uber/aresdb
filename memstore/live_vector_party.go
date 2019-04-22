@@ -20,12 +20,41 @@ import (
 	"github.com/uber/aresdb/utils"
 	"io"
 	"reflect"
+	"unsafe"
 )
 
 // cLiveVectorParty is the implementation of LiveVectorParty with c allocated memory
 // this vector party stores columns with fixed length data type
 type cLiveVectorParty struct {
 	cVectorParty
+}
+
+// SetBool implements SetBool in LiveVectorParty interface
+func (vp *cLiveVectorParty) SetBool((offset int,val bool, valid bool) {
+	vp.setValidity(offset, valid)
+	vp.values.SetBool(offset, val)
+	return
+}
+
+// SetBool implements SetValue in LiveVectorParty interface
+func (vp *cLiveVectorParty) SetValue(offset int, val unsafe.Pointer, valid bool) {
+	vp.setValidity(offset, valid)
+	if valid {
+		vp.values.SetValue(offset, val)
+	} else {
+		var zero [2]uint64
+		vp.values.SetValue(offset, unsafe.Pointer(&zero))
+	}
+}
+
+// SetGoValue implements SetGoValue in LiveVectorParty interface
+func (vp *cLiveVectorParty) SetGoValue(offset int, val common.GoDataValue, valid bool) {
+	panic("SetGoValue is not supported in cLiveVectorParty")
+}
+
+// GetValue implements GetValue in LiveVectorParty interface
+func (vp *cLiveVectorParty) GetValue(offset int) (unsafe.Pointer, bool) {
+	return vp.values.GetValue(offset), vp.GetValidity(offset)
 }
 
 // goLiveVectorParty is the implementation of LiveVectorParty with go allocated memory
@@ -57,18 +86,39 @@ func (vp *goLiveVectorParty) Allocate(hasCount bool) {
 
 // SetDataValue implements SetDataValue in VectorParty interface
 // liveVectorParty ignores countsUpdateMode or counts
-func (vp *goLiveVectorParty) SetDataValue(offset int, value common.DataValue, countsUpdateMode common.ValueCountsUpdateMode, counts ...uint32) {
+func (vp *goLiveVectorParty) SetDataValue(offset int, value common.DataValue,
+	countsUpdateMode common.ValueCountsUpdateMode, counts ...uint32) {
+	vp.SetGoValue(offset, value.GoVal, value.Valid)
+}
+
+// SetBool implements SetBool in LiveVectorParty interface
+func (vp *goLiveVectorParty) SetBool((offset int,val bool, valid bool) {
+	panic("SetBool is not supported in goLiveVectorParty")
+}
+
+// SetValue implements SetValue in LiveVectorParty interface
+func (vp *goLiveVectorParty) SetValue(offset int,val unsafe.Pointer, valid bool) {
+	panic("SetValue is not supported in goLiveVectorParty")
+}
+
+// GetValue implements GetValue in LiveVectorParty interface
+func (vp *goLiveVectorParty) GetValue(offset int) (unsafe.Pointer, bool) {
+	panic("GetValue is not supported in goLiveVectorParty")
+}
+
+// SetGoValue implements SetGoValue in LiveVectorParty interface
+func (vp *goLiveVectorParty) SetGoValue(offset int, val common.GoDataValue, valid bool) {
 	oldBytes, newBytes := 0, 0
 	if vp.values[offset] != nil {
 		oldBytes = vp.values[offset].GetBytes()
 	}
 
-	if !value.Valid || value.GoVal == nil {
+	if !valid || val == nil {
 		newBytes = 0
 		vp.values[offset] = nil
 	} else {
-		newBytes = value.GoVal.GetBytes()
-		vp.values[offset] = value.GoVal
+		newBytes = val.GetBytes()
+		vp.values[offset] = val
 	}
 
 	bytesChange := int64(newBytes - oldBytes)
