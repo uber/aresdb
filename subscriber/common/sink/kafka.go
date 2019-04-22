@@ -25,11 +25,12 @@ import (
 	"go.uber.org/zap"
 	"strings"
 	"time"
+	memCom "github.com/uber/aresdb/memstore/common"
 )
 
 type KafkaPublisher struct {
 	sarama.SyncProducer
-	client.UpsertBatchBuilderImpl
+	client.UpsertBatchBuilder
 
 	ServiceConfig config.ServiceConfig
 	JobConfig     *rules.JobConfig
@@ -51,6 +52,7 @@ func NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceC
 	if err != nil {
 		return nil, utils.StackError(err, "Unable to initialize Kafka publisher")
 	}
+
 	upsertBatchBuilderImpl := client.UpsertBatchBuilderImpl{
 		/* TODO: need export parameters
 		cfg:                      serviceConfig.Logger.Sugar(),
@@ -75,39 +77,88 @@ func NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceC
 		}),
 		ClusterName: cluster,
 	}
-
+	upsertBatchBuilder := client.NewUpsertBatchBuilderImpl(
+		client.ConnectorConfig{},
+		serviceConfig.Logger.Sugar(),
+		serviceConfig.Scope,
+		make(map[string]*client.TableSchema),
+		make(map[string]map[int]client.EnumDict),
+		make(map[string]map[int]int),
+		kp.postEnumCases,
+		kp.getEnumDict)
+	
+	upsertBatchBuilder.SetTableSchema(cluster, jobConfig.AresTableConfig.Table)
+	kp.UpsertBatchBuilder = upsertBatchBuilder
 	return &kp, nil
 }
 
 // Shutdown will clean up resources that needs to be cleaned up
-func (kp *KafkaPublisher) Shutdown() {}
+func (kp *KafkaPublisher) Shutdown() {
+	kp.SyncProducer.Close()
+}
 
 // Save saves a batch of row objects into a destination
 func (kp *KafkaPublisher) Save(destination Destination, rows []client.Row) error {
 	shards := Sharding(rows, destination, kp.JobConfig)
-	kp.Scope.Gauge("batchSize").Update(float64(len(rows)))
-	aresRows := make([]client.Row, 0, len(rows))
-	for _, row := range rows {
-		aresRows = append(aresRows, row)
+	if shards == nil {
+		// case1: no sharding --  publish rows to random kafka partition
+		kp.Insert(destination.Table, -1,  destination.ColumnNames, rows, destination.AresUpdateModes...)
+	} else {
+		// case2: sharding -- publish rows to specified partition
+		for shardID, rowsInShard := range shards {
+			kp.Insert(destination.Table, int32(shardID),  destination.ColumnNames, rowsInShard, destination.AresUpdateModes...)
+		}
 	}
 
-	saveStart := time.Now()
-	kp.ServiceConfig.Logger.Debug("saving", zap.Any("rows", aresRows))
-	rowsInserted, err := kp.Connector.
-		Insert(destination.Table, destination.ColumnNames, aresRows, destination.AresUpdateModes...)
-	if err != nil {
-		kp.Scope.Counter("errors.insert").Inc(1)
-		return utils.StackError(err, fmt.Sprintf("Failed to save rows in table %s, columns: %+v",
-			destination.Table, destination.ColumnNames))
-	}
-	kp.Scope.Timer("latency.ares.save").Record(time.Now().Sub(saveStart))
-	kp.Scope.Counter("rowsWritten").Inc(int64(rowsInserted))
-	kp.Scope.Counter("rowsIgnored").Inc(int64(len(aresRows)) - int64(rowsInserted))
-	kp.Scope.Gauge("upsertBatchSize").Update(float64(rowsInserted))
 	return nil
 }
 
 // Cluster returns the DB cluster name
 func (kp *KafkaPublisher) Cluster() string {
 	return kp.ClusterName
+}
+
+func (kp *KafkaPublisher) Insert(tableName string, shardID int32, columnNames []string, rows []client.Row,
+	updateModes ...memCom.ColumnUpdateMode) (int, error) {
+	kp.Scope.Gauge("batchSize").Update(float64(len(rows)))
+	saveStart := time.Now()
+	kp.ServiceConfig.Logger.Debug("saving", zap.Any("rows", rows))
+
+	bytes, numRows, err := kp.UpsertBatchBuilder.PrepareUpsertBatch(kp.ClusterName, tableName, columnNames, updateModes, rows)
+	if err != nil {
+		kp.Scope.Counter("errors.insert").Inc(1)
+		return 0, utils.StackError(err, fmt.Sprintf("Failed to prepare rows in table %s, columns: %+v",
+			tableName, columnNames))
+	}
+
+	msg := sarama.ProducerMessage{
+		Topic: fmt.Sprint("%s-%s", tableName, kp.Cluster()),
+		Value: sarama.ByteEncoder(bytes),
+	}
+	if shardID >= 0 {
+		msg.Partition = shardID
+	}
+	_, _, err = kp.SyncProducer.SendMessage(&msg)
+	if err != nil {
+		kp.Scope.Counter("errors.insert").Inc(1)
+		return 0, utils.StackError(err, fmt.Sprintf("Failed to publish rows in table %s, columns: %+v",
+			tableName, columnNames))
+	}
+	kp.Scope.Timer("latency.ares.save").Record(time.Now().Sub(saveStart))
+	kp.Scope.Counter("rowsWritten").Inc(int64(numRows))
+	kp.Scope.Counter("rowsIgnored").Inc(int64(len(rows)) - int64(numRows))
+	kp.Scope.Gauge("upsertBatchSize").Update(float64(numRows))
+	return numRows, err
+}
+
+func (kp *KafkaPublisher) postEnumCases(namespace, tableName, columnName string, enumCasesBytes []byte) ([]int, error) {
+	var enumIDs []int
+
+	return enumIDs, nil
+}
+
+func (kp *KafkaPublisher) getEnumDict(namespace, tableName, columnName string) ([]string, error) {
+	var enumDictReponse []string
+
+	return enumDictReponse, nil
 }

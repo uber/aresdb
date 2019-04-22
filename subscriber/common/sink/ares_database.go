@@ -64,15 +64,11 @@ func (db *AresDatabase) Shutdown() {}
 // Save saves a batch of row objects into a destination
 func (db *AresDatabase) Save(destination Destination, rows []client.Row) error {
 	db.Scope.Gauge("batchSize").Update(float64(len(rows)))
-	aresRows := make([]client.Row, 0, len(rows))
-	for _, row := range rows {
-		aresRows = append(aresRows, row)
-	}
 
 	saveStart := time.Now()
-	db.ServiceConfig.Logger.Debug("saving", zap.Any("rows", aresRows))
+	db.ServiceConfig.Logger.Debug("saving", zap.Any("rows", rows))
 	rowsInserted, err := db.Connector.
-		Insert(destination.Table, destination.ColumnNames, aresRows, destination.AresUpdateModes...)
+		Insert(destination.Table, destination.ColumnNames, rows, destination.AresUpdateModes...)
 	if err != nil {
 		db.Scope.Counter("errors.insert").Inc(1)
 		return utils.StackError(err, fmt.Sprintf("Failed to save rows in table %s, columns: %+v",
@@ -80,7 +76,7 @@ func (db *AresDatabase) Save(destination Destination, rows []client.Row) error {
 	}
 	db.Scope.Timer("latency.ares.save").Record(time.Now().Sub(saveStart))
 	db.Scope.Counter("rowsWritten").Inc(int64(rowsInserted))
-	db.Scope.Counter("rowsIgnored").Inc(int64(len(aresRows)) - int64(rowsInserted))
+	db.Scope.Counter("rowsIgnored").Inc(int64(len(rows)) - int64(rowsInserted))
 	db.Scope.Gauge("upsertBatchSize").Update(float64(rowsInserted))
 	return nil
 }
