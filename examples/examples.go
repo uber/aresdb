@@ -76,8 +76,9 @@ func queryDataSet() {
 	for _, queryInfo := range queriesDirInfo {
 		baseName := queryInfo.Name()
 		queryName := strings.TrimSuffix(baseName, filepath.Ext(baseName))
+		queryType := filepath.Ext(baseName)
 		queryPath := fmt.Sprintf("%s/%s/%s", dataSetName, queriesDir, baseName)
-		makeQuery(queryName, queryPath)
+		makeQuery(queryName, queryType, queryPath)
 	}
 }
 
@@ -115,12 +116,21 @@ func ingestDataForDataSet() {
 	}
 }
 
-func makeQuery(queryName, queryPath string) {
-	file, err := os.Open(queryPath)
+func makeQuery(queryName, queryType, queryPath string) {
+	var err error
+	var file *os.File
+	file, err = os.Open(queryPath)
 	panicIfErr(err)
 
 	fmt.Printf("making query %s ... \n", queryName)
-	resp, err := http.Post(fmt.Sprintf("http://%s:%d/query/aql", viper.GetString(hostKeyName), viper.GetInt(portKeyName)), "application/json", file)
+	var resp *http.Response
+	if queryType == ".aql" {
+		resp, err = http.Post(fmt.Sprintf("http://%s:%d/query/aql", viper.GetString(hostKeyName), viper.GetInt(portKeyName)), "application/json", file)
+	} else if queryType == ".sql" {
+		resp, err = http.Post(fmt.Sprintf("http://%s:%d/query/sql", viper.GetString(hostKeyName), viper.GetInt(portKeyName)), "application/json", file)
+	} else {
+		err = fmt.Errorf("query file has to have .aql or .sql suffix")
+	}
 	panicIfErr(err)
 	if resp.StatusCode != http.StatusOK {
 		panic(fmt.Errorf("query failed with status code %d", resp.StatusCode))

@@ -24,6 +24,8 @@ import (
 
 // Dimension specifies a row level dimension for grouping by.
 type Dimension struct {
+	// Alias/name of the dimension, to be referenced by other dimensions and measures.
+	Alias string `json:"alias,omitempty"`
 	// The SQL expression for computing the dimension.
 	// Expr can be empty when TimeBucketizer is specified, which implies the
 	// designated time column from the main table is used as the expresssion.
@@ -64,6 +66,8 @@ type NumericBucketizerDef struct {
 
 // Measure specifies a group level aggregation measure.
 type Measure struct {
+	// Alias/name of the measure, to be referenced by other (derived) measures.
+	Alias string `json:"alias,omitempty"`
 	// The SQL expression for computing the measure.
 	Expr string `json:"sqlExpression"`
 	expr expr.Expr
@@ -99,6 +103,15 @@ type TimeFilter struct {
 	To   string `json:"to"`
 }
 
+// SortField represents a field to sort results by.
+type SortField struct {
+	// Name or alias of the field
+	Name string `json:"name"`
+
+	// Order the column, will be asc or desc
+	Order string `json:"order"`
+}
+
 // AQLQuery specifies the query on top of tables.
 type AQLQuery struct {
 	// Name of the main table.
@@ -120,6 +133,13 @@ type AQLQuery struct {
 	// Syntax sugar for specifying a time based range filter.
 	TimeFilter TimeFilter `json:"timeFilter,omitempty"`
 
+	// Additional supporting dimensions, these dimensions will not be grouped by,
+	// but they may be referenced in Dimensions, Measures, SupportingDimensions and SupportingMeasures.
+	SupportingDimensions []Dimension `json:"supportingDimensions,omitempty"`
+	// Additional supporting measures, these measures will not be reported,
+	// but they may be referenced in Measures and SupportingMeasures.
+	SupportingMeasures []Measure `json:"supportingMeasures,omitempty"`
+
 	// Timezone to use when converting timestamp to calendar time, specified as:
 	//   - -8:00
 	//   - GMT
@@ -136,6 +156,11 @@ type AQLQuery struct {
 
 	// Limit is the max number of rows need to be return, and only used for non-aggregation
 	Limit int `json:"limit,omitempty"`
+
+	Sorts []SortField `json:"sorts, omitempty" yaml:"sorts"`
+
+	// SQLQuery
+	SQLQuery string `json:"sql, omitempty"`
 }
 
 // AQLRequest contains multiple of AQLQueries.
