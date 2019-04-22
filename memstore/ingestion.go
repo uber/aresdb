@@ -60,7 +60,7 @@ func (shard *TableShard) ApplyUpsertBatch(upsertBatch *UpsertBatch, redoLogFile 
 	valueTypeByColumn := shard.Schema.ValueTypeByColumn
 	columnDeletions := shard.Schema.GetColumnDeletions()
 	allowMissingEventTime := shard.Schema.Schema.Config.AllowMissingEventTime
-	nonNilDefault := shard.Schema.GetColumnNonNilDefault()
+	nonNilDefault := shard.Schema.GetColumnIfNonNilDefault()
 	shard.Schema.RUnlock()
 	primaryKeyColumns := shard.Schema.GetPrimaryKeyColumns()
 	// IsFactTable should be immutable.
@@ -441,7 +441,7 @@ func (shard *TableShard) writeBatchRecords(columnDeletions []bool, nonNilDefault
 				}
 
 				// only read oldValue when mode is one of add, min, max.
-				if columnUpdateMode > common.UpdateOverwriteNotNull {
+				if columnUpdateMode >= common.UpdateWithAddition && columnUpdateMode <= common.UpdateWithMax {
 					oldVal, oldValid := vectorParty.GetValue(recordInfo.index)
 					// Only need to do calculation when old value is valid, otherwise we can directly
 					// set what's in upsert batch.

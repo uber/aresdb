@@ -30,7 +30,7 @@ type cLiveVectorParty struct {
 }
 
 // SetBool implements SetBool in LiveVectorParty interface
-func (vp *cLiveVectorParty) SetBool((offset int,val bool, valid bool) {
+func (vp *cLiveVectorParty) SetBool(offset int,val bool, valid bool) {
 	vp.setValidity(offset, valid)
 	vp.values.SetBool(offset, val)
 	return
@@ -92,7 +92,7 @@ func (vp *goLiveVectorParty) SetDataValue(offset int, value common.DataValue,
 }
 
 // SetBool implements SetBool in LiveVectorParty interface
-func (vp *goLiveVectorParty) SetBool((offset int,val bool, valid bool) {
+func (vp *goLiveVectorParty) SetBool(offset int,val bool, valid bool) {
 	panic("SetBool is not supported in goLiveVectorParty")
 }
 
