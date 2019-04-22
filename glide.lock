@@ -1,8 +1,12 @@
-hash: 622c72997054d338c6398aa25349849b208e5f1aa2b263b676c97fa49bc439ac
-updated: 2019-04-10T09:01:08.295856-07:00
+hash: e12c0cddcf6163f4253fd90e1836ae84a11ef71240ff08ceaecf043bf9ca4d4c
+updated: 2019-04-17T14:55:48.48762-07:00
 imports:
+- name: github.com/abiosoft/ishell
+  version: 0a6b1640e32638dd433ee7e57ec325a7bdd79561
+- name: github.com/abiosoft/readline
+  version: 155bce2042db95a783081fab225e74dd879055b0
 - name: github.com/antlr/antlr4
-  version: 837aa60e2c4736e242432c2ac93ed2de3b9eff3b
+  version: be58ebffde8e29c154192c019608f0a5b8e6a064
   subpackages:
   - runtime/Go/antlr
 - name: github.com/apache/thrift
@@ -33,18 +37,22 @@ imports:
 - name: github.com/curator-go/curator
   version: 8a961ea3b25229b9b328724b8b2059ab58c1d16b
 - name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
   - spew
 - name: github.com/emirpasic/gods
-  version: 729073a73ce2057955fafa2a8f0ac62b99e950c9
+  version: 7c131f6714175bd4ce484da1f348260c79db3069
   subpackages:
   - containers
   - trees
   - trees/redblacktree
   - utils
+- name: github.com/fatih/color
+  version: 3f9d52f7176a6927daacff70a3e8d1dc2025c53e
+- name: github.com/flynn-archive/go-shlex
+  version: 3f9db97f856818214da2e1057f8ad84803971cff
 - name: github.com/fsnotify/fsnotify
-  version: 1485a34d5d5723fea214f5710708e19a831720e4
+  version: ccc981bf80385c528a65fbfdd49bf2d8da22aa23
 - name: github.com/getlantern/deepcopy
   version: 7f45deb8130a0acc553242eb0e009e3f6f3d9ce3
 - name: github.com/gogo/protobuf
@@ -65,9 +73,9 @@ imports:
   - ptypes/duration
   - ptypes/timestamp
 - name: github.com/gorilla/handlers
-  version: ac6d24f88de4584385a0cb3a88f953d08a2f7a05
+  version: 7e6a874cdc0efb71a260254cc0e30d5415b6a5bb
 - name: github.com/gorilla/mux
-  version: c5c6c98bc25355028a63748a498942a6398ccd22
+  version: 08e7f807d38d6a870193019bb439056118661505
 - name: github.com/hashicorp/hcl
   version: 65a6292f0157eff210d03ed1bf6c59b190b8b906
   subpackages:
@@ -107,19 +115,14 @@ imports:
   - src/cluster/shard
 - name: github.com/m3db/m3x
   version: b66c9c466c4726e3c9b47b1f837abbbe0f14be81
-  vcs: git
   subpackages:
-  - checked
   - clock
   - close
   - errors
-  - ident
   - instrument
   - log
-  - pool
   - process
   - retry
-  - time
   - watch
 - name: github.com/m3db/prometheus_client_golang
   version: 8ae269d24972b8695572fa6b2e3718b5ea82d6b4
@@ -140,6 +143,10 @@ imports:
   version: 1878d9fbb537119d24b21ca07effd591627cd160
 - name: github.com/magiconair/properties
   version: 7757cc9fdb852f7579b24170bcacda2c7471bb6a
+- name: github.com/mattn/go-colorable
+  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
+- name: github.com/mattn/go-isatty
+  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -147,7 +154,7 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/onsi/ginkgo
-  version: eea6ad008b96acdaa524f5b409513bf062b500ad
+  version: 505cc352255139defb7371000668063d1161e331
   subpackages:
   - config
   - internal/codelocation
@@ -167,7 +174,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 90e289841c1ed79b7a598a7cd9959750cb5e89e2
+  version: 5533ce8a0da374da682cd53d70ddcc54adf1a710
   subpackages:
   - format
   - internal/assertion
@@ -181,16 +188,16 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: 1949ddbfd147afd4d964a9f00b24eb291e0e7c38
+  version: 659c90643e714681897ec2521c60567dd21da733
   subpackages:
   - ext
   - log
 - name: github.com/pelletier/go-toml
-  version: d95bfe020e0c72df368b4368a4bf61d95eb4416c
+  version: 27c6b39a135b7dc87a14afb068809132fb7a9a8f
 - name: github.com/pkg/errors
-  version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
+  version: ba968bfe8b2f7e042a574c888954fccecfa385b4
 - name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
   subpackages:
   - difflib
 - name: github.com/samuel/go-zookeeper
@@ -200,30 +207,30 @@ imports:
 - name: github.com/satori/go.uuid
   version: b2ce2384e17bbe0c6d34077efa39dbab3e09123b
 - name: github.com/spf13/afero
-  version: 588a75ec4f32903aa5e39a2619ba6a4631e28424
+  version: a5d6946387efe7d64d09dcba68cdd523dc1273a3
   subpackages:
   - mem
 - name: github.com/spf13/cast
   version: 8c9545af88b134710ab1cd196795e7f2388358d7
 - name: github.com/spf13/cobra
-  version: 67fc4837d267bc9bfd6e47f77783fcc3dffc68de
+  version: 7547e83b2d85fd1893c7d76916f67689d761fecb
 - name: github.com/spf13/jwalterweatherman
   version: 94f6ae3ed3bceceafa716478c5fbf8d29ca601a1
 - name: github.com/spf13/pflag
   version: 24fa6976df40757dce6aea913e7b81ade90530e1
 - name: github.com/spf13/viper
-  version: 7a605a50e69cd1ea431c4a1e6eebe9b287ef6de4
+  version: 6d33b5a963d922d182c91e8a1c88d81fd150cfd4
 - name: github.com/stretchr/objx
-  version: cbeaeb16a013161a98496fad62933b1d21786672
+  version: ef50b0de28773081167c97fc27cf29a0bf8b8c71
 - name: github.com/stretchr/testify
-  version: 6fe211e493929a8aac0469b93f28b1d0688a9a3a
+  version: 363ebb24d041ccea8068222281c2e963e997b9dc
   subpackages:
   - assert
   - mock
   - require
   - suite
 - name: github.com/uber-go/tally
-  version: e9a67ec1839e1f6e5133dbcca2f57bec12fdeda2
+  version: d0a004a77fc9f0b9733e3afe638994d18da13f3d
   subpackages:
   - m3
   - m3/customtransports
@@ -269,7 +276,7 @@ imports:
   - internal/digreflect
   - internal/dot
 - name: go.uber.org/fx
-  version: b7ed67fc3f046ecf4bc90a3f8bf16c4e70497ed4
+  version: 3de044da969b90ad0a3e4a7867a74662f645f3f9
   subpackages:
   - internal/fxlog
   - internal/fxreflect
@@ -277,7 +284,7 @@ imports:
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/zap
-  version: f85c78b1dd998214c5f2138155b320a4a43fbe36
+  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
   subpackages:
   - buffer
   - internal/bufferpool
@@ -285,23 +292,21 @@ imports:
   - internal/exit
   - zapcore
 - name: golang.org/x/net
-  version: ab5485076ff3407ad2d02db054635913f017b0ed
-  repo: https://github.com/golang/net
-  vcs: git
+  version: 915654e7eabcea33ae277abbecf52f0d8b7a9fdc
   subpackages:
   - context
   - html
   - html/atom
   - html/charset
+  - http/httpguts
   - http2
   - http2/hpack
   - idna
   - internal/timeseries
-  - lex/httplex
   - netutil
   - trace
 - name: golang.org/x/sys
-  version: 4b34438f7a67ee5f45cc6132e2bad873a20324e9
+  version: 11f53e03133963fb11ae0588e08b5e0b85be8be5
   subpackages:
   - unix
 - name: golang.org/x/text
