@@ -69,8 +69,8 @@ type TableSchema struct {
 	ColumnDict map[string]int
 }
 
-// EnumDict maps from enum value to enumID
-type EnumDict map[string]int
+// enumDict maps from enum value to enumID
+type enumDict map[string]int
 
 // UpsertBatchBuilderImpl implements interface UpsertBatchBuilder
 type UpsertBatchBuilderImpl struct {
@@ -100,6 +100,14 @@ type ConnectorConfig struct {
 	// fetch and refresh schema from ares
 	// if <= 0, will use default
 	SchemaRefreshInterval int `yaml:"schemaRefreshInterval"`
+}
+
+func NewUpsertBatchBuilderImpl(logger *zap.SugaredLogger, scope tally.Scope, schemaHandler *CachedSchemaHandler) UpsertBatchBuilder {
+	return &UpsertBatchBuilderImpl{
+		logger:        logger,
+		metricScope:   scope,
+		schemaHandler: schemaHandler,
+	}
 }
 
 // NewConnector returns a new ares Connector

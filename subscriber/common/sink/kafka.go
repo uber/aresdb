@@ -53,22 +53,30 @@ func NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceC
 		return nil, utils.StackError(err, "Unable to initialize Kafka publisher")
 	}
 
-	upsertBatchBuilderImpl := client.UpsertBatchBuilderImpl{
-		/* TODO: need export parameters
-		cfg:                      serviceConfig.Logger.Sugar(),
-		logger:                   serviceConfig.Logger.Sugar(),
-		metricScope:              serviceConfig.Scope.Tagged(map[string]string{
+	// replace httpSchemaFetcher with gateway client
+	// httpSchemaFetcher := NewHttpSchemaFetcher(httpClient, cfg.Address, metricScope)
+	cachedSchemaHandler := client.NewCachedSchemaHandler(
+		serviceConfig.Logger.Sugar(),
+		serviceConfig.Scope.Tagged(map[string]string{
 			"job":         jobConfig.Name,
 			"aresCluster": cluster,
-		}),
-		schemas:                  make(map[string]*client.TableSchema),
-		enumMappings:             make(map[string]map[int]client.EnumDict),
-		enumDefaultValueMappings: make(map[string]map[int]int),
-		*/
+		}), httpSchemaFetcher)
+
+	// schema refresh is based on job assignment refresh, so disable at here
+	err = cachedSchemaHandler.Start(0)
+	if err != nil {
+		return nil, err
 	}
+
 	kp := KafkaPublisher{
 		SyncProducer:           p,
-		UpsertBatchBuilderImpl: upsertBatchBuilderImpl,
+		UpsertBatchBuilderImpl: client.NewUpsertBatchBuilderImpl(
+			serviceConfig.Logger.Sugar(),
+			serviceConfig.Scope.Tagged(map[string]string{
+				"job":         jobConfig.Name,
+				"aresCluster": cluster,
+			}),
+			cachedSchemaHandler),
 		ServiceConfig:          serviceConfig,
 		JobConfig:              jobConfig,
 		Scope: serviceConfig.Scope.Tagged(map[string]string{
@@ -77,18 +85,7 @@ func NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceC
 		}),
 		ClusterName: cluster,
 	}
-	upsertBatchBuilder := client.NewUpsertBatchBuilderImpl(
-		client.ConnectorConfig{},
-		serviceConfig.Logger.Sugar(),
-		serviceConfig.Scope,
-		make(map[string]*client.TableSchema),
-		make(map[string]map[int]client.EnumDict),
-		make(map[string]map[int]int),
-		kp.postEnumCases,
-		kp.getEnumDict)
-	
-	upsertBatchBuilder.SetTableSchema(cluster, jobConfig.AresTableConfig.Table)
-	kp.UpsertBatchBuilder = upsertBatchBuilder
+
 	return &kp, nil
 }
 
@@ -124,7 +121,7 @@ func (kp *KafkaPublisher) Insert(tableName string, shardID int32, columnNames []
 	saveStart := time.Now()
 	kp.ServiceConfig.Logger.Debug("saving", zap.Any("rows", rows))
 
-	bytes, numRows, err := kp.UpsertBatchBuilder.PrepareUpsertBatch(kp.ClusterName, tableName, columnNames, updateModes, rows)
+	bytes, numRows, err := kp.UpsertBatchBuilder.PrepareUpsertBatch(tableName, columnNames, updateModes, rows)
 	if err != nil {
 		kp.Scope.Counter("errors.insert").Inc(1)
 		return 0, utils.StackError(err, fmt.Sprintf("Failed to prepare rows in table %s, columns: %+v",
