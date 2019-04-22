@@ -18,17 +18,6 @@ import (
 	"github.com/uber/aresdb/query"
 )
 
-// QueryContext contains settings common for all requests
-type RequestContext struct {
-	Device int
-	Verbose int
-	Debug int
-	Profiling string
-	DeviceChoosingTimeout int
-	Accept string
-	Origin string
-}
-
 // AQLRequest represents AQL query request. Debug mode will
 // run **each batch** in synchronized mode and report time
 // for each step.
