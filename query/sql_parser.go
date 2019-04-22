@@ -963,7 +963,7 @@ func (v *ASTBuilder) VisitFunctionCall(ctx *antlrgen.FunctionCallContext) interf
 	name := v.getText(ctx.QualifiedName())
 	udfDef, ok := util.UdfTable[name]
 	if ok {
-		if ctx.SetQuantifier() != nil || ctx.Filter() != nil || ctx.Over() != nil || len(ctx.AllSortItem()) != 0 || ctx.AllExpression() == nil {
+		if ctx.SetQuantifier() != nil || ctx.Filter() != nil || len(ctx.AllSortItem()) != 0 || ctx.AllExpression() == nil {
 			panic(fmt.Errorf("quantifier/filter/over/sort not supported in %s function at (line:%d, col:%d)",
 				name, location.Line, location.CharPosition))
 		}
@@ -1669,31 +1669,6 @@ func (v *ASTBuilder) VisitWhenClause(ctx *antlrgen.WhenClauseContext) interface{
 
 // VisitFilter visits the node
 func (v *ASTBuilder) VisitFilter(ctx *antlrgen.FilterContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitOver visits the node
-func (v *ASTBuilder) VisitOver(ctx *antlrgen.OverContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitWindowFrame visits the node
-func (v *ASTBuilder) VisitWindowFrame(ctx *antlrgen.WindowFrameContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitUnboundedFrame visits the node
-func (v *ASTBuilder) VisitUnboundedFrame(ctx *antlrgen.UnboundedFrameContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitCurrentRowBound visits the node
-func (v *ASTBuilder) VisitCurrentRowBound(ctx *antlrgen.CurrentRowBoundContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitBoundedFrame visits the node
-func (v *ASTBuilder) VisitBoundedFrame(ctx *antlrgen.BoundedFrameContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 

@@ -575,26 +575,6 @@ func (v *BaseSqlBaseVisitor) VisitFilter(ctx *FilterContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
-func (v *BaseSqlBaseVisitor) VisitOver(ctx *OverContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BaseSqlBaseVisitor) VisitWindowFrame(ctx *WindowFrameContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BaseSqlBaseVisitor) VisitUnboundedFrame(ctx *UnboundedFrameContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BaseSqlBaseVisitor) VisitCurrentRowBound(ctx *CurrentRowBoundContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BaseSqlBaseVisitor) VisitBoundedFrame(ctx *BoundedFrameContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BaseSqlBaseVisitor) VisitExplainFormat(ctx *ExplainFormatContext) interface{} {
 	return v.VisitChildren(ctx)
 }

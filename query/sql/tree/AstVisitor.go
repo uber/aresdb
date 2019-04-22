@@ -29,9 +29,6 @@ type AstVisitor interface {
 	// VisitExpression visits the node
 	VisitExpression(exp IExpression, ctx interface{}) interface{}
 
-	// VisitFrameBound visits the node
-	VisitFrameBound(frameBound *FrameBound, ctx interface{}) interface{}
-
 	// VisitGroupBy visits the node
 	VisitGroupBy(groupby *GroupBy, ctx interface{}) interface{}
 
@@ -85,12 +82,6 @@ type AstVisitor interface {
 
 	// VisitTableSubquery visits the node
 	VisitTableSubquery(tableSubquery *TableSubquery, ctx interface{}) interface{}
-
-	// VisitWindow visits the node
-	VisitWindow(window *Window, ctx interface{}) interface{}
-
-	// VisitWindowFrame visits the node
-	VisitWindowFrame(windowFrame *WindowFrame, ctx interface{}) interface{}
 
 	// VisitWith visits the node
 	VisitWith(with *With, ctx interface{}) interface{}

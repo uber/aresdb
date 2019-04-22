@@ -433,21 +433,6 @@ type SqlBaseVisitor interface {
 	// Visit a parse tree produced by SqlBaseParser#filter.
 	VisitFilter(ctx *FilterContext) interface{}
 
-	// Visit a parse tree produced by SqlBaseParser#over.
-	VisitOver(ctx *OverContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#windowFrame.
-	VisitWindowFrame(ctx *WindowFrameContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#unboundedFrame.
-	VisitUnboundedFrame(ctx *UnboundedFrameContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#currentRowBound.
-	VisitCurrentRowBound(ctx *CurrentRowBoundContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#boundedFrame.
-	VisitBoundedFrame(ctx *BoundedFrameContext) interface{}
-
 	// Visit a parse tree produced by SqlBaseParser#explainFormat.
 	VisitExplainFormat(ctx *ExplainFormatContext) interface{}
 
