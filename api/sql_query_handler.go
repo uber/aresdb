@@ -17,13 +17,9 @@ package api
 import (
 	"net/http"
 	"github.com/uber/aresdb/query"
-<<<<<<< HEAD
-	"github.com/uber/aresdb/utils"
-=======
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"time"
->>>>>>> fa85b0d... wip
 )
 
 // HandleSQL swagger:route POST /query/sql querySQL
@@ -43,30 +39,6 @@ import (
 func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 	sqlRequest := SQLRequest{Device: -1}
 
-<<<<<<< HEAD
-	if err := ReadRequest(r, &sqlRequest); err != nil {
-		RespondWithBadRequest(w, err)
-		utils.GetLogger().With(
-			"error", err,
-			"statusCode", http.StatusBadRequest,
-		).Error("failed to parse query")
-		return
-	}
-
-	var aqlQueries []query.AQLQuery
-	if sqlRequest.Body.Queries != nil {
-		aqlQueries = make([]query.AQLQuery, len(sqlRequest.Body.Queries))
-		for i, sqlQuery := range sqlRequest.Body.Queries {
-			parsedAQLQuery, err := query.Parse(sqlQuery, utils.GetLogger())
-			if err != nil {
-				RespondWithBadRequest(w, err)
-				return
-			}
-			aqlQueries[i] = *parsedAQLQuery
-		}
-	}
-
-=======
 	var err error
 	var duration time.Duration
 	var qc *query.AQLQueryContext
@@ -105,7 +77,6 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// for options only, to reuse handleQuery
->>>>>>> fa85b0d... wip
 	aqlRequest := AQLRequest{
 		Device: sqlRequest.Device,
 		Verbose: sqlRequest.Verbose,
@@ -114,13 +85,6 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		DeviceChoosingTimeout: sqlRequest.DeviceChoosingTimeout,
 		Accept: sqlRequest.Accept,
 		Origin: sqlRequest.Origin,
-<<<<<<< HEAD
-		Body: query.AQLRequest{
-			Queries: aqlQueries,
-		},
-	}
-	handler.handleAQLInternal(aqlRequest, w, r)
-=======
 	}
 
 	requestResponseWriter := getSingleResponseWriter(aqlRequest.Accept == ContentTypeHyperLogLog)
@@ -267,5 +231,4 @@ func (w *HLLSingleQueryResponseWriter) Respond(rw http.ResponseWriter) {
 // GetStatusCode returns the status code written into response.
 func (w *HLLSingleQueryResponseWriter) GetStatusCode() int {
 	return w.statusCode
->>>>>>> fa85b0d... wip
 }
