@@ -1012,17 +1012,19 @@ func (qc *AQLQueryContext) calculateMemoryRequirement(memStore memstore.MemStore
 		}
 
 		// estimate archive batch memory usage
-		if archiveStore != nil && (qc.fromTime == nil || cutoff > uint32(qc.fromTime.Time.Unix())) {
-			scanner := qc.TableScanners[0]
-			for batchID := scanner.ArchiveBatchIDStart; batchID < scanner.ArchiveBatchIDEnd; batchID++ {
-				archiveBatch := archiveStore.RequestBatch(int32(batchID))
-				if archiveBatch == nil || archiveBatch.Size == 0 {
-					continue
-				}
-				isFirstOrLast := batchID == scanner.ArchiveBatchIDStart || batchID == scanner.ArchiveBatchIDEnd-1
-				batchBytes := qc.estimateArchiveBatchMemoryUsage(archiveBatch, isFirstOrLast)
-				if batchBytes > maxBytesRequired {
-					maxBytesRequired = batchBytes
+		if archiveStore != nil {
+			if qc.fromTime == nil || cutoff > uint32(qc.fromTime.Time.Unix()) {
+				scanner := qc.TableScanners[0]
+				for batchID := scanner.ArchiveBatchIDStart; batchID < scanner.ArchiveBatchIDEnd; batchID++ {
+					archiveBatch := archiveStore.RequestBatch(int32(batchID))
+					if archiveBatch == nil || archiveBatch.Size == 0 {
+						continue
+					}
+					isFirstOrLast := batchID == scanner.ArchiveBatchIDStart || batchID == scanner.ArchiveBatchIDEnd-1
+					batchBytes := qc.estimateArchiveBatchMemoryUsage(archiveBatch, isFirstOrLast)
+					if batchBytes > maxBytesRequired {
+						maxBytesRequired = batchBytes
+					}
 				}
 			}
 			archiveStore.Users.Done()

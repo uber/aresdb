@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-// APIError ...
+// APIError represents APIError with error code
 type APIError struct {
 	Code    int    `json:"-"`
 	Message string `json:"message"`

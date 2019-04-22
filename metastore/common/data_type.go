@@ -14,6 +14,11 @@
 
 package common
 
+const (
+	// EnumDelimiter
+	EnumDelimiter = "\u0000\n"
+)
+
 // string representations of data types
 const (
 	Bool      = "Bool"
@@ -31,3 +36,5 @@ const (
 	GeoShape  = "GeoShape"
 	Int64     = "Int64"
 )
+
+
