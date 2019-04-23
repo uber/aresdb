@@ -233,7 +233,7 @@ func (t *TableSchema) GetColumnDeletions() []bool {
 	return deletedByColumn
 }
 
-// GetColumnDeletions returns a boolean slice that indicates whether a column has non nil default value. Callers
+// GetColumnIfNonNilDefault returns a boolean slice that indicates whether a column has non nil default value. Callers
 // need to hold a read lock.
 func (t *TableSchema) GetColumnIfNonNilDefault() []bool {
 	nonNilDefaultByColumn := make([]bool, len(t.Schema.Columns))

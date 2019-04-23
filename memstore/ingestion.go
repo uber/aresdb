@@ -60,7 +60,6 @@ func (shard *TableShard) ApplyUpsertBatch(upsertBatch *UpsertBatch, redoLogFile 
 	valueTypeByColumn := shard.Schema.ValueTypeByColumn
 	columnDeletions := shard.Schema.GetColumnDeletions()
 	allowMissingEventTime := shard.Schema.Schema.Config.AllowMissingEventTime
-	nonNilDefault := shard.Schema.GetColumnIfNonNilDefault()
 	shard.Schema.RUnlock()
 	primaryKeyColumns := shard.Schema.GetPrimaryKeyColumns()
 	// IsFactTable should be immutable.
@@ -106,12 +105,12 @@ func (shard *TableShard) ApplyUpsertBatch(upsertBatch *UpsertBatch, redoLogFile 
 	// We write insert records first so records with the same primary key in a upsert batch
 	// will be updated in order.
 	for batchID, records := range insertRecords {
-		if err := shard.writeBatchRecords(columnDeletions, nonNilDefault, upsertBatch, batchID, records, false); err != nil {
+		if err := shard.writeBatchRecords(columnDeletions, upsertBatch, batchID, records, false); err != nil {
 			return false, err
 		}
 	}
 	for batchID, records := range updateRecords {
-		if err := shard.writeBatchRecords(columnDeletions, nonNilDefault, upsertBatch, batchID, records, true); err != nil {
+		if err := shard.writeBatchRecords(columnDeletions, upsertBatch, batchID, records, true); err != nil {
 			return false, err
 		}
 	}
@@ -337,7 +336,7 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 }
 
 // Read rows from a batch group and write to memStore. Batch id = 0 is for records to be inserted.
-func (shard *TableShard) writeBatchRecords(columnDeletions []bool, nonNilDefault []bool,
+func (shard *TableShard) writeBatchRecords(columnDeletions []bool,
 	upsertBatch *UpsertBatch, batchID int32, records []recordInfo, forUpdate bool) error {
 	var batch *LiveBatch
 	if forUpdate {
@@ -378,10 +377,9 @@ func (shard *TableShard) writeBatchRecords(columnDeletions []bool, nonNilDefault
 		columnMode := upsertBatch.columns[col].columnMode
 
 		// we will skip processing this column if
-		// 1. AllValuesDefault
-		// 2. Its default value is nil
-		// 3. columnUpdate is not UpdateForceOverWriter
-		if columnMode == common.AllValuesDefault && nonNilDefault[columnID] == false && columnUpdateMode != common.UpdateForceOverwrite {
+		// 1. columnMode is AllValuesDefault
+		// 2. columnUpdateMode is UpdateOverwriteNotNull
+		if columnMode == common.AllValuesDefault && columnUpdateMode == common.UpdateOverwriteNotNull {
 			continue
 		}
 
