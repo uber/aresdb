@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/aresdb/client"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -31,9 +30,9 @@ type ControllerClient interface {
 
 // ControllerHTTPClient implements ControllerClient over http
 type ControllerHTTPClient struct {
-	c       *http.Client
-	address string
-	headers http.Header
+	c         *http.Client
+	address   string
+	headers   http.Header
 	namespace string
 }
 
@@ -177,7 +176,7 @@ func (c *ControllerHTTPClient) SetNamespace(namespace string) {
 
 // FetchAllSchemas fetches all schemas
 func (c *ControllerHTTPClient) FetchAllSchemas() (tables []common.Table, err error) {
-	return  c.GetAllSchema(c.namespace)
+	return c.GetAllSchema(c.namespace)
 }
 
 // FetchSchema fetch one schema for given table
@@ -212,11 +211,7 @@ func (c *ControllerHTTPClient) FetchAllEnums(tableName string, columnName string
 
 // ExtendEnumCases extends enum cases to given table column
 func (c *ControllerHTTPClient) ExtendEnumCases(tableName, columnName string, enumCases []string) (enumIDs []int, err error) {
-	enumCasesRequest := client.EnumCasesWrapper{
-		EnumCases: enumCases,
-	}
-
-	enumCasesBytes, err := json.Marshal(enumCasesRequest)
+	enumCasesBytes, err := json.Marshal(enumCases)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to marshal enum cases")
 	}
@@ -230,4 +225,3 @@ func (c *ControllerHTTPClient) ExtendEnumCases(tableName, columnName string, enu
 	return
 
 }
-

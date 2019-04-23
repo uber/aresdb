@@ -1,23 +1,23 @@
 package main
 
 import (
-	"github.com/abiosoft/ishell"
-	"github.com/spf13/cobra"
-	"net/http"
-	"fmt"
-	"github.com/fatih/color"
-	"io/ioutil"
 	"encoding/json"
+	"fmt"
+	"github.com/abiosoft/ishell"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+	"io/ioutil"
+	"net/http"
 	"strings"
 )
 
 const contentType = "application/json"
 
 type shellContext struct {
-	host string
-	port int
+	host        string
+	port        int
 	clusterMode bool
-	client http.Client
+	client      http.Client
 }
 
 // script global context
@@ -59,7 +59,7 @@ func show(c *ishell.Context) {
 				c.Println(strings.Join(tables, " "))
 			}
 		case "configs":
-			c.Printf("%+v\n",ctx)
+			c.Printf("%+v\n", ctx)
 		}
 	}
 }
@@ -123,9 +123,9 @@ func Execute() {
 
 	// cobra command
 	cmd := &cobra.Command{
-		Use: "arescli",
-		Short: "AresDB cli",
-		Long: "AresDB command line tool to interact with the backend",
+		Use:     "arescli",
+		Short:   "AresDB cli",
+		Long:    "AresDB command line tool to interact with the backend",
 		Example: "arescli --host localhost --port 9374",
 		Run: func(cmd *cobra.Command, args []string) {
 			// read args
@@ -155,15 +155,12 @@ func Execute() {
 		},
 	}
 
-	cmd.Flags().StringP("host", "","localhost", "host of aresdb service, in cluster mode, host of controller")
+	cmd.Flags().StringP("host", "", "localhost", "host of aresdb service, in cluster mode, host of controller")
 	cmd.Flags().IntP("port", "p", 9374, "port of aresdb service, in cluster mode, port of controller")
 	cmd.Flags().BoolP("cluster", "c", false, "whether to use cluster mode")
 	cmd.Execute()
 }
 
-
 func main() {
 	Execute()
 }
-
-

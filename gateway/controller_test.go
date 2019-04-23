@@ -20,7 +20,7 @@ var _ = ginkgo.Describe("Controller", func() {
 		"Foo": []string{"bar"},
 	}
 
-	table := common.Table {
+	table := common.Table{
 		Version: 0,
 		Name:    "test1",
 		Columns: []common.Column{
