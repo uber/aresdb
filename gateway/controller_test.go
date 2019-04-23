@@ -116,6 +116,16 @@ var _ = ginkgo.Describe("Controller", func() {
 				w.Write(enumIDBytes)
 			}
 		})
+		testRouter.HandleFunc("/schema/ns_baddata/tables/test1", func(w http.ResponseWriter, r *http.Request) {
+			w.Write(enumCasesBytes)
+		})
+		testRouter.HandleFunc("/enum/ns_baddata/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				w.Write(enumIDBytes)
+			} else if r.Method == http.MethodPost {
+				w.Write(enumCasesBytes)
+			}
+		})
 		testServer.Start()
 		hostPort = testServer.Listener.Addr().String()
 	})
@@ -169,8 +179,26 @@ var _ = ginkgo.Describe("Controller", func() {
 		tablesGot, err := c.GetAllSchema("bad_ns")
 		Ω(err).ShouldNot(BeNil())
 		Ω(tablesGot).Should(BeNil())
+		c.SetNamespace("bad_ns")
+		_, err = c.FetchAllSchemas()
+		Ω(err).ShouldNot(BeNil())
+		_, err = c.FetchAllEnums("test1", "col1")
+		Ω(err).ShouldNot(BeNil())
+		_, err = c.FetchAllEnums("test1", "col2")
+		Ω(err).ShouldNot(BeNil())
+		_, err = c.ExtendEnumCases("test1", "col2", []string{"2"})
+		Ω(err).ShouldNot(BeNil())
 
 		_, err = c.GetAllSchema("ns_baddata")
+		Ω(err).ShouldNot(BeNil())
+		c.SetNamespace("ns_baddata")
+		_, err = c.FetchAllSchemas()
+		Ω(err).ShouldNot(BeNil())
+		_, err = c.FetchAllEnums("test1", "col1")
+		Ω(err).ShouldNot(BeNil())
+		_, err = c.FetchAllEnums("test1", "col2")
+		Ω(err).ShouldNot(BeNil())
+		_, err = c.ExtendEnumCases("test1", "col2", []string{"2"})
 		Ω(err).ShouldNot(BeNil())
 	})
 
