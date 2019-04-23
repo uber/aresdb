@@ -109,7 +109,7 @@ var _ = ginkgo.Describe("Controller", func() {
 		testRouter.HandleFunc("/schema/ns1/tables/test1", func(w http.ResponseWriter, r *http.Request) {
 			w.Write(tableBytes)
 		})
-		testRouter.HandleFunc("enum/ns1/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
+		testRouter.HandleFunc("/enum/ns1/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodGet {
 				w.Write(enumCasesBytes)
 			} else if r.Method == http.MethodPost {
