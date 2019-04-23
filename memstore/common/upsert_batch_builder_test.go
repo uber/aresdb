@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/utils"
 	"time"
+	"unsafe"
 )
 
 var _ = ginkgo.Describe("upsert batch builder", func() {
@@ -158,272 +159,118 @@ var _ = ginkgo.Describe("upsert batch builder", func() {
 		Ω(err).ShouldNot(BeNil())
 	})
 
-	ginkgo.It("UpdateWithAddition test", func() {
-		oldValue, _ := ValueFromString("null", Bool)
-		newValue, _ := ValueFromString("1", Bool)
-		finalVal, needUpdate, err := UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).ShouldNot(BeNil())
+	ginkgo.It("AdditionUpdate should work", func() {
+		// big enough to hold all numeric types
+		var oldValue int64
+		var newValue int64
+		*(*int8)(unsafe.Pointer(&oldValue)) = -1
+		*(*int8)(unsafe.Pointer(&newValue)) = 1
+		AdditionUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int8)
+		Ω(*(*int8)(unsafe.Pointer(&oldValue))).Should(Equal(int8(0)))
 
-		oldValue, _ = ValueFromString("null", SmallEnum)
-		newValue, _ = ValueFromString("1", SmallEnum)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).ShouldNot(BeNil())
+		*(*uint8)(unsafe.Pointer(&oldValue)) = 1
+		*(*uint8)(unsafe.Pointer(&newValue)) = 1
+		AdditionUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Uint8)
+		Ω(*(*uint8)(unsafe.Pointer(&oldValue))).Should(Equal(uint8(2)))
 
-		oldValue, _ = ValueFromString("null", Int8)
-		newValue, _ = ValueFromString("1", Int8)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		*(*int16)(unsafe.Pointer(&oldValue)) = -256
+		*(*int16)(unsafe.Pointer(&newValue)) = 256
+		AdditionUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int16)
+		Ω(*(*int16)(unsafe.Pointer(&oldValue))).Should(Equal(int16(0)))
 
-		oldValue, _ = ValueFromString("1", Int8)
-		newValue, _ = ValueFromString("null", Int8)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).ShouldNot(BeTrue())
-		Ω(finalVal).Should(Equal(&oldValue))
+		*(*uint16)(unsafe.Pointer(&oldValue)) = 1
+		*(*uint16)(unsafe.Pointer(&newValue)) = 256
+		AdditionUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Uint16)
+		Ω(*(*uint16)(unsafe.Pointer(&oldValue))).Should(Equal(uint16(257)))
 
-		oldValue, _ = ValueFromString("1", Int8)
-		newValue, _ = ValueFromString("1", Int8)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		v := *(*int8)(finalVal.OtherVal)
-		Ω(v).Should(Equal(int8(2)))
+		*(*int32)(unsafe.Pointer(&oldValue)) = -65536
+		*(*int32)(unsafe.Pointer(&newValue)) = 65536
+		AdditionUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int32)
+		Ω(*(*int32)(unsafe.Pointer(&oldValue))).Should(Equal(int32(0)))
 
-		oldValue, _ = ValueFromString("1", Uint8)
-		newValue, _ = ValueFromString("1", Uint8)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		vuint8 := *(*uint8)(finalVal.OtherVal)
-		Ω(vuint8).Should(Equal(uint8(2)))
+		*(*uint32)(unsafe.Pointer(&oldValue)) = 1
+		*(*uint32)(unsafe.Pointer(&newValue)) = 65536
+		AdditionUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Uint32)
+		Ω(*(*uint32)(unsafe.Pointer(&oldValue))).Should(Equal(uint32(65537)))
 
-		oldValue, _ = ValueFromString("1", Int16)
-		newValue, _ = ValueFromString("1", Int16)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		vint16 := *(*int16)(finalVal.OtherVal)
-		Ω(vint16).Should(Equal(int16(2)))
+		*(*float32)(unsafe.Pointer(&oldValue)) = -1.0
+		*(*float32)(unsafe.Pointer(&newValue)) = 1.0
+		AdditionUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Float32)
+		Ω(*(*float32)(unsafe.Pointer(&oldValue))).Should(Equal(float32(0.0)))
 
-		oldValue, _ = ValueFromString("1", Uint16)
-		newValue, _ = ValueFromString("1", Uint16)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		vuint16 := *(*uint16)(finalVal.OtherVal)
-		Ω(vuint16).Should(Equal(uint16(2)))
-
-		oldValue, _ = ValueFromString("1", Int32)
-		newValue, _ = ValueFromString("1", Int32)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		vint32 := *(*int32)(finalVal.OtherVal)
-		Ω(vint32).Should(Equal(int32(2)))
-
-		oldValue, _ = ValueFromString("1", Uint32)
-		newValue, _ = ValueFromString("1", Uint32)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		vuint32 := *(*uint32)(finalVal.OtherVal)
-		Ω(vuint32).Should(Equal(uint32(2)))
-
-		oldValue, _ = ValueFromString("1", Int64)
-		newValue, _ = ValueFromString("1", Int64)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		vint64 := *(*int64)(finalVal.OtherVal)
-		Ω(vint64).Should(Equal(int64(2)))
-
-		oldValue, _ = ValueFromString("1", Float32)
-		newValue, _ = ValueFromString("1", Float32)
-		finalVal, needUpdate, err = UpdateWithAdditionFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		vfloat32 := *(*float32)(finalVal.OtherVal)
-		Ω(vfloat32).Should(Equal(float32(2)))
+		*(*int64)(unsafe.Pointer(&oldValue)) = -(1 << 31) - 1
+		*(*int64)(unsafe.Pointer(&newValue)) = (1 << 31) + 1
+		AdditionUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int64)
+		Ω(*(*int64)(unsafe.Pointer(&oldValue))).Should(Equal(int64(0)))
 	})
 
-	ginkgo.It("UpdateWithMin test", func() {
-		oldValue, _ := ValueFromString("null", Bool)
-		newValue, _ := ValueFromString("1", Bool)
-		finalVal, needUpdate, err := UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).ShouldNot(BeNil())
+	ginkgo.It("MinMaxUpdate should work", func() {
+		// big enough to hold all numeric types
+		var oldValue int64
+		var newValue int64
+		*(*int8)(unsafe.Pointer(&oldValue)) = -1
+		*(*int8)(unsafe.Pointer(&newValue)) = 1
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int8, CompareInt8, 1)
+		Ω(*(*int8)(unsafe.Pointer(&oldValue))).Should(Equal(int8(-1)))
 
-		oldValue, _ = ValueFromString("null", SmallEnum)
-		newValue, _ = ValueFromString("1", SmallEnum)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).ShouldNot(BeNil())
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int8, CompareInt8, -1)
+		Ω(*(*int8)(unsafe.Pointer(&oldValue))).Should(Equal(int8(1)))
 
-		oldValue, _ = ValueFromString("null", Int8)
-		newValue, _ = ValueFromString("1", Int8)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		*(*uint8)(unsafe.Pointer(&oldValue)) = 0
+		*(*uint8)(unsafe.Pointer(&newValue)) = 1
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Uint8, CompareUint8, 1)
+		Ω(*(*uint8)(unsafe.Pointer(&oldValue))).Should(Equal(uint8(0)))
 
-		oldValue, _ = ValueFromString("1", Int8)
-		newValue, _ = ValueFromString("null", Int8)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).ShouldNot(BeTrue())
-		Ω(finalVal).Should(Equal(&oldValue))
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Uint8, CompareUint8, -1)
+		Ω(*(*uint8)(unsafe.Pointer(&oldValue))).Should(Equal(uint8(1)))
 
-		oldValue, _ = ValueFromString("1", Int8)
-		newValue, _ = ValueFromString("2", Int8)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).ShouldNot(BeTrue())
-		Ω(finalVal).Should(Equal(&oldValue))
+		*(*int16)(unsafe.Pointer(&oldValue)) = -256
+		*(*int16)(unsafe.Pointer(&newValue)) = 256
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int16, CompareInt16, 1)
+		Ω(*(*int16)(unsafe.Pointer(&oldValue))).Should(Equal(int16(-256)))
 
-		oldValue, _ = ValueFromString("2", Int8)
-		newValue, _ = ValueFromString("1", Int8)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int16, CompareInt16, -1)
+		Ω(*(*int16)(unsafe.Pointer(&oldValue))).Should(Equal(int16(256)))
 
-		oldValue, _ = ValueFromString("3", Uint8)
-		newValue, _ = ValueFromString("2", Uint8)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		*(*uint16)(unsafe.Pointer(&oldValue)) = 0
+		*(*uint16)(unsafe.Pointer(&newValue)) = 256
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Uint16, CompareUint16, 1)
+		Ω(*(*uint16)(unsafe.Pointer(&oldValue))).Should(Equal(uint16(0)))
 
-		oldValue, _ = ValueFromString("3", Int16)
-		newValue, _ = ValueFromString("2", Int16)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Uint16, CompareUint16, -1)
+		Ω(*(*uint16)(unsafe.Pointer(&oldValue))).Should(Equal(uint16(256)))
 
-		oldValue, _ = ValueFromString("3", Uint16)
-		newValue, _ = ValueFromString("2", Uint16)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		*(*int32)(unsafe.Pointer(&oldValue)) = -65536
+		*(*int32)(unsafe.Pointer(&newValue)) = 65536
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int32, CompareInt32, 1)
+		Ω(*(*int32)(unsafe.Pointer(&oldValue))).Should(Equal(int32(-65536)))
 
-		oldValue, _ = ValueFromString("3", Int32)
-		newValue, _ = ValueFromString("2", Int32)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int32, CompareInt32, -1)
+		Ω(*(*int32)(unsafe.Pointer(&oldValue))).Should(Equal(int32(65536)))
 
-		oldValue, _ = ValueFromString("3", Uint32)
-		newValue, _ = ValueFromString("2", Uint32)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		*(*uint32)(unsafe.Pointer(&oldValue)) = 0
+		*(*uint32)(unsafe.Pointer(&newValue)) = 65536
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Uint32, CompareUint32, 1)
+		Ω(*(*uint32)(unsafe.Pointer(&oldValue))).Should(Equal(uint32(0)))
 
-		oldValue, _ = ValueFromString("3", Int64)
-		newValue, _ = ValueFromString("2", Int64)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Uint32, CompareUint32, -1)
+		Ω(*(*uint32)(unsafe.Pointer(&oldValue))).Should(Equal(uint32(65536)))
 
-		oldValue, _ = ValueFromString("3", Float32)
-		newValue, _ = ValueFromString("2", Float32)
-		finalVal, needUpdate, err = UpdateWithMinFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
-	})
+		*(*int64)(unsafe.Pointer(&oldValue)) = -(1 << 31) - 1
+		*(*int64)(unsafe.Pointer(&newValue)) = (1 << 31) + 1
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int64, CompareInt64, 1)
+		Ω(*(*int64)(unsafe.Pointer(&oldValue))).Should(Equal(int64(-(1 << 31) - 1)))
 
-	ginkgo.It("UpdateWithMax test", func() {
-		oldValue, _ := ValueFromString("null", Bool)
-		newValue, _ := ValueFromString("1", Bool)
-		finalVal, needUpdate, err := UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).ShouldNot(BeNil())
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Int64, CompareInt64, -1)
+		Ω(*(*int64)(unsafe.Pointer(&oldValue))).Should(Equal(int64((1 << 31) + 1)))
 
-		oldValue, _ = ValueFromString("null", SmallEnum)
-		newValue, _ = ValueFromString("1", SmallEnum)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).ShouldNot(BeNil())
+		*(*float32)(unsafe.Pointer(&oldValue)) = -1.0
+		*(*float32)(unsafe.Pointer(&newValue)) = 1.0
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Float32, CompareFloat32, 1)
+		Ω(*(*float32)(unsafe.Pointer(&oldValue))).Should(Equal(float32(-1.0)))
 
-		oldValue, _ = ValueFromString("null", Int8)
-		newValue, _ = ValueFromString("1", Int8)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
-
-		oldValue, _ = ValueFromString("1", Int8)
-		newValue, _ = ValueFromString("null", Int8)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).ShouldNot(BeTrue())
-		Ω(finalVal).Should(Equal(&oldValue))
-
-		oldValue, _ = ValueFromString("2", Int8)
-		newValue, _ = ValueFromString("1", Int8)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).ShouldNot(BeTrue())
-		Ω(finalVal).Should(Equal(&oldValue))
-
-		oldValue, _ = ValueFromString("1", Int8)
-		newValue, _ = ValueFromString("2", Int8)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
-
-		oldValue, _ = ValueFromString("1", Uint8)
-		newValue, _ = ValueFromString("2", Uint8)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
-
-		oldValue, _ = ValueFromString("1", Int16)
-		newValue, _ = ValueFromString("2", Int16)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
-
-		oldValue, _ = ValueFromString("1", Uint16)
-		newValue, _ = ValueFromString("2", Uint16)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
-
-		oldValue, _ = ValueFromString("1", Int32)
-		newValue, _ = ValueFromString("2", Int32)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
-
-		oldValue, _ = ValueFromString("1", Uint32)
-		newValue, _ = ValueFromString("2", Uint32)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
-
-		oldValue, _ = ValueFromString("1", Int64)
-		newValue, _ = ValueFromString("2", Int64)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
-
-		oldValue, _ = ValueFromString("1", Float32)
-		newValue, _ = ValueFromString("2", Float32)
-		finalVal, needUpdate, err = UpdateWithMaxFunc(&oldValue, &newValue)
-		Ω(err).Should(BeNil())
-		Ω(needUpdate).Should(BeTrue())
-		Ω(finalVal).Should(Equal(&newValue))
+		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Float32, CompareFloat32, -1)
+		Ω(*(*float32)(unsafe.Pointer(&oldValue))).Should(Equal(float32(1.0)))
 	})
 
 	ginkgo.It("set enum as string directly", func() {

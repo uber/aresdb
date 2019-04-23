@@ -131,7 +131,6 @@ type VectorParty interface {
 
 // CVectorParty is vector party that is backed by c
 type CVectorParty interface {
-
 	//Judge column mode
 	JudgeMode() ColumnMode
 	// Get column mode
@@ -142,6 +141,17 @@ type CVectorParty interface {
 type LiveVectorParty interface {
 	VectorParty
 
+	// Note for all following functions, data type are not checked. So callee need to perform the data type check
+	// and call the correct SetXXX function.
+
+	// If we already know this is a bool vp, we can set bool directly without constructing a data value struct.
+	SetBool(offset int, val bool, valid bool)
+	// Set value via a unsafe.Pointer directly.
+	SetValue(offset int, val unsafe.Pointer, valid bool)
+	// Set go value directly.
+	SetGoValue(offset int, val GoDataValue, valid bool)
+	// Get value directly
+	GetValue(offset int) (unsafe.Pointer, bool)
 	// GetMinMaxValue get min and max value,
 	// returns uint32 value since only valid for time column
 	GetMinMaxValue() (min, max uint32)

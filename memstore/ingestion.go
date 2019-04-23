@@ -106,12 +106,12 @@ func (shard *TableShard) ApplyUpsertBatch(upsertBatch *UpsertBatch, redoLogFile 
 	// We write insert records first so records with the same primary key in a upsert batch
 	// will be updated in order.
 	for batchID, records := range insertRecords {
-		if err := writeBatchRecords(columnDeletions, upsertBatch, batchID, records, false, shard); err != nil {
+		if err := shard.writeBatchRecords(columnDeletions, upsertBatch, batchID, records, false); err != nil {
 			return false, err
 		}
 	}
 	for batchID, records := range updateRecords {
-		if err := writeBatchRecords(columnDeletions, upsertBatch, batchID, records, true, shard); err != nil {
+		if err := shard.writeBatchRecords(columnDeletions, upsertBatch, batchID, records, true); err != nil {
 			return false, err
 		}
 	}
@@ -337,8 +337,8 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 }
 
 // Read rows from a batch group and write to memStore. Batch id = 0 is for records to be inserted.
-func writeBatchRecords(columnDeletions []bool,
-	upsertBatch *UpsertBatch, batchID int32, records []recordInfo, forUpdate bool, shard *TableShard) error {
+func (shard *TableShard) writeBatchRecords(columnDeletions []bool,
+	upsertBatch *UpsertBatch, batchID int32, records []recordInfo, forUpdate bool) error {
 	var batch *LiveBatch
 	if forUpdate {
 		// We need to lock the batch for update to achieve row level consistency.
@@ -364,53 +364,101 @@ func writeBatchRecords(columnDeletions []bool,
 		batch.MaxArrivalTime = upsertBatch.ArrivalTime
 	}
 
-	for _, recordInfo := range records {
-		for col := 0; col < upsertBatch.NumColumns; col++ {
-			columnID, err := upsertBatch.GetColumnID(col)
-			if err != nil {
-				return utils.StackError(err, "Failed to get column id for col %d", col)
+	// Instead of traversing row by row, we instead do column by column to avoid making checks on each row.
+	for col := 0; col < upsertBatch.NumColumns; col++ {
+		columnID, err := upsertBatch.GetColumnID(col)
+		if err != nil {
+			return utils.StackError(err, "Failed to get column id for col %d", col)
+		}
+		if columnDeletions[columnID] {
+			continue
+		}
+
+		columnUpdateMode := upsertBatch.columns[col].columnUpdateMode
+		columnMode := upsertBatch.columns[col].columnMode
+
+		// we will skip processing this column if
+		// 1. columnMode is AllValuesDefault
+		// 2. columnUpdateMode is UpdateOverwriteNotNull
+		if columnMode == common.AllValuesDefault && columnUpdateMode == common.UpdateOverwriteNotNull {
+			continue
+		}
+
+		if col >= len(upsertBatch.columns) {
+			return utils.StackError(nil, "Column index %d out of range %d", col, upsertBatch.columns)
+		}
+
+		vectorParty := batch.GetOrCreateVectorParty(columnID, true)
+		dataType := upsertBatch.columns[col].dataType
+		cmpFunc := common.GetCompareFunc(dataType)
+
+		// check whether the update mode is valid based on data type.
+		forceWrite := false
+		if forUpdate {
+			switch columnUpdateMode {
+			case common.UpdateForceOverwrite:
+				// always update
+				forceWrite = true
+			case common.UpdateWithAddition:
+				fallthrough
+			case common.UpdateWithMin:
+				fallthrough
+			case common.UpdateWithMax:
+				if !common.IsNumeric(dataType) {
+					return utils.StackError(nil, "Unsupported data type %x for column update mode %x", dataType, columnUpdateMode)
+				}
 			}
-			if columnDeletions[columnID] {
-				continue
+		}
+
+		for _, recordInfo := range records {
+			if recordInfo.row >= upsertBatch.NumRows {
+				return utils.StackError(nil, "Row index %d out of range %d", recordInfo.row, upsertBatch.NumRows)
 			}
 
-			dataValue, err := upsertBatch.GetDataValue(recordInfo.row, col)
-			if err != nil {
-				return utils.StackError(err, "Failed to get column id for col %d", col)
-			}
-
-			columnUpdateMode := upsertBatch.columns[col].columnUpdateMode
-			vectorParty := batch.GetOrCreateVectorParty(columnID, true)
-
-			newValue := &dataValue
-			needToWrite := newValue.Valid
-
-			if forUpdate {
-				var oldValue common.DataValue
-				// only read oldValue when mode within add, min, max
-				if columnUpdateMode > common.UpdateOverwriteNotNull {
-					oldValue = vectorParty.GetDataValue(recordInfo.index)
+			// We explicitly treat different columns by checking whether they are
+			// 1. Bool type
+			// 2. Go types
+			// 3. Other types
+			// Via doing this, we save lots of stack space to storing all related fields for different cases.
+			if dataType == common.Bool {
+				val, valid := upsertBatch.columns[col].ReadBool(recordInfo.row)
+				if !valid && !forceWrite {
+					continue
+				}
+				vectorParty.SetBool(recordInfo.index, val, valid)
+			} else if common.IsGoType(dataType) {
+				val := upsertBatch.columns[col].ReadGoValue(recordInfo.row)
+				valid := val != nil
+				if !valid && !forceWrite {
+					continue
+				}
+				vectorParty.SetGoValue(recordInfo.index, val, valid)
+			} else {
+				val, valid := upsertBatch.columns[col].ReadValue(recordInfo.row)
+				if !valid && !forceWrite {
+					continue
 				}
 
-				switch columnUpdateMode {
-				case common.UpdateForceOverwrite:
-					// always update
-					needToWrite = true
-				case common.UpdateWithAddition:
-					newValue, needToWrite, err = common.UpdateWithAdditionFunc(&oldValue, newValue)
-				case common.UpdateWithMin:
-					newValue, needToWrite, err = common.UpdateWithMinFunc(&oldValue, newValue)
-				case common.UpdateWithMax:
-					newValue, needToWrite, err = common.UpdateWithMaxFunc(&oldValue, newValue)
+				// only read oldValue when mode is one of add, min, max.
+				if columnUpdateMode >= common.UpdateWithAddition && columnUpdateMode <= common.UpdateWithMax {
+					oldVal, oldValid := vectorParty.GetValue(recordInfo.index)
+					// Only need to do calculation when old value is valid, otherwise we can directly
+					// set what's in upsert batch.
+					if oldValid {
+						switch columnUpdateMode {
+						case common.UpdateWithAddition:
+							common.AdditionUpdate(oldVal, val, dataType)
+						case common.UpdateWithMin:
+							common.MinMaxUpdate(oldVal, val, dataType, cmpFunc, 1)
+						case common.UpdateWithMax:
+							common.MinMaxUpdate(oldVal, val, dataType, cmpFunc, -1)
+						}
+						continue
+					}
 				}
 
-				if err != nil {
-					return utils.StackError(err, "Failed to calculate value for col %d, updateMode=%d", col, columnUpdateMode)
-				}
-			}
-
-			if needToWrite {
-				vectorParty.SetDataValue(recordInfo.index, *newValue, IgnoreCount)
+				// if the value is not updated, set the value directly using value from upsert batch.
+				vectorParty.SetValue(recordInfo.index, val, valid)
 			}
 		}
 	}
