@@ -58,8 +58,8 @@ type UpsertBatchBuilder interface {
 	PrepareUpsertBatch(tableName string, columnNames []string, updateModes []memCom.ColumnUpdateMode, rows []Row) ([]byte, int, error)
 }
 
-// EnumCasesWrapper is a response/request body which wraps enum cases
-type EnumCasesWrapper struct {
+// enumCasesWrapper is a response/request body which wraps enum cases
+type enumCasesWrapper struct {
 	EnumCases []string
 }
 
