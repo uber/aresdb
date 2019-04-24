@@ -24,10 +24,10 @@ import (
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query/sql/antlrgen"
 	"github.com/uber/aresdb/query/sql/tree"
 	"github.com/uber/aresdb/query/sql/util"
-	"github.com/uber/aresdb/common"
 )
 
 const (
@@ -457,8 +457,8 @@ func (v *ASTBuilder) VisitQuerySpecification(ctx *antlrgen.QuerySpecificationCon
 				}
 				v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey] = append(v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey],
 					Measure{
-						Alias:         alias,
-						Expr: util.GetSubstring(item.Expression.GetValue()),
+						Alias: alias,
+						Expr:  util.GetSubstring(item.Expression.GetValue()),
 					})
 			case *tree.AllColumns:
 				v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey] = append(v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey],
@@ -593,8 +593,8 @@ func (v *ASTBuilder) VisitSingleGroupingSet(ctx *antlrgen.SingleGroupingSetConte
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] =
 				append(v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
 					Dimension{
-						Alias:         alias,
-						Expr: expr,
+						Alias: alias,
+						Expr:  expr,
 					})
 		}
 	}
@@ -993,7 +993,7 @@ func (v *ASTBuilder) VisitFunctionCall(ctx *antlrgen.FunctionCallContext) interf
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = append(
 				v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
 				Dimension{
-					Expr:  util.TrimQuote(v.getText(ctx.Expression(0))),
+					Expr:           util.TrimQuote(v.getText(ctx.Expression(0))),
 					TimeBucketizer: util.TrimQuote(udfDef.Definition),
 					TimeUnit:       util.TrimQuote(v.getText(ctx.Expression(1))),
 				})
@@ -1845,7 +1845,7 @@ func (v *ASTBuilder) setNumericBucketizer(ctx []antlrgen.IExpressionContext, def
 		v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = append(
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
 			Dimension{
-				Expr:     util.TrimQuote(v.getText(ctx[0])),
+				Expr:              util.TrimQuote(v.getText(ctx[0])),
 				NumericBucketizer: NumericBucketizerDef{BucketWidth: value},
 			})
 	case util.NumericBucketTypeLogBase:
@@ -1858,7 +1858,7 @@ func (v *ASTBuilder) setNumericBucketizer(ctx []antlrgen.IExpressionContext, def
 		v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = append(
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
 			Dimension{
-				Expr:     util.TrimQuote(v.getText(ctx[0])),
+				Expr:              util.TrimQuote(v.getText(ctx[0])),
 				NumericBucketizer: NumericBucketizerDef{LogBase: value},
 			})
 	case util.NumericBucketTypeManualPartitions:
@@ -1876,7 +1876,7 @@ func (v *ASTBuilder) setNumericBucketizer(ctx []antlrgen.IExpressionContext, def
 		v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = append(
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
 			Dimension{
-				Expr:     util.TrimQuote(v.getText(ctx[0])),
+				Expr:              util.TrimQuote(v.getText(ctx[0])),
 				NumericBucketizer: NumericBucketizerDef{ManualPartitions: partitions},
 			})
 	}
@@ -1974,7 +1974,7 @@ func (v *ASTBuilder) GetAQL() *AQLQuery {
 			Joins:      joins,
 			Measures:   v.SQL2AqlCtx.MapMeasures[0],
 			Dimensions: v.SQL2AqlCtx.MapDimensions[0],
-			Filters: v.SQL2AqlCtx.MapRowFilters[0],
+			Filters:    v.SQL2AqlCtx.MapRowFilters[0],
 			TimeFilter: v.SQL2AqlCtx.timeFilter,
 			Timezone:   v.SQL2AqlCtx.timezone,
 			Now:        v.SQL2AqlCtx.timeNow,

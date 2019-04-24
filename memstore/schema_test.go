@@ -592,7 +592,10 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		tableSchema.SetDefaultValue(4)
 		Ω(tableSchema.DefaultValues[4].Valid).ShouldNot(BeFalse())
 		Ω(*(*uint8)(tableSchema.DefaultValues[4].OtherVal)).Should(Equal(uint8(0)))
+		Ω(tableSchema.GetColumnDeletions()).Should(BeEquivalentTo([]bool{false, false, false, false, false}))
+		Ω(tableSchema.GetColumnIfNonNilDefault()).Should(BeEquivalentTo([]bool{false, true, true, true, true}))
 		destroyTestMemstore(testMemstore)
+
 	})
 
 })

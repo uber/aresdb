@@ -15,11 +15,11 @@
 package api
 
 import (
-	"net/http"
 	"github.com/uber/aresdb/query"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"time"
+	"net/http"
 )
 
 // HandleSQL swagger:route POST /query/sql querySQL
@@ -78,10 +78,10 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 
 	// for options only, to reuse handleQuery
 	aqlRequest := AQLRequest{
-		Device: sqlRequest.Device,
-		Verbose: sqlRequest.Verbose,
-		Debug: sqlRequest.Debug,
-		Profiling: sqlRequest.Profiling,
+		Device:                sqlRequest.Device,
+		Verbose:               sqlRequest.Verbose,
+		Debug:                 sqlRequest.Debug,
+		Profiling:             sqlRequest.Profiling,
 		DeviceChoosingTimeout: sqlRequest.DeviceChoosingTimeout,
 		Accept: sqlRequest.Accept,
 		Origin: sqlRequest.Origin,

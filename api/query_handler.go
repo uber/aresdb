@@ -31,14 +31,14 @@ import (
 
 // QueryHandler handles query execution.
 type QueryHandler struct {
-	memStore     memstore.MemStore
+	memStore      memstore.MemStore
 	deviceManager *query.DeviceManager
 }
 
 // NewQueryHandler creates a new QueryHandler.
 func NewQueryHandler(memStore memstore.MemStore, cfg common.QueryConfig) *QueryHandler {
 	return &QueryHandler{
-		memStore:     memStore,
+		memStore:      memStore,
 		deviceManager: query.NewDeviceManager(cfg),
 	}
 }
@@ -175,7 +175,6 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 
 func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager, aqlRequest AQLRequest, aqlQuery query.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
 	qc = aqlQuery.Compile(memStore, aqlRequest.Accept == ContentTypeHyperLogLog)
-
 
 	for tableName := range qc.TableSchemaByName {
 		utils.GetRootReporter().GetChildCounter(map[string]string{

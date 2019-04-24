@@ -50,7 +50,7 @@ char *checkRMMError(rmmError_t rmmError, const char* message) {
 }
 
 DeviceMemoryFlags GetFlags() {
-  return DEVICE_MEMORY_IMPLEMENTATION_FLAG & POOLED_MEMORY_FLAG;
+  return DEVICE_MEMORY_IMPLEMENTATION_FLAG | POOLED_MEMORY_FLAG;
 }
 
 CGoCallResHandle Init() {

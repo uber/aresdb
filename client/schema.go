@@ -20,7 +20,7 @@ import (
 // SchemaFetcher is the interface for fetch schema and enums
 type SchemaFetcher interface {
 	// FetchAllSchemas fetches all schemas
-	FetchAllSchemas() ([]*metaCom.Table, error)
+	FetchAllSchemas() ([]metaCom.Table, error)
 	// FetchSchema fetch one schema for given table
 	FetchSchema(table string) (*metaCom.Table, error)
 	// FetchAllEnums fetches all enums for given table and column
@@ -142,8 +142,8 @@ func (cf *CachedSchemaHandler) FetchAllSchema() error {
 	}
 
 	for _, table := range tables {
-		cf.setTable(table)
-		err := cf.fetchAndSetEnumCases(table)
+		cf.setTable(&table)
+		err := cf.fetchAndSetEnumCases(&table)
 		if err != nil {
 			return err
 		}
@@ -348,7 +348,7 @@ func (hf *httpSchemaFetcher) FetchSchema(tableName string) (*metaCom.Table, erro
 	return &table, nil
 }
 
-func (hf *httpSchemaFetcher) FetchAllSchemas() ([]*metaCom.Table, error) {
+func (hf *httpSchemaFetcher) FetchAllSchemas() ([]metaCom.Table, error) {
 	var tables []string
 	resp, err := hf.httpClient.Get(hf.listTablesPath())
 	err = hf.readJSONResponse(resp, err, &tables)
@@ -356,7 +356,7 @@ func (hf *httpSchemaFetcher) FetchAllSchemas() ([]*metaCom.Table, error) {
 		return nil, utils.StackError(err, "Failed to fetch table list")
 	}
 
-	var res []*metaCom.Table
+	var res []metaCom.Table
 	for _, tableName := range tables {
 		table, err := hf.FetchSchema(tableName)
 		if err != nil {
@@ -365,7 +365,7 @@ func (hf *httpSchemaFetcher) FetchAllSchemas() ([]*metaCom.Table, error) {
 			}).Counter("err_fetch_table").Inc(1)
 			return nil, utils.StackError(err, "Failed to fetch schema error")
 		}
-		res = append(res, table)
+		res = append(res, *table)
 	}
 
 	return res, nil

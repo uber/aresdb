@@ -25,6 +25,7 @@ import (
 
 // ColumnUpdateMode represents how to update data from UpsertBatch
 type ColumnUpdateMode int
+
 // UpsertBatchVersion represents the version of upsert batch
 type UpsertBatchVersion uint32
 
@@ -48,10 +49,10 @@ const (
 )
 
 type columnBuilder struct {
-	columnID       int
-	dataType       DataType
-	values         []interface{}
-	enumDict       map[string]int
+	columnID int
+	dataType DataType
+	values   []interface{}
+	enumDict map[string]int
 	// enumDictLengthInBytes is final length in bytes for enum dict vector
 	// first byte represent validity
 	// 1+len(enum)+len(delimiter)+len(enum)+...
@@ -485,193 +486,47 @@ func (u UpsertBatchBuilder) ToByteArray() ([]byte, error) {
 	return buffer, nil
 }
 
-// UpdateWithAdditionFunc will return the addition of old value and new value
-func UpdateWithAdditionFunc(oldValue, newValue *DataValue) (*DataValue, bool, error) {
-	if oldValue.DataType != newValue.DataType {
-		return nil, false, utils.StackError(nil, "Data type not match, old type: %x, new type: %x", oldValue.DataType, newValue.DataType)
-	}
-	if !IsNumeric(oldValue.DataType) {
-		return nil, false, utils.StackError(nil, "Invalid data type for add operation, data type: %x", oldValue.DataType)
-	}
-
-	if !newValue.Valid {
-		return oldValue, false, nil
-	} else if !oldValue.Valid {
-		return newValue, true, nil
-	}
-
-	v := additionFunc(oldValue, newValue)
-	if v == oldValue {
-		return oldValue, false, nil
-	}
-	return v, true, nil
-}
-
-// UpdateWithMinFunc will return the minimum of old and new value
-func UpdateWithMinFunc(oldValue, newValue *DataValue) (*DataValue, bool, error) {
-	if oldValue.DataType != newValue.DataType {
-		return nil, false, utils.StackError(nil, "Data type not match, old type: %x, new type: %x", oldValue.DataType, newValue.DataType)
-	}
-	if !IsNumeric(oldValue.DataType) {
-		return nil, false, utils.StackError(nil, "Invalid data type for min operation, data type: %x", oldValue.DataType)
-	}
-
-	if !newValue.Valid {
-		return oldValue, false, nil
-	} else if !oldValue.Valid {
-		return newValue, true, nil
-	}
-
-	v := minFunc(oldValue, newValue)
-	if v == oldValue {
-		return oldValue, false, nil
-	}
-	return v, true, nil
-}
-
-// UpdateWithMaxFunc will return the maximum of old and new value
-func UpdateWithMaxFunc(oldValue, newValue *DataValue) (*DataValue, bool, error) {
-	if oldValue.DataType != newValue.DataType {
-		return nil, false, utils.StackError(nil, "Data type not match, old type: %x, new type: %x", oldValue.DataType, newValue.DataType)
-	}
-	if !IsNumeric(oldValue.DataType) {
-		return nil, false, utils.StackError(nil, "Invalid data type for max operation, data type: %x", oldValue.DataType)
-	}
-
-	if !newValue.Valid {
-		return oldValue, false, nil
-	} else if !oldValue.Valid {
-		return newValue, true, nil
-	}
-
-	v := maxFunc(oldValue, newValue)
-	if v == oldValue {
-		return oldValue, false, nil
-	}
-	return v, true, nil
-}
-
-// Note: newValue will be updated
-// TODO how to reuse newValue.OtherVal, here we avoid to update the value pointed by the pointer
-func additionFunc(oldValue, newValue *DataValue) *DataValue {
-	v := newValue
-	switch oldValue.DataType {
+func AdditionUpdate(oldValue, newValue unsafe.Pointer, dataType DataType) {
+	switch dataType {
 	case Int8:
-		t := *(*int8)(oldValue.OtherVal) + *(*int8)(newValue.OtherVal)
-		v.OtherVal = unsafe.Pointer(&t)
+		*(*int8)(oldValue) = *(*int8)(oldValue) + *(*int8)(newValue)
 	case Uint8:
-		t := *(*uint8)(oldValue.OtherVal) + *(*uint8)(newValue.OtherVal)
-		v.OtherVal = unsafe.Pointer(&t)
+		*(*uint8)(oldValue) = *(*uint8)(oldValue) + *(*uint8)(newValue)
 	case Int16:
-		t := *(*int16)(oldValue.OtherVal) + *(*int16)(newValue.OtherVal)
-		v.OtherVal = unsafe.Pointer(&t)
+		*(*int16)(oldValue) = *(*int16)(oldValue) + *(*int16)(newValue)
 	case Uint16:
-		t := *(*uint16)(oldValue.OtherVal) + *(*uint16)(newValue.OtherVal)
-		v.OtherVal = unsafe.Pointer(&t)
+		*(*uint16)(oldValue) = *(*uint16)(oldValue) + *(*uint16)(newValue)
 	case Int32:
-		t := *(*int32)(oldValue.OtherVal) + *(*int32)(newValue.OtherVal)
-		v.OtherVal = unsafe.Pointer(&t)
+		*(*int32)(oldValue) = *(*int32)(oldValue) + *(*int32)(newValue)
 	case Uint32:
-		t := *(*uint32)(oldValue.OtherVal) + *(*uint32)(newValue.OtherVal)
-		v.OtherVal = unsafe.Pointer(&t)
+		*(*uint32)(oldValue) = *(*uint32)(oldValue) + *(*uint32)(newValue)
 	case Int64:
-		t := *(*int64)(oldValue.OtherVal) + *(*int64)(newValue.OtherVal)
-		v.OtherVal = unsafe.Pointer(&t)
+		*(*int64)(oldValue) = *(*int64)(oldValue) + *(*int64)(newValue)
 	case Float32:
-		t := *(*float32)(oldValue.OtherVal) + *(*float32)(newValue.OtherVal)
-		v.OtherVal = unsafe.Pointer(&t)
+		*(*float32)(oldValue) = *(*float32)(oldValue) + *(*float32)(newValue)
 	}
-	return v
 }
 
-func minFunc(oldValue, newValue *DataValue) *DataValue {
-	switch oldValue.DataType {
-	case Int8:
-		if *(*int8)(oldValue.OtherVal) <= *(*int8)(newValue.OtherVal) {
-			return oldValue
+// MinMaxUpdate update the old value if compareRes == expectedRes
+func MinMaxUpdate(oldValue, newValue unsafe.Pointer, dataType DataType, cmpFunc CompareFunc, expectedRes int) {
+	if compareRes := cmpFunc(oldValue, newValue); compareRes*expectedRes > 0 {
+		switch dataType {
+		case Int8:
+			*(*int8)(oldValue) = *(*int8)(newValue)
+		case Uint8:
+			*(*uint8)(oldValue) = *(*uint8)(newValue)
+		case Int16:
+			*(*int16)(oldValue) = *(*int16)(newValue)
+		case Uint16:
+			*(*uint16)(oldValue) = *(*uint16)(newValue)
+		case Int32:
+			*(*int32)(oldValue) = *(*int32)(newValue)
+		case Uint32:
+			*(*uint32)(oldValue) = *(*uint32)(newValue)
+		case Int64:
+			*(*int64)(oldValue) = *(*int64)(newValue)
+		case Float32:
+			*(*float32)(oldValue) = *(*float32)(newValue)
 		}
-		return newValue
-	case Uint8:
-		if *(*uint8)(oldValue.OtherVal) <= *(*uint8)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Int16:
-		if *(*int16)(oldValue.OtherVal) <= *(*int16)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Uint16:
-		if *(*uint16)(oldValue.OtherVal) <= *(*uint16)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Int32:
-		if *(*int32)(oldValue.OtherVal) <= *(*int32)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Uint32:
-		if *(*uint32)(oldValue.OtherVal) <= *(*uint32)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Int64:
-		if *(*int64)(oldValue.OtherVal) <= *(*int64)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Float32:
-		if *(*float32)(oldValue.OtherVal) <= *(*float32)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
 	}
-	return oldValue
-}
-
-func maxFunc(oldValue, newValue *DataValue) *DataValue {
-	switch oldValue.DataType {
-	case Int8:
-		if *(*int8)(oldValue.OtherVal) >= *(*int8)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Uint8:
-		if *(*uint8)(oldValue.OtherVal) >= *(*uint8)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Int16:
-		if *(*int16)(oldValue.OtherVal) >= *(*int16)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Uint16:
-		if *(*uint16)(oldValue.OtherVal) >= *(*uint16)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Int32:
-		if *(*int32)(oldValue.OtherVal) >= *(*int32)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Uint32:
-		if *(*uint32)(oldValue.OtherVal) >= *(*uint32)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Int64:
-		if *(*int64)(oldValue.OtherVal) >= *(*int64)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	case Float32:
-		if *(*float32)(oldValue.OtherVal) >= *(*float32)(newValue.OtherVal) {
-			return oldValue
-		}
-		return newValue
-	}
-	return oldValue
 }

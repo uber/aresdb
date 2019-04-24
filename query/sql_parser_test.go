@@ -44,7 +44,7 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 		res := AQLQuery{
 			Table:      "trips",
 			Measures:   []Measure{{Alias: "completed_trips", Expr: "count(*)"}, {Expr: "sum(fare)"}},
-			Filters: []string{"status='completed' AND NOT status = 'cancelled' OR marketplace='agora'"},
+			Filters:    []string{"status='completed' AND NOT status = 'cancelled' OR marketplace='agora'"},
 			Dimensions: []Dimension{{Expr: "status"}},
 		}
 		runTest(sqls, res, logger)
@@ -84,8 +84,8 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			ORDER BY field1;`,
 		}
 		res := AQLQuery{
-			Table: "trips",
-			Measures: []Measure{{Expr: "1"}},
+			Table:      "trips",
+			Measures:   []Measure{{Expr: "1"}},
 			Dimensions: []Dimension{{Expr: "field1"}},
 			Sorts: []SortField{
 				{Name: "field1", Order: "ASC"},
@@ -183,7 +183,7 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			Measures:   []Measure{{Expr: "count(*)"}},
 			TimeFilter: TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
 			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "minutes", TimeUnit: "minute"}},
-			Filters: []string{`marketplace="agora"`},
+			Filters:    []string{`marketplace="agora"`},
 			Timezone:   "America/New_York",
 		}
 		runTest(sqls, res, logger)
@@ -201,7 +201,7 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			Measures:   []Measure{{Alias: "pop", Expr: "population"}, {Expr: "count(*)"}},
 			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "hour", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: NumericBucketizerDef{LogBase: 2}}},
 			TimeFilter: TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
-			Filters: []string{`marketplace="agora"`},
+			Filters:    []string{`marketplace="agora"`},
 			Timezone:   "America/New_York",
 		}
 		runTest(sqls, res, logger)
@@ -227,7 +227,7 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			Measures:   []Measure{{Alias: "pop", Expr: "population"}, {Expr: "count(*)"}},
 			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "hours", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: NumericBucketizerDef{LogBase: 2}}},
 			TimeFilter: TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
-			Filters: []string{`marketplace="agora"`},
+			Filters:    []string{`marketplace="agora"`},
 			Timezone:   "America/New_York",
 		}
 		runTest(sqls, res, logger)
