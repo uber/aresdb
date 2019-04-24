@@ -559,7 +559,7 @@ struct UnaryFunctor<O, UUIDT, typename std::enable_if<!std::is_same<O, GeoPointT
   }
 };
 
-// specialize unary transformation from UUIDT to UUIDT
+// Specialize unary transformation from UUIDT to UUIDT
 template <>
 struct UnaryFunctor<UUIDT, UUIDT> {
   typedef thrust::tuple<UUIDT, bool> argument_type;
@@ -575,7 +575,7 @@ struct UnaryFunctor<UUIDT, UUIDT> {
   }
 };
 
-// specialize UnaryFunctor for GeoPointT input type to types other than GeoPointT
+// Specialize UnaryFunctor for GeoPointT input type to types other than GeoPointT
 template <typename O>
 struct UnaryFunctor<
     O,
@@ -598,7 +598,7 @@ struct UnaryFunctor<
   }
 };
 
-// specialize UnaryFunctor for input type other than GeoPointT to GeoPointT output type
+// Specialize UnaryFunctor for input type other than GeoPointT to GeoPointT output type
 template <typename I>
 struct UnaryFunctor<GeoPointT, I, typename std::enable_if<!std::is_same<I, GeoPointT>::value>::type> {
   typedef thrust::tuple<I, bool> argument_type;
@@ -615,7 +615,7 @@ struct UnaryFunctor<GeoPointT, I, typename std::enable_if<!std::is_same<I, GeoPo
   }
 };
 
-// specialize unary transformation from GeoPointT to GeoPointT
+// Specialize from GeoPointT to GeoPointT
 template <>
 struct UnaryFunctor<GeoPointT, GeoPointT> {
   typedef thrust::tuple<GeoPointT, bool> argument_type;
@@ -632,7 +632,7 @@ struct UnaryFunctor<GeoPointT, GeoPointT> {
 };
 
 
-// specialize unary transformation from GeoPointT to float_t (to resolve tie of partial specialization)
+// Specialize from GeoPointT to float_t(to resolve partial specialization tie)
 template <>
 struct UnaryFunctor<GeoPointT, float_t> {
   typedef thrust::tuple<float_t, bool> argument_type;
@@ -814,6 +814,8 @@ struct BinaryFunctor<
   }
 };
 
+// Specialization for GeoPointT as input and output type. this is used to for
+// compile only, should never be called in runtime
 template <>
 struct BinaryFunctor<GeoPointT, GeoPointT> {
     typedef thrust::tuple<GeoPointT, bool> argument_type;
