@@ -25,6 +25,7 @@ import (
 
 // ColumnUpdateMode represents how to update data from UpsertBatch
 type ColumnUpdateMode int
+
 // UpsertBatchVersion represents the version of upsert batch
 type UpsertBatchVersion uint32
 
@@ -48,10 +49,10 @@ const (
 )
 
 type columnBuilder struct {
-	columnID       int
-	dataType       DataType
-	values         []interface{}
-	enumDict       map[string]int
+	columnID int
+	dataType DataType
+	values   []interface{}
+	enumDict map[string]int
 	// enumDictLengthInBytes is final length in bytes for enum dict vector
 	// first byte represent validity
 	// 1+len(enum)+len(delimiter)+len(enum)+...

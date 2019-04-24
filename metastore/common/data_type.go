@@ -36,5 +36,3 @@ const (
 	GeoShape  = "GeoShape"
 	Int64     = "Int64"
 )
-
-

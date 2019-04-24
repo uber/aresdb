@@ -1,8 +1,10 @@
 package gateway
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -28,9 +30,10 @@ type ControllerClient interface {
 
 // ControllerHTTPClient implements ControllerClient over http
 type ControllerHTTPClient struct {
-	c       *http.Client
-	address string
-	headers http.Header
+	c         *http.Client
+	address   string
+	headers   http.Header
+	namespace string
 }
 
 // NewControllerHTTPClient returns new ControllerHTTPClient
@@ -45,10 +48,10 @@ func NewControllerHTTPClient(address string, timeoutSec time.Duration, headers h
 }
 
 // buildRequest builds an http.Request with headers.
-func (c *ControllerHTTPClient) buildRequest(method, path string) (req *http.Request, err error) {
+func (c *ControllerHTTPClient) buildRequest(method, path string, body io.Reader) (req *http.Request, err error) {
 	path = strings.TrimPrefix(path, "/")
 	url := fmt.Sprintf("http://%s/%s", c.address, path)
-	req, err = http.NewRequest(method, url, nil)
+	req, err = http.NewRequest(method, url, body)
 	if err != nil {
 		req = nil
 		return
@@ -96,7 +99,7 @@ func (c *ControllerHTTPClient) getJSONResponse(request *http.Request, output int
 }
 
 func (c *ControllerHTTPClient) GetSchemaHash(namespace string) (hash string, err error) {
-	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("/schema/%s/hash", namespace))
+	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("/schema/%s/hash", namespace), nil)
 	if err != nil {
 		return
 	}
@@ -111,7 +114,7 @@ func (c *ControllerHTTPClient) GetSchemaHash(namespace string) (hash string, err
 }
 
 func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []common.Table, err error) {
-	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("/schema/%s/tables", namespace))
+	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("/schema/%s/tables", namespace), nil)
 	if err != nil {
 		return
 	}
@@ -126,7 +129,7 @@ func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []common.T
 
 // GetAssignmentHash get hash code of assignment
 func (c *ControllerHTTPClient) GetAssignmentHash(jobNamespace, instance string) (hash string, err error) {
-	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("assignment/%s/hash/%s", jobNamespace, instance))
+	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("assignment/%s/hash/%s", jobNamespace, instance), nil)
 	if err != nil {
 		return
 	}
@@ -143,7 +146,7 @@ func (c *ControllerHTTPClient) GetAssignmentHash(jobNamespace, instance string) 
 
 // GetAssignment gets the job assignment of the ares-subscriber
 func (c *ControllerHTTPClient) GetAssignment(jobNamespace, instance string) (assignment *rules.Assignment, err error) {
-	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("assignment/%s/assignments/%s", jobNamespace, instance))
+	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("assignment/%s/assignments/%s", jobNamespace, instance), nil)
 	if err != nil {
 		err = utils.StackError(err, "Failed to buildRequest")
 		return
@@ -164,4 +167,61 @@ func (c *ControllerHTTPClient) GetAssignment(jobNamespace, instance string) (ass
 		}
 	}
 	return
+}
+
+// SetNamespace sets the namespace which the ControllerHTTPClient connects to
+func (c *ControllerHTTPClient) SetNamespace(namespace string) {
+	c.namespace = namespace
+}
+
+// FetchAllSchemas fetches all schemas
+func (c *ControllerHTTPClient) FetchAllSchemas() (tables []common.Table, err error) {
+	return c.GetAllSchema(c.namespace)
+}
+
+// FetchSchema fetch one schema for given table
+func (c *ControllerHTTPClient) FetchSchema(tableName string) (table *common.Table, err error) {
+	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("schema/%s/tables/%s", c.namespace, tableName), nil)
+	if err != nil {
+		return
+	}
+	table = &common.Table{}
+	err = c.getJSONResponse(request, table)
+	if err != nil {
+		err = utils.StackError(err, "controller client error fetching schema for table: %s", tableName)
+		return
+	}
+	return
+}
+
+// FetchAllEnums fetches all enums for given table and column
+func (c *ControllerHTTPClient) FetchAllEnums(tableName string, columnName string) (enumDictReponse []string, err error) {
+	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("enum/%s/%s/columns/%s/enum-cases", c.namespace, tableName, columnName), nil)
+	if err != nil {
+		return
+	}
+
+	err = c.getJSONResponse(request, &enumDictReponse)
+	if err != nil {
+		err = utils.StackError(err, "controller client error fetching schema for table: %s", tableName)
+		return
+	}
+	return
+}
+
+// ExtendEnumCases extends enum cases to given table column
+func (c *ControllerHTTPClient) ExtendEnumCases(tableName, columnName string, enumCases []string) (enumIDs []int, err error) {
+	enumCasesBytes, err := json.Marshal(enumCases)
+	if err != nil {
+		return nil, utils.StackError(err, "Failed to marshal enum cases")
+	}
+
+	request, err := c.buildRequest(http.MethodPost, fmt.Sprintf("enum/%s/%s/columns/%s/enum-cases", c.namespace, tableName, columnName), bytes.NewReader(enumCasesBytes))
+	if err != nil {
+		return
+	}
+
+	err = c.getJSONResponse(request, &enumIDs)
+	return
+
 }

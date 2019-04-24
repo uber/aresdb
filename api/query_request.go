@@ -20,13 +20,13 @@ import (
 
 // QueryContext contains settings common for all requests
 type RequestContext struct {
-	Device int
-	Verbose int
-	Debug int
-	Profiling string
+	Device                int
+	Verbose               int
+	Debug                 int
+	Profiling             string
 	DeviceChoosingTimeout int
-	Accept string
-	Origin string
+	Accept                string
+	Origin                string
 }
 
 // AQLRequest represents AQL query request. Debug mode will
