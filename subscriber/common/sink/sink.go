@@ -54,7 +54,7 @@ type Destination struct {
 }
 
 func Sharding(rows []client.Row, destination Destination, jobConfig *rules.JobConfig) map[uint32][]client.Row {
-	if destination.NumShards == 0 {
+	if destination.NumShards == 0 || destination.NumShards == 1 {
 		// in this case, there is no sharding in this aresDB cluster
 		return nil
 	}
@@ -110,6 +110,7 @@ func GetDataValue(col interface{}, columnIDInSchema int, jobConfig *rules.JobCon
 	if dataStr, ok = col.(string); !ok {
 		return memCom.DataValue{}, fmt.Errorf("Failed to convert %v to string", col)
 	}
+
 	dataType := memCom.DataTypeFromString(jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].Type)
 	dataVal, err := memCom.ValueFromString(dataStr, dataType)
 

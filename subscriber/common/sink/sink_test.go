@@ -39,11 +39,11 @@ var _ = Describe("AresDatabase client", func() {
 					IsFactTable: true,
 					Columns: []metaCom.Column{
 						{
-							Name: "c1",
+							Name: "c2",
 							Type: "string",
 						},
 						{
-							Name: "c2",
+							Name: "c1",
 							Type: "string",
 						},
 						{
@@ -57,7 +57,17 @@ var _ = Describe("AresDatabase client", func() {
 				},
 			},
 		}
+		destination.NumShards = 0
 		batches := Sharding(rows, destination, &jobConfig)
-		Ω(batches).ShouldNot(BeEmpty())
+		Ω(batches).Should(BeNil())
+
+		destination.NumShards = 1
+		batches = Sharding(rows, destination, &jobConfig)
+		Ω(batches).Should(BeNil())
+
+		destination.NumShards = 2
+		batches = Sharding(rows, destination, &jobConfig)
+		Ω(batches).ShouldNot(BeNil())
+		Ω(len(batches)).Should(Equal(2))
 	})
 })

@@ -19,13 +19,16 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/gateway"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"net/http"
+	"os"
 	"strings"
 	"time"
-	memCom "github.com/uber/aresdb/memstore/common"
 )
 
 type KafkaPublisher struct {
@@ -44,14 +47,25 @@ func NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceC
 
 	cfg := sarama.NewConfig()
 	cfg.Producer.RequiredAcks = sarama.WaitForAll // Wait for all in-sync replicas to ack the message
-	cfg.Producer.Retry.Max = kpCfg.RetryMax
-	cfg.Producer.Timeout = time.Second * time.Duration(kpCfg.TimeoutInSec)
+	if kpCfg.RetryMax > 0 {
+		cfg.Producer.Retry.Max = kpCfg.RetryMax
+	}
+	if kpCfg.TimeoutInSec > 0 {
+		cfg.Producer.Timeout = time.Second * time.Duration(kpCfg.TimeoutInSec)
+	}
 	cfg.Producer.Return.Successes = true
 
 	p, err := sarama.NewSyncProducer(addresses, cfg)
 	if err != nil {
-		return nil, utils.StackError(err, "Unable to initialize Kafka publisher")
+		return nil, utils.StackError(err, "Unable to initialize Kafka producer")
 	}
+
+	aresControllerClient := gateway.NewControllerHTTPClient(serviceConfig.ControllerConfig.Address,
+		time.Duration(serviceConfig.ControllerConfig.Timeout)*time.Second,
+		http.Header{
+			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
+			"RPC-Service": []string{serviceConfig.ControllerConfig.ServiceName},
+		})
 
 	// replace httpSchemaFetcher with gateway client
 	// httpSchemaFetcher := NewHttpSchemaFetcher(httpClient, cfg.Address, metricScope)
@@ -60,7 +74,7 @@ func NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceC
 		serviceConfig.Scope.Tagged(map[string]string{
 			"job":         jobConfig.Name,
 			"aresCluster": cluster,
-		}), httpSchemaFetcher)
+		}), aresControllerClient)
 
 	// schema refresh is based on job assignment refresh, so disable at here
 	err = cachedSchemaHandler.Start(0)
@@ -69,16 +83,16 @@ func NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceC
 	}
 
 	kp := KafkaPublisher{
-		SyncProducer:           p,
-		UpsertBatchBuilderImpl: client.NewUpsertBatchBuilderImpl(
+		SyncProducer: p,
+		UpsertBatchBuilder: client.NewUpsertBatchBuilderImpl(
 			serviceConfig.Logger.Sugar(),
 			serviceConfig.Scope.Tagged(map[string]string{
 				"job":         jobConfig.Name,
 				"aresCluster": cluster,
 			}),
 			cachedSchemaHandler),
-		ServiceConfig:          serviceConfig,
-		JobConfig:              jobConfig,
+		ServiceConfig: serviceConfig,
+		JobConfig:     jobConfig,
 		Scope: serviceConfig.Scope.Tagged(map[string]string{
 			"job":         jobConfig.Name,
 			"aresCluster": cluster,
@@ -99,11 +113,11 @@ func (kp *KafkaPublisher) Save(destination Destination, rows []client.Row) error
 	shards := Sharding(rows, destination, kp.JobConfig)
 	if shards == nil {
 		// case1: no sharding --  publish rows to random kafka partition
-		kp.Insert(destination.Table, -1,  destination.ColumnNames, rows, destination.AresUpdateModes...)
+		kp.Insert(destination.Table, -1, destination.ColumnNames, rows, destination.AresUpdateModes...)
 	} else {
 		// case2: sharding -- publish rows to specified partition
 		for shardID, rowsInShard := range shards {
-			kp.Insert(destination.Table, int32(shardID),  destination.ColumnNames, rowsInShard, destination.AresUpdateModes...)
+			kp.Insert(destination.Table, int32(shardID), destination.ColumnNames, rowsInShard, destination.AresUpdateModes...)
 		}
 	}
 
