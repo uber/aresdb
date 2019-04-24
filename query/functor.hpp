@@ -539,7 +539,11 @@ struct UnaryFunctor<
 
 // specialize UnaryFunctor for UUIDT input input type to types other than UUIDT
 template <typename O>
-struct UnaryFunctor<O, UUIDT, typename std::enable_if<!std::is_same<O, GeoPointT>::value>::type> {
+struct UnaryFunctor<
+    O,
+    UUIDT,
+    typename std::enable_if<!std::is_same<O, GeoPointT>::value>::type
+  > {
   typedef thrust::tuple<UUIDT, bool> argument_type;
   typedef thrust::tuple<O, bool> result_type;
 
@@ -575,7 +579,8 @@ struct UnaryFunctor<UUIDT, UUIDT> {
   }
 };
 
-// Specialize UnaryFunctor for GeoPointT input type to types other than GeoPointT
+// Specialize UnaryFunctor for GeoPointT input type to types other than
+// GeoPointT
 template <typename O>
 struct UnaryFunctor<
     O,
@@ -598,9 +603,14 @@ struct UnaryFunctor<
   }
 };
 
-// Specialize UnaryFunctor for input type other than GeoPointT to GeoPointT output type
+// Specialize UnaryFunctor for input type other than GeoPointT to
+// GeoPointT output type
 template <typename I>
-struct UnaryFunctor<GeoPointT, I, typename std::enable_if<!std::is_same<I, GeoPointT>::value>::type> {
+struct UnaryFunctor<
+    GeoPointT,
+    I,
+    typename std::enable_if<!std::is_same<I, GeoPointT>::value>::type
+  > {
   typedef thrust::tuple<I, bool> argument_type;
   typedef thrust::tuple<GeoPointT, bool> result_type;
 
@@ -829,7 +839,6 @@ struct BinaryFunctor<GeoPointT, GeoPointT> {
                                                  const argument_type t2) const {
         return thrust::make_tuple(thrust::get<0>(t1), false);
       }
-
 };
 
 // BinaryPredicateFunctor simply applies the BinaryFunctor f on <lhs, rhs>
