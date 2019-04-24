@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Shopify/sarama"
 	"github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"

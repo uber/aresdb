@@ -82,8 +82,10 @@ func (_m *ControllerClient) GetAssignment(jobNamespace, instance string) (*rules
 		Scope:  tally.NoopScope,
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
-	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
+	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+		"dev01": {
+			AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
+		},
 	}
 	rootPath := tools.GetModulePath("")
 	os.Chdir(rootPath)
@@ -93,9 +95,9 @@ func (_m *ControllerClient) GetAssignment(jobNamespace, instance string) (*rules
 		jobConfigs["job1"]["dev01"],
 	}
 
-	aresClusters := map[string]client.ConnectorConfig{
+	aresClusters := map[string]config.SinkConfig{
 		"dev01": {
-			Address: "localhost:5436",
+			AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:5436"},
 		},
 	}
 
