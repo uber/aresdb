@@ -58,6 +58,7 @@ var _ = Describe("AresDatabase client", func() {
 				},
 			},
 		}
+		jobConfig.SetPrimaryKeyBytes(1)
 		destination.NumShards = 0
 		batches := Sharding(rows, destination, &jobConfig)
 		Ω(batches).Should(BeNil())

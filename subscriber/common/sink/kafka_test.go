@@ -147,6 +147,7 @@ var _ = Describe("Kafka producer", func() {
 	})
 
 	It("NewKafkaPublisher", func() {
+		jobConfig.SetPrimaryKeyBytes(1)
 		publisher, err := NewKafkaPublisher(serviceConfig, &jobConfig, cluster, sinkCfg)
 		Ω(err).Should(BeNil())
 		Ω(publisher).ShouldNot(BeNil())

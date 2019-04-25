@@ -184,6 +184,11 @@ func (j *JobConfig) GetPrimaryKeys() map[string]int {
 	return j.primaryKeys
 }
 
+// SetPrimaryKeyBytes sets the number of bytes needed by primaryKey
+func (j *JobConfig) SetPrimaryKeyBytes(primaryKeyBytes int) {
+	j.primaryKeyBytes = primaryKeyBytes
+}
+
 // GetPrimaryKeyBytes returns the number of bytes needed by primaryKey
 func (j *JobConfig) GetPrimaryKeyBytes() int {
 	return j.primaryKeyBytes
