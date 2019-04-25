@@ -41,7 +41,11 @@ type KafkaPublisher struct {
 	ClusterName   string
 }
 
-func NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, cluster string, kpCfg config.KafkaProducerConfig) (Sink, error) {
+func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string, sinkCfg config.SinkConfig) (Sink, error) {
+	if sinkCfg.GetSinkMode() != config.Sink_Kafka {
+		return nil, fmt.Errorf("Failed to NewKafkaPublisher, wrong sinkMode=%d", sinkCfg.GetSinkMode())
+	}
+	kpCfg := sinkCfg.KafkaProducerConfig
 	addresses := strings.Split(kpCfg.Brokers, ",")
 	serviceConfig.Logger.Info("Kafka borkers address", zap.Any("brokers", addresses))
 
@@ -66,6 +70,7 @@ func NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceC
 			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
 			"RPC-Service": []string{serviceConfig.ControllerConfig.ServiceName},
 		})
+	aresControllerClient.SetNamespace(cluster)
 
 	// replace httpSchemaFetcher with gateway client
 	// httpSchemaFetcher := NewHttpSchemaFetcher(httpClient, cfg.Address, metricScope)
@@ -146,6 +151,7 @@ func (kp *KafkaPublisher) Insert(tableName string, shardID int32, columnNames []
 		Topic: fmt.Sprint("%s-%s", tableName, kp.Cluster()),
 		Value: sarama.ByteEncoder(bytes),
 	}
+
 	if shardID >= 0 {
 		msg.Partition = shardID
 	}

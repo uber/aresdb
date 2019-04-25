@@ -28,6 +28,7 @@ import (
 	"github.com/uber/aresdb/subscriber/common/consumer"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
+	"github.com/uber/aresdb/subscriber/common/sink"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
@@ -53,10 +54,11 @@ var _ = Describe("controller", func() {
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
 	sinkConfig := config.SinkConfig{
+		SinkModeStr: "aresDB",
 		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
 	}
 	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
-		"dev01": sinkConfig,
+		"dev-ares01": sinkConfig,
 	}
 
 	var testServer *httptest.Server
@@ -171,11 +173,13 @@ var _ = Describe("controller", func() {
 			}))
 		testServer.Start()
 		address = testServer.Listener.Addr().String()
+
 		sinkConfig := config.SinkConfig{
+			SinkModeStr: "aresDB",
 			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
 		}
-		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
-			"dev01": sinkConfig,
+		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig {
+			"dev-ares01": sinkConfig,
 		}
 	})
 
@@ -267,6 +271,7 @@ var _ = Describe("controller", func() {
 		params := Params{
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
+			SinkInitFunc: sink.NewAresDatabase,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
@@ -301,6 +306,7 @@ var _ = Describe("controller", func() {
 		params := Params{
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
+			SinkInitFunc: sink.NewAresDatabase,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
@@ -332,6 +338,7 @@ var _ = Describe("controller", func() {
 		params := Params{
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
+			SinkInitFunc: sink.NewAresDatabase,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
@@ -368,6 +375,5 @@ var _ = Describe("controller", func() {
 		mockServices.EXPECT().Advertise(gomock.Any()).Return(nil).AnyTimes()
 		err := registerHeartBeatService(params, mockServices)
 		Ω(err).Should(BeNil())
-
 	})
 })

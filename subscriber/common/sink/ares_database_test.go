@@ -63,10 +63,14 @@ var _ = Describe("AresDatabase client", func() {
 		Connector:     &mockConnector,
 	}
 	It("NewAresDatabase", func() {
-		config := client.ConnectorConfig{
+		cfg := client.ConnectorConfig{
 			Address: "localhost:8081",
 		}
-		_, err := NewAresDatabase(serviceConfig, &jobConfig, cluster, config)
+		sinkCfg := config.SinkConfig{
+			SinkModeStr: "aresDB",
+			AresDBConnectorConfig: cfg,
+		}
+		_, err := NewAresDatabase(serviceConfig, &jobConfig, cluster, sinkCfg)
 		Ω(err).ShouldNot(BeNil())
 	})
 	It("Save", func() {

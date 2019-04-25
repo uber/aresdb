@@ -53,6 +53,7 @@ var _ = Describe("streaming_processor", func() {
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
 	sinkConfig := config.SinkConfig{
+		SinkModeStr: "aresDB",
 		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
 	}
 	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
@@ -234,18 +235,19 @@ var _ = Describe("streaming_processor", func() {
 		testServer.Close()
 	})
 	It("NewStreamingProcessor", func() {
-		p, err := NewStreamingProcessor(1, jobConfig, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err := NewStreamingProcessor(1, jobConfig, sink.NewAresDatabase, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).Should(BeNil())
 		Ω(err).ShouldNot(BeNil())
 
 		sinkConfig := config.SinkConfig{
+			SinkModeStr: "aresDB",
 			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
 		}
 		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
 			"dev01": sinkConfig,
 		}
-		p, err = NewStreamingProcessor(1, jobConfig, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err = NewStreamingProcessor(1, jobConfig, sink.NewAresDatabase, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).ShouldNot(BeNil())
 		Ω(p.(*StreamingProcessor).highLevelConsumer).ShouldNot(BeNil())

@@ -93,8 +93,24 @@ type HeartBeatConfig struct {
 	CheckInterval *time.Duration `yaml:"checkInterval"`
 }
 
+// SinkMode defines the subscriber sink mode
+type SinkMode int
+const (
+	Sink_Undefined SinkMode = iota
+	Sink_AresDB
+	Sink_Kafka
+)
+var sinkModeStr = map[string]SinkMode{
+	"undefined": Sink_Undefined,
+	"aresDB": Sink_AresDB,
+	"kafka": Sink_Kafka,
+}
+
+
 // SinkConfig wraps sink configurations
 type SinkConfig struct {
+	// SinkMode defines the subscriber sink mode
+	SinkModeStr string `yaml:"sinkMode"`
 	// AresDBConnectorConfig defines aresDB client config
 	AresDBConnectorConfig client.ConnectorConfig `yaml:"aresDB"`
 	// KafkaProducerConfig defines Kafka producer config
@@ -209,4 +225,11 @@ func NewServiceConfig(p Params) (Result, error) {
 	return Result{
 		ServiceConfig: serviceConfig,
 	}, nil
+}
+
+func (s SinkConfig) GetSinkMode() SinkMode {
+	if val, ok := sinkModeStr[s.SinkModeStr]; ok {
+		return val
+	}
+	return Sink_Undefined
 }

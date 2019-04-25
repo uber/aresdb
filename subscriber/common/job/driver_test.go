@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/subscriber/common/sink"
 
 	"github.com/uber/aresdb/subscriber/common/consumer"
 
@@ -52,6 +53,7 @@ var _ = Describe("driver", func() {
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
 	sinkConfig := config.SinkConfig{
+		SinkModeStr: "aresDB",
 		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
 	}
 	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
@@ -170,6 +172,7 @@ var _ = Describe("driver", func() {
 		testServer.Start()
 		address = testServer.Listener.Addr().String()
 		sinkConfig := config.SinkConfig{
+			SinkModeStr: "aresDB",
 			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
 		}
 		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
@@ -182,7 +185,7 @@ var _ = Describe("driver", func() {
 	})
 
 	It("NewDriver", func() {
-		driver, err := NewDriver(jobConfig, serviceConfig, NewStreamingProcessor,
+		driver, err := NewDriver(jobConfig, serviceConfig, NewStreamingProcessor, sink.NewAresDatabase,
 			consumer.NewKafkaConsumer, message.NewDefaultDecoder)
 		Ω(driver).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())

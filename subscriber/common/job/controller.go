@@ -51,6 +51,7 @@ type Params struct {
 	LifeCycle        fx.Lifecycle
 	ServiceConfig    config.ServiceConfig
 	JobConfigs       rules.JobConfigs
+	SinkInitFunc NewSink
 	ConsumerInitFunc NewConsumer
 	DecoderInitFunc  NewDecoder
 }
@@ -86,6 +87,8 @@ type Controller struct {
 	zkClient curator.CuratorFramework
 	// etcdServices is etcd services client
 	etcdServices services.Services
+	// sinkInitFunc is func of NewSink
+	sinkInitFunc NewSink
 	// consumerInitFunc is func of NewConsumer
 	consumerInitFunc NewConsumer
 	// decoderInitFunc is func of NewDecoder
@@ -130,6 +133,9 @@ func NewController(params Params) *Controller {
 		jobNS:                config.ActiveJobNameSpace,
 		aresClusterNS:        config.ActiveAresNameSpace,
 		assignmentHashCode:   "",
+		sinkInitFunc: params.SinkInitFunc,
+		consumerInitFunc: params.ConsumerInitFunc,
+		decoderInitFunc: params.DecoderInitFunc,
 	}
 
 	if params.ServiceConfig.ControllerConfig.Enable {
@@ -425,7 +431,7 @@ func (c *Controller) startDriver(
 
 	// 2. create a new driver
 	driver, err :=
-		NewDriver(clonedJobConfig, c.serviceConfig, NewStreamingProcessor, c.consumerInitFunc, c.decoderInitFunc)
+		NewDriver(clonedJobConfig, c.serviceConfig, NewStreamingProcessor, c.sinkInitFunc, c.consumerInitFunc, c.decoderInitFunc)
 	if err != nil {
 		c.serviceConfig.Logger.Error("Failed to create driver",
 			zap.String("job", jobConfig.Name),

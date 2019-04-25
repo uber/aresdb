@@ -105,4 +105,21 @@ var _ = Describe("service_config", func() {
 		Ω(err).ShouldNot(BeNil())
 		Ω(res).ShouldNot(BeNil())
 	})
+
+	It("GetSinkMode", func() {
+		s := SinkConfig{
+			SinkModeStr: "x",
+		}
+		Ω(s.GetSinkMode()).Should(Equal(Sink_Undefined))
+
+		s = SinkConfig{
+			SinkModeStr: "aresDB",
+		}
+		Ω(s.GetSinkMode()).Should(Equal(Sink_AresDB))
+
+		s = SinkConfig{
+			SinkModeStr: "kafka",
+		}
+		Ω(s.GetSinkMode()).Should(Equal(Sink_Kafka))
+	})
 })

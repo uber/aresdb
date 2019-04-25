@@ -74,6 +74,7 @@ type JobConfig struct {
 	destinations    map[string]*DestinationConfig
 	transformations map[string]*TransformationConfig
 	primaryKeys     map[string]int
+	primaryKeyBytes int
 }
 
 // AresTableConfig contains ares table schema and cluster informaiton
@@ -183,6 +184,11 @@ func (j *JobConfig) GetPrimaryKeys() map[string]int {
 	return j.primaryKeys
 }
 
+// GetPrimaryKeyBytes returns the number of bytes needed by primaryKey
+func (j *JobConfig) GetPrimaryKeyBytes() int {
+	return j.primaryKeyBytes
+}
+
 // GetColumnDict returns a job's columnDict definition
 func (j *JobConfig) GetColumnDict() map[string]int {
 	return j.columnDict
@@ -190,10 +196,17 @@ func (j *JobConfig) GetColumnDict() map[string]int {
 
 // PopulateAresTableConfig populates information into jobConfig fields
 func (j *JobConfig) PopulateAresTableConfig() error {
-	// set primaryKeys
+	// set primaryKeys and primaryKeyBytes
+	j.primaryKeyBytes = 0
 	j.primaryKeys = make(map[string]int, len(j.AresTableConfig.Table.PrimaryKeyColumns))
 	for _, pk := range j.AresTableConfig.Table.PrimaryKeyColumns {
 		j.primaryKeys[j.AresTableConfig.Table.Columns[pk].Name] = pk
+		columnType := j.AresTableConfig.Table.Columns[pk].Type
+		dataBits := memCom.DataTypeBits(memCom.DataTypeFromString(columnType))
+		if dataBits < 8 {
+			dataBits = 8
+		}
+		j.primaryKeyBytes += dataBits / 8
 	}
 
 	size := len(j.AresTableConfig.Table.Columns)

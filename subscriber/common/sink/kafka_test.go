@@ -28,7 +28,7 @@ var _ = Describe("Kafka producer", func() {
 		{"2", "v22", "true"},
 		{"3", "v32", "false"},
 	}
-	cluster := "test"
+	cluster := "ns1"
 	table := "test"
 	columnNames := []string{"c1", "c2", "c3"}
 	pk := map[string]int{"c1": 0}
@@ -48,6 +48,7 @@ var _ = Describe("Kafka producer", func() {
 	serviceConfig := config.ServiceConfig{
 		Logger: zap.NewNop(),
 		Scope:  tally.NoopScope,
+		ControllerConfig: &config.ControllerConfig{},
 	}
 	jobConfig := rules.JobConfig{
 		AresTableConfig: rules.AresTableConfig{
@@ -61,16 +62,17 @@ var _ = Describe("Kafka producer", func() {
 					},
 					{
 						Name: "c1",
-						Type: "int",
+						Type: "Int8",
 					},
 					{
 						Name: "c3",
-						Type: "bool",
+						Type: "Bool",
 					},
 				},
 				Config: metaCom.TableConfig{
 					BatchSize: 10,
 				},
+				PrimaryKeyColumns:[]int{1},
 			},
 		},
 	}
@@ -86,9 +88,12 @@ var _ = Describe("Kafka producer", func() {
 	enumIDBytes, _ := json.Marshal(column2extendedEnumIDs)
 
 	kafkaConfig := config.KafkaProducerConfig{
-		Brokers:      seedBroker.Addr(),
-		RetryMax:     3,
-		TimeoutInSec: 10,
+		RetryMax:     0,
+		TimeoutInSec: 1,
+	}
+	sinkCfg := config.SinkConfig{
+		SinkModeStr: "kafka",
+		KafkaProducerConfig: kafkaConfig,
 	}
 	topic := fmt.Sprint("%s-%s", table, cluster)
 
@@ -117,16 +122,22 @@ var _ = Describe("Kafka producer", func() {
 		// kafka broker mock setup
 		seedBroker = sarama.NewMockBroker(serviceConfig.Logger.Sugar(), 1)
 		leader = sarama.NewMockBroker(serviceConfig.Logger.Sugar(), 2)
+		kafkaConfig.Brokers = seedBroker.Addr()
 
 		metadataResponse := new(sarama.MetadataResponse)
 		metadataResponse.AddBroker(leader.Addr(), leader.BrokerID())
 		metadataResponse.AddTopicPartition(topic, 0, leader.BrokerID(), nil, nil, nil, sarama.ErrNoError)
+		metadataResponse.AddTopicPartition(topic, 1, leader.BrokerID(), nil, nil, nil, sarama.ErrNoError)
+		metadataResponse.AddTopicPartition(topic, 2, leader.BrokerID(), nil, nil, nil, sarama.ErrNoError)
 		seedBroker.Returns(metadataResponse)
 
 		prodSuccess := new(sarama.ProduceResponse)
 		prodSuccess.AddTopicPartition(topic, 0, sarama.ErrNoError)
 		prodSuccess.AddTopicPartition(topic, 1, sarama.ErrNoError)
 		prodSuccess.AddTopicPartition(topic, 2, sarama.ErrNoError)
+		for i := 0; i < 4; i++ {
+			leader.Returns(prodSuccess)
+		}
 	})
 
 	AfterEach(func() {
@@ -136,7 +147,7 @@ var _ = Describe("Kafka producer", func() {
 	})
 
 	It("NewKafkaPublisher", func() {
-		publisher, err := NewKafkaPublisher(&jobConfig, serviceConfig, cluster, kafkaConfig)
+		publisher, err := NewKafkaPublisher(serviceConfig, &jobConfig, cluster, sinkCfg)
 		Ω(err).Should(BeNil())
 		Ω(publisher).ShouldNot(BeNil())
 
@@ -150,5 +161,7 @@ var _ = Describe("Kafka producer", func() {
 		destination.NumShards = 3
 		err = publisher.Save(destination, rows)
 		Ω(err).Should(BeNil())
+
+		publisher.Shutdown()
 	})
 })

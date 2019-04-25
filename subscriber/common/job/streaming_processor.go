@@ -35,7 +35,12 @@ import (
 // NewConsumer is the type of function each consumer that implements Consumer should provide for initialization.
 type NewConsumer func(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (consumer.Consumer, error)
 
+// NewDecoder is the type of function each decoder that implements decoder should provide for initialization.
 type NewDecoder func(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (decoder message.Decoder, err error)
+
+// NewSink is the type of function each decoder that implements sink should provide for initialization.
+type NewSink func(
+	serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string, sinkCfg config.SinkConfig) (sink.Sink, error)
 
 // StreamingProcessor defines a individual processor that connects to a Kafka high level consumer,
 // processes the messages based on the type of job and saves to database
@@ -47,6 +52,7 @@ type StreamingProcessor struct {
 	serviceConfig     config.ServiceConfig
 	scope             tally.Scope
 	sink              sink.Sink
+	sinkInitFunc NewSink
 	highLevelConsumer consumer.Consumer
 	consumerInitFunc  NewConsumer
 	parser            *message.Parser
@@ -60,11 +66,11 @@ type StreamingProcessor struct {
 }
 
 // NewStreamingProcessor returns Processor to consume, process and save data to db.
-func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
+func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, sinkInitFunc NewSink, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
 	errors chan ProcessorError, msgSizes chan int64, serviceConfig config.ServiceConfig) (Processor, error) {
 	cluster := jobConfig.AresTableConfig.Cluster
 	// Initialize downstream DB
-	db, err := initDatabase(jobConfig, serviceConfig)
+	db, err := initSink(jobConfig, serviceConfig, sinkInitFunc)
 	if err != nil {
 		return nil, utils.StackError(err,
 			fmt.Sprintf("Failed to initialize database connection for job: %s, cluster: %s",
@@ -101,6 +107,7 @@ func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, consumerInitFunc 
 			"aresCluster": jobConfig.AresTableConfig.Cluster,
 		}),
 		sink:              db,
+		sinkInitFunc: sinkInitFunc,
 		failureHandler:    failureHandler,
 		highLevelConsumer: hlConsumer,
 		consumerInitFunc:  consumerInitFunc,
@@ -134,8 +141,8 @@ func initFailureHandler(serviceConfig config.ServiceConfig,
 }
 
 // initDatabase will initialize the database for writing ingest data
-func initDatabase(
-	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (sink.Sink, error) {
+func initSink(
+	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, sinkInitFunc NewSink) (sink.Sink, error) {
 	cluster := jobConfig.AresTableConfig.Cluster
 	serviceConfig.Logger.Info("Initialize database",
 		zap.String("job", jobConfig.Name),
@@ -147,10 +154,8 @@ func initDatabase(
 		return nil, fmt.Errorf("Failed to get ares config for job: %s, cluster: %s",
 			jobConfig.Name, cluster)
 	}
-
-	db, err := sink.NewAresDatabase(serviceConfig, jobConfig, cluster, aresConfig.AresDBConnectorConfig)
-
-	return db, err
+	
+	return sinkInitFunc(serviceConfig, jobConfig, cluster, aresConfig)
 }
 
 // GetID will return ID of this processor
@@ -263,7 +268,7 @@ func (s *StreamingProcessor) reInitialize() error {
 		zap.Int("ID", s.ID),
 		zap.String("job", s.jobConfig.Name),
 		zap.String("cluster", s.cluster))
-	db, err := initDatabase(s.jobConfig, s.serviceConfig)
+	db, err := initSink(s.jobConfig, s.serviceConfig, s.sinkInitFunc)
 	if err != nil {
 		err = utils.StackError(err, "Unable to initialize Database")
 		return err
@@ -405,9 +410,9 @@ func (s *StreamingProcessor) saveToDestination(batch []interface{}, destination 
 		}
 		row, err := s.parser.ParseMessage(msg, destination)
 		if err == nil &&
-			s.parser.CheckPrimaryKeys(destination, row) != nil &&
+			s.parser.CheckPrimaryKeys(destination, row) == nil &&
 			s.parser.CheckTimeColumnExistence(
-				s.jobConfig.AresTableConfig.Table, s.jobConfig.GetColumnDict(), destination, row) != nil {
+				s.jobConfig.AresTableConfig.Table, s.jobConfig.GetColumnDict(), destination, row) == nil {
 			rows = append(rows, row)
 		} else {
 			s.context.Lock()

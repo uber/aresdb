@@ -37,8 +37,11 @@ type AresDatabase struct {
 
 // NewAresDatabase initialize an AresDatabase cluster
 func NewAresDatabase(
-	serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string,
-	config client.ConnectorConfig) (Sink, error) {
+	serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string, sinkCfg config.SinkConfig) (Sink, error) {
+	if sinkCfg.GetSinkMode() != config.Sink_AresDB {
+		return nil, fmt.Errorf("Failed to NewAresDatabase, wrong sinkMode=%d", sinkCfg.GetSinkMode())
+	}
+	config := sinkCfg.AresDBConnectorConfig
 	connector, err := config.NewConnector(serviceConfig.Logger.Sugar(), serviceConfig.Scope.Tagged(map[string]string{
 		"job":         jobConfig.Name,
 		"aresCluster": cluster,

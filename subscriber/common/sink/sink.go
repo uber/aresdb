@@ -53,6 +53,10 @@ type Destination struct {
 	NumShards uint32
 }
 
+//NewAresDatabase(
+//	serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string,
+//	config client.ConnectorConfig) (Sink, error)
+//NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, cluster string, kpCfg config.KafkaProducerConfig) (Sink, error)
 func Sharding(rows []client.Row, destination Destination, jobConfig *rules.JobConfig) map[uint32][]client.Row {
 	if destination.NumShards == 0 || destination.NumShards == 1 {
 		// in this case, there is no sharding in this aresDB cluster
@@ -63,9 +67,10 @@ func Sharding(rows []client.Row, destination Destination, jobConfig *rules.JobCo
 	for i := uint32(0); i < destination.NumShards; i++ {
 		shards[i] = make([]client.Row, 0, len(rows))
 	}
+
 	for _, row := range rows {
 		// convert primaryKey to byte array
-		pk := []byte{}
+		pk := make([]byte, jobConfig.GetPrimaryKeyBytes())
 		err := GetPrimaryKeyBytes(row, destination, jobConfig, pk)
 		if err != nil {
 			utils.StackError(err, "Failed to convert primaryKey to byte array for row: %v", row)

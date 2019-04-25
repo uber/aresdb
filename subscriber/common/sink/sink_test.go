@@ -12,9 +12,9 @@ import (
 var _ = Describe("AresDatabase client", func() {
 	It("Sharding", func() {
 		rows := []client.Row{
-			{"v11", "v12", "v13"},
-			{"v21", "v22", "v23"},
-			{"v31", "v32", "v33"},
+			{"1", "v12", "v13"},
+			{"2", "v22", "v23"},
+			{"3", "v32", "v33"},
 		}
 		table := "test"
 		columnNames := []string{"c1", "c2", "c3"}
@@ -44,7 +44,7 @@ var _ = Describe("AresDatabase client", func() {
 						},
 						{
 							Name: "c1",
-							Type: "string",
+							Type: "Int8",
 						},
 						{
 							Name: "c3",
@@ -54,6 +54,7 @@ var _ = Describe("AresDatabase client", func() {
 					Config: metaCom.TableConfig{
 						BatchSize: 10,
 					},
+					PrimaryKeyColumns:[]int{1},
 				},
 			},
 		}
