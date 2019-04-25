@@ -35,7 +35,7 @@ type Result struct {
 	Scope       tally.Scope
 	Consumer    job.NewConsumer
 	Decoder     job.NewDecoder
-	Sink job.NewSink
+	Sink        job.NewSink
 }
 
 func main() {
@@ -136,6 +136,6 @@ func Init(params Params) Result {
 		Scope:       scope,
 		Consumer:    consumer.NewKafkaConsumer,
 		Decoder:     message.NewDefaultDecoder,
-		Sink: sink.NewAresDatabase,
+		Sink:        sink.NewAresDatabase,
 	}
 }

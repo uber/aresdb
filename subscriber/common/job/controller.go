@@ -51,7 +51,7 @@ type Params struct {
 	LifeCycle        fx.Lifecycle
 	ServiceConfig    config.ServiceConfig
 	JobConfigs       rules.JobConfigs
-	SinkInitFunc NewSink
+	SinkInitFunc     NewSink
 	ConsumerInitFunc NewConsumer
 	DecoderInitFunc  NewDecoder
 }
@@ -133,9 +133,9 @@ func NewController(params Params) *Controller {
 		jobNS:                config.ActiveJobNameSpace,
 		aresClusterNS:        config.ActiveAresNameSpace,
 		assignmentHashCode:   "",
-		sinkInitFunc: params.SinkInitFunc,
-		consumerInitFunc: params.ConsumerInitFunc,
-		decoderInitFunc: params.DecoderInitFunc,
+		sinkInitFunc:         params.SinkInitFunc,
+		consumerInitFunc:     params.ConsumerInitFunc,
+		decoderInitFunc:      params.DecoderInitFunc,
 	}
 
 	if params.ServiceConfig.ControllerConfig.Enable {

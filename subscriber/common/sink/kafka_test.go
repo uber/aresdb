@@ -46,8 +46,8 @@ var _ = Describe("Kafka producer", func() {
 		AresUpdateModes:     modes,
 	}
 	serviceConfig := config.ServiceConfig{
-		Logger: zap.NewNop(),
-		Scope:  tally.NoopScope,
+		Logger:           zap.NewNop(),
+		Scope:            tally.NoopScope,
 		ControllerConfig: &config.ControllerConfig{},
 	}
 	jobConfig := rules.JobConfig{
@@ -72,7 +72,7 @@ var _ = Describe("Kafka producer", func() {
 				Config: metaCom.TableConfig{
 					BatchSize: 10,
 				},
-				PrimaryKeyColumns:[]int{1},
+				PrimaryKeyColumns: []int{1},
 			},
 		},
 	}
@@ -92,7 +92,7 @@ var _ = Describe("Kafka producer", func() {
 		TimeoutInSec: 1,
 	}
 	sinkCfg := config.SinkConfig{
-		SinkModeStr: "kafka",
+		SinkModeStr:         "kafka",
 		KafkaProducerConfig: kafkaConfig,
 	}
 	topic := fmt.Sprint("%s-%s", table, cluster)

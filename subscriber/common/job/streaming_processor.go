@@ -52,7 +52,7 @@ type StreamingProcessor struct {
 	serviceConfig     config.ServiceConfig
 	scope             tally.Scope
 	sink              sink.Sink
-	sinkInitFunc NewSink
+	sinkInitFunc      NewSink
 	highLevelConsumer consumer.Consumer
 	consumerInitFunc  NewConsumer
 	parser            *message.Parser
@@ -107,7 +107,7 @@ func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, sinkInitFunc NewS
 			"aresCluster": jobConfig.AresTableConfig.Cluster,
 		}),
 		sink:              db,
-		sinkInitFunc: sinkInitFunc,
+		sinkInitFunc:      sinkInitFunc,
 		failureHandler:    failureHandler,
 		highLevelConsumer: hlConsumer,
 		consumerInitFunc:  consumerInitFunc,
@@ -154,7 +154,7 @@ func initSink(
 		return nil, fmt.Errorf("Failed to get ares config for job: %s, cluster: %s",
 			jobConfig.Name, cluster)
 	}
-	
+
 	return sinkInitFunc(serviceConfig, jobConfig, cluster, aresConfig)
 }
 

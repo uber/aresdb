@@ -95,17 +95,18 @@ type HeartBeatConfig struct {
 
 // SinkMode defines the subscriber sink mode
 type SinkMode int
+
 const (
 	Sink_Undefined SinkMode = iota
 	Sink_AresDB
 	Sink_Kafka
 )
+
 var sinkModeStr = map[string]SinkMode{
 	"undefined": Sink_Undefined,
-	"aresDB": Sink_AresDB,
-	"kafka": Sink_Kafka,
+	"aresDB":    Sink_AresDB,
+	"kafka":     Sink_Kafka,
 }
-
 
 // SinkConfig wraps sink configurations
 type SinkConfig struct {

@@ -53,7 +53,7 @@ var _ = Describe("streaming_processor", func() {
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
 	sinkConfig := config.SinkConfig{
-		SinkModeStr: "aresDB",
+		SinkModeStr:           "aresDB",
 		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
 	}
 	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
@@ -241,7 +241,7 @@ var _ = Describe("streaming_processor", func() {
 		Ω(err).ShouldNot(BeNil())
 
 		sinkConfig := config.SinkConfig{
-			SinkModeStr: "aresDB",
+			SinkModeStr:           "aresDB",
 			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
 		}
 		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{

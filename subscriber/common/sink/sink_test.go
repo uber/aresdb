@@ -54,7 +54,7 @@ var _ = Describe("AresDatabase client", func() {
 					Config: metaCom.TableConfig{
 						BatchSize: 10,
 					},
-					PrimaryKeyColumns:[]int{1},
+					PrimaryKeyColumns: []int{1},
 				},
 			},
 		}

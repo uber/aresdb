@@ -54,7 +54,7 @@ var _ = Describe("controller", func() {
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
 	sinkConfig := config.SinkConfig{
-		SinkModeStr: "aresDB",
+		SinkModeStr:           "aresDB",
 		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
 	}
 	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
@@ -175,10 +175,10 @@ var _ = Describe("controller", func() {
 		address = testServer.Listener.Addr().String()
 
 		sinkConfig := config.SinkConfig{
-			SinkModeStr: "aresDB",
+			SinkModeStr:           "aresDB",
 			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
 		}
-		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig {
+		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
 			"dev-ares01": sinkConfig,
 		}
 	})
@@ -271,7 +271,7 @@ var _ = Describe("controller", func() {
 		params := Params{
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
-			SinkInitFunc: sink.NewAresDatabase,
+			SinkInitFunc:     sink.NewAresDatabase,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
@@ -306,7 +306,7 @@ var _ = Describe("controller", func() {
 		params := Params{
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
-			SinkInitFunc: sink.NewAresDatabase,
+			SinkInitFunc:     sink.NewAresDatabase,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
@@ -338,7 +338,7 @@ var _ = Describe("controller", func() {
 		params := Params{
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
-			SinkInitFunc: sink.NewAresDatabase,
+			SinkInitFunc:     sink.NewAresDatabase,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}

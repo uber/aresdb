@@ -67,7 +67,7 @@ var _ = Describe("AresDatabase client", func() {
 			Address: "localhost:8081",
 		}
 		sinkCfg := config.SinkConfig{
-			SinkModeStr: "aresDB",
+			SinkModeStr:           "aresDB",
 			AresDBConnectorConfig: cfg,
 		}
 		_, err := NewAresDatabase(serviceConfig, &jobConfig, cluster, sinkCfg)

@@ -64,7 +64,7 @@ type Driver struct {
 	processors        []Processor
 	processorMsgCount map[int]int64
 	processorMsgSizes chan int64
-	sinkInitFunc NewSink
+	sinkInitFunc      NewSink
 	consumerInitFunc  NewConsumer
 	decoderInitFunc   NewDecoder
 }
@@ -133,7 +133,7 @@ func NewDriver(
 		processors:          []Processor{},
 		processorMsgCount:   make(map[int]int64),
 		processorMsgSizes:   make(chan int64),
-		sinkInitFunc: sinkInitFunc,
+		sinkInitFunc:        sinkInitFunc,
 		consumerInitFunc:    consumerInitFunc,
 		decoderInitFunc:     decoderInitFunc,
 	}, nil

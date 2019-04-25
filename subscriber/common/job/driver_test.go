@@ -53,7 +53,7 @@ var _ = Describe("driver", func() {
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
 	sinkConfig := config.SinkConfig{
-		SinkModeStr: "aresDB",
+		SinkModeStr:           "aresDB",
 		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
 	}
 	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
@@ -172,7 +172,7 @@ var _ = Describe("driver", func() {
 		testServer.Start()
 		address = testServer.Listener.Addr().String()
 		sinkConfig := config.SinkConfig{
-			SinkModeStr: "aresDB",
+			SinkModeStr:           "aresDB",
 			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
 		}
 		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
