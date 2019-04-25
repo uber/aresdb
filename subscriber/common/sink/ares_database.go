@@ -41,8 +41,8 @@ func NewAresDatabase(
 	if sinkCfg.GetSinkMode() != config.Sink_AresDB {
 		return nil, fmt.Errorf("Failed to NewAresDatabase, wrong sinkMode=%d", sinkCfg.GetSinkMode())
 	}
-	config := sinkCfg.AresDBConnectorConfig
-	connector, err := config.NewConnector(serviceConfig.Logger.Sugar(), serviceConfig.Scope.Tagged(map[string]string{
+
+	connector, err := sinkCfg.AresDBConnectorConfig.NewConnector(serviceConfig.Logger.Sugar(), serviceConfig.Scope.Tagged(map[string]string{
 		"job":         jobConfig.Name,
 		"aresCluster": cluster,
 	}))

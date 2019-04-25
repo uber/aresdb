@@ -122,7 +122,7 @@ var _ = Describe("Kafka producer", func() {
 		// kafka broker mock setup
 		seedBroker = sarama.NewMockBroker(serviceConfig.Logger.Sugar(), 1)
 		leader = sarama.NewMockBroker(serviceConfig.Logger.Sugar(), 2)
-		kafkaConfig.Brokers = seedBroker.Addr()
+		sinkCfg.KafkaProducerConfig.Brokers = seedBroker.Addr()
 
 		metadataResponse := new(sarama.MetadataResponse)
 		metadataResponse.AddBroker(leader.Addr(), leader.BrokerID())

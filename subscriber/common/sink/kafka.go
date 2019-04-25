@@ -45,17 +45,17 @@ func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobC
 	if sinkCfg.GetSinkMode() != config.Sink_Kafka {
 		return nil, fmt.Errorf("Failed to NewKafkaPublisher, wrong sinkMode=%d", sinkCfg.GetSinkMode())
 	}
-	kpCfg := sinkCfg.KafkaProducerConfig
-	addresses := strings.Split(kpCfg.Brokers, ",")
+
+	addresses := strings.Split(sinkCfg.KafkaProducerConfig.Brokers, ",")
 	serviceConfig.Logger.Info("Kafka borkers address", zap.Any("brokers", addresses))
 
 	cfg := sarama.NewConfig()
 	cfg.Producer.RequiredAcks = sarama.WaitForAll // Wait for all in-sync replicas to ack the message
-	if kpCfg.RetryMax > 0 {
-		cfg.Producer.Retry.Max = kpCfg.RetryMax
+	if sinkCfg.KafkaProducerConfig.RetryMax > 0 {
+		cfg.Producer.Retry.Max = sinkCfg.KafkaProducerConfig.RetryMax
 	}
-	if kpCfg.TimeoutInSec > 0 {
-		cfg.Producer.Timeout = time.Second * time.Duration(kpCfg.TimeoutInSec)
+	if sinkCfg.KafkaProducerConfig.TimeoutInSec > 0 {
+		cfg.Producer.Timeout = time.Second * time.Duration(sinkCfg.KafkaProducerConfig.TimeoutInSec)
 	}
 	cfg.Producer.Return.Successes = true
 

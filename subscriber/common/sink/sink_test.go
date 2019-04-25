@@ -9,7 +9,7 @@ import (
 	"github.com/uber/aresdb/subscriber/common/rules"
 )
 
-var _ = Describe("AresDatabase client", func() {
+var _ = Describe("Sink", func() {
 	It("Sharding", func() {
 		rows := []client.Row{
 			{"1", "v12", "v13"},
