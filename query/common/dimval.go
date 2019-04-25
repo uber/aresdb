@@ -93,8 +93,8 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer,
 		coords := *(*[2]float32)(valuePtr)
 		result = fmt.Sprintf(
 			"Point(%s %s)",
-			strconv.FormatFloat(float64(coords[0]), 'g', -1,32),
 			strconv.FormatFloat(float64(coords[1]), 'g', -1,32),
+			strconv.FormatFloat(float64(coords[0]), 'g', -1,32),
 		)
 		return &result
 	default:
