@@ -148,7 +148,7 @@ func (kp *KafkaPublisher) Insert(tableName string, shardID int32, columnNames []
 	}
 
 	msg := sarama.ProducerMessage{
-		Topic: fmt.Sprint("%s-%s", tableName, kp.Cluster()),
+		Topic: fmt.Sprintf("%s-%s", tableName, kp.Cluster()),
 		Value: sarama.ByteEncoder(bytes),
 	}
 

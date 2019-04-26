@@ -95,7 +95,7 @@ var _ = Describe("Kafka producer", func() {
 		SinkModeStr:         "kafka",
 		KafkaProducerConfig: kafkaConfig,
 	}
-	topic := fmt.Sprint("%s-%s", table, cluster)
+	topic := fmt.Sprintf("%s-%s", table, cluster)
 
 	BeforeEach(func() {
 		// ares controller http server setup
