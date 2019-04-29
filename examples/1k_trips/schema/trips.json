@@ -24,6 +24,10 @@
     {
       "name": "driver_uuid",
       "type": "UUID"
+    },
+    {
+      "name": "request_point",
+      "type": "GeoPoint"
     }
   ],
   "primaryKeyColumns": [1],

@@ -46,6 +46,8 @@ int OutputVectorBinder<NInput, FunctorType>::transformDimensionOutput(
       BIND_DIMENSION_OUTPUT(UUIDT)
     case Float32:
       BIND_DIMENSION_OUTPUT(float_t)
+    case GeoPoint:
+      BIND_DIMENSION_OUTPUT(GeoPointT)
     default:
       throw std::invalid_argument(
           "Unsupported data type for DimensionOutput");

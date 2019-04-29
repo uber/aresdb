@@ -1800,8 +1800,7 @@ func (qc *AQLQueryContext) processMeasure() {
 func (qc *AQLQueryContext) getAllColumnsDimension() (columns []Dimension) {
 	// only main table columns wildcard match supported
 	for _, column := range qc.TableScanners[0].Schema.Schema.Columns {
-		// TODO we can add GeoPoint data type support
-		if !column.Deleted && column.Type != metaCom.GeoPoint && column.Type != metaCom.GeoShape {
+		if !column.Deleted && column.Type != metaCom.GeoShape {
 			columns = append(columns, Dimension{
 				expr: &expr.VarRef{Val: column.Name},
 				Expr: column.Name,
@@ -1817,9 +1816,9 @@ func (qc *AQLQueryContext) processDimensions() {
 	for i, dim := range qc.Query.Dimensions {
 		// TODO: support numeric bucketizer.
 		qc.OOPK.Dimensions[i] = dim.expr
-		if dim.expr.Type() == expr.GeoPoint || dim.expr.Type() == expr.GeoShape {
+		if dim.expr.Type() == expr.GeoShape {
 			qc.Error = utils.StackError(nil,
-				"GeoPoint/GeoShape can not be used for dimension: %s", dim.Expr)
+				"GeoShape can not be used for dimension: %s", dim.Expr)
 			return
 		}
 	}

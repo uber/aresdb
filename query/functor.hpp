@@ -539,7 +539,11 @@ struct UnaryFunctor<
 
 // specialize UnaryFunctor for UUIDT input input type to types other than UUIDT
 template <typename O>
-struct UnaryFunctor<O, UUIDT> {
+struct UnaryFunctor<
+    O,
+    UUIDT,
+    typename std::enable_if<!std::is_same<O, GeoPointT>::value>::type
+  > {
   typedef thrust::tuple<UUIDT, bool> argument_type;
   typedef thrust::tuple<O, bool> result_type;
 
@@ -559,7 +563,7 @@ struct UnaryFunctor<O, UUIDT> {
   }
 };
 
-// specialize unary transformation from UUIDT to UUIDT
+// Specialize unary transformation from UUIDT to UUIDT
 template <>
 struct UnaryFunctor<UUIDT, UUIDT> {
   typedef thrust::tuple<UUIDT, bool> argument_type;
@@ -572,6 +576,86 @@ struct UnaryFunctor<UUIDT, UUIDT> {
 
   __host__ __device__ result_type operator()(const argument_type t) const {
     return NoopFunctor<UUIDT>()(t);
+  }
+};
+
+// Specialize UnaryFunctor for GeoPointT input type to types other than
+// GeoPointT
+template <typename O>
+struct UnaryFunctor<
+    O,
+    GeoPointT,
+    typename std::enable_if<
+        !std::is_same<O, GeoPointT>::value && !std::is_same<O, UUIDT>::value
+    >::type
+  >{
+  typedef thrust::tuple<GeoPointT, bool> argument_type;
+  typedef thrust::tuple<O, bool> result_type;
+
+  explicit UnaryFunctor(UnaryFunctorType functorType)
+      : functorType(functorType) {}
+
+  UnaryFunctorType functorType;
+
+  __host__ __device__ result_type operator()(const argument_type t) const {
+       O o;
+       return thrust::make_tuple<O, bool>(o, false);
+  }
+};
+
+// Specialize UnaryFunctor for input type other than GeoPointT to
+// GeoPointT output type
+template <typename I>
+struct UnaryFunctor<
+    GeoPointT,
+    I,
+    typename std::enable_if<!std::is_same<I, GeoPointT>::value>::type
+  > {
+  typedef thrust::tuple<I, bool> argument_type;
+  typedef thrust::tuple<GeoPointT, bool> result_type;
+
+  explicit UnaryFunctor(UnaryFunctorType functorType)
+      : functorType(functorType) {}
+
+  UnaryFunctorType functorType;
+
+  __host__ __device__ result_type operator()(const argument_type t) const {
+       GeoPointT o;
+       return thrust::make_tuple<GeoPointT, bool>(o, false);
+  }
+};
+
+// Specialize from GeoPointT to GeoPointT
+template <>
+struct UnaryFunctor<GeoPointT, GeoPointT> {
+  typedef thrust::tuple<GeoPointT, bool> argument_type;
+  typedef thrust::tuple<GeoPointT, bool> result_type;
+
+  explicit UnaryFunctor(UnaryFunctorType functorType)
+      : functorType(functorType) {}
+
+  UnaryFunctorType functorType;
+
+  __host__ __device__ result_type operator()(const argument_type t) const {
+    return NoopFunctor<GeoPointT>()(t);
+  }
+};
+
+
+// Specialize from GeoPointT to float_t(to resolve partial specialization tie)
+template <>
+struct UnaryFunctor<GeoPointT, float_t> {
+  typedef thrust::tuple<float_t, bool> argument_type;
+  typedef thrust::tuple<GeoPointT, bool> result_type;
+
+  explicit UnaryFunctor(UnaryFunctorType functorType)
+      : functorType(functorType) {}
+
+  UnaryFunctorType functorType;
+
+  __host__ __device__ result_type operator()(const argument_type t) const {
+     GeoPointT g;
+     return thrust::make_tuple<GeoPointT, bool>(g, false);
   }
 };
 
@@ -652,11 +736,34 @@ struct BinaryFunctor<UUIDT, I> {
   }
 };
 
+template <typename I>
+struct BinaryFunctor<GeoPointT, I> {
+  typedef thrust::tuple<I, bool> argument_type;
+  typedef thrust::tuple<GeoPointT, bool> result_type;
+
+  explicit BinaryFunctor(BinaryFunctorType functorType)
+      : functorType(functorType) {}
+
+  BinaryFunctorType functorType;
+
+  __host__ __device__ result_type operator()(const argument_type t1,
+                                             const argument_type t2) const {
+    GeoPointT o;
+    return thrust::make_tuple(o, false);
+  }
+};
+
+
 // Specialization with float type to avoid illegal functor type template
 // generation.
 template <typename O>
 struct BinaryFunctor<
-    O, float_t, typename std::enable_if<!std::is_same<O, UUIDT>::value>::type> {
+    O,
+    float_t,
+    typename std::enable_if<
+        !std::is_same<O, UUIDT>::value && !std::is_same<O, GeoPointT>::value
+    >::type
+  > {
   typedef thrust::tuple<float_t, bool> argument_type;
   typedef thrust::tuple<O, bool> result_type;
 
@@ -715,6 +822,23 @@ struct BinaryFunctor<
         return false;
     }
   }
+};
+
+// Specialization for GeoPointT as input and output type. this is used to for
+// compile only, should never be called in runtime
+template <>
+struct BinaryFunctor<GeoPointT, GeoPointT> {
+    typedef thrust::tuple<GeoPointT, bool> argument_type;
+    typedef thrust::tuple<GeoPointT, bool> result_type;
+    explicit BinaryFunctor(BinaryFunctorType functorType)
+          : functorType(functorType) {}
+
+      BinaryFunctorType functorType;
+
+      __host__ __device__ result_type operator()(const argument_type t1,
+                                                 const argument_type t2) const {
+        return thrust::make_tuple(thrust::get<0>(t1), false);
+      }
 };
 
 // BinaryPredicateFunctor simply applies the BinaryFunctor f on <lhs, rhs>
