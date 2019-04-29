@@ -27,3 +27,5 @@ import:
 - package: github.com/antlr/antlr4
 - package: github.com/abiosoft/ishell
   version: ^2.0.0
+- package: github.com/Shopify/sarama
+  version: ^1.22.1

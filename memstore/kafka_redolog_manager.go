@@ -1,7 +1,7 @@
 package memstore
 
 import (
-	sarama "github.com/Shopify/Sarama"
+	"github.com/Shopify/sarama"
 	"github.com/uber/aresdb/utils"
 	"math"
 	"sync"
