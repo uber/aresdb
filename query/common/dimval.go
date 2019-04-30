@@ -75,33 +75,9 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer,
 			intValue = int64(*(*uint8)(valuePtr))
 		}
 	case memCom.UUID:
-		formated := memCom.DataValue{
-			Valid: true,
-			DataType: memCom.UUID,
-			OtherVal: valuePtr,
-		}.ConvertToHumanReadable(memCom.UUID)
-		if formated == nil {
-			return nil
-		}
-		var ok bool
-		if result, ok = formated.(string); !ok {
-			return nil
-		}
-		return &result
+		return formatWithDataValue(valuePtr, memCom.UUID)
 	case memCom.GeoPoint:
-		formated := memCom.DataValue{
-			Valid: true,
-			DataType: memCom.GeoPoint,
-			OtherVal: valuePtr,
-		}.ConvertToHumanReadable(memCom.GeoPoint)
-		if formated == nil {
-			return nil
-		}
-		var ok bool
-		if result, ok = formated.(string); ! ok {
-			return nil
-		}
-		return &result
+		return formatWithDataValue(valuePtr, memCom.GeoPoint)
 	default:
 		// Should never happen.
 		return nil
@@ -117,6 +93,23 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer,
 	}
 
 	return &result
+}
+
+// formatWithDataValue formats value with given type
+func formatWithDataValue(valuePtr unsafe.Pointer, dataType memCom.DataType) *string {
+	formatted := memCom.DataValue{
+		Valid: true,
+		DataType: dataType,
+		OtherVal: valuePtr,
+	}.ConvertToHumanReadable(dataType)
+	if formatted == nil {
+		return nil
+	}
+	if result, ok := formatted.(string); !ok {
+		return nil
+	} else {
+		return &result
+	}
 }
 
 // GetDimensionStartOffsets calculates the value and null starting position for given dimension inside dimension vector
