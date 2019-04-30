@@ -15,8 +15,6 @@
 package common
 
 import (
-	"encoding/hex"
-	"fmt"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"strconv"
@@ -77,18 +75,9 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer,
 			intValue = int64(*(*uint8)(valuePtr))
 		}
 	case memCom.UUID:
-		bys := *(*[16]byte)(valuePtr)
-		uuidStr := hex.EncodeToString(bys[:])
-		if len(uuidStr) == 32 {
-			result = fmt.Sprintf("%s-%s-%s-%s-%s",
-				uuidStr[:8],
-				uuidStr[8:12],
-				uuidStr[12:16],
-				uuidStr[16:20],
-				uuidStr[20:])
-			return &result
-		}
-		return nil
+		return formatWithDataValue(valuePtr, memCom.UUID)
+	case memCom.GeoPoint:
+		return formatWithDataValue(valuePtr, memCom.GeoPoint)
 	default:
 		// Should never happen.
 		return nil
@@ -104,6 +93,23 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer,
 	}
 
 	return &result
+}
+
+// formatWithDataValue formats value with given type
+func formatWithDataValue(valuePtr unsafe.Pointer, dataType memCom.DataType) *string {
+	formatted := memCom.DataValue{
+		Valid: true,
+		DataType: dataType,
+		OtherVal: valuePtr,
+	}.ConvertToHumanReadable(dataType)
+	if formatted == nil {
+		return nil
+	}
+	if result, ok := formatted.(string); !ok {
+		return nil
+	} else {
+		return &result
+	}
 }
 
 // GetDimensionStartOffsets calculates the value and null starting position for given dimension inside dimension vector

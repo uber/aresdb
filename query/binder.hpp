@@ -417,18 +417,6 @@ class InputVectorBinderBase<Context, NumVectors, 0> {
   uint32_t startCount;
 
  public:
-  // Special handling if the first input iter is a geo iter.
-  template<typename GeoIterator>
-  typename std::enable_if<
-      std::is_same<typename GeoIterator::value_type::head_type,
-                   GeoPointT>::value && NumVectors == 1,
-      int>::type bind(
-      GeoIterator geoIter) {
-    throw std::invalid_argument(
-        "GeoPoint data type is not supported when doing UnaryTransform "
-            + std::to_string(__LINE__));
-  }
-
   template<typename ...InputIterators>
   int bind(InputIterators... boundInputIterators) {
     return context.run(indexVector, boundInputIterators...);

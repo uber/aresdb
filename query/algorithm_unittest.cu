@@ -267,44 +267,6 @@ TEST(UnaryTransformTest, CheckDimensionOutputIterator) {
 }
 
 // cppcheck-suppress *
-TEST(UnaryTransformTest, CheckGeoPoint) {
-  const int size = 3;
-  uint32_t indexVectorH[size * 2] = {0, 1, 2};
-  GeoPointT lhsValuesH[size] = {{1, 1}, {1, 0}, {0, 0}};
-  // T T F
-  uint8_t lhsNullsH[1 + ((size - 1) / 8)] = {0x03};
-
-  uint8_t *inputBasePtr =
-      allocate_column(nullptr, &lhsNullsH[0], &lhsValuesH[0], 0, 1, 24);
-
-  int outputValuesH[size] = {false, false, false};
-  bool outputNullsH[size] = {false, false, false};
-  uint8_t *outputBasePtr =
-      allocate_column(nullptr, reinterpret_cast<uint8_t *>(&outputValuesH[0]),
-                      &outputNullsH[0], 0, 12, 3);
-
-  uint32_t *indexVector = allocate(&indexVectorH[0], size * 2);
-
-  DefaultValue defaultValue = {false, {.Int32Val = 0}};
-  VectorPartySlice
-      inputColumn = {inputBasePtr, 0, 8, 0, GeoPoint, defaultValue};
-  ScratchSpaceVector outputScratchSpace = {outputBasePtr, 3, Int32};
-
-  InputVector input = {{.VP = inputColumn}, VectorPartyInput};
-  OutputVector output = {{.ScratchSpace = outputScratchSpace},
-                         ScratchSpaceOutput};
-
-  CGoCallResHandle resHandle = {0, nullptr};
-  resHandle = UnaryTransform(input, output, indexVector, size, nullptr, 0,
-      Negate, 0, 0);
-  EXPECT_TRUE(resHandle.pStrErr != nullptr);
-  free(const_cast<char *>(resHandle.pStrErr));
-  release(inputBasePtr);
-  release(outputBasePtr);
-  release(indexVector);
-}
-
-// cppcheck-suppress *
 TEST(UnaryFilterTest, CheckFilter) {
   const int size = 3;
   uint32_t indexVectorH[size] = {0, 1, 2};

@@ -117,6 +117,17 @@ class OutputVectorBinder {
     }
   }
 
+  // Shared by all output iterator;
+  template<typename OutputIterator>
+  int transform(OutputIterator outputIter) {
+    typedef TransformContext<OutputIterator, FunctorType> Context;
+    Context ctx(
+      outputIter, indexVectorLength, functorType, cudaStream);
+    InputVectorBinder<Context, NInput> binder(
+        ctx, inputs, indexVector, baseCounts, startCount);
+    return binder.bind();
+  }
+
  private:
   OutputVector output;
   std::vector<InputVector> inputs;
@@ -133,17 +144,6 @@ class OutputVectorBinder {
   int transformDimensionOutput(DimensionOutputVector output);
   int transformMeasureOutput(MeasureOutputVector output);
   int transformScratchSpaceOutput(ScratchSpaceVector output);
-
-  // Shared by all output iterator;
-  template<typename OutputIterator>
-  int transform(OutputIterator outputIter) {
-    typedef TransformContext<OutputIterator, FunctorType> Context;
-    Context ctx(
-        outputIter, indexVectorLength, functorType, cudaStream);
-    InputVectorBinder<Context, NInput> binder(
-        ctx, inputs, indexVector, baseCounts, startCount);
-    return binder.bind();
-  }
 };
 
 }  // namespace ares
