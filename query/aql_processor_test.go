@@ -2166,7 +2166,6 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 		}
 		qc.Query = q
-
 		qc = q.Compile(memStore, false)
 		Ω(qc.Error).Should(BeNil())
 		qc.ProcessQuery(memStore)
