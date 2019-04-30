@@ -124,8 +124,8 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardMap[shardID].ArchiveStore.CurrentVersion.Batches[0] = archiveBatch0
 		// Map from max event time to file creation time.
 		shardMap[shardID].LiveStore.RedoLogManager = NewFileRedoLogManager(10800, 1<<30, m.diskStore, table, shardID)
-		shardMap[shardID].LiveStore.RedoLogManager.MaxEventTimePerFile = make(map[int64]uint32)
-		shardMap[shardID].LiveStore.RedoLogManager.MaxEventTimePerFile[1] = 1
+		shardMap[shardID].LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile = make(map[int64]uint32)
+		shardMap[shardID].LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile[1] = 1
 		// make purge to pass
 		shardMap[shardID].LiveStore.BackfillManager = NewBackfillManager(table, shardID, metaCom.TableConfig{
 			BackfillMaxBufferSize:    1 << 32,
@@ -228,7 +228,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		(m.diskStore).(*diskMocks.DiskStore).On(
 			"OpenVectorPartyFileForWrite", table, mock.Anything, shardID, day, mock.Anything, mock.Anything).Return(writer, nil)
 
-		tableShard.LiveStore.RedoLogManager.CurrentFileCreationTime = 2
+		tableShard.LiveStore.RedoLogManager.(*fileRedologManager).CurrentFileCreationTime = 2
 
 		timeIncrementer := &utils.TimeIncrementer{IncBySecond: 1}
 		utils.SetClockImplementation(timeIncrementer.Now)
@@ -275,7 +275,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		}
 
 		// MaxEventTimePerFile should be purged.
-		Ω(tableShard.LiveStore.RedoLogManager.MaxEventTimePerFile).ShouldNot(HaveKey(int64(1)))
+		Ω(tableShard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile).ShouldNot(HaveKey(int64(1)))
 
 		// Archive again, there should be no crashes or errors.
 		Ω(m.Archive(table, shardID, cutoff+100, jobManager.reportArchiveJobDetail)).Should(BeNil())

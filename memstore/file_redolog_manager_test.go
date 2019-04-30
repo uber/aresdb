@@ -35,7 +35,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 			return time.Unix(int64(5), 0)
 		})
 
-		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0)
+		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0).(*fileRedologManager)
 		Ω(redoManager.currentLogFile).Should(BeNil())
 
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
@@ -53,7 +53,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		utils.SetClockImplementation(func() time.Time {
 			return time.Unix(int64(5), 0)
 		})
-		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0)
+		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0).(*fileRedologManager)
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(buffer)
 
@@ -76,7 +76,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		utils.SetClockImplementation(func() time.Time {
 			return time.Unix(int64(5), 0)
 		})
-		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0)
+		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0).(*fileRedologManager)
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(buffer)
 
@@ -393,7 +393,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 	})
 
 	ginkgo.It("getRedoLogFilesToPurge should work", func() {
-		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0)
+		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0).(*fileRedologManager)
 		redoManager.MaxEventTimePerFile[1] = 100
 		redoManager.MaxEventTimePerFile[2] = 200
 		redoManager.MaxEventTimePerFile[3] = 300
@@ -421,7 +421,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 	ginkgo.It("PurgeRedologFileAndData should work", func() {
 		diskStore := CreateMockDiskStore()
 		diskStore.On("DeleteLogFile", "abc", 0, mock.Anything).Return(nil)
-		redoManager := NewFileRedoLogManager(10, 1<<30, diskStore, "abc", 0)
+		redoManager := NewFileRedoLogManager(10, 1<<30, diskStore, "abc", 0).(*fileRedologManager)
 		redoManager.MaxEventTimePerFile[1] = 100
 		redoManager.MaxEventTimePerFile[2] = 200
 		redoManager.MaxEventTimePerFile[3] = 300

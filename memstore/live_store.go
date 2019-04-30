@@ -276,7 +276,10 @@ func (s *LiveStore) Destruct() {
 				-int64(s.BackfillManager.MaxBufferSize * utils.GolangMemoryFootprintFactor))
 		}()
 	}
-	s.RedoLogManager.Close()
+	if s.RedoLogManager != nil {
+		s.RedoLogManager.Close()
+		s.RedoLogManager = nil
+	}
 }
 
 // PurgeBatches purges the specified batches.
