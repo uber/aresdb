@@ -15,8 +15,6 @@
 package common
 
 import (
-	"encoding/hex"
-	"fmt"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"strconv"
@@ -77,18 +75,33 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer,
 			intValue = int64(*(*uint8)(valuePtr))
 		}
 	case memCom.UUID:
-		bys := *(*[16]byte)(valuePtr)
-		uuidStr := hex.EncodeToString(bys[:])
-		if len(uuidStr) == 32 {
-			result = fmt.Sprintf("%s-%s-%s-%s-%s",
-				uuidStr[:8],
-				uuidStr[8:12],
-				uuidStr[12:16],
-				uuidStr[16:20],
-				uuidStr[20:])
-			return &result
+		formated := memCom.DataValue{
+			Valid: true,
+			DataType: memCom.UUID,
+			OtherVal: valuePtr,
+		}.ConvertToHumanReadable(memCom.UUID)
+		if formated == nil {
+			return nil
 		}
-		return nil
+		var ok bool
+		if result, ok = formated.(string); !ok {
+			return nil
+		}
+		return &result
+	case memCom.GeoPoint:
+		formated := memCom.DataValue{
+			Valid: true,
+			DataType: memCom.GeoPoint,
+			OtherVal: valuePtr,
+		}.ConvertToHumanReadable(memCom.GeoPoint)
+		if formated == nil {
+			return nil
+		}
+		var ok bool
+		if result, ok = formated.(string); ! ok {
+			return nil
+		}
+		return &result
 	default:
 		// Should never happen.
 		return nil
