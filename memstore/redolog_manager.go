@@ -5,7 +5,6 @@ type RedologManagerConfig struct {
 	Kafka struct {
 		Enabled           bool                     `json:"enabled"`
 		Address           []string                 `json:"address"`
-		MaxBatchesPerFile uint32                   `json:"maxBatchesPerFile"`
 		CommitFunc        func(offset int64) error `json:"-"`
 	} `json:"kafka"`
 	Namespace string

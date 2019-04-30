@@ -112,7 +112,6 @@ func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
 		LastReadRecord:  RecordID{BatchID: BaseBatchID, Index: 0},
 		NextWriteRecord: RecordID{BatchID: BaseBatchID, Index: 0},
 		PrimaryKey:      NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable, schema.Schema.Config.InitialPrimaryKeyNumBuckets, shard.HostMemoryManager),
-		// TODO: support table specific log rotation interval.
 		RedoLogManager: NewFileRedoLogManager(int64(tableCfg.RedoLogRotationInterval), int64(tableCfg.MaxRedoLogFileSize),
 			shard.diskStore, schema.Schema.Name, shard.ShardID),
 		HostMemoryManager: shard.HostMemoryManager,

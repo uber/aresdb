@@ -74,7 +74,7 @@ type fileRedologManager struct {
 }
 
 // NewFileRedoLogManager creates a new fileRedologManager instance.
-func NewFileRedoLogManager(rotationInterval int64, maxRedoLogSize int64, diskStore diskstore.DiskStore, tableName string, shard int) *fileRedologManager {
+func NewFileRedoLogManager(rotationInterval int64, maxRedoLogSize int64, diskStore diskstore.DiskStore, tableName string, shard int) RedologManager {
 	return &fileRedologManager{
 		RotationInterval:    rotationInterval,
 		MaxEventTimePerFile: make(map[int64]uint32),
