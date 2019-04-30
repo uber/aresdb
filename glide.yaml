@@ -25,6 +25,6 @@ import:
 - package: github.com/confluentinc/confluent-kafka-go
   version: 213e7cd9dd311f2fb7586c02cb61b1b3aa5a5e48 
 - package: github.com/antlr/antlr4
-  version: 213e7cd9dd311f2fb7586c02cb61b1b3aa5a5e48
+  version: 4.7.2
 - package: github.com/abiosoft/ishell
   version: ^2.0.0
