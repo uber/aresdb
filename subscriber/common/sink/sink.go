@@ -21,6 +21,7 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/utils"
+	"strings"
 	"unsafe"
 )
 
@@ -53,11 +54,7 @@ type Destination struct {
 	NumShards uint32
 }
 
-//NewAresDatabase(
-//	serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string,
-//	config client.ConnectorConfig) (Sink, error)
-//NewKafkaPublisher(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, cluster string, kpCfg config.KafkaProducerConfig) (Sink, error)
-func Sharding(rows []client.Row, destination Destination, jobConfig *rules.JobConfig) map[uint32][]client.Row {
+func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfig) map[uint32][]client.Row {
 	if destination.NumShards == 0 || destination.NumShards == 1 {
 		// in this case, there is no sharding in this aresDB cluster
 		return nil
@@ -71,7 +68,7 @@ func Sharding(rows []client.Row, destination Destination, jobConfig *rules.JobCo
 	for _, row := range rows {
 		// convert primaryKey to byte array
 		pk := make([]byte, jobConfig.GetPrimaryKeyBytes())
-		err := GetPrimaryKeyBytes(row, destination, jobConfig, pk)
+		err := GetPrimaryKeyBytes(row, destination, jobConfig, &pk)
 		if err != nil {
 			utils.StackError(err, "Failed to convert primaryKey to byte array for row: %v", row)
 			continue
@@ -88,22 +85,40 @@ func shardFn(key []byte, numShards uint32) uint32 {
 	return utils.Murmur3Sum32(unsafe.Pointer(&key[0]), len(key), 0) % numShards
 }
 
-func GetPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rules.JobConfig, key []byte) error {
+func GetPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rules.JobConfig, key *[]byte) error {
 	primaryKeyValues := make([]memCom.DataValue, len(destination.PrimaryKeys))
 	var err error
+	var strBytes []byte
 	i := 0
 	for columnName, columnID := range destination.PrimaryKeys {
 		columnIDInSchema := destination.PrimaryKeysInSchema[columnName]
-		primaryKeyValues[i], err = GetDataValue(row[columnID], columnIDInSchema, jobConfig)
-		if err != nil {
-			return utils.StackError(err, "Failed to read primary key at row %d, col %d",
-				row, columnID)
+		if jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].Type == memCom.DataTypeName[memCom.SmallEnum] ||
+			jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].Type == memCom.DataTypeName[memCom.BigEnum] {
+			// convert the string to bytes if primaryKey value is string
+			str := row[columnID].(string)
+			if strBytes == nil {
+				strBytes = make([]byte, 0, len(str))
+			}
+
+			if !jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].CaseInsensitive {
+				str = strings.ToLower(row[columnID].(string))
+			}
+			strBytes = append(strBytes, []byte(str)...)
+		} else {
+			primaryKeyValues[i], err = GetDataValue(row[columnID], columnIDInSchema, jobConfig)
+			if err != nil {
+				return utils.StackError(err, "Failed to read primary key at row %d, col %d",
+					row, columnID)
+			}
+			i++
 		}
-		i++
 	}
 
-	if err := memstore.GetPrimaryKeyBytes(primaryKeyValues, key); err != nil {
+	if err := memstore.GetPrimaryKeyBytes(primaryKeyValues, *key); err != nil {
 		return err
+	}
+	if strBytes != nil {
+		*key = append(*key, strBytes...)
 	}
 	return nil
 }

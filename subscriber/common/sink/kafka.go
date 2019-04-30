@@ -25,8 +25,6 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -41,7 +39,8 @@ type KafkaPublisher struct {
 	ClusterName   string
 }
 
-func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string, sinkCfg config.SinkConfig) (Sink, error) {
+func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string,
+	sinkCfg config.SinkConfig, aresControllerClient gateway.ControllerClient) (Sink, error) {
 	if sinkCfg.GetSinkMode() != config.Sink_Kafka {
 		return nil, fmt.Errorf("Failed to NewKafkaPublisher, wrong sinkMode=%d", sinkCfg.GetSinkMode())
 	}
@@ -63,14 +62,6 @@ func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobC
 	if err != nil {
 		return nil, utils.StackError(err, "Unable to initialize Kafka producer")
 	}
-
-	aresControllerClient := gateway.NewControllerHTTPClient(serviceConfig.ControllerConfig.Address,
-		time.Duration(serviceConfig.ControllerConfig.Timeout)*time.Second,
-		http.Header{
-			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
-			"RPC-Service": []string{serviceConfig.ControllerConfig.ServiceName},
-		})
-	aresControllerClient.SetNamespace(cluster)
 
 	// replace httpSchemaFetcher with gateway client
 	// httpSchemaFetcher := NewHttpSchemaFetcher(httpClient, cfg.Address, metricScope)
@@ -115,7 +106,7 @@ func (kp *KafkaPublisher) Shutdown() {
 
 // Save saves a batch of row objects into a destination
 func (kp *KafkaPublisher) Save(destination Destination, rows []client.Row) error {
-	shards := Sharding(rows, destination, kp.JobConfig)
+	shards := Shard(rows, destination, kp.JobConfig)
 	if shards == nil {
 		// case1: no sharding --  publish rows to random kafka partition
 		kp.Insert(destination.Table, -1, destination.ColumnNames, rows, destination.AresUpdateModes...)
@@ -148,7 +139,7 @@ func (kp *KafkaPublisher) Insert(tableName string, shardID int32, columnNames []
 	}
 
 	msg := sarama.ProducerMessage{
-		Topic: fmt.Sprintf("%s-%s", tableName, kp.Cluster()),
+		Topic: fmt.Sprintf("%s-%s", kp.Cluster(), tableName),
 		Value: sarama.ByteEncoder(bytes),
 	}
 
@@ -166,16 +157,4 @@ func (kp *KafkaPublisher) Insert(tableName string, shardID int32, columnNames []
 	kp.Scope.Counter("rowsIgnored").Inc(int64(len(rows)) - int64(numRows))
 	kp.Scope.Gauge("upsertBatchSize").Update(float64(numRows))
 	return numRows, err
-}
-
-func (kp *KafkaPublisher) postEnumCases(namespace, tableName, columnName string, enumCasesBytes []byte) ([]int, error) {
-	var enumIDs []int
-
-	return enumIDs, nil
-}
-
-func (kp *KafkaPublisher) getEnumDict(namespace, tableName, columnName string) ([]string, error) {
-	var enumDictReponse []string
-
-	return enumDictReponse, nil
 }

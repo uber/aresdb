@@ -235,7 +235,7 @@ var _ = Describe("streaming_processor", func() {
 		testServer.Close()
 	})
 	It("NewStreamingProcessor", func() {
-		p, err := NewStreamingProcessor(1, jobConfig, sink.NewAresDatabase, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).Should(BeNil())
 		Ω(err).ShouldNot(BeNil())
@@ -247,7 +247,7 @@ var _ = Describe("streaming_processor", func() {
 		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
 			"dev01": sinkConfig,
 		}
-		p, err = NewStreamingProcessor(1, jobConfig, sink.NewAresDatabase, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err = NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).ShouldNot(BeNil())
 		Ω(p.(*StreamingProcessor).highLevelConsumer).ShouldNot(BeNil())

@@ -10,7 +10,7 @@ import (
 )
 
 var _ = Describe("Sink", func() {
-	It("Sharding", func() {
+	It("Shard", func() {
 		rows := []client.Row{
 			{"1", "v12", "v13"},
 			{"2", "v22", "v23"},
@@ -60,15 +60,15 @@ var _ = Describe("Sink", func() {
 		}
 		jobConfig.SetPrimaryKeyBytes(1)
 		destination.NumShards = 0
-		batches := Sharding(rows, destination, &jobConfig)
+		batches := Shard(rows, destination, &jobConfig)
 		Ω(batches).Should(BeNil())
 
 		destination.NumShards = 1
-		batches = Sharding(rows, destination, &jobConfig)
+		batches = Shard(rows, destination, &jobConfig)
 		Ω(batches).Should(BeNil())
 
 		destination.NumShards = 2
-		batches = Sharding(rows, destination, &jobConfig)
+		batches = Shard(rows, destination, &jobConfig)
 		Ω(batches).ShouldNot(BeNil())
 		Ω(len(batches)).Should(Equal(2))
 	})

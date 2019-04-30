@@ -70,7 +70,7 @@ var _ = Describe("AresDatabase client", func() {
 			SinkModeStr:           "aresDB",
 			AresDBConnectorConfig: cfg,
 		}
-		_, err := NewAresDatabase(serviceConfig, &jobConfig, cluster, sinkCfg)
+		_, err := NewAresDatabase(serviceConfig, &jobConfig, cluster, sinkCfg, nil)
 		Ω(err).ShouldNot(BeNil())
 	})
 	It("Save", func() {

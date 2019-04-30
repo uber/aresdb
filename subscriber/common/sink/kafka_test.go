@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/gateway"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
@@ -16,12 +17,15 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"time"
 )
 
 var _ = Describe("Kafka producer", func() {
 	var testServer *httptest.Server
 	var seedBroker *sarama.MockBroker
 	var leader *sarama.MockBroker
+	var aresControllerClient gateway.ControllerClient
 
 	rows := []client.Row{
 		{"1", "v12", "true"},
@@ -50,6 +54,7 @@ var _ = Describe("Kafka producer", func() {
 		Scope:            tally.NoopScope,
 		ControllerConfig: &config.ControllerConfig{},
 	}
+
 	jobConfig := rules.JobConfig{
 		AresTableConfig: rules.AresTableConfig{
 			Table: metaCom.Table{
@@ -95,7 +100,7 @@ var _ = Describe("Kafka producer", func() {
 		SinkModeStr:         "kafka",
 		KafkaProducerConfig: kafkaConfig,
 	}
-	topic := fmt.Sprintf("%s-%s", table, cluster)
+	topic := fmt.Sprintf("%s-%s", cluster, table)
 
 	BeforeEach(func() {
 		// ares controller http server setup
@@ -118,6 +123,13 @@ var _ = Describe("Kafka producer", func() {
 		})
 		testServer.Start()
 		serviceConfig.ControllerConfig.Address = testServer.Listener.Addr().String()
+		aresControllerClient = gateway.NewControllerHTTPClient(serviceConfig.ControllerConfig.Address,
+			time.Duration(serviceConfig.ControllerConfig.Timeout)*time.Second,
+			http.Header{
+				"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
+				"RPC-Service": []string{serviceConfig.ControllerConfig.ServiceName},
+			})
+		aresControllerClient.(*gateway.ControllerHTTPClient).SetNamespace(cluster)
 
 		// kafka broker mock setup
 		seedBroker = sarama.NewMockBroker(serviceConfig.Logger.Sugar(), 1)
@@ -148,7 +160,7 @@ var _ = Describe("Kafka producer", func() {
 
 	It("NewKafkaPublisher", func() {
 		jobConfig.SetPrimaryKeyBytes(1)
-		publisher, err := NewKafkaPublisher(serviceConfig, &jobConfig, cluster, sinkCfg)
+		publisher, err := NewKafkaPublisher(serviceConfig, &jobConfig, cluster, sinkCfg, aresControllerClient)
 		Ω(err).Should(BeNil())
 		Ω(publisher).ShouldNot(BeNil())
 

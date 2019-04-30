@@ -126,14 +126,6 @@ func (mp *Parser) IsMessageValid(msg map[string]interface{}, destination sink.De
 			len(destination.AresUpdateModes), len(destination.ColumnNames))
 	}
 
-	if len(msg) != len(destination.ColumnNames) {
-		return utils.StackError(nil,
-			"Length of column names should match length of a single row, length of column names :%d, length of row: %d",
-			len(destination.ColumnNames),
-			len(msg),
-		)
-	}
-
 	return nil
 }
 

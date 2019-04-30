@@ -56,7 +56,7 @@ type Params struct {
 	DecoderInitFunc  NewDecoder
 }
 
-// Result defines the objects that the rules module provides.
+// Result defines the objects that the job module provides.
 type Result struct {
 	fx.Out
 
@@ -104,10 +104,18 @@ type ZKNodeSubscriber struct {
 }
 
 // NewController creates controller
-func NewController(params Params) *Controller {
+func NewController(params Params) *Controller  {
 	params.ServiceConfig.Logger.Info("Creating Controller")
 
-	drivers, err := NewDrivers(params)
+	aresControllerClient := gateway.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
+		time.Duration(params.ServiceConfig.ControllerConfig.Timeout)*time.Second,
+		http.Header{
+			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
+			"RPC-Service": []string{params.ServiceConfig.ControllerConfig.ServiceName},
+		})
+	aresControllerClient.SetNamespace(config.ActiveAresNameSpace)
+
+	drivers, err := NewDrivers(params, aresControllerClient)
 	if err != nil {
 		panic(err)
 	}
@@ -118,13 +126,6 @@ func NewController(params Params) *Controller {
 			zap.Int("to", defaultRefreshInterval))
 		params.ServiceConfig.ControllerConfig.RefreshInterval = defaultRefreshInterval
 	}
-
-	aresControllerClient := gateway.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
-		time.Duration(params.ServiceConfig.ControllerConfig.Timeout)*time.Second,
-		http.Header{
-			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
-			"RPC-Service": []string{params.ServiceConfig.ControllerConfig.ServiceName},
-		})
 
 	controller := &Controller{
 		serviceConfig:        params.ServiceConfig,
@@ -141,7 +142,7 @@ func NewController(params Params) *Controller {
 	if params.ServiceConfig.ControllerConfig.Enable {
 		params.ServiceConfig.Logger.Info("aresDB Controller is enabled")
 
-		if *params.ServiceConfig.HeartbeatConfig.Enabled {
+		if params.ServiceConfig.HeartbeatConfig.Enabled {
 			controller.etcdServices, err = connectEtcdServices(params)
 			if err != nil {
 				panic(utils.StackError(err, "Failed to createEtcdServices"))
@@ -207,8 +208,8 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		SetPlacementInstance(pInstance)
 
 	err := servicesClient.SetMetadata(sid, services.NewMetadata().
-		SetHeartbeatInterval(*params.ServiceConfig.HeartbeatConfig.Interval).
-		SetLivenessInterval(*params.ServiceConfig.HeartbeatConfig.Timeout))
+		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
+		SetLivenessInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Timeout)*time.Second))
 	if err != nil {
 		return err
 	}
@@ -431,7 +432,7 @@ func (c *Controller) startDriver(
 
 	// 2. create a new driver
 	driver, err :=
-		NewDriver(clonedJobConfig, c.serviceConfig, NewStreamingProcessor, c.sinkInitFunc, c.consumerInitFunc, c.decoderInitFunc)
+		NewDriver(clonedJobConfig, c.serviceConfig, c.aresControllerClient, NewStreamingProcessor, c.sinkInitFunc, c.consumerInitFunc, c.decoderInitFunc)
 	if err != nil {
 		c.serviceConfig.Logger.Error("Failed to create driver",
 			zap.String("job", jobConfig.Name),

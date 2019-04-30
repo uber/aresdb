@@ -185,7 +185,7 @@ var _ = Describe("driver", func() {
 	})
 
 	It("NewDriver", func() {
-		driver, err := NewDriver(jobConfig, serviceConfig, NewStreamingProcessor, sink.NewAresDatabase,
+		driver, err := NewDriver(jobConfig, serviceConfig, nil, NewStreamingProcessor, sink.NewAresDatabase,
 			consumer.NewKafkaConsumer, message.NewDefaultDecoder)
 		Ω(driver).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())

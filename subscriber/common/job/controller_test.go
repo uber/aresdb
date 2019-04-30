@@ -37,7 +37,6 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
-	"time"
 )
 
 var _ = Describe("controller", func() {
@@ -60,6 +59,7 @@ var _ = Describe("controller", func() {
 	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
 		"dev-ares01": sinkConfig,
 	}
+	config.ActiveAresNameSpace = "dev01"
 
 	var testServer *httptest.Server
 	var address string
@@ -356,15 +356,12 @@ var _ = Describe("controller", func() {
 				},
 			},
 		}
-		enabled := true
-		timeout := 30 * time.Second
-		interval := 10 * time.Second
-		checkInterval := 2 * time.Second
+
 		params.ServiceConfig.HeartbeatConfig = &config.HeartBeatConfig{
-			Enabled:       &enabled,
-			Timeout:       &timeout,
-			Interval:      &interval,
-			CheckInterval: &checkInterval,
+			Enabled:       true,
+			Timeout:       30,
+			Interval:      10,
+			CheckInterval: 2,
 		}
 
 		ctrl := gomock.NewController(GinkgoT())
