@@ -26,7 +26,6 @@ import (
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"time"
-	"fmt"
 )
 
 const (
@@ -522,7 +521,6 @@ func (qc *AQLQueryContext) transferLiveBatch(batch *memstore.LiveBatch, size int
 				numTransfers += t
 			}
 		}
-		fmt.Println("firstColumn from live batch", firstColumn)
 		return
 	}
 }
@@ -606,7 +604,6 @@ func (qc *AQLQueryContext) transferArchiveBatch(batch *memstore.ArchiveBatch,
 				numTransfers += t
 			}
 		}
-		fmt.Println("firstColumn from archive batch", firstColumn)
 		return
 	}
 }
