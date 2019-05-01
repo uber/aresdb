@@ -106,7 +106,8 @@ type VectorParty interface {
 	SetDataValue(offset int, value DataValue, countsUpdateMode ValueCountsUpdateMode, counts ...uint32)
 	// GetDataValueByRow returns the DataValue for the specified row. It will do binary
 	// search on the count vector to find the correct offset if this is a mode 3 vector
-	// party. Otherwise it will behave same as GetDataValue. Index bound is not checked!
+	// party. Otherwise it will behave same as GetDataValue.
+	// Caller needs to ensure row is within valid range.
 	GetDataValueByRow(row int) DataValue
 
 	GetDataType() DataType

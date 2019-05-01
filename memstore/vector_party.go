@@ -331,7 +331,11 @@ func (vp *cVectorParty) Slice(startRow int, numRows int) (vector common.SlicedVe
 		lowerCount := uint32(startRow)
 		upperCount := uint32(startRow + numRows)
 		beginIndex = vp.counts.UpperBound(0, vp.counts.Size, unsafe.Pointer(&lowerCount)) - 1
-		endIndex := vp.counts.LowerBound(beginIndex, vp.counts.Size-1, unsafe.Pointer(&upperCount))
+		endIndex := vp.counts.LowerBound(beginIndex, vp.counts.Size, unsafe.Pointer(&upperCount))
+		// subtract endIndex by 1 when endIndex points to vp.length+1
+		if endIndex == vp.counts.Size {
+			endIndex -= 1
+		}
 		size = endIndex - beginIndex
 	}
 
@@ -392,8 +396,12 @@ func (vp *cVectorParty) SliceByValue(lowerBoundRow, upperBoundRow int, value uns
 		}
 		return upperBoundRow, upperBoundRow, upperBoundRow, upperBoundRow
 	} else if vp.GetMode() == common.HasCountVector {
-		startIndex := vp.counts.UpperBound(0, vp.length, unsafe.Pointer(&lowerBoundRow)) - 1
-		endIndex := vp.counts.LowerBound(startIndex, vp.length, unsafe.Pointer(&upperBoundRow))
+		startIndex := vp.counts.UpperBound(0, vp.counts.Size, unsafe.Pointer(&lowerBoundRow)) - 1
+		endIndex := vp.counts.LowerBound(startIndex, vp.counts.Size, unsafe.Pointer(&upperBoundRow))
+		// subtract endIndex by 1 when endIndex points to vp.length+1
+		if endIndex == vp.counts.Size {
+			endIndex -= 1
+		}
 
 		startIndex = vp.values.LowerBound(startIndex, endIndex, value)
 		endIndex = vp.values.UpperBound(startIndex, endIndex, value)
@@ -412,8 +420,12 @@ func (vp *cVectorParty) SliceByValue(lowerBoundRow, upperBoundRow int, value uns
 // party.
 func (vp *cVectorParty) SliceIndex(lowerBoundRow, upperBoundRow int) (startIndex, endIndex int) {
 	if vp.GetMode() == common.HasCountVector {
-		startIndex = vp.counts.UpperBound(0, vp.length, unsafe.Pointer(&lowerBoundRow)) - 1
-		endIndex = vp.counts.LowerBound(startIndex, vp.length, unsafe.Pointer(&upperBoundRow))
+		startIndex = vp.counts.UpperBound(0, vp.counts.Size, unsafe.Pointer(&lowerBoundRow)) - 1
+		endIndex = vp.counts.LowerBound(startIndex, vp.counts.Size, unsafe.Pointer(&upperBoundRow))
+		// subtract endIndex by 1 when endIndex points to vp.length+1
+		if endIndex == vp.counts.Size {
+			endIndex -= 1
+		}
 		return startIndex, endIndex
 	}
 	return lowerBoundRow, upperBoundRow
