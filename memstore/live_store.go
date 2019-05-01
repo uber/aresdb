@@ -66,7 +66,7 @@ type LiveStore struct {
 	ArchivingCutoffHighWatermark uint32
 
 	// Logs.
-	RedoLogManager RedoLogManager
+	RedoLogManager RedologManager
 
 	// Manage backfill queue during ingestion.
 	BackfillManager *BackfillManager
@@ -112,8 +112,7 @@ func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
 		LastReadRecord:  RecordID{BatchID: BaseBatchID, Index: 0},
 		NextWriteRecord: RecordID{BatchID: BaseBatchID, Index: 0},
 		PrimaryKey:      NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable, schema.Schema.Config.InitialPrimaryKeyNumBuckets, shard.HostMemoryManager),
-		// TODO: support table specific log rotation interval.
-		RedoLogManager: NewRedoLogManager(int64(tableCfg.RedoLogRotationInterval), int64(tableCfg.MaxRedoLogFileSize),
+		RedoLogManager: NewFileRedoLogManager(int64(tableCfg.RedoLogRotationInterval), int64(tableCfg.MaxRedoLogFileSize),
 			shard.diskStore, schema.Schema.Name, shard.ShardID),
 		HostMemoryManager: shard.HostMemoryManager,
 	}
@@ -277,7 +276,10 @@ func (s *LiveStore) Destruct() {
 				-int64(s.BackfillManager.MaxBufferSize * utils.GolangMemoryFootprintFactor))
 		}()
 	}
-	s.RedoLogManager.Close()
+	if s.RedoLogManager != nil {
+		s.RedoLogManager.Close()
+		s.RedoLogManager = nil
+	}
 }
 
 // PurgeBatches purges the specified batches.
