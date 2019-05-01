@@ -33,7 +33,7 @@ type BatchExecutor interface {
 	// reduce to sort and aggregate result
 	reduce()
 	// prepare work before execution
-	preExec(lastBatch bool, start time.Time, hasRegularFilter bool)
+	preExec(lastBatch bool, start time.Time)
 	// post execution after execution
 	postExec(start time.Time)
 }
@@ -59,7 +59,7 @@ func (e *DummyBatchExecutorImpl) project() {
 func (e *DummyBatchExecutorImpl) reduce() {
 }
 
-func (e *DummyBatchExecutorImpl) preExec(lastBatch bool, start time.Time, hasRegularFilter bool) {
+func (e *DummyBatchExecutorImpl) preExec(lastBatch bool, start time.Time) {
 }
 
 func (e *DummyBatchExecutorImpl) postExec(start time.Time) {
@@ -243,10 +243,10 @@ func (e *BatchExecutorImpl) reduce() {
 	memutils.WaitForCudaStream(e.stream, e.qc.Device)
 }
 
-func (e *BatchExecutorImpl) preExec(isLastBatch bool, start time.Time, hasRegularFilter bool) {
+func (e *BatchExecutorImpl) preExec(isLastBatch bool, start time.Time) {
 	e.isLastBatch = isLastBatch
 	// initialize index vector.
-	if hasRegularFilter {
+	if !e.qc.OOPK.currentBatch.indexVectorD.isNull() {
 		initIndexVector(e.qc.OOPK.currentBatch.indexVectorD.getPointer(), 0, e.qc.OOPK.currentBatch.size, e.stream, e.qc.Device)
 	}
 	e.qc.reportTimingForCurrentBatch(e.stream, &start, initIndexVectorTiming)

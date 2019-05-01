@@ -730,7 +730,6 @@ func (bc *oopkBatchContext) prepareForFiltering(
 	bc.startRow = startRow
 
 	if firstColumn >= 0 {
-		// some filter exists
 		bc.size = columns[firstColumn].length
 		// Allocate twice of the size to save number of allocations of temporary index vector.
 		bc.indexVectorD = deviceAllocate(bc.size*4, bc.device)
@@ -1283,7 +1282,7 @@ func (qc *AQLQueryContext) FindDeviceForQuery(memStore memstore.MemStore, prefer
 
 func (qc *AQLQueryContext) runBatchExecutor(e BatchExecutor, isLastBatch bool) {
 	start := utils.Now()
-	e.preExec(isLastBatch, start, !qc.OOPK.currentBatch.indexVectorD.isNull())
+	e.preExec(isLastBatch, start)
 
 	e.filter()
 
