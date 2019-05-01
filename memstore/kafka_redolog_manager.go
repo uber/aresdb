@@ -22,6 +22,7 @@ type kafkaRedologManager struct {
 	Topic               string           `json:"topic"`
 	TableName           string           `json:"table"`
 	Shard               int              `json:"shard"`
+
 	MaxEventTimePerFile map[int64]uint32 `json:"maxEventTimePerFile"`
 
 	consumer          sarama.Consumer
