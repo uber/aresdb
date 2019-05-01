@@ -22,7 +22,9 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 	var t GinkgoTestReporter
 
 	ginkgo.It("NextUpsertBatch should work", func() {
-		consumer := mocks.NewConsumer(t, nil)
+		config := sarama.NewConfig()
+		config.ChannelBufferSize = 2 * maxBatchesPerFile
+		consumer := mocks.NewConsumer(t, config)
 		commitedOffset := make([]int64, 0)
 		commitFunc := func(offset int64) error {
 			commitedOffset = append(commitedOffset, offset)
@@ -30,35 +32,36 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 		}
 
 		upsertBatchBytes := []byte{1, 0, 237, 254, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 0, 123, 0, 1, 0, 0, 0, 0, 0, 135, 0, 0, 0, 0, 0, 0, 0}
-		redoManager := &kafkaRedologManager{
-			TableName:           "test",
-			Shard:               0,
-			Topic:               "test-test",
-			consumer:            consumer,
-			commitFunc:          commitFunc,
-			MaxEventTimePerFile: make(map[int64]uint32),
-			done:                make(chan struct{}),
-			batches:             make(chan upsertBatchBundle, 1),
-		}
+		redoManager := NewKafkaRedologManager("test", "test", 0, consumer, commitFunc)
 
-		consumer.ExpectConsumePartition("test-test", 0, 0).
-			YieldMessage(&sarama.ConsumerMessage{
-				Value: upsertBatchBytes,
-			})
+		for i := 0; i < 2*maxBatchesPerFile; i++ {
+			consumer.ExpectConsumePartition("test-test", 0, mocks.AnyOffset).
+				YieldMessage(&sarama.ConsumerMessage{
+					Value: upsertBatchBytes,
+				})
+		}
 
 		err := redoManager.ConsumeFrom(0)
 		Ω(err).Should(BeNil())
 
 		nextUpsertBatch := redoManager.NextUpsertBatch()
-		upsertBatch, fileID, offset := nextUpsertBatch()
-		Ω(upsertBatch.buffer).Should(Equal(upsertBatchBytes))
-		Ω(fileID).Should(Equal(int64(1 / maxBatchesPerFile)))
-		Ω(offset).Should(Equal(uint32(1 % maxBatchesPerFile)))
+		for i := 1; i <= 2*maxBatchesPerFile; i++ {
+			upsertBatch, fileID, offset := nextUpsertBatch()
+			Ω(upsertBatch.buffer).Should(Equal(upsertBatchBytes))
+			Ω(fileID).Should(Equal(int64(i / maxBatchesPerFile)))
+			Ω(offset).Should(Equal(uint32(i % maxBatchesPerFile)))
+			redoManager.UpdateMaxEventTime(0, fileID)
+		}
 
-		redoManager.UpdateMaxEventTime(0, fileID)
 		err = redoManager.PurgeRedologFileAndData(1, 1, 0)
 		Ω(err).Should(BeNil())
+		Ω(commitedOffset).Should(ConsistOf(int64(1)))
 		redoManager.Close()
+
+		upsertBatch, fileID, offset := nextUpsertBatch()
+		Ω(upsertBatch).Should(BeNil())
+		Ω(fileID).Should(BeEquivalentTo(0))
+		Ω(offset).Should(BeEquivalentTo(0))
 	})
 
 })
