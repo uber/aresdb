@@ -412,8 +412,12 @@ func (vp *cVectorParty) SliceByValue(lowerBoundRow, upperBoundRow int, value uns
 // party.
 func (vp *cVectorParty) SliceIndex(lowerBoundRow, upperBoundRow int) (startIndex, endIndex int) {
 	if vp.GetMode() == common.HasCountVector {
-		startIndex = vp.counts.UpperBound(0, vp.length, unsafe.Pointer(&lowerBoundRow)) - 1
-		endIndex = vp.counts.LowerBound(startIndex, vp.length, unsafe.Pointer(&upperBoundRow))
+		startIndex = vp.counts.UpperBound(0, vp.length+1, unsafe.Pointer(&lowerBoundRow))
+		// only substract by 1 when startIndex points to a valid position
+		if startIndex < vp.length+1 {
+			startIndex -= 1
+		}
+		endIndex = vp.counts.LowerBound(startIndex, vp.length+1, unsafe.Pointer(&upperBoundRow))
 		return startIndex, endIndex
 	}
 	return lowerBoundRow, upperBoundRow
