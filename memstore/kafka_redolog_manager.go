@@ -1,6 +1,7 @@
 package memstore
 
 import (
+	"encoding/json"
 	"github.com/Shopify/sarama"
 	"github.com/uber/aresdb/utils"
 	"math"
@@ -10,7 +11,7 @@ import (
 const maxBatchesPerFile = 5000
 
 type upsertBatchBundle struct {
-	batch *UpsertBatch
+	batch       *UpsertBatch
 	kafkaOffset int64
 }
 
@@ -18,26 +19,28 @@ type upsertBatchBundle struct {
 type kafkaRedologManager struct {
 	sync.RWMutex
 
-	Topic string
-	TableName string
-	Shard int
-	Address []string `json:"address"`
-
+	Topic               string           `json:"topic"`
+	TableName           string           `json:"table"`
+	Shard               int              `json:"shard"`
 	MaxEventTimePerFile map[int64]uint32 `json:"maxEventTimePerFile"`
-	consumer sarama.PartitionConsumer
+
+	consumer          sarama.Consumer
+	partitionConsumer sarama.PartitionConsumer
 
 	commitFunc func(offset int64) error
-	done    chan struct{}
-	batches chan upsertBatchBundle
+	done       chan struct{}
+	batches    chan upsertBatchBundle
 }
 
 // NewKafkaRedologManager creates kafka redolog manager
-func NewKafkaRedologManager(namespace, table string, shard int, address []string, commitFunc func(offset int64) error) KafkaRedologManager {
+func NewKafkaRedologManager(namespace, table string, shard int, consumer sarama.Consumer, commitFunc func(offset int64) error) KafkaRedologManager {
+	topic := utils.GetTopicFromTable(namespace, table)
 	return &kafkaRedologManager{
-		Topic: utils.GetTopicFromTable(namespace, table),
-		Shard: shard,
-		Address: address,
-		commitFunc: commitFunc,
+		TableName:           table,
+		Shard:               shard,
+		Topic:               topic,
+		consumer:            consumer,
+		commitFunc:          commitFunc,
 		MaxEventTimePerFile: make(map[int64]uint32),
 		done:                make(chan struct{}),
 		batches:             make(chan upsertBatchBundle, 1),
@@ -81,7 +84,7 @@ func (k *kafkaRedologManager) PurgeRedologFileAndData(eventTimeCutoff uint32, fi
 	for fileID, maxEventTime := range k.MaxEventTimePerFile {
 		if maxEventTime >= eventTimeCutoff ||
 			fileID > fileIDCheckpointed ||
-			(fileID == fileIDCheckpointed && batchOffset != maxBatchesPerFile - 1) {
+			(fileID == fileIDCheckpointed && batchOffset != maxBatchesPerFile-1) {
 			// file not purgeable
 			if fileID < firstUnpurgeable {
 				firstUnpurgeable = fileID
@@ -107,20 +110,14 @@ func (k *kafkaRedologManager) PurgeRedologFileAndData(eventTimeCutoff uint32, fi
 	return nil
 }
 
-// StartConsumer starts kafka consumer from a offset
-func (k *kafkaRedologManager) StartConsumer(offset int64) error {
-	if k.consumer != nil {
-		k.consumer.Close()
+// ConsumeFrom starts kafka consumer from a offset
+func (k *kafkaRedologManager) ConsumeFrom(offset int64) error {
+	if k.partitionConsumer != nil {
+		// close previous created partition consumer
+		k.partitionConsumer.Close()
 	}
-
-	config := sarama.NewConfig()
-	consumer, err := sarama.NewConsumer(k.Address, config)
-	if err != nil {
-		return utils.StackError(err, "failed to initialize kafka consumer for topic %s",
-			k.Topic)
-	}
-
-	k.consumer, err = consumer.ConsumePartition(k.Topic, int32(k.Shard), offset)
+	var err error
+	k.partitionConsumer, err = k.consumer.ConsumePartition(k.Topic, int32(k.Shard), offset)
 	if err != nil {
 		return utils.StackError(err, "failed to consume from topic %s partition %d",
 			k.Topic, k.Shard)
@@ -129,7 +126,7 @@ func (k *kafkaRedologManager) StartConsumer(offset int64) error {
 	go func() {
 		for {
 			select {
-			case msg, ok := <-k.consumer.Messages():
+			case msg, ok := <-k.partitionConsumer.Messages():
 				if !ok {
 					// consumer closed
 					return
@@ -154,13 +151,17 @@ func (k *kafkaRedologManager) StartConsumer(offset int64) error {
 }
 
 func (k *kafkaRedologManager) Close() {
-	if k.consumer != nil {
-		if err := k.consumer.Close(); err != nil {
-			utils.GetLogger().With(
-				"topic", k.Topic,
-				"partition", k.Shard).Error("failed to close consumer")
-
-		}
+	if k.partitionConsumer != nil {
+		k.partitionConsumer.Close()
 	}
 	close(k.done)
+}
+
+// MarshalJSON marshals a fileRedologManager into json.
+func (k *kafkaRedologManager) MarshalJSON() ([]byte, error) {
+	// Avoid json.Marshal loop calls.
+	type alias kafkaRedologManager
+	k.RLock()
+	defer k.RUnlock()
+	return json.Marshal((*alias)(k))
 }

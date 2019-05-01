@@ -24,5 +24,5 @@ type RedologManager interface {
 // KafkaRedologManager is interface for kafka based redolog manager
 type KafkaRedologManager interface {
 	RedologManager
-	StartConsumer(offset int64) error
+	ConsumeFrom(offset int64) error
 }
