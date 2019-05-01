@@ -19,9 +19,9 @@ type upsertBatchBundle struct {
 type kafkaRedologManager struct {
 	sync.RWMutex
 
-	Topic               string           `json:"topic"`
-	TableName           string           `json:"table"`
-	Shard               int              `json:"shard"`
+	Topic     string `json:"topic"`
+	TableName string `json:"table"`
+	Shard     int    `json:"shard"`
 
 	MaxEventTimePerFile map[int64]uint32 `json:"maxEventTimePerFile"`
 
@@ -95,7 +95,7 @@ func (k *kafkaRedologManager) PurgeRedologFileAndData(eventTimeCutoff uint32, fi
 	k.RUnlock()
 
 	if firstUnpurgeable < math.MaxInt64 {
-		err := k.commitFunc(firstUnpurgeable)
+		err := k.commitFunc(firstUnpurgeable * maxBatchesPerFile)
 		if err != nil {
 			return err
 		}
