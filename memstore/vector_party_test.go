@@ -137,8 +137,8 @@ var _ = ginkgo.Describe("VectorParty", func() {
 		Ω(endIndex).Should(Equal(4))
 
 		startIndex, endIndex = vp.SliceIndex(21, 21)
-		Ω(startIndex).Should(Equal(5))
-		Ω(endIndex).Should(Equal(5))
+		Ω(startIndex).Should(Equal(4))
+		Ω(endIndex).Should(Equal(4))
 	})
 
 	ginkgo.It("GetDataValueByRow should work", func() {
