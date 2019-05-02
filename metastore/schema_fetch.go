@@ -86,7 +86,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 	}
 
 	for _, table := range tables {
-		if !oldTablesMap[table.Name] {
+		if _, exist := oldTablesMap[table.Name]; !exist {
 			// found new table
 			err = j.schemaMutator.CreateTable(&table)
 			if err != nil {
