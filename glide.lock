@@ -1,5 +1,5 @@
-hash: a9437fdcb624a8c5f1071ca1faccdb0065b413c1741dec54ecabd802c6d033cd
-updated: 2019-04-17T15:00:04.822418-07:00
+hash: 153d629c516efaea45d1144d51a767e11daad36e97e6bb027845845df2d953b9
+updated: 2019-04-30T13:51:18.650647-07:00
 imports:
 - name: github.com/abiosoft/ishell
   version: 0a6b1640e32638dd433ee7e57ec325a7bdd79561
@@ -37,11 +37,11 @@ imports:
 - name: github.com/curator-go/curator
   version: 8a961ea3b25229b9b328724b8b2059ab58c1d16b
 - name: github.com/davecgh/go-spew
-  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
 - name: github.com/emirpasic/gods
-  version: 7c131f6714175bd4ce484da1f348260c79db3069
+  version: b2394dfbb6314eeb616db55d1e01928f287da4b4
   subpackages:
   - containers
   - trees
@@ -52,7 +52,7 @@ imports:
 - name: github.com/flynn-archive/go-shlex
   version: 3f9db97f856818214da2e1057f8ad84803971cff
 - name: github.com/fsnotify/fsnotify
-  version: ccc981bf80385c528a65fbfdd49bf2d8da22aa23
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: github.com/getlantern/deepcopy
   version: 7f45deb8130a0acc553242eb0e009e3f6f3d9ce3
 - name: github.com/gogo/protobuf
@@ -72,10 +72,12 @@ imports:
   - ptypes/any
   - ptypes/duration
   - ptypes/timestamp
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/handlers
-  version: 7e6a874cdc0efb71a260254cc0e30d5415b6a5bb
+  version: 90663712d74cb411cbef281bc1e08c19d1a76145
 - name: github.com/gorilla/mux
-  version: 08e7f807d38d6a870193019bb439056118661505
+  version: e3702bed27f0d39777b0b37b664b6280e8ef8fbf
 - name: github.com/hashicorp/hcl
   version: 65a6292f0157eff210d03ed1bf6c59b190b8b906
   subpackages:
@@ -115,14 +117,19 @@ imports:
   - src/cluster/shard
 - name: github.com/m3db/m3x
   version: b66c9c466c4726e3c9b47b1f837abbbe0f14be81
+  vcs: git
   subpackages:
+  - checked
   - clock
   - close
   - errors
+  - ident
   - instrument
   - log
+  - pool
   - process
   - retry
+  - time
   - watch
 - name: github.com/m3db/prometheus_client_golang
   version: 8ae269d24972b8695572fa6b2e3718b5ea82d6b4
@@ -146,7 +153,7 @@ imports:
 - name: github.com/mattn/go-colorable
   version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
 - name: github.com/mattn/go-isatty
-  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
+  version: c1975dc15c1d481e8da23f6ed313bb071136b98f
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -154,7 +161,7 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/onsi/ginkgo
-  version: 505cc352255139defb7371000668063d1161e331
+  version: eea6ad008b96acdaa524f5b409513bf062b500ad
   subpackages:
   - config
   - internal/codelocation
@@ -174,7 +181,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 5533ce8a0da374da682cd53d70ddcc54adf1a710
+  version: 90e289841c1ed79b7a598a7cd9959750cb5e89e2
   subpackages:
   - format
   - internal/assertion
@@ -188,7 +195,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: 659c90643e714681897ec2521c60567dd21da733
+  version: 1949ddbfd147afd4d964a9f00b24eb291e0e7c38
   subpackages:
   - ext
   - log
@@ -197,7 +204,7 @@ imports:
 - name: github.com/pkg/errors
   version: ba968bfe8b2f7e042a574c888954fccecfa385b4
 - name: github.com/pmezard/go-difflib
-  version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
   - difflib
 - name: github.com/samuel/go-zookeeper
@@ -205,9 +212,9 @@ imports:
   subpackages:
   - zk
 - name: github.com/satori/go.uuid
-  version: b2ce2384e17bbe0c6d34077efa39dbab3e09123b
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/spf13/afero
-  version: a5d6946387efe7d64d09dcba68cdd523dc1273a3
+  version: f4711e4db9e9a1d3887343acb72b2bbfc2f686f5
   subpackages:
   - mem
 - name: github.com/spf13/cast
@@ -219,18 +226,18 @@ imports:
 - name: github.com/spf13/pflag
   version: 24fa6976df40757dce6aea913e7b81ade90530e1
 - name: github.com/spf13/viper
-  version: 6d33b5a963d922d182c91e8a1c88d81fd150cfd4
+  version: d104d259b3380cb653bb793756823c3c41b37b53
 - name: github.com/stretchr/objx
-  version: ef50b0de28773081167c97fc27cf29a0bf8b8c71
+  version: cbeaeb16a013161a98496fad62933b1d21786672
 - name: github.com/stretchr/testify
-  version: 363ebb24d041ccea8068222281c2e963e997b9dc
+  version: 6fe211e493929a8aac0469b93f28b1d0688a9a3a
   subpackages:
   - assert
   - mock
   - require
   - suite
 - name: github.com/uber-go/tally
-  version: d0a004a77fc9f0b9733e3afe638994d18da13f3d
+  version: e9a67ec1839e1f6e5133dbcca2f57bec12fdeda2
   subpackages:
   - m3
   - m3/customtransports
@@ -284,7 +291,7 @@ imports:
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/zap
-  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
+  version: f85c78b1dd998214c5f2138155b320a4a43fbe36
   subpackages:
   - buffer
   - internal/bufferpool
@@ -292,25 +299,27 @@ imports:
   - internal/exit
   - zapcore
 - name: golang.org/x/net
-  version: 915654e7eabcea33ae277abbecf52f0d8b7a9fdc
+  version: ab5485076ff3407ad2d02db054635913f017b0ed
+  repo: https://github.com/golang/net
+  vcs: git
   subpackages:
   - context
   - html
   - html/atom
   - html/charset
-  - http/httpguts
   - http2
   - http2/hpack
   - idna
   - internal/timeseries
+  - lex/httplex
   - netutil
   - trace
 - name: golang.org/x/sys
-  version: 11f53e03133963fb11ae0588e08b5e0b85be8be5
+  version: e48874b42435b4347fc52bdee0424a52abc974d7
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: f21a4dfb5e38f5895301dc265a8def02365cc3d0
+  version: 342b2e1fbaa52c93f31447ad2c6abc048c63e475
   subpackages:
   - encoding
   - encoding/charmap
@@ -322,6 +331,8 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
+  - internal/language
+  - internal/language/compact
   - internal/tag
   - internal/utf8internal
   - language
@@ -356,7 +367,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/validator.v2
-  version: 135c24b11c19e52befcae2ec3fca5d9b78c4e98e
+  version: 59c90c7046f643cbe0d4e7c8776c42a84ce75910
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 testImports:
