@@ -248,6 +248,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 			  "primaryKeyColumns": null,
 			  "isFactTable": false,
 			  "config": {},
+              "incarnation": 0,
 			  "version": 0
 			},
 			"columnIDs": null,

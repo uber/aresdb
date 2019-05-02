@@ -558,6 +558,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
         "backfillMaxBufferSize": 4294967296,
         "backfillThresholdInBytes": 2097152
       },
+      "incarnation": 0,
       "version": 0
     },
     "columnIDs": {
