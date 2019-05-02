@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/uber/aresdb/subscriber/common/sink"
 	"os"
 	"runtime"
 
@@ -34,6 +35,7 @@ type Result struct {
 	Scope       tally.Scope
 	Consumer    job.NewConsumer
 	Decoder     job.NewDecoder
+	Sink        job.NewSink
 }
 
 func main() {
@@ -134,5 +136,6 @@ func Init(params Params) Result {
 		Scope:       scope,
 		Consumer:    consumer.NewKafkaConsumer,
 		Decoder:     message.NewDefaultDecoder,
+		Sink:        sink.NewAresDatabase,
 	}
 }
