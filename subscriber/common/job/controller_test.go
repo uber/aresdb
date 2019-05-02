@@ -28,6 +28,7 @@ import (
 	"github.com/uber/aresdb/subscriber/common/consumer"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
+	"github.com/uber/aresdb/subscriber/common/sink"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
@@ -36,7 +37,6 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
-	"time"
 )
 
 var _ = Describe("controller", func() {
@@ -52,9 +52,14 @@ var _ = Describe("controller", func() {
 		ControllerConfig: &config.ControllerConfig{},
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
-	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-		"dev-ares01": client.ConnectorConfig{Address: "localhost:8888"},
+	sinkConfig := config.SinkConfig{
+		SinkModeStr:           "aresDB",
+		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
 	}
+	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+		"dev-ares01": sinkConfig,
+	}
+	config.ActiveAresNameSpace = "dev01"
 
 	var testServer *httptest.Server
 	var address string
@@ -168,8 +173,13 @@ var _ = Describe("controller", func() {
 			}))
 		testServer.Start()
 		address = testServer.Listener.Addr().String()
-		serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-			"dev-ares01": client.ConnectorConfig{Address: address},
+
+		sinkConfig := config.SinkConfig{
+			SinkModeStr:           "aresDB",
+			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
+		}
+		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+			"dev-ares01": sinkConfig,
 		}
 	})
 
@@ -261,6 +271,7 @@ var _ = Describe("controller", func() {
 		params := Params{
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
+			SinkInitFunc:     sink.NewAresDatabase,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
@@ -295,6 +306,7 @@ var _ = Describe("controller", func() {
 		params := Params{
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
+			SinkInitFunc:     sink.NewAresDatabase,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
@@ -326,6 +338,7 @@ var _ = Describe("controller", func() {
 		params := Params{
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
+			SinkInitFunc:     sink.NewAresDatabase,
 			ConsumerInitFunc: consumer.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
@@ -343,15 +356,12 @@ var _ = Describe("controller", func() {
 				},
 			},
 		}
-		enabled := true
-		timeout := 30 * time.Second
-		interval := 10 * time.Second
-		checkInterval := 2 * time.Second
+
 		params.ServiceConfig.HeartbeatConfig = &config.HeartBeatConfig{
-			Enabled:       &enabled,
-			Timeout:       &timeout,
-			Interval:      &interval,
-			CheckInterval: &checkInterval,
+			Enabled:       true,
+			Timeout:       30,
+			Interval:      10,
+			CheckInterval: 2,
 		}
 
 		ctrl := gomock.NewController(GinkgoT())
@@ -362,6 +372,5 @@ var _ = Describe("controller", func() {
 		mockServices.EXPECT().Advertise(gomock.Any()).Return(nil).AnyTimes()
 		err := registerHeartBeatService(params, mockServices)
 		Ω(err).Should(BeNil())
-
 	})
 })

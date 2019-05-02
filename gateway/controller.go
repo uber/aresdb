@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/aresdb/client"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -22,6 +23,8 @@ const (
 
 // ControllerClient defines methods to communicate with ares-controller
 type ControllerClient interface {
+	client.SchemaFetcher
+
 	GetSchemaHash(namespace string) (string, error)
 	GetAllSchema(namespace string) ([]common.Table, error)
 	GetAssignmentHash(jobNamespace, instance string) (string, error)

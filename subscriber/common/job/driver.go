@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/aresdb/gateway"
 	"net/http"
 	"strconv"
 	"sync"
@@ -64,17 +65,19 @@ type Driver struct {
 	processors        []Processor
 	processorMsgCount map[int]int64
 	processorMsgSizes chan int64
+	aresControllerClient gateway.ControllerClient
+	sinkInitFunc      NewSink
 	consumerInitFunc  NewConsumer
 	decoderInitFunc   NewDecoder
 }
 
 // NewProcessor is the type of function each processor that implements Processor should provide for initialization
 // This function implementation should always return a new instance of the processor
-type NewProcessor func(id int, jobConfig *rules.JobConfig, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
+type NewProcessor func(id int, jobConfig *rules.JobConfig, aresControllerClient gateway.ControllerClient, sinkInitFunc NewSink, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
 	errors chan ProcessorError, msgSizes chan int64, serviceConfig config.ServiceConfig) (Processor, error)
 
 // NewDrivers return Drivers
-func NewDrivers(params Params) (Drivers, error) {
+func NewDrivers(params Params, aresControllerClient gateway.ControllerClient) (Drivers, error) {
 	drivers := make(Drivers)
 
 	// iterate local job configs
@@ -82,7 +85,7 @@ func NewDrivers(params Params) (Drivers, error) {
 		// iterate all active ares clusters
 		aresClusterDriverTable := make(map[string]*Driver)
 		for aresCluster, jobConfig := range jobAresConfig {
-			driver, err := NewDriver(jobConfig, params.ServiceConfig, NewStreamingProcessor,
+			driver, err := NewDriver(jobConfig, params.ServiceConfig, aresControllerClient, NewStreamingProcessor, params.SinkInitFunc,
 				params.ConsumerInitFunc, params.DecoderInitFunc)
 			if err != nil {
 				params.ServiceConfig.Logger.Error("Failed to create driver",
@@ -104,7 +107,7 @@ func NewDrivers(params Params) (Drivers, error) {
 
 // NewDriver will return a new Driver instance to start a ingest job
 func NewDriver(
-	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, processorInitFunc NewProcessor,
+	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, aresControllerClient gateway.ControllerClient, processorInitFunc NewProcessor, sinkInitFunc NewSink,
 	consumerInitFunc NewConsumer, decoderInitFunc NewDecoder) (*Driver, error) {
 	return &Driver{
 		Topic:                jobConfig.StreamingConfig.Topic,
@@ -132,6 +135,8 @@ func NewDriver(
 		processors:          []Processor{},
 		processorMsgCount:   make(map[int]int64),
 		processorMsgSizes:   make(chan int64),
+		aresControllerClient: aresControllerClient,
+		sinkInitFunc:        sinkInitFunc,
 		consumerInitFunc:    consumerInitFunc,
 		decoderInitFunc:     decoderInitFunc,
 	}, nil
@@ -174,7 +179,7 @@ func (d *Driver) AddProcessor() (err error) {
 	d.processorCounter++
 	ID := int(d.processorCounter)
 
-	processor, err := d.processorInitFunc(ID, d.jobConfig, d.consumerInitFunc, d.decoderInitFunc,
+	processor, err := d.processorInitFunc(ID, d.jobConfig, d.aresControllerClient, d.sinkInitFunc, d.consumerInitFunc, d.decoderInitFunc,
 		d.errors, d.processorMsgSizes, d.serviceConfig)
 	if err != nil {
 		d.serviceConfig.Logger.Error("Failed to initialize Processor",

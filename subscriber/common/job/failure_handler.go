@@ -16,7 +16,7 @@ package job
 
 import (
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/subscriber/common/database"
+	"github.com/uber/aresdb/subscriber/common/sink"
 )
 
 const retryHandler string = "retry"
@@ -27,5 +27,5 @@ type FailureHandler interface {
 
 	// HandleFailure will provide a contingent plan to
 	// keep track of failed save
-	HandleFailure(destination database.Destination, rows []client.Row) error
+	HandleFailure(destination sink.Destination, rows []client.Row) error
 }

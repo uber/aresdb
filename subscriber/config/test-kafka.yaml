@@ -11,13 +11,15 @@ ares:
   clusters:
     clusters:
       dev-ares01:
-        aresDB:
-          address: "ares01:9000"
-          timeout: 20
+        kafkaProducer:
+          brokers: "kafka11:9000,kafka12:9000"
+          retryMax: 5
+          timeoutInSec: 5
       dev-ares02:
-        aresDB:
-          address: "ares02:9000"
-          timeout: 20
+        kafkaProducer:
+          address: "kafka21:9000,kafka22:9000"
+          retryMax: 5
+          timeoutInSec: 5
 
 # A list of jobs which are defined in config/jobs
 jobs:
@@ -61,5 +63,3 @@ heartbeat:
   checkInterval: 2
   # heartbeatInterval in second
   interval: 10
-
-
