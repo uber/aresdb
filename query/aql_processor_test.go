@@ -2147,4 +2147,37 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(qc.OOPK.hllVectorD).Should(BeZero())
 		Ω(qc.OOPK.hllDimRegIDCountD).Should(BeZero())
 	})
+
+	ginkgo.It("ProcessQuery should work for query without regular filters", func() {
+		shard.ArchiveStore.CurrentVersion.Batches[0] = archiveBatch1
+		qc := &AQLQueryContext{}
+		q := &AQLQuery{
+			Table: table,
+			Dimensions: []Dimension{
+				{Expr: "0"},
+			},
+			Measures: []Measure{
+				{Expr: "count(*)"},
+			},
+			TimeFilter: TimeFilter{
+				Column: "c0",
+				From:   "1970-01-01",
+				To:     "1970-01-02",
+			},
+		}
+		qc.Query = q
+		qc = q.Compile(memStore, false)
+		Ω(qc.Error).Should(BeNil())
+		qc.ProcessQuery(memStore)
+		Ω(qc.Error).Should(BeNil())
+
+		qc.Results = qc.Postprocess()
+		qc.ReleaseHostResultsBuffers()
+		bs, err := json.Marshal(qc.Results)
+		Ω(err).Should(BeNil())
+
+		Ω(bs).Should(MatchJSON(` {
+			"0": 12
+		  }`))
+	})
 })

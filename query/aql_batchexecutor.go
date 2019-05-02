@@ -246,7 +246,9 @@ func (e *BatchExecutorImpl) reduce() {
 func (e *BatchExecutorImpl) preExec(isLastBatch bool, start time.Time) {
 	e.isLastBatch = isLastBatch
 	// initialize index vector.
-	initIndexVector(e.qc.OOPK.currentBatch.indexVectorD.getPointer(), 0, e.qc.OOPK.currentBatch.size, e.stream, e.qc.Device)
+	if !e.qc.OOPK.currentBatch.indexVectorD.isNull() {
+		initIndexVector(e.qc.OOPK.currentBatch.indexVectorD.getPointer(), 0, e.qc.OOPK.currentBatch.size, e.stream, e.qc.Device)
+	}
 	e.qc.reportTimingForCurrentBatch(e.stream, &start, initIndexVectorTiming)
 }
 

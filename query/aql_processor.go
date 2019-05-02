@@ -201,6 +201,7 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 			liveRecordsProcessed += size
 			previousBatchExecutor = qc.processBatch(&batch.Batch,
 				batchID,
+				size,
 				qc.transferLiveBatch(batch, size),
 				qc.liveBatchCustomFilterExecutor(cutoff), previousBatchExecutor, true)
 			qc.cudaStreams[0], qc.cudaStreams[1] = qc.cudaStreams[1], qc.cudaStreams[0]
@@ -224,6 +225,7 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 			previousBatchExecutor = qc.processBatch(
 				&archiveBatch.Batch,
 				int32(batchID),
+				archiveBatch.Size,
 				qc.transferArchiveBatch(archiveBatch, isFirstOrLast),
 				qc.archiveBatchCustomFilterExecutor(isFirstOrLast),
 				previousBatchExecutor, false)
@@ -725,13 +727,16 @@ func (bc *oopkBatchContext) swapResultBufferForNextBatch() {
 func (bc *oopkBatchContext) prepareForFiltering(
 	columns []deviceVectorPartySlice, firstColumn int, startRow int, stream unsafe.Pointer) {
 	bc.columns = columns
-	bc.size = columns[firstColumn].length
-	bc.stats.batchSize = bc.size
-	// Allocate twice of the size to save number of allocations of temporary index vector.
-	bc.indexVectorD = deviceAllocate(bc.size*4, bc.device)
-	bc.predicateVectorD = deviceAllocate(bc.size, bc.device)
-	bc.baseCountD = columns[firstColumn].counts.offset(columns[firstColumn].countStartIndex * 4)
 	bc.startRow = startRow
+
+	if firstColumn >= 0 {
+		bc.size = columns[firstColumn].length
+		// Allocate twice of the size to save number of allocations of temporary index vector.
+		bc.indexVectorD = deviceAllocate(bc.size*4, bc.device)
+		bc.predicateVectorD = deviceAllocate(bc.size, bc.device)
+		bc.baseCountD = columns[firstColumn].counts.offset(columns[firstColumn].countStartIndex * 4)
+	}
+	bc.stats.batchSize = bc.size
 }
 
 // prepareForDimAndMeasureEval ensures that dim/measure vectors have enough
@@ -813,7 +818,7 @@ func (qc *AQLQueryContext) doProfile(action func(), profileName string, stream u
 // a function closure to be invoked later. customFilterExecutor is the executor
 // to apply custom filters for live batch and archive batch.
 func (qc *AQLQueryContext) processBatch(
-	batch *memstore.Batch, batchID int32, transferFunc batchTransferExecutor,
+	batch *memstore.Batch, batchID int32, batchSize int, transferFunc batchTransferExecutor,
 	customFilterFunc customFilterExecutor, previousBatchExecutor BatchExecutor, needToUnlockBatch bool) BatchExecutor {
 	defer func() {
 		if needToUnlockBatch {
@@ -899,6 +904,7 @@ func (qc *AQLQueryContext) processBatch(
 	}
 
 	// no prefilter slicing in livebatch, startRow is always 0
+	qc.OOPK.currentBatch.size = batchSize
 	qc.OOPK.currentBatch.prepareForFiltering(deviceSlices, firstColumn, startRow, stream)
 
 	qc.reportTimingForCurrentBatch(stream, &start, prepareForFilteringTiming)
