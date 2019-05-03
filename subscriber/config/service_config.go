@@ -87,10 +87,10 @@ type ServiceConfig struct {
 
 // HeartBeatConfig represents heartbeat config
 type HeartBeatConfig struct {
-	Enabled       bool          `yaml:"enabled"`
-	Timeout       int `yaml:"timeout"`
-	Interval      int `yaml:"interval"`
-	CheckInterval int `yaml:"checkInterval"`
+	Enabled       bool `yaml:"enabled"`
+	Timeout       int  `yaml:"timeout"`
+	Interval      int  `yaml:"interval"`
+	CheckInterval int  `yaml:"checkInterval"`
 }
 
 // SinkMode defines the subscriber sink mode

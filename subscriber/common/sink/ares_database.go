@@ -16,12 +16,10 @@ package sink
 
 import (
 	"fmt"
-	"github.com/uber/aresdb/gateway"
-	"github.com/uber/aresdb/subscriber/common/rules"
-	"time"
-
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/gateway"
+	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
@@ -70,7 +68,7 @@ func (db *AresDatabase) Shutdown() {}
 func (db *AresDatabase) Save(destination Destination, rows []client.Row) error {
 	db.Scope.Gauge("batchSize").Update(float64(len(rows)))
 
-	saveStart := time.Now()
+	saveStart := utils.Now()
 	db.ServiceConfig.Logger.Debug("saving", zap.Any("rows", rows))
 	rowsInserted, err := db.Connector.
 		Insert(destination.Table, destination.ColumnNames, rows, destination.AresUpdateModes...)
@@ -79,7 +77,7 @@ func (db *AresDatabase) Save(destination Destination, rows []client.Row) error {
 		return utils.StackError(err, fmt.Sprintf("Failed to save rows in table %s, columns: %+v",
 			destination.Table, destination.ColumnNames))
 	}
-	db.Scope.Timer("latency.ares.save").Record(time.Now().Sub(saveStart))
+	db.Scope.Timer("latency.ares.save").Record(utils.Now().Sub(saveStart))
 	db.Scope.Counter("rowsWritten").Inc(int64(rowsInserted))
 	db.Scope.Counter("rowsIgnored").Inc(int64(len(rows)) - int64(rowsInserted))
 	db.Scope.Gauge("upsertBatchSize").Update(float64(rowsInserted))

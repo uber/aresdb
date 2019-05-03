@@ -124,7 +124,7 @@ func (kp *KafkaPublisher) Save(destination Destination, rows []client.Row) error
 		}
 	}
 
-	saveStart := time.Now()
+	saveStart := utils.Now()
 	kp.ServiceConfig.Logger.Debug("saving", zap.Any("rows", rows))
 	err := kp.SyncProducer.SendMessages(msgs)
 	if err != nil {
@@ -132,8 +132,8 @@ func (kp *KafkaPublisher) Save(destination Destination, rows []client.Row) error
 		return utils.StackError(err, fmt.Sprintf("Failed to publish rows in table %s, columns: %+v",
 			destination.Table, destination.ColumnNames))
 	}
-	numRows := len(rows)-rowsIgnored
-	kp.Scope.Timer("latency.ares.save").Record(time.Now().Sub(saveStart))
+	numRows := len(rows) - rowsIgnored
+	kp.Scope.Timer("latency.ares.save").Record(utils.Now().Sub(saveStart))
 	kp.Scope.Counter("rowsWritten").Inc(int64(numRows))
 	kp.Scope.Counter("rowsIgnored").Inc(int64(rowsIgnored))
 	kp.Scope.Gauge("upsertBatchSize").Update(float64(numRows))
@@ -165,6 +165,6 @@ func (kp *KafkaPublisher) buildKafkaMessage(msgs []*sarama.ProducerMessage, rows
 	}
 
 	msgs = append(msgs, &msg)
-	*rowsIgnored = *rowsIgnored + (len(rows)-numRows)
+	*rowsIgnored = *rowsIgnored + (len(rows) - numRows)
 	return
 }

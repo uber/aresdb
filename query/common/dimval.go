@@ -98,7 +98,7 @@ func ReadDimension(valueStart, nullStart unsafe.Pointer,
 // formatWithDataValue formats value with given type
 func formatWithDataValue(valuePtr unsafe.Pointer, dataType memCom.DataType) *string {
 	formatted := memCom.DataValue{
-		Valid: true,
+		Valid:    true,
 		DataType: dataType,
 		OtherVal: valuePtr,
 	}.ConvertToHumanReadable(dataType)

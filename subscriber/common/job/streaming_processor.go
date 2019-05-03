@@ -47,25 +47,25 @@ type NewSink func(
 // StreamingProcessor defines a individual processor that connects to a Kafka high level consumer,
 // processes the messages based on the type of job and saves to database
 type StreamingProcessor struct {
-	ID                int
-	context           *ProcessorContext
-	jobConfig         *rules.JobConfig
-	cluster           string
-	serviceConfig     config.ServiceConfig
-	scope             tally.Scope
+	ID                   int
+	context              *ProcessorContext
+	jobConfig            *rules.JobConfig
+	cluster              string
+	serviceConfig        config.ServiceConfig
+	scope                tally.Scope
 	aresControllerClient gateway.ControllerClient
-	sink              sink.Sink
-	sinkInitFunc      NewSink
-	highLevelConsumer consumer.Consumer
-	consumerInitFunc  NewConsumer
-	parser            *message.Parser
-	decoder           message.Decoder
-	batcher           *tools.Batcher
-	msgSizes          chan int64
-	shutdown          chan bool
-	close             chan bool
-	errors            chan ProcessorError
-	failureHandler    FailureHandler
+	sink                 sink.Sink
+	sinkInitFunc         NewSink
+	highLevelConsumer    consumer.Consumer
+	consumerInitFunc     NewConsumer
+	parser               *message.Parser
+	decoder              message.Decoder
+	batcher              *tools.Batcher
+	msgSizes             chan int64
+	shutdown             chan bool
+	close                chan bool
+	errors               chan ProcessorError
+	failureHandler       FailureHandler
 }
 
 // NewStreamingProcessor returns Processor to consume, process and save data to db.
@@ -110,17 +110,17 @@ func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, aresControllerCli
 			"aresCluster": jobConfig.AresTableConfig.Cluster,
 		}),
 		aresControllerClient: aresControllerClient,
-		sink:              db,
-		sinkInitFunc:      sinkInitFunc,
-		failureHandler:    failureHandler,
-		highLevelConsumer: hlConsumer,
-		consumerInitFunc:  consumerInitFunc,
-		msgSizes:          msgSizes,
-		parser:            parser,
-		decoder:           decoder,
-		shutdown:          make(chan bool),
-		close:             make(chan bool),
-		errors:            errors,
+		sink:                 db,
+		sinkInitFunc:         sinkInitFunc,
+		failureHandler:       failureHandler,
+		highLevelConsumer:    hlConsumer,
+		consumerInitFunc:     consumerInitFunc,
+		msgSizes:             msgSizes,
+		parser:               parser,
+		decoder:              decoder,
+		shutdown:             make(chan bool),
+		close:                make(chan bool),
+		errors:               errors,
 		context: &ProcessorContext{
 			StartTime: time.Now(),
 			Errors: processorErrors{

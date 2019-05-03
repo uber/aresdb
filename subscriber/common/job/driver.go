@@ -60,15 +60,15 @@ type Driver struct {
 	statusCheckInterval int
 
 	// processors related variables
-	processorInitFunc NewProcessor
-	processorCounter  uint
-	processors        []Processor
-	processorMsgCount map[int]int64
-	processorMsgSizes chan int64
+	processorInitFunc    NewProcessor
+	processorCounter     uint
+	processors           []Processor
+	processorMsgCount    map[int]int64
+	processorMsgSizes    chan int64
 	aresControllerClient gateway.ControllerClient
-	sinkInitFunc      NewSink
-	consumerInitFunc  NewConsumer
-	decoderInitFunc   NewDecoder
+	sinkInitFunc         NewSink
+	consumerInitFunc     NewConsumer
+	decoderInitFunc      NewDecoder
 }
 
 // NewProcessor is the type of function each processor that implements Processor should provide for initialization
@@ -127,18 +127,18 @@ func NewDriver(
 			"job":         jobConfig.Name,
 			"aresCluster": jobConfig.AresTableConfig.Cluster,
 		}),
-		errors:              make(chan ProcessorError),
-		errorThreshold:      jobConfig.StreamingConfig.ErrorThreshold,
-		statusCheckInterval: jobConfig.StreamingConfig.StatusCheckInterval,
-		processorInitFunc:   processorInitFunc,
-		processorCounter:    uint(0),
-		processors:          []Processor{},
-		processorMsgCount:   make(map[int]int64),
-		processorMsgSizes:   make(chan int64),
+		errors:               make(chan ProcessorError),
+		errorThreshold:       jobConfig.StreamingConfig.ErrorThreshold,
+		statusCheckInterval:  jobConfig.StreamingConfig.StatusCheckInterval,
+		processorInitFunc:    processorInitFunc,
+		processorCounter:     uint(0),
+		processors:           []Processor{},
+		processorMsgCount:    make(map[int]int64),
+		processorMsgSizes:    make(chan int64),
 		aresControllerClient: aresControllerClient,
-		sinkInitFunc:        sinkInitFunc,
-		consumerInitFunc:    consumerInitFunc,
-		decoderInitFunc:     decoderInitFunc,
+		sinkInitFunc:         sinkInitFunc,
+		consumerInitFunc:     consumerInitFunc,
+		decoderInitFunc:      decoderInitFunc,
 	}, nil
 }
 

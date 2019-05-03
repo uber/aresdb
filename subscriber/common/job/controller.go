@@ -104,7 +104,7 @@ type ZKNodeSubscriber struct {
 }
 
 // NewController creates controller
-func NewController(params Params) *Controller  {
+func NewController(params Params) *Controller {
 	params.ServiceConfig.Logger.Info("Creating Controller")
 
 	aresControllerClient := gateway.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,

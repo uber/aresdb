@@ -115,7 +115,7 @@ func (_m *ControllerClient) FetchAllSchemas() ([]common.Table, error) {
 }
 
 // FetchSchema fetch one schema for given table
-func (_m *ControllerClient)FetchSchema(table string) (*common.Table, error) {
+func (_m *ControllerClient) FetchSchema(table string) (*common.Table, error) {
 	ret := _m.Called(table)
 
 	var r0 *common.Table
@@ -138,7 +138,7 @@ func (_m *ControllerClient)FetchSchema(table string) (*common.Table, error) {
 }
 
 // FetchAllEnums fetches all enums for given table and column
-func (_m *ControllerClient)FetchAllEnums(tableName string, columnName string) ([]string, error) {
+func (_m *ControllerClient) FetchAllEnums(tableName string, columnName string) ([]string, error) {
 	ret := _m.Called(tableName, columnName)
 
 	var r0 []string
