@@ -106,15 +106,19 @@ func (kp *KafkaPublisher) Shutdown() {
 
 // Save saves a batch of row objects into a destination
 func (kp *KafkaPublisher) Save(destination Destination, rows []client.Row) error {
-	shards := Shard(rows, destination, kp.JobConfig)
+	shards, rowsIgnored := Shard(rows, destination, kp.JobConfig)
 	if shards == nil {
 		// case1: no sharding --  publish rows to random kafka partition
-		kp.Insert(destination.Table, -1, destination.ColumnNames, rows, destination.AresUpdateModes...)
+		kp.insert(destination.Table, -1, destination.ColumnNames, rows, destination.AresUpdateModes...)
 	} else {
 		// case2: sharding -- publish rows to specified partition
 		for shardID, rowsInShard := range shards {
-			kp.Insert(destination.Table, int32(shardID), destination.ColumnNames, rowsInShard, destination.AresUpdateModes...)
+			kp.insert(destination.Table, int32(shardID), destination.ColumnNames, rowsInShard, destination.AresUpdateModes...)
 		}
+	}
+
+	if rowsIgnored != 0 {
+		kp.Scope.Counter("errors.shard").Inc(int64(rowsIgnored))
 	}
 
 	return nil
@@ -125,8 +129,8 @@ func (kp *KafkaPublisher) Cluster() string {
 	return kp.ClusterName
 }
 
-func (kp *KafkaPublisher) Insert(tableName string, shardID int32, columnNames []string, rows []client.Row,
-	updateModes ...memCom.ColumnUpdateMode) (int, error) {
+func (kp *KafkaPublisher) insert(tableName string, shardID int32, columnNames []string, rows []client.Row,
+	updateModes ...memCom.ColumnUpdateMode) {
 	kp.Scope.Gauge("batchSize").Update(float64(len(rows)))
 	saveStart := time.Now()
 	kp.ServiceConfig.Logger.Debug("saving", zap.Any("rows", rows))
@@ -134,8 +138,8 @@ func (kp *KafkaPublisher) Insert(tableName string, shardID int32, columnNames []
 	bytes, numRows, err := kp.UpsertBatchBuilder.PrepareUpsertBatch(tableName, columnNames, updateModes, rows)
 	if err != nil {
 		kp.Scope.Counter("errors.insert").Inc(1)
-		return 0, utils.StackError(err, fmt.Sprintf("Failed to prepare rows in table %s, columns: %+v",
-			tableName, columnNames))
+		utils.StackError(err, "Failed to prepare rows in table %s, columns: %+v",
+			tableName, columnNames)
 	}
 
 	msg := sarama.ProducerMessage{
@@ -149,12 +153,12 @@ func (kp *KafkaPublisher) Insert(tableName string, shardID int32, columnNames []
 	_, _, err = kp.SyncProducer.SendMessage(&msg)
 	if err != nil {
 		kp.Scope.Counter("errors.insert").Inc(1)
-		return 0, utils.StackError(err, fmt.Sprintf("Failed to publish rows in table %s, columns: %+v",
+		utils.StackError(err, fmt.Sprintf("Failed to publish rows in table %s, columns: %+v",
 			tableName, columnNames))
 	}
 	kp.Scope.Timer("latency.ares.save").Record(time.Now().Sub(saveStart))
 	kp.Scope.Counter("rowsWritten").Inc(int64(numRows))
 	kp.Scope.Counter("rowsIgnored").Inc(int64(len(rows)) - int64(numRows))
 	kp.Scope.Gauge("upsertBatchSize").Update(float64(numRows))
-	return numRows, err
+	return
 }

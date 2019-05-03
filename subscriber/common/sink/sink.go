@@ -54,10 +54,11 @@ type Destination struct {
 	NumShards uint32
 }
 
-func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfig) map[uint32][]client.Row {
+func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfig) (map[uint32][]client.Row, int) {
+	rowsIgnored := 0
 	if destination.NumShards == 0 || destination.NumShards == 1 {
 		// in this case, there is no sharding in this aresDB cluster
-		return nil
+		return nil, rowsIgnored
 	}
 
 	shards := make(map[uint32][]client.Row)
@@ -67,10 +68,10 @@ func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfi
 
 	for _, row := range rows {
 		// convert primaryKey to byte array
-		pk := make([]byte, jobConfig.GetPrimaryKeyBytes())
-		err := GetPrimaryKeyBytes(row, destination, jobConfig, &pk)
+		pk, err := getPrimaryKeyBytes(row, destination, jobConfig, jobConfig.GetPrimaryKeyBytes())
 		if err != nil {
 			utils.StackError(err, "Failed to convert primaryKey to byte array for row: %v", row)
+			rowsIgnored++
 			continue
 		}
 
@@ -78,17 +79,17 @@ func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfi
 		shardID := shardFn(pk, destination.NumShards)
 		shards[shardID] = append(shards[shardID], row)
 	}
-	return shards
+	return shards, rowsIgnored
 }
 
 func shardFn(key []byte, numShards uint32) uint32 {
 	return utils.Murmur3Sum32(unsafe.Pointer(&key[0]), len(key), 0) % numShards
 }
 
-func GetPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rules.JobConfig, key *[]byte) error {
+func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rules.JobConfig, keyLength int) ([]byte, error) {
 	primaryKeyValues := make([]memCom.DataValue, len(destination.PrimaryKeys))
 	var err error
-	var strBytes []byte
+	var key, strBytes []byte
 	i := 0
 	for columnName, columnID := range destination.PrimaryKeys {
 		columnIDInSchema := destination.PrimaryKeysInSchema[columnName]
@@ -104,26 +105,26 @@ func GetPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rule
 			}
 			strBytes = append(strBytes, []byte(str)...)
 		} else {
-			primaryKeyValues[i], err = GetDataValue(row[columnID], columnIDInSchema, jobConfig)
+			primaryKeyValues[i], err = getDataValue(row[columnID], columnIDInSchema, jobConfig)
 			if err != nil {
-				return utils.StackError(err, "Failed to read primary key at row %d, col %d",
+				return key, utils.StackError(err, "Failed to read primary key at row %d, col %d",
 					row, columnID)
 			}
 			i++
 		}
 	}
 
-	if err := memstore.GetPrimaryKeyBytes(primaryKeyValues, *key); err != nil {
-		return err
+	if key, err = memstore.GetPrimaryKeyBytes(primaryKeyValues, keyLength); err != nil {
+		return key, err
 	}
 	if strBytes != nil {
-		*key = append(*key, strBytes...)
+		key = append(key, strBytes...)
 	}
-	return nil
+	return key, err
 }
 
 // GetDataValue returns the DataValue for the given column value.
-func GetDataValue(col interface{}, columnIDInSchema int, jobConfig *rules.JobConfig) (memCom.DataValue, error) {
+func getDataValue(col interface{}, columnIDInSchema int, jobConfig *rules.JobConfig) (memCom.DataValue, error) {
 	var dataStr string
 	var ok bool
 	if dataStr, ok = col.(string); !ok {

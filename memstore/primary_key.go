@@ -100,26 +100,24 @@ func MarshalPrimaryKey(pk PrimaryKey) ([]byte, error) {
 }
 
 // GetPrimaryKeyBytes returns primary key bytes for a given row.
-func GetPrimaryKeyBytes(primaryKeyValues []common.DataValue, key []byte) error {
-	outputIdx := 0
+func GetPrimaryKeyBytes(primaryKeyValues []common.DataValue, keyLength int) ([]byte, error) {
+	key := make([]byte, 0, keyLength)
 	for _, value := range primaryKeyValues {
 		if !value.Valid {
-			return utils.StackError(nil, "Primary key cannot be null")
+			return key, utils.StackError(nil, "Primary key cannot be null")
 		}
 
 		if value.IsBool {
 			if value.BoolVal {
-				key[outputIdx] = 1
+				key = append(key, 1)
 			} else {
-				key[outputIdx] = 0
+				key = append(key, 0)
 			}
-			outputIdx++
 		} else {
 			for i := 0; i < common.DataTypeBits(value.DataType)/8; i++ {
-				key[outputIdx] = *(*byte)(memutils.MemAccess(value.OtherVal, i))
-				outputIdx++
+				key = append(key, *(*byte)(memutils.MemAccess(value.OtherVal, i)))
 			}
 		}
 	}
-	return nil
+	return key, nil
 }

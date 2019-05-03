@@ -429,7 +429,7 @@ func (ctx *backfillContext) backfill(reporter BackfillJobDetailReporter, jobKey 
 	}
 
 	// reuse the space for primary primaryKeyValues of each row.
-	primaryKeyValues := make([]byte, ctx.base.Shard.Schema.PrimaryKeyBytes)
+	var primaryKeyValues []byte
 	tableName := ctx.base.Shard.Schema.Schema.Name
 	shardID := ctx.base.Shard.ShardID
 
@@ -450,8 +450,8 @@ func (ctx *backfillContext) backfill(reporter BackfillJobDetailReporter, jobKey 
 			return err
 		}
 
-		if err := upsertBatch.GetPrimaryKeyBytes(int(patchRecordID.Index),
-			primaryKeyCols, primaryKeyValues); err != nil {
+		if primaryKeyValues, err = upsertBatch.GetPrimaryKeyBytes(int(patchRecordID.Index),
+			primaryKeyCols, ctx.base.Shard.Schema.PrimaryKeyBytes); err != nil {
 			return err
 		}
 

@@ -60,15 +60,15 @@ var _ = Describe("Sink", func() {
 		}
 		jobConfig.SetPrimaryKeyBytes(1)
 		destination.NumShards = 0
-		batches := Shard(rows, destination, &jobConfig)
+		batches, _ := Shard(rows, destination, &jobConfig)
 		Ω(batches).Should(BeNil())
 
 		destination.NumShards = 1
-		batches = Shard(rows, destination, &jobConfig)
+		batches, _ = Shard(rows, destination, &jobConfig)
 		Ω(batches).Should(BeNil())
 
 		destination.NumShards = 2
-		batches = Shard(rows, destination, &jobConfig)
+		batches, _ = Shard(rows, destination, &jobConfig)
 		Ω(batches).ShouldNot(BeNil())
 		Ω(len(batches)).Should(Equal(2))
 	})
