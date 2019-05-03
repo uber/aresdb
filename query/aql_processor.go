@@ -105,6 +105,17 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		}
 	}
 
+	if qc.isNonAggregationQuery {
+		qc.Results = make(queryCom.AQLQueryResult)
+		headers := make([]string, len(qc.Query.Dimensions))
+		for i, dim := range qc.Query.Dimensions {
+			headers[i] = dim.Expr
+		}
+		qc.Results.SetHeaders(headers)
+	}
+
+	qc.initResultFlushContext()
+
 	for _, shardID := range qc.TableScanners[0].Shards {
 		previousBatchExecutor = qc.processShard(memStore, shardID, previousBatchExecutor)
 		if qc.Error != nil {

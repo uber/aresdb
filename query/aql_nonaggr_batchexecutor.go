@@ -18,6 +18,7 @@ import (
 	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"unsafe"
+	"time"
 )
 
 // NonAggrBatchExecutorImpl is batch executor implementation for non-aggregation query
@@ -88,4 +89,10 @@ func (e *NonAggrBatchExecutorImpl) prepareForDimEval(
 	if bc.size > lenWanted {
 		bc.size = lenWanted
 	}
+}
+
+func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
+
+
+	e.BatchExecutorImpl.postExec(start)
 }
