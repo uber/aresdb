@@ -142,6 +142,11 @@ type Table struct {
 	// IDs of columns to sort based upon.
 	ArchivingSortColumns []int `json:"archivingSortColumns,omitempty"`
 
+	// Incarnation gets incremented every time an table name is reused
+	// only used for controller managed schema in cluster setting
+	Incarnation int `json:"incarnation"`
+	// Version gets incremented every time when schema is updated
+	// only used for controller managed schema in cluster setting
 	Version int `json:"version"`
 }
 

@@ -86,7 +86,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 	}
 
 	for _, table := range tables {
-		if !oldTablesMap[table.Name] {
+		if _, exist := oldTablesMap[table.Name]; !exist {
 			// found new table
 			err = j.schemaMutator.CreateTable(&table)
 			if err != nil {
@@ -99,7 +99,20 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 			if err != nil {
 				return
 			}
-			if !reflect.DeepEqual(&table, oldTable) {
+			if oldTable.Incarnation < table.Incarnation {
+				// found new table incarnation, delete previous table and data
+				// then create new table
+				err := j.schemaMutator.DeleteTable(table.Name)
+				if err != nil {
+					return err
+				}
+				utils.GetRootReporter().GetCounter(utils.SchemaDeletionCount).Inc(1)
+				err = j.schemaMutator.CreateTable(&table)
+				if err != nil {
+					return err
+				}
+				utils.GetRootReporter().GetCounter(utils.SchemaCreationCount).Inc(1)
+			} else if oldTable.Incarnation == table.Incarnation && !reflect.DeepEqual(&table, oldTable) {
 				// found table update
 				j.schemaValidator.SetNewTable(table)
 				j.schemaValidator.SetOldTable(*oldTable)
