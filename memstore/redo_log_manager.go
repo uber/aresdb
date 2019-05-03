@@ -343,6 +343,10 @@ func (r *RedoLogManager) evictRedoLogData(creationTime int64) {
 // PurgeRedologFileAndData purges disk files and in memory data of redologs that are eligible to be purged.
 func (r *RedoLogManager) PurgeRedologFileAndData(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) error {
 	creationTimes := r.getRedoLogFilesToPurge(cutoff, redoFileCheckpointed, batchOffset)
+
+	utils.GetLogger().With("action", "purgeRedoLog", "table", r.tableName, "shard", r.shard).Infof(
+		"PurgeRedologFiles, cutoff: %d, redologfile: %d, batchoffset: %d, files: %d", cutoff, redoFileCheckpointed, batchOffset, len(creationTimes))
+
 	for _, creationTime := range creationTimes {
 		if err := r.diskStore.DeleteLogFile(
 			r.tableName, r.shard, creationTime); err != nil {

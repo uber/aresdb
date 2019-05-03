@@ -29,8 +29,8 @@ func (shard *TableShard) ReplayRedoLogs() {
 	timer := utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetTimer(utils.RecoveryLatency).Start()
 	defer timer.Stop()
 
-	utils.GetLogger().Infof("Replay redo logs for Shard %d of table %s",
-		shard.ShardID, shard.Schema.Schema.Name)
+	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Infof(
+		"Replay redo logs for Shard %d of table %s", shard.ShardID, shard.Schema.Schema.Name)
 
 	var redoLogFilePersisted int64
 	var offsetPersisted uint32
@@ -40,7 +40,8 @@ func (shard *TableShard) ReplayRedoLogs() {
 	} else {
 		redoLogFilePersisted, offsetPersisted, _, _ = shard.LiveStore.SnapshotManager.GetLastSnapshotInfo()
 	}
-	utils.GetLogger().Infof("Checkpointed redoLogFile=%d offset=%d", redoLogFilePersisted, offsetPersisted)
+	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Infof(
+		"Checkpointed redoLogFile=%d offset=%d", redoLogFilePersisted, offsetPersisted)
 
 	// Replay redo logs to create LiveStore.
 	nextUpsertBatch := shard.LiveStore.RedoLogManager.NextUpsertBatch()

@@ -115,6 +115,7 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 							numRecordsArchived++
 						} else {
 							numRecordsIgnored++
+							// why ignored here??? TODO davidw
 						}
 					}
 				}
@@ -124,6 +125,10 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 			status.Current = batchIdx + 1
 		})
 	}
+
+	utils.GetLogger().With("action", "archiving", "table", tableName, "shard", shardID).
+		Warnf("Archiving records: %d, ignored: %d, oldCutoff: %d, newCutoff: %d",
+			numRecordsArchived, numRecordsIgnored, oldCutoff, cutoff)
 
 	utils.GetReporter(tableName, shardID).GetCounter(utils.ArchivingIgnoredRecords).Inc(numRecordsIgnored)
 	utils.GetReporter(tableName, shardID).GetCounter(utils.ArchivingRecords).Inc(numRecordsArchived)
