@@ -326,8 +326,8 @@ func (u *UpsertBatch) GetPrimaryKeyCols(primaryKeyColumnIDs []int) ([]int, error
 // columnIDs.
 func (u *UpsertBatch) GetPrimaryKeyBytes(row int, primaryKeyCols []int, keyLength int) ([]byte, error) {
 	var key []byte
-	primaryKeyValues := make([]memCom.DataValue, len(primaryKeyCols))
 	var err error
+	primaryKeyValues := make([]memCom.DataValue, len(primaryKeyCols))
 	for i, col := range primaryKeyCols {
 		primaryKeyValues[i], err = u.GetDataValue(row, col)
 		if err != nil {
@@ -336,10 +336,7 @@ func (u *UpsertBatch) GetPrimaryKeyBytes(row int, primaryKeyCols []int, keyLengt
 		}
 	}
 
-	if key, err := GetPrimaryKeyBytes(primaryKeyValues, keyLength); err != nil {
-		return key, err
-	}
-	return key, nil
+	return GetPrimaryKeyBytes(primaryKeyValues, keyLength)
 }
 
 // ExtractBackfillBatch extracts given rows and stores in a new UpsertBatch

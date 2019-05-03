@@ -109,9 +109,9 @@ func GetPrimaryKeyBytes(primaryKeyValues []common.DataValue, keyLength int) ([]b
 
 		if value.IsBool {
 			if value.BoolVal {
-				key = append(key, 1)
+				key = append(key, byte(1))
 			} else {
-				key = append(key, 0)
+				key = append(key, byte(0))
 			}
 		} else {
 			for i := 0; i < common.DataTypeBits(value.DataType)/8; i++ {
