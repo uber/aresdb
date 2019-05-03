@@ -304,8 +304,14 @@ var _ = ginkgo.Describe("device_manager", func() {
 		memUsage = estimateSortReduceMemUsage(20)
 		Ω(memUsage).Should(Equal(720))
 
-		// batch processing
-		memUsage = qc.estimateMemUsageForBatch(20, 128+128+128)
+		// batch processing non-aggregate query
+		qc.isNonAggregationQuery = true
+		memUsage = qc.estimateMemUsageForBatch(20, 128+128+128, 40)
+		Ω(memUsage).Should(Equal(1404))
+
+		// batch processing aggregate query
+		qc.isNonAggregationQuery = false
+		memUsage = qc.estimateMemUsageForBatch(20, 128+128+128, 40)
 		Ω(memUsage).Should(Equal(1204))
 
 		// live batch columns + processing

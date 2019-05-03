@@ -1053,7 +1053,7 @@ func (qc *AQLQueryContext) estimateLiveBatchMemoryUsage(batch *memstore.LiveBatc
 		columnMemUsage += int(sourceVP.GetBytes())
 	}
 
-	totalBytes := qc.estimateMemUsageForBatch(batch.Capacity, columnMemUsage)
+	totalBytes := qc.estimateMemUsageForBatch(batch.Capacity, columnMemUsage, batch.Capacity)
 	utils.GetQueryLogger().Debugf("Live batch %+v needs memory: %d", batch, totalBytes)
 	return totalBytes
 }
@@ -1075,6 +1075,8 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 	}
 
 	prefilterIndex := 0
+	// max number of rows after pre-filtering. used for non-agg query
+	maxSizeAfterPreFilter := batch.Size
 	for i := len(qc.TableScanners[0].Columns) - 1; i >= 0; i-- {
 		columnID := qc.TableScanners[0].Columns[i]
 		usage := qc.TableScanners[0].ColumnUsages[columnID]
@@ -1084,6 +1086,9 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 
 		if usage&matchedColumnUsages != 0 || usage&columnUsedByPrefilter != 0 {
 			startRow, endRow, hostSlice = qc.prefilterSlice(sourceVP, prefilterIndex, startRow, endRow)
+			if hostSlice.Length < maxSizeAfterPreFilter {
+				maxSizeAfterPreFilter = hostSlice.Length
+			}
 			prefilterIndex++
 			if usage&matchedColumnUsages != 0 {
 				columnMemUsage += hostSlice.ValueBytes + hostSlice.NullBytes + hostSlice.CountBytes
@@ -1093,7 +1098,7 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 		sourceVP.Release()
 	}
 
-	totalBytes := qc.estimateMemUsageForBatch(firstColumnSize, columnMemUsage)
+	totalBytes := qc.estimateMemUsageForBatch(firstColumnSize, columnMemUsage, maxSizeAfterPreFilter)
 	utils.GetQueryLogger().Debugf("Archive batch %d needs memory: %d", batch.BatchID, totalBytes)
 	return totalBytes
 }
@@ -1105,7 +1110,7 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 // * Measurement
 // * Sort (hash/index)
 // * Reduce
-func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize int, columnMemUsage int) (memUsage int) {
+func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize, columnMemUsage, maxSizeAfterPreFilter int) (memUsage int) {
 	// 1. columnMemUsage
 	memUsageBeforeAgg := columnMemUsage
 
@@ -1127,10 +1132,17 @@ func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize int, columnM
 	}
 
 	// 7. max(memUsageBeforeAgg, sortReduceMemoryUsage)
-	memUsage = int(math.Max(float64(memUsageBeforeAgg), float64(estimateSortReduceMemUsage(firstColumnSize))))
+	memUsage = memUsageBeforeAgg
+	if !qc.isNonAggregationQuery {
+		memUsage = int(math.Max(float64(memUsage), float64(estimateSortReduceMemUsage(firstColumnSize))))
+	}
 
 	// 8. Dimension vector memory usage (input + output)
-	memUsage += firstColumnSize * qc.OOPK.DimRowBytes * 2
+	if qc.isNonAggregationQuery {
+		memUsage += maxSizeAfterPreFilter * qc.OOPK.DimRowBytes * 2
+	} else {
+		memUsage += firstColumnSize * qc.OOPK.DimRowBytes * 2
+	}
 
 	// 9. Measure vector memory usage (input + output)
 	memUsage += firstColumnSize * qc.OOPK.MeasureBytes * 2

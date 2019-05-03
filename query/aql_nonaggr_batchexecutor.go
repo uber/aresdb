@@ -26,9 +26,9 @@ type NonAggrBatchExecutorImpl struct {
 }
 
 // project for non-aggregation query will only calculate the selected columns
-// measure calculation, reduce will be skipped, once the generated result reaches limit, it will return and cancel all other ongoing processing.
+// dimension calculation, reduce will be skipped, once the generated result reaches limit, it will return and cancel all other ongoing processing.
 func (e *NonAggrBatchExecutorImpl) project() {
-	// Prepare for dimension and measure evaluation.
+	// Prepare for dimension evaluation.
 	e.prepareForDimEval(e.qc.OOPK.DimRowBytes, e.qc.OOPK.NumDimsPerDimWidth, e.stream)
 
 	e.qc.reportTimingForCurrentBatch(e.stream, &e.start, prepareForDimAndMeasureTiming)
