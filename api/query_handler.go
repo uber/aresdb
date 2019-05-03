@@ -273,7 +273,7 @@ func (w *JSONQueryResponseWriter) ReportQueryContext(qc *query.AQLQueryContext) 
 
 // ReportResult writes the query result to the response.
 func (w *JSONQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQueryContext) {
-	qc.Results = qc.Postprocess()
+	qc.Postprocess()
 	if qc.Error != nil {
 		w.ReportError(queryIndex, qc.Query.Table, qc.Error, http.StatusInternalServerError)
 	}
