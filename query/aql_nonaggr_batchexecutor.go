@@ -40,59 +40,57 @@ func (e *NonAggrBatchExecutorImpl) project() {
 	// wait for stream to clean up non used buffer before final aggregation
 	memutils.WaitForCudaStream(e.stream, e.qc.Device)
 	e.qc.OOPK.currentBatch.cleanupBeforeAggregation()
-
-	if e.qc.OOPK.currentBatch.resultSize >= e.qc.Query.Limit {
-		e.qc.OOPK.done = true
-	}
-}
-
-func (e *NonAggrBatchExecutorImpl) reduce() {
-	// nothing need to do for non-aggregation query
-}
-
-func (e *NonAggrBatchExecutorImpl) expandDimensions(numDims queryCom.DimCountsPerDimWidth) {
-	bc := &e.qc.OOPK.currentBatch
-	if bc.size == 0 {
-		//nothing to do
-		return
-	}
-
-	if bc.baseCountD.isNull() {
-		// baseCountD is null, no uncompression is needed
-		asyncCopyDimensionVector(bc.dimensionVectorD[1].getPointer(), bc.dimensionVectorD[0].getPointer(), bc.size, bc.resultSize,
-			numDims, bc.resultCapacity, bc.resultCapacity, memutils.AsyncCopyDeviceToDevice, e.stream, e.qc.Device)
-		bc.resultSize += bc.size
-		return
-	}
-
-	e.qc.doProfile(func() {
-		e.qc.OOPK.currentBatch.expand(numDims, bc.size, e.stream, e.qc.Device)
-		e.qc.reportTimingForCurrentBatch(e.stream, &e.start, expandEvalTiming)
-	}, "expand", e.stream)
 }
 
 func (e *NonAggrBatchExecutorImpl) prepareForDimEval(
 	dimRowBytes int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth, stream unsafe.Pointer) {
 
 	bc := &e.qc.OOPK.currentBatch
+	lenWanted := e.qc.Query.Limit - e.qc.numberOfRowsWritten
+	if bc.size > lenWanted {
+		bc.size = lenWanted
+	}
+
 	if bc.resultCapacity == 0 {
-		bc.resultCapacity = e.qc.Query.Limit
+		bc.resultCapacity = bc.size
 		bc.dimensionVectorD = [2]devicePointer{
 			deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device),
 			deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device),
 		}
 	}
-	// to keep the consistency of the output dimension vector
-	bc.dimensionVectorD[0], bc.dimensionVectorD[1] = bc.dimensionVectorD[1], bc.dimensionVectorD[0]
-	// maximum rows needed from filter result
-	lenWanted := bc.resultCapacity - bc.resultSize
-	if bc.size > lenWanted {
-		bc.size = lenWanted
+}
+
+func (e *NonAggrBatchExecutorImpl) expandDimensions(numDims queryCom.DimCountsPerDimWidth) {
+	bc := &e.qc.OOPK.currentBatch
+
+	if bc.size != 0 && !bc.baseCountD.isNull() {
+		e.qc.doProfile(func() {
+			e.qc.OOPK.currentBatch.expand(numDims, bc.size, e.stream, e.qc.Device)
+			e.qc.reportTimingForCurrentBatch(e.stream, &e.start, expandEvalTiming)
+		}, "expand", e.stream)
 	}
 }
 
 func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
+	// transfer current batch result from device to host
+	e.qc.OOPK.dimensionVectorH = memutils.HostAlloc(e.qc.OOPK.currentBatch.size * e.qc.OOPK.DimRowBytes)
+	asyncCopyDimensionVector(e.qc.OOPK.dimensionVectorH, e.qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), e.qc.OOPK.currentBatch.size, 0,
+		e.qc.OOPK.NumDimsPerDimWidth, e.qc.OOPK.currentBatch.size, e.qc.OOPK.currentBatch.resultCapacity,
+		memutils.AsyncCopyDeviceToHost, e.qc.cudaStreams[0], e.qc.Device)
+	memutils.WaitForCudaStream(e.qc.cudaStreams[0], e.qc.Device)
 
+	// flush current results from current batch
+	e.qc.OOPK.ResultSize = e.qc.OOPK.currentBatch.size
+	e.qc.flushResultBuffer()
+	e.qc.numberOfRowsWritten += e.qc.OOPK.currentBatch.size
+	if e.qc.numberOfRowsWritten >= e.qc.Query.Limit {
+		e.qc.OOPK.done = true
+	}
 
 	e.BatchExecutorImpl.postExec(start)
+}
+
+
+func (e *NonAggrBatchExecutorImpl) reduce() {
+	// nothing need to do for non-aggregation query
 }

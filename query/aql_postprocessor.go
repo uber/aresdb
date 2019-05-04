@@ -42,20 +42,18 @@ func (qc *AQLQueryContext) Postprocess() {
 		return
 	}
 
-	qc.flushResultBuffer()
+	if !qc.isNonAggregationQuery {
+		qc.flushResultBuffer()
+	}
 }
 
 func (qc *AQLQueryContext) initResultFlushContext() {
 	qc.resultFlushContext.dimensionValueCache = make([]map[queryCom.TimeDimensionMeta]map[int64]string, len(qc.OOPK.Dimensions))
 	qc.resultFlushContext.dimensionDataTypes = make([]memCom.DataType, len(qc.OOPK.Dimensions))
 	qc.resultFlushContext.reverseDicts = make(map[int][]string)
-	qc.resultFlushContext.dimOffsets = make(map[int][2]int)
 
 	oopkContext := qc.OOPK
 	for dimIndex, dimExpr := range oopkContext.Dimensions {
-		dimVectorIndex := oopkContext.DimensionVectorIndex[dimIndex]
-		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, dimVectorIndex, oopkContext.ResultSize)
-		qc.resultFlushContext.dimOffsets[dimIndex] = [2]int{valueOffset, nullOffset}
 		qc.resultFlushContext.dimensionDataTypes[dimIndex], qc.resultFlushContext.reverseDicts[dimIndex] = getDimensionDataType(dimExpr), qc.getEnumReverseDict(dimIndex, dimExpr)
 	}
 }
@@ -75,9 +73,17 @@ func (qc *AQLQueryContext) flushResultBuffer() {
 		_, fromOffset = qc.fromTime.Time.Zone()
 		_, toOffset = qc.toTime.Time.Zone()
 	}
+
+	dimOffsets := make(map[int][2]int)
+	for dimIndex := range oopkContext.Dimensions {
+		dimVectorIndex := oopkContext.DimensionVectorIndex[dimIndex]
+		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, dimVectorIndex, oopkContext.ResultSize)
+		dimOffsets[dimIndex] = [2]int{valueOffset, nullOffset}
+	}
+
 	for i := 0; i < oopkContext.ResultSize; i++ {
 		for dimIndex := range oopkContext.Dimensions {
-			offsets := dpc.dimOffsets[dimIndex]
+			offsets := dimOffsets[dimIndex]
 			valueOffset, nullOffset := offsets[0], offsets[1]
 			valuePtr, nullPtr := memutils.MemAccess(oopkContext.dimensionVectorH, valueOffset), memutils.MemAccess(oopkContext.dimensionVectorH, nullOffset)
 

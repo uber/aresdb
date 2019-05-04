@@ -307,7 +307,6 @@ type resultFlushContext struct {
 	dimensionValueCache []map[queryCom.TimeDimensionMeta]map[int64]string `json:"-"`
 	dimensionDataTypes []memCom.DataType
 	reverseDicts map[int][]string
-	dimOffsets map[int][2]int
 }
 
 // GeoIntersection is the struct to storing geo intersection related fields.
@@ -394,7 +393,7 @@ type AQLQueryContext struct {
 	// fields for non aggregate query
 	// Flag to indicate if this query is not aggregation query
 	isNonAggregationQuery bool
-	numberOfRowsWritten   int32
+	numberOfRowsWritten   int
 }
 
 // IsHLL return if the aggregation function is HLL

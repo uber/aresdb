@@ -216,6 +216,9 @@ var _ = ginkgo.Describe("device_manager", func() {
 		}
 
 		qc := AQLQueryContext{
+			Query: &AQLQuery{
+					Limit: 1000000,
+			},
 			TableScanners: []*TableScanner{
 				{
 					Columns: []int{0, 2, 1},
@@ -308,6 +311,9 @@ var _ = ginkgo.Describe("device_manager", func() {
 		qc.isNonAggregationQuery = true
 		memUsage = qc.estimateMemUsageForBatch(20, 128+128+128, 40)
 		Ω(memUsage).Should(Equal(1404))
+		qc.Query.Limit = 10
+		memUsage = qc.estimateMemUsageForBatch(20, 128+128+128, 40)
+		Ω(memUsage).Should(Equal(1104))
 
 		// batch processing aggregate query
 		qc.isNonAggregationQuery = false

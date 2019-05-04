@@ -145,19 +145,19 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		if qc.OOPK.IsHLL() {
 			qc.HLLQueryResult, qc.Error = qc.PostprocessAsHLLData()
 		} else {
-			// copy dimensions
-			qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
-			asyncCopyDimensionVector(qc.OOPK.dimensionVectorH, qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), qc.OOPK.ResultSize, 0,
-				qc.OOPK.NumDimsPerDimWidth, qc.OOPK.ResultSize, qc.OOPK.currentBatch.resultCapacity,
-				memutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
 			if !qc.isNonAggregationQuery {
+				// copy dimensions
+				qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
+				asyncCopyDimensionVector(qc.OOPK.dimensionVectorH, qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), qc.OOPK.ResultSize, 0,
+					qc.OOPK.NumDimsPerDimWidth, qc.OOPK.ResultSize, qc.OOPK.currentBatch.resultCapacity,
+					memutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
 				// copy measures
 				qc.OOPK.measureVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.MeasureBytes)
 				memutils.AsyncCopyDeviceToHost(
 					qc.OOPK.measureVectorH, qc.OOPK.currentBatch.measureVectorD[0].getPointer(),
 					qc.OOPK.ResultSize*qc.OOPK.MeasureBytes, qc.cudaStreams[0], qc.Device)
+				memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 			}
-			memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 		}
 	}
 	qc.reportTiming(qc.cudaStreams[0], &start, resultTransferTiming)
@@ -1150,7 +1150,11 @@ func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize, columnMemUs
 
 	// 8. Dimension vector memory usage (input + output)
 	if qc.isNonAggregationQuery {
-		memUsage += maxSizeAfterPreFilter * qc.OOPK.DimRowBytes * 2
+		maxRowsPerBatch := maxSizeAfterPreFilter
+		if qc.Query.Limit < maxRowsPerBatch {
+			maxRowsPerBatch = qc.Query.Limit
+		}
+		memUsage += maxRowsPerBatch * qc.OOPK.DimRowBytes * 2
 	} else {
 		memUsage += firstColumnSize * qc.OOPK.DimRowBytes * 2
 	}

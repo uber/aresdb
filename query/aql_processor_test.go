@@ -988,7 +988,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(qc.Error).Should(BeNil())
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		qc.ReleaseHostResultsBuffers()
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -1189,7 +1189,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.OOPK.currentBatch.timezoneLookupDSize).Should(Equal(3))
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		qc.ReleaseHostResultsBuffers()
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -1520,7 +1520,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc.ProcessQuery(mockMemStore)
 		Ω(qc.Error).Should(BeNil())
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		Ω(qc.Error).Should(BeNil())
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -1797,7 +1797,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc.ProcessQuery(mockMemStore)
 		Ω(qc.Error).Should(BeNil())
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		Ω(qc.Error).Should(BeNil())
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -2050,7 +2050,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc.ProcessQuery(mockMemStore)
 		Ω(qc.Error).Should(BeNil())
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		Ω(qc.Error).Should(BeNil())
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -2089,7 +2089,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
 
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		qc.ReleaseHostResultsBuffers()
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -2171,7 +2171,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
 
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		qc.ReleaseHostResultsBuffers()
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
