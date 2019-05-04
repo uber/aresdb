@@ -29,8 +29,8 @@ import (
 
 var _ = Describe("message decoder tests", func() {
 
-	It("stringMessage tests", func() {
-		msg := &stringMessage{
+	It("StringMessage tests", func() {
+		msg := &StringMessage{
 			"topic",
 			"message",
 		}
