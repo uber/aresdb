@@ -55,6 +55,13 @@ type StringMessage struct {
 	msg   string
 }
 
+func NewStringMessage(topic, msg string) *StringMessage {
+	return  &StringMessage {
+		topic: topic,
+		msg: msg,
+	}
+}
+
 func (m *StringMessage) Key() []byte {
 	return []byte("")
 }
