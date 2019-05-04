@@ -1033,8 +1033,7 @@ func (qc *AQLQueryContext) calculateMemoryRequirement(memStore memstore.MemStore
 					}
 				}
 			}
-			// TODO Remove this comment
-			// archiveStore.Users.Done()
+			archiveStore.Users.Done()
 		}
 		shard.Users.Done()
 	}
