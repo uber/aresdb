@@ -115,7 +115,6 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 							numRecordsArchived++
 						} else {
 							numRecordsIgnored++
-							// why ignored here??? TODO davidw
 						}
 					}
 				}
