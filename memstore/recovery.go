@@ -58,10 +58,8 @@ func (shard *TableShard) ReplayRedoLogs() {
 		// Put a 0 in maxEventTimePerFile in case this is redolog is full of backfill batches.
 		shard.LiveStore.RedoLogManager.UpdateMaxEventTime(0, redoLogFile)
 
-		// check if this batch has already been backfilled and persisted
-		// skipBackfillRows := redoLogFile < redoLogFilePersisted ||
-		//	(redoLogFile == redoLogFilePersisted && offset <= offsetPersisted)
-
+		// backfill and archive are two distinct operation, better to append all old records into backfill,
+		// there are possibilites that archiving run ahead during recovery
 		_, err := shard.ApplyUpsertBatch(upsertBatch, redoLogFile, offset, false)
 
 		shard.LiveStore.WriterLock.Unlock()
