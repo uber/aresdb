@@ -59,10 +59,10 @@ func (shard *TableShard) ReplayRedoLogs() {
 		shard.LiveStore.RedoLogManager.UpdateMaxEventTime(0, redoLogFile)
 
 		// check if this batch has already been backfilled and persisted
-		skipBackfillRows := redoLogFile < redoLogFilePersisted ||
-			(redoLogFile == redoLogFilePersisted && offset <= offsetPersisted)
+		// skipBackfillRows := redoLogFile < redoLogFilePersisted ||
+		//	(redoLogFile == redoLogFilePersisted && offset <= offsetPersisted)
 
-		_, err := shard.ApplyUpsertBatch(upsertBatch, redoLogFile, offset, skipBackfillRows)
+		_, err := shard.ApplyUpsertBatch(upsertBatch, redoLogFile, offset, false)
 
 		shard.LiveStore.WriterLock.Unlock()
 

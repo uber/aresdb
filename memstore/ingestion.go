@@ -239,6 +239,10 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 				maxUpsertBatchEventTime = eventTime
 			}
 
+			// Update max event time so archiving won't purge redo log files that have records newer than
+			// archiving cut off time.
+			shard.LiveStore.RedoLogManager.UpdateMaxEventTime(eventTime, redoLogFile)
+
 			// If we get a record that is older than archiving cutoff time (exclusive) that means
 			// 1. during ingestion, the event should be put into a backfill queue
 			// 2. during recovery, the event should be ignored, because it was already put into
@@ -257,10 +261,6 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 				continue
 			}
 
-			// Update max event time so archiving won't purge redo log files that have records newer than
-			// archiving cut off time.
-			// Why not move before the above if condition? TODO davidw
-			shard.LiveStore.RedoLogManager.UpdateMaxEventTime(eventTime, redoLogFile)
 		}
 
 		numRecordsIngested++
