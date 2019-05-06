@@ -72,6 +72,7 @@ const (
 	QueryFailed
 	QuerySucceeded
 	QueryLatency
+	QuerySQLParsingLatency
 	QueryWaitForMemoryDuration
 	QueryReceived
 	QueryLiveRecordsProcessed
@@ -178,6 +179,7 @@ const (
 	scopeNameQueryFailed                     = "query_failed"
 	scopeNameQuerySucceeded                  = "query_succeeded"
 	scopeNameQueryLatency                    = "query_latency"
+	scopeNameQuerySQLParsingLatency			 = "sql_parsing_latency"
 	scopeNameQueryWaitForMemoryDuration      = "query_wait_for_memory_duration"
 	scopeNameQueryReceived                   = "query_received"
 	scopeNameQueryRecordsProcessed           = "records_processed"
@@ -581,6 +583,13 @@ var metricsDefs = map[MetricName]metricDefinition{
 	},
 	QueryLatency: {
 		name:       scopeNameQueryLatency,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	QuerySQLParsingLatency: {
+		name:       scopeNameQuerySQLParsingLatency,
 		metricType: Timer,
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentQuery,
