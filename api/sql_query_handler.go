@@ -18,7 +18,6 @@ import (
 	"github.com/uber/aresdb/query"
 	"github.com/uber/aresdb/utils"
 	"net/http"
-	"time"
 )
 
 // HandleSQL swagger:route POST /query/sql querySQL
@@ -50,7 +49,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 	var aqlQueries []query.AQLQuery
 	if sqlRequest.Body.Queries != nil {
 		aqlQueries = make([]query.AQLQuery, len(sqlRequest.Body.Queries))
-		startTs := time.Now()
+		startTs := utils.Now()
 		for i, sqlQuery := range sqlRequest.Body.Queries {
 			parsedAQLQuery, err := query.Parse(sqlQuery, utils.GetLogger())
 			if err != nil {
@@ -60,7 +59,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 			aqlQueries[i] = *parsedAQLQuery
 		}
 		sqlParseTimer := utils.GetRootReporter().GetTimer(utils.QuerySQLParsingLatency)
-		duration := time.Now().Sub(startTs)
+		duration := utils.Now().Sub(startTs)
 		sqlParseTimer.Record(duration)
 
 	}
