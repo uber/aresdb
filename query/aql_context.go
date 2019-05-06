@@ -304,7 +304,7 @@ type timezoneTableContext struct {
 // context for processing dimensions
 type resultFlushContext struct {
 	// caches time formatted time dimension values
-	dimensionValueCache []map[queryCom.TimeDimensionMeta]map[int64]string `json:"-"`
+	dimensionValueCache []map[queryCom.TimeDimensionMeta]map[int64]string
 	dimensionDataTypes []memCom.DataType
 	reverseDicts map[int][]string
 }
@@ -373,7 +373,7 @@ type AQLQueryContext struct {
 	cudaStreams [2]unsafe.Pointer
 
 	Results queryCom.AQLQueryResult `json:"-"`
-	resultFlushContext resultFlushContext `json:-`
+	resultFlushContext resultFlushContext
 
 
 	// whether to serialize the query result as HLLData. If ReturnHLLData is true, we will not release dimension
