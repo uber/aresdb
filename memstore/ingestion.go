@@ -297,7 +297,7 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 				return nil, nil, nil, utils.StackError(err, "Failed to get column id for col %d", col)
 			}
 
-			if columnID >= len(shard.LiveStore.lastModifiedTimePerColumn) {
+			for columnID >= len(shard.LiveStore.lastModifiedTimePerColumn) {
 				shard.LiveStore.lastModifiedTimePerColumn = append(shard.LiveStore.lastModifiedTimePerColumn, 0)
 			}
 

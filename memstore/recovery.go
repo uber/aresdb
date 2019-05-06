@@ -30,7 +30,7 @@ func (shard *TableShard) ReplayRedoLogs() {
 	defer timer.Stop()
 
 	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Infof(
-		"Replay redo logs for Shard %d of table %s", shard.ShardID, shard.Schema.Schema.Name)
+		"Replay redo logs")
 
 	var redoLogFilePersisted int64
 	var offsetPersisted uint32
