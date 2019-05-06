@@ -85,7 +85,7 @@ func (m *memStoreImpl) Backfill(table string, shardID int, reporter BackfillJobD
 
 	// Archiving cutoff won't change during backfill, so it's safe to use current version's cutoff.
 	if err := shard.LiveStore.RedoLogManager.
-		PurgeRedologFileAndData(shard.ArchiveStore.CurrentVersion.ArchivingCutoff, backfillMgr.LastRedoFile,
+		CheckpointRedolog(shard.ArchiveStore.CurrentVersion.ArchivingCutoff, backfillMgr.LastRedoFile,
 			backfillMgr.LastBatchOffset); err != nil {
 		return err
 	}

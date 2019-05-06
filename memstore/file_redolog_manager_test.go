@@ -418,7 +418,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		Ω(creationTimes).Should(Equal([]int64{1, 2}))
 	})
 
-	ginkgo.It("PurgeRedologFileAndData should work", func() {
+	ginkgo.It("CheckpointRedolog should work", func() {
 		diskStore := CreateMockDiskStore()
 		diskStore.On("DeleteLogFile", "abc", 0, mock.Anything).Return(nil)
 		redoManager := NewFileRedoLogManager(10, 1<<30, diskStore, "abc", 0).(*fileRedologManager)
@@ -430,7 +430,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		redoManager.BatchCountPerFile[2] = 20
 		redoManager.BatchCountPerFile[3] = 30
 
-		err := redoManager.PurgeRedologFileAndData(400, 3, 29)
+		err := redoManager.CheckpointRedolog(400, 3, 29)
 		Ω(err).Should(BeNil())
 		Ω(redoManager.MaxEventTimePerFile).ShouldNot(HaveKey(1))
 		Ω(redoManager.MaxEventTimePerFile).ShouldNot(HaveKey(2))

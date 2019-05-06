@@ -79,14 +79,14 @@ func (shard *TableShard) ReplayRedoLogs() {
 	// proactively purge redo files
 	if shard.LiveStore.BackfillManager != nil {
 		shard.LiveStore.RedoLogManager.
-			PurgeRedologFileAndData(shard.LiveStore.ArchivingCutoffHighWatermark, redoLogFilePersisted, offsetPersisted)
+			CheckpointRedolog(shard.LiveStore.ArchivingCutoffHighWatermark, redoLogFilePersisted, offsetPersisted)
 	}
 }
 
 func (shard *TableShard) cleanOldSnapshotAndLogs(redoLogFile int64, offset uint32) {
 	tableName := shard.Schema.Schema.Name
 	// snapshot won't care about the cutoff.
-	if err := shard.LiveStore.RedoLogManager.PurgeRedologFileAndData(math.MaxUint32, redoLogFile, offset); err != nil {
+	if err := shard.LiveStore.RedoLogManager.CheckpointRedolog(math.MaxUint32, redoLogFile, offset); err != nil {
 		utils.GetLogger().With(
 			"job", "snapshot_cleanup",
 			"table", tableName).Errorf(

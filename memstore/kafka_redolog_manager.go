@@ -23,7 +23,10 @@ type kafkaRedologManager struct {
 	TableName string `json:"table"`
 	Shard     int    `json:"shard"`
 
+	// MaxEventTime per virtual redolog file
 	MaxEventTimePerFile map[int64]uint32 `json:"maxEventTimePerFile"`
+	// FirstKafkaOffset per virtual redolog file
+	FirstKafkaOffsetPerFile map[int64]int64 `json:"firstKafkaOffsetPerFile"`
 
 	consumer          sarama.Consumer
 	partitionConsumer sarama.PartitionConsumer
@@ -37,14 +40,15 @@ type kafkaRedologManager struct {
 func NewKafkaRedologManager(namespace, table string, shard int, consumer sarama.Consumer, commitFunc func(offset int64) error) KafkaRedologManager {
 	topic := utils.GetTopicFromTable(namespace, table)
 	return &kafkaRedologManager{
-		TableName:           table,
-		Shard:               shard,
-		Topic:               topic,
-		consumer:            consumer,
-		commitFunc:          commitFunc,
-		MaxEventTimePerFile: make(map[int64]uint32),
-		done:                make(chan struct{}),
-		batches:             make(chan upsertBatchBundle, 1),
+		TableName:               table,
+		Shard:                   shard,
+		Topic:                   topic,
+		consumer:                consumer,
+		commitFunc:              commitFunc,
+		MaxEventTimePerFile:     make(map[int64]uint32),
+		FirstKafkaOffsetPerFile: make(map[int64]int64),
+		done:    make(chan struct{}),
+		batches: make(chan upsertBatchBundle, 1),
 	}
 }
 
@@ -62,7 +66,14 @@ func (k *kafkaRedologManager) UpdateMaxEventTime(eventTime uint32, fileID int64)
 	k.MaxEventTimePerFile[fileID] = eventTime
 }
 
-// NextUpsertBatch creates iterator function for getting the next upsert batch
+func (k *kafkaRedologManager) updateKafkaOffset(fileID int64, kafkaOffset int64) {
+	k.Lock()
+	defer k.Unlock()
+	if currentFirstOffset, ok := k.FirstKafkaOffsetPerFile[fileID]; !ok || currentFirstOffset > kafkaOffset {
+		k.FirstKafkaOffsetPerFile[fileID] = kafkaOffset
+	}
+}
+
 func (k *kafkaRedologManager) NextUpsertBatch() func() (*UpsertBatch, int64, uint32) {
 	return func() (*UpsertBatch, int64, uint32) {
 		for {
@@ -70,6 +81,7 @@ func (k *kafkaRedologManager) NextUpsertBatch() func() (*UpsertBatch, int64, uin
 			case batchBundle := <-k.batches:
 				fileID := batchBundle.kafkaOffset / maxBatchesPerFile
 				fileOffset := batchBundle.kafkaOffset % maxBatchesPerFile
+				k.updateKafkaOffset(fileID, batchBundle.kafkaOffset)
 				return batchBundle.batch, fileID, uint32(fileOffset)
 			case <-k.done:
 				// redolog manager closed
@@ -79,31 +91,35 @@ func (k *kafkaRedologManager) NextUpsertBatch() func() (*UpsertBatch, int64, uin
 	}
 }
 
-func (k *kafkaRedologManager) PurgeRedologFileAndData(eventTimeCutoff uint32, fileIDCheckpointed int64, batchOffset uint32) error {
+func (k *kafkaRedologManager) CheckpointRedolog(eventTimeCutoff uint32, fileIDCheckpointed int64, batchOffset uint32) error {
 	k.RLock()
-	var firstUnpurgeable int64 = math.MaxInt64
+	var firstUnpurgeableFileID int64 = math.MaxInt64
+	var firstKafkaOffset int64 = math.MaxInt64
 	for fileID, maxEventTime := range k.MaxEventTimePerFile {
 		if maxEventTime >= eventTimeCutoff ||
 			fileID > fileIDCheckpointed ||
 			(fileID == fileIDCheckpointed && batchOffset != maxBatchesPerFile-1) {
 			// file not purgeable
-			if fileID < firstUnpurgeable {
-				firstUnpurgeable = fileID
+			if fileID < firstUnpurgeableFileID {
+				firstUnpurgeableFileID = fileID
+				// fileID existing in MaxEventTimePerFile should always have entry in FirstKafkaOffsetPerFile
+				firstKafkaOffset = k.FirstKafkaOffsetPerFile[fileID]
 			}
 		}
 	}
 	k.RUnlock()
 
-	if firstUnpurgeable < math.MaxInt64 {
-		err := k.commitFunc(firstUnpurgeable * maxBatchesPerFile)
+	if firstUnpurgeableFileID < math.MaxInt64 {
+		err := k.commitFunc(firstKafkaOffset)
 		if err != nil {
 			return err
 		}
 
 		k.Lock()
 		for fileID := range k.MaxEventTimePerFile {
-			if fileID < firstUnpurgeable {
+			if fileID < firstUnpurgeableFileID {
 				delete(k.MaxEventTimePerFile, fileID)
+				delete(k.FirstKafkaOffsetPerFile, fileID)
 			}
 		}
 		k.Unlock()
@@ -111,7 +127,6 @@ func (k *kafkaRedologManager) PurgeRedologFileAndData(eventTimeCutoff uint32, fi
 	return nil
 }
 
-// ConsumeFrom starts kafka consumer from a offset
 func (k *kafkaRedologManager) ConsumeFrom(offset int64) error {
 	if k.partitionConsumer != nil {
 		// close previous created partition consumer
@@ -130,6 +145,9 @@ func (k *kafkaRedologManager) ConsumeFrom(offset int64) error {
 			case msg, ok := <-k.partitionConsumer.Messages():
 				if !ok {
 					// consumer closed
+					utils.GetLogger().With(
+						"table", k.TableName,
+						"shard", k.Shard).Error("partition consumer channel closed")
 					return
 				}
 				if msg != nil {
@@ -137,11 +155,22 @@ func (k *kafkaRedologManager) ConsumeFrom(offset int64) error {
 					if err != nil {
 						utils.GetLogger().With(
 							"table", k.TableName,
-							"Shard", k.Shard).Error("failed to create upsert batch from msg")
+							"shard", k.Shard, "error", err.Error()).Error("failed to create upsert batch from msg")
 						continue
 					}
 					k.batches <- upsertBatchBundle{upsertBatch, msg.Offset}
 				}
+			case err, ok := <-k.partitionConsumer.Errors():
+				if !ok {
+					// consumer closed
+					utils.GetLogger().With(
+						"table", k.TableName,
+						"shard", k.Shard).Error("partition consumer error channel closed")
+				} else {
+					utils.GetLogger().With("table", k.TableName, "shard", k.Shard, "error", err.Error()).
+						Error("received consumer error")
+				}
+				continue
 			case <-k.done:
 				return
 			}

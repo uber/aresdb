@@ -23,8 +23,6 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-
-
 // UpsertHeader is the magic header written into the beginning of each redo log file.
 const UpsertHeader uint32 = 0xADDAFEED
 
@@ -340,8 +338,8 @@ func (r *fileRedologManager) evictRedoLogData(creationTime int64) {
 	r.Unlock()
 }
 
-// PurgeRedologFileAndData purges disk files and in memory data of redologs that are eligible to be purged.
-func (r *fileRedologManager) PurgeRedologFileAndData(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) error {
+// CheckpointRedolog purges disk files and in memory data of redologs that are eligible to be purged.
+func (r *fileRedologManager) CheckpointRedolog(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) error {
 	creationTimes := r.getRedoLogFilesToPurge(cutoff, redoFileCheckpointed, batchOffset)
 	for _, creationTime := range creationTimes {
 		if err := r.diskStore.DeleteLogFile(

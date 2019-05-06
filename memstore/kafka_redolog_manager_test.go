@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 		Ω(fileIDs).Should(HaveKey(int64(1)))
 		Ω(fileIDs).Should(HaveKey(int64(2)))
 
-		err = redoManager.PurgeRedologFileAndData(1, 1, 0)
+		err = redoManager.CheckpointRedolog(1, 1, 0)
 		Ω(err).Should(BeNil())
 		Ω(commitedOffset).Should(ConsistOf(int64(maxBatchesPerFile)))
 		redoManager.Close()
