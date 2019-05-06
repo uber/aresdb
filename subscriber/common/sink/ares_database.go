@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package database
+package sink
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/gateway"
+	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
@@ -28,18 +28,22 @@ import (
 // AresDatabase is an implementation of Database interface for saving data to ares
 type AresDatabase struct {
 	ServiceConfig config.ServiceConfig
+	JobConfig     *rules.JobConfig
 	Scope         tally.Scope
 	ClusterName   string
 	Connector     client.Connector
-	JobName       string
 }
 
 // NewAresDatabase initialize an AresDatabase cluster
 func NewAresDatabase(
-	serviceConfig config.ServiceConfig, jobName string, cluster string,
-	config client.ConnectorConfig) (*AresDatabase, error) {
-	connector, err := config.NewConnector(serviceConfig.Logger.Sugar(), serviceConfig.Scope.Tagged(map[string]string{
-		"job":         jobName,
+	serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string,
+	sinkCfg config.SinkConfig, aresControllerClient gateway.ControllerClient) (Sink, error) {
+	if sinkCfg.GetSinkMode() != config.Sink_AresDB {
+		return nil, fmt.Errorf("Failed to NewAresDatabase, wrong sinkMode=%d", sinkCfg.GetSinkMode())
+	}
+
+	connector, err := sinkCfg.AresDBConnectorConfig.NewConnector(serviceConfig.Logger.Sugar(), serviceConfig.Scope.Tagged(map[string]string{
+		"job":         jobConfig.Name,
 		"aresCluster": cluster,
 	}))
 	if err != nil {
@@ -47,13 +51,13 @@ func NewAresDatabase(
 	}
 	return &AresDatabase{
 		ServiceConfig: serviceConfig,
+		JobConfig:     jobConfig,
 		Scope: serviceConfig.Scope.Tagged(map[string]string{
-			"job":         jobName,
+			"job":         jobConfig.Name,
 			"aresCluster": cluster,
 		}),
 		ClusterName: cluster,
 		Connector:   connector,
-		JobName:     jobName,
 	}, nil
 }
 
@@ -63,23 +67,19 @@ func (db *AresDatabase) Shutdown() {}
 // Save saves a batch of row objects into a destination
 func (db *AresDatabase) Save(destination Destination, rows []client.Row) error {
 	db.Scope.Gauge("batchSize").Update(float64(len(rows)))
-	aresRows := make([]client.Row, 0, len(rows))
-	for _, row := range rows {
-		aresRows = append(aresRows, client.Row(row))
-	}
 
-	saveStart := time.Now()
-	db.ServiceConfig.Logger.Debug("saving", zap.Any("rows", aresRows))
+	saveStart := utils.Now()
+	db.ServiceConfig.Logger.Debug("saving", zap.Any("rows", rows))
 	rowsInserted, err := db.Connector.
-		Insert(destination.Table, destination.ColumnNames, aresRows, destination.AresUpdateModes...)
+		Insert(destination.Table, destination.ColumnNames, rows, destination.AresUpdateModes...)
 	if err != nil {
 		db.Scope.Counter("errors.insert").Inc(1)
 		return utils.StackError(err, fmt.Sprintf("Failed to save rows in table %s, columns: %+v",
 			destination.Table, destination.ColumnNames))
 	}
-	db.Scope.Timer("latency.ares.save").Record(time.Now().Sub(saveStart))
+	db.Scope.Timer("latency.ares.save").Record(utils.Now().Sub(saveStart))
 	db.Scope.Counter("rowsWritten").Inc(int64(rowsInserted))
-	db.Scope.Counter("rowsIgnored").Inc(int64(len(aresRows)) - int64(rowsInserted))
+	db.Scope.Counter("rowsIgnored").Inc(int64(len(rows)) - int64(rowsInserted))
 	db.Scope.Gauge("upsertBatchSize").Update(float64(rowsInserted))
 	return nil
 }

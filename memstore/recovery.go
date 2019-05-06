@@ -421,7 +421,8 @@ func (shard *TableShard) rebuildIndexForLiveStore(batchID int32, lastRecord uint
 	batch := shard.LiveStore.Batches[batchID]
 	primaryKeyBytes := shard.Schema.PrimaryKeyBytes
 	primaryKeyColumns := shard.Schema.GetPrimaryKeyColumns()
-	key := make([]byte, primaryKeyBytes)
+	var key []byte
+	var err error
 	primaryKeyValues := make([]memcom.DataValue, len(primaryKeyColumns))
 
 	var row uint32
@@ -429,7 +430,7 @@ func (shard *TableShard) rebuildIndexForLiveStore(batchID int32, lastRecord uint
 		for i, col := range primaryKeyColumns {
 			primaryKeyValues[i] = batch.Columns[col].GetDataValue(int(row))
 		}
-		if err := GetPrimaryKeyBytes(primaryKeyValues, key); err != nil {
+		if key, err = GetPrimaryKeyBytes(primaryKeyValues, primaryKeyBytes); err != nil {
 			return err
 		}
 		recordID := RecordID{

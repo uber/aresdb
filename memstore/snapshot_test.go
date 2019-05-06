@@ -236,12 +236,12 @@ var _ = ginkgo.Describe("snapshot", func() {
 
 		// check if the primray key rebuilt and can data be found
 		primaryKeyBytes := shard.Schema.PrimaryKeyBytes
-		key := make([]byte, primaryKeyBytes)
+		var key []byte
 		primaryKeyValues := make([]memCom.DataValue, 1)
 
 		for row := 0; row <= rows; row++ {
 			primaryKeyValues[0], _ = memCom.ValueFromString(fmt.Sprintf("%d", row+1), memCom.Uint16)
-			err = GetPrimaryKeyBytes(primaryKeyValues, key)
+			key, err = GetPrimaryKeyBytes(primaryKeyValues, primaryKeyBytes)
 
 			Ω(err).Should(BeNil())
 			record, found := shard.LiveStore.PrimaryKey.Find(key)

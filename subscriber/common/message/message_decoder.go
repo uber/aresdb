@@ -50,40 +50,47 @@ type Message struct {
 }
 
 // stringMessage is an implementation of Message interface for testing.
-type stringMessage struct {
+type StringMessage struct {
 	topic string
 	msg   string
 }
 
-func (m *stringMessage) Key() []byte {
+func NewStringMessage(topic, msg string) *StringMessage {
+	return  &StringMessage {
+		topic: topic,
+		msg: msg,
+	}
+}
+
+func (m *StringMessage) Key() []byte {
 	return []byte("")
 }
 
-func (m *stringMessage) Value() []byte {
+func (m *StringMessage) Value() []byte {
 	return []byte(m.msg)
 }
 
-func (m *stringMessage) Topic() string {
+func (m *StringMessage) Topic() string {
 	return m.topic
 }
 
-func (m *stringMessage) Partition() int32 {
+func (m *StringMessage) Partition() int32 {
 	return 0
 }
 
-func (m *stringMessage) Offset() int64 {
+func (m *StringMessage) Offset() int64 {
 	return 0
 }
 
-func (m *stringMessage) Ack() {
+func (m *StringMessage) Ack() {
 	return
 }
 
-func (m *stringMessage) Nack() {
+func (m *StringMessage) Nack() {
 	return
 }
 
-func (m *stringMessage) Cluster() string {
+func (m *StringMessage) Cluster() string {
 	return ""
 }
 
