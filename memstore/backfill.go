@@ -37,6 +37,8 @@ func (m *memStoreImpl) Backfill(table string, shardID int, reporter BackfillJobD
 		reporter(jobKey, func(status *BackfillJobDetail) {
 			status.LastDuration = duration
 		})
+		utils.GetReporter(table, shardID).
+			GetCounter(utils.BackfillCount).Inc(1)
 	}()
 
 	shard, err := m.GetTableShard(table, shardID)

@@ -236,6 +236,8 @@ func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporte
 		reporter(jobKey, func(status *ArchiveJobDetail) {
 			status.LastDuration = duration
 		})
+		utils.GetReporter(table, shardID).
+			GetCounter(utils.ArchivingCount).Inc(1)
 	}()
 
 	reporter(jobKey, func(status *ArchiveJobDetail) {
