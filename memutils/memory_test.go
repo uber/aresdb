@@ -23,22 +23,6 @@ import (
 )
 
 var _ = ginkgo.Describe("memory utils", func() {
-	ginkgo.It("Memory swap should work", func() {
-		key1 := []byte{1, 1, 1, 1}
-		key2 := []byte{2, 2, 2, 2}
-		MemSwap(unsafe.Pointer(&key1[0]), unsafe.Pointer(&key2[0]), 4)
-		Ω(key1).Should(Equal([]byte{2, 2, 2, 2}))
-		Ω(key2).Should(Equal([]byte{1, 1, 1, 1}))
-	})
-
-	ginkgo.It("Memory swap should work", func() {
-		key1 := []byte{1, 1, 1, 1}
-		key2 := []byte{2, 2, 2, 2}
-		MemSwap(unsafe.Pointer(&key1[0]), unsafe.Pointer(&key2[0]), 4)
-		Ω(key1).Should(Equal([]byte{2, 2, 2, 2}))
-		Ω(key2).Should(Equal([]byte{1, 1, 1, 1}))
-	})
-
 	ginkgo.It("MakeSliceFromCPtr should work", func() {
 		// Allocate 5 ints.
 		p := HostAlloc(5)
