@@ -11,6 +11,10 @@ type RedologManager interface {
 	// CheckpointRedolog checkpoint event time cutoff (from archiving) and redologFileID and batchOffset (from backfill)
 	// to redolog manager
 	CheckpointRedolog(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) error
+	// GetTotalSize returns the total size of all redologs tracked in redolog manager
+	GetTotalSize() int
+	// Get the number of files tracked in redolog manager
+	GetNumFiles() int
 	// Close free resources held by redolog manager
 	Close()
 }

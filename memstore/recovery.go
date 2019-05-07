@@ -71,10 +71,8 @@ func (shard *TableShard) ReplayRedoLogs() {
 	}
 
 	// report redolog size after replay
-	if fileRedologManager, ok := shard.LiveStore.RedoLogManager.(*fileRedologManager); ok {
-		utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.NumberOfRedologs).Update(float64(len(fileRedologManager.SizePerFile)))
-		utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.SizeOfRedologs).Update(float64(fileRedologManager.TotalRedoLogSize))
-	}
+	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.NumberOfRedologs).Update(float64(shard.LiveStore.RedoLogManager.GetNumFiles()))
+	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.SizeOfRedologs).Update(float64(shard.LiveStore.RedoLogManager.GetTotalSize()))
 
 	// proactively purge redo files
 	if shard.LiveStore.BackfillManager != nil {

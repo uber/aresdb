@@ -27,6 +27,8 @@ type kafkaRedologManager struct {
 	MaxEventTimePerFile map[int64]uint32 `json:"maxEventTimePerFile"`
 	// FirstKafkaOffset per virtual redolog file
 	FirstKafkaOffsetPerFile map[int64]int64 `json:"firstKafkaOffsetPerFile"`
+	SizePerFile map[int64]int `json:"sizePerFile"`
+	TotalRedologSize int 		  `json:"totalRedologSize"`
 
 	consumer          sarama.Consumer
 	partitionConsumer sarama.PartitionConsumer
@@ -47,6 +49,7 @@ func NewKafkaRedologManager(namespace, table string, shard int, consumer sarama.
 		commitFunc:              commitFunc,
 		MaxEventTimePerFile:     make(map[int64]uint32),
 		FirstKafkaOffsetPerFile: make(map[int64]int64),
+		SizePerFile:             make(map[int64]int),
 		done:    make(chan struct{}),
 		batches: make(chan upsertBatchBundle, 1),
 	}
@@ -66,12 +69,19 @@ func (k *kafkaRedologManager) UpdateMaxEventTime(eventTime uint32, fileID int64)
 	k.MaxEventTimePerFile[fileID] = eventTime
 }
 
-func (k *kafkaRedologManager) updateKafkaOffset(fileID int64, kafkaOffset int64) {
+func (k *kafkaRedologManager) addMessage(fileID int64, kafkaOffset int64, size int) {
 	k.Lock()
 	defer k.Unlock()
 	if currentFirstOffset, ok := k.FirstKafkaOffsetPerFile[fileID]; !ok || currentFirstOffset > kafkaOffset {
 		k.FirstKafkaOffsetPerFile[fileID] = kafkaOffset
 	}
+
+	if _, exist := k.SizePerFile[fileID]; !exist {
+		k.SizePerFile[fileID] = 0
+	} else {
+		k.SizePerFile[fileID] += size
+	}
+	k.TotalRedologSize += size
 }
 
 func (k *kafkaRedologManager) NextUpsertBatch() func() (*UpsertBatch, int64, uint32) {
@@ -81,7 +91,7 @@ func (k *kafkaRedologManager) NextUpsertBatch() func() (*UpsertBatch, int64, uin
 			case batchBundle := <-k.batches:
 				fileID := batchBundle.kafkaOffset / maxBatchesPerFile
 				fileOffset := batchBundle.kafkaOffset % maxBatchesPerFile
-				k.updateKafkaOffset(fileID, batchBundle.kafkaOffset)
+				k.addMessage(fileID, batchBundle.kafkaOffset, len(batchBundle.batch.buffer))
 				return batchBundle.batch, fileID, uint32(fileOffset)
 			case <-k.done:
 				// redolog manager closed
@@ -120,6 +130,8 @@ func (k *kafkaRedologManager) CheckpointRedolog(eventTimeCutoff uint32, fileIDCh
 			if fileID < firstUnpurgeableFileID {
 				delete(k.MaxEventTimePerFile, fileID)
 				delete(k.FirstKafkaOffsetPerFile, fileID)
+				k.TotalRedologSize -= k.SizePerFile[fileID]
+				delete(k.SizePerFile, fileID)
 			}
 		}
 		k.Unlock()
@@ -176,8 +188,19 @@ func (k *kafkaRedologManager) ConsumeFrom(offset int64) error {
 			}
 		}
 	}()
-
 	return nil
+}
+
+func (k *kafkaRedologManager) GetTotalSize() int {
+	k.RLock()
+	defer k.RUnlock()
+	return int(k.TotalRedologSize)
+}
+
+func (k *kafkaRedologManager) GetNumFiles() int {
+	k.RLock()
+	defer k.RUnlock()
+	return len(k.SizePerFile)
 }
 
 func (k *kafkaRedologManager) Close() {

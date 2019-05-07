@@ -351,6 +351,19 @@ func (r *fileRedologManager) CheckpointRedolog(cutoff uint32, redoFileCheckpoint
 	return nil
 }
 
+// CheckpointRedolog purges disk files and in memory data of redologs that are eligible to be purged.
+func (r *fileRedologManager) GetTotalSize() int {
+	r.RLock()
+	defer r.RUnlock()
+	return int(r.TotalRedoLogSize)
+}
+
+func (r *fileRedologManager) GetNumFiles() int {
+	r.RLock()
+	defer r.RUnlock()
+	return len(r.SizePerFile)
+}
+
 // MarshalJSON marshals a fileRedologManager into json.
 func (r *fileRedologManager) MarshalJSON() ([]byte, error) {
 	// Avoid json.Marshal loop calls.
