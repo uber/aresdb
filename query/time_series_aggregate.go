@@ -18,16 +18,15 @@ package query
 // #include "time_series_aggregate.h"
 import "C"
 import (
-	"github.com/uber/aresdb/utils"
 	"strconv"
 	"unsafe"
 
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 )
 
 // DataTypeToCDataType mapps from memstore data type to c data types
