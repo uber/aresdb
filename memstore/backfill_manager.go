@@ -152,7 +152,7 @@ func (r *BackfillManager) StartBackfill() ([]*UpsertBatch, int64, uint32) {
 
 	utils.GetLogger().With("action", "Backfill", "table", r.TableName, "shard", r.Shard,
 		"lastRedoFile", r.LastRedoFile, "lastOffset", r.LastBatchOffset, "newRedoFile", r.CurrentRedoFile,
-		"newOffset", r.CurrentBatchOffset). Infof("Start backfill", r.TableName)
+		"newOffset", r.CurrentBatchOffset). Info("Start backfill")
 
 	// no data to backfill
 	// but CurrentRedoFile/CurrentBatchOffset may not be checkpointed yet(live batch)
@@ -227,7 +227,7 @@ func (r *BackfillManager) Done(currentRedoFile int64, currentBatchOffset uint32,
 		}
 		utils.GetLogger().With("action", "Backfill", "table", r.TableName, "shard", r.Shard,
 			"lastRedoFile", r.LastRedoFile, "lastOffset", r.LastBatchOffset, "newRedoFile", currentRedoFile,
-			"newOffset", currentBatchOffset). Infof("Finish backfill", r.TableName)
+			"newOffset", currentBatchOffset). Info("Finish backfill")
 		r.advanceOffset(currentRedoFile, currentBatchOffset)
 	}
 

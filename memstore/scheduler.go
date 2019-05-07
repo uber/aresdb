@@ -44,6 +44,7 @@ type jobBundle struct {
 type Scheduler interface {
 	Start()
 	Stop()
+	StartArchiving()
 	SubmitJob(job Job) chan error
 	DeleteTable(table string, isFactTable bool)
 	GetJobDetails(jobType common.JobType) interface{}
@@ -83,6 +84,7 @@ type schedulerImpl struct {
 	// Stop executor loop.
 	executorStopChan chan struct{}
 	jobManagers      map[common.JobType]jobManager
+	archivingStarted bool
 }
 
 func (scheduler *schedulerImpl) reportJob(key string, mutator jobDetailMutator) {
@@ -204,6 +206,11 @@ func (scheduler *schedulerImpl) Start() {
 	}()
 }
 
+// StartArchiving start archiving job generation
+func (scheduler *schedulerImpl) StartArchiving() {
+	scheduler.archivingStarted = true
+}
+
 func (scheduler *schedulerImpl) executeJob(jb *jobBundle) {
 	job := jb.Job
 	utils.GetLogger().Info(fmt.Sprintf("Running job %v", job))
@@ -254,7 +261,10 @@ func (scheduler *schedulerImpl) SubmitJob(job Job) chan error {
 // run runs at every tick. It first generates a list of jobs to run based on current condition,
 // then it runs every job sequentially in the same process.
 func (scheduler *schedulerImpl) run() {
-	for _, jobManager := range scheduler.jobManagers {
+	for jobType, jobManager := range scheduler.jobManagers {
+		if jobType == common.ArchivingJobType && !scheduler.archivingStarted {
+			continue
+		}
 		for _, job := range jobManager.generateJobs() {
 			// Waiting for job to finish.
 			if err := <-scheduler.SubmitJob(job); err != nil {

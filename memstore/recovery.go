@@ -58,9 +58,10 @@ func (shard *TableShard) ReplayRedoLogs() {
 		// Put a 0 in maxEventTimePerFile in case this is redolog is full of backfill batches.
 		shard.LiveStore.RedoLogManager.UpdateMaxEventTime(0, redoLogFile)
 
-		// backfill and archive are two distinct operation, better to append all old records into backfill,
-		// there are possibilites that archiving run ahead during recovery
-		_, err := shard.ApplyUpsertBatch(upsertBatch, redoLogFile, offset, false)
+		// check if this batch has already been backfilled and persisted
+		skipBackfillRows := redoLogFile < redoLogFilePersisted ||
+			(redoLogFile == redoLogFilePersisted && offset <= offsetPersisted)
+		_, err := shard.ApplyUpsertBatch(upsertBatch, redoLogFile, offset, skipBackfillRows)
 
 		shard.LiveStore.WriterLock.Unlock()
 
@@ -227,12 +228,18 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 	if !schedulerOff {
 		// Start scheduler.
 		utils.GetLogger().Infof("Starting archiving scheduler")
+		// this will start scheduler of all jobs except archiving, archiving will be started individually
 		m.GetScheduler().Start()
 	} else {
 		utils.GetLogger().Infof("Scheduler is off")
 	}
 
 	m.replayRedoLogs()
+
+	if !schedulerOff {
+		// Archiving must wait for recovery to finish first
+		m.GetScheduler().StartArchiving()
+	}
 
 	// watch Shard ownership change
 	shardOwnershipChangeEvents, done, err := m.metaStore.WatchShardOwnershipEvents()
