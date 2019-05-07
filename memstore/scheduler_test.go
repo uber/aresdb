@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/metastore/mocks"
+	"github.com/uber/aresdb/memstore/common"
 )
 
 type countJob struct {
@@ -75,5 +76,20 @@ var _ = ginkgo.Describe("scheduler", func() {
 			Ω(err).Should(BeNil())
 		}
 		scheduler.Stop()
+	})
+
+	ginkgo.It("Test jobmanager enabler", func() {
+		scheduler := newScheduler(m)
+		Ω(scheduler).Should(Not(BeNil()))
+		jobManager := scheduler.GetJobManager(common.ArchivingJobType)
+		Ω(jobManager.IsEnabled()).Should(Equal(false))
+		jobManager.Enable(true)
+		Ω(jobManager.IsEnabled()).Should(Equal(true))
+		jobManager = scheduler.GetJobManager(common.BackfillJobType)
+		Ω(jobManager.IsEnabled()).Should(Equal(true))
+		jobManager = scheduler.GetJobManager(common.SnapshotJobType)
+		Ω(jobManager.IsEnabled()).Should(Equal(true))
+		jobManager = scheduler.GetJobManager(common.PurgeJobType)
+		Ω(jobManager.IsEnabled()).Should(Equal(true))
 	})
 })

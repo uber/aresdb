@@ -333,12 +333,18 @@ func (handler *DebugHandler) Backfill(w http.ResponseWriter, r *http.Request) {
 	shard.Users.Done()
 
 	scheduler := handler.memStore.GetScheduler()
-	go func() {
-		scheduler.SubmitJob(
-			scheduler.NewBackfillJob(request.TableName, request.ShardID))
-	}()
+	jobManager := scheduler.GetJobManager(memCom.ArchivingJobType)
+	if jobManager.IsEnabled() {
+		go func() {
+			scheduler.SubmitJob(
+				scheduler.NewBackfillJob(request.TableName, request.ShardID))
+		}()
 
-	RespondJSONObjectWithCode(w, http.StatusOK, "Backfill job submitted")
+		RespondJSONObjectWithCode(w, http.StatusOK, "Backfill job submitted")
+	} else {
+		// basically, this is to disable archive job submission during recovery
+		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, "Archiving disabled")
+	}
 }
 
 // Snapshot starts an snapshot process on demand.

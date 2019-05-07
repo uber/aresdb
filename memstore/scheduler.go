@@ -44,7 +44,6 @@ type jobBundle struct {
 type Scheduler interface {
 	Start()
 	Stop()
-	StartArchiving()
 	SubmitJob(job Job) chan error
 	DeleteTable(table string, isFactTable bool)
 	GetJobDetails(jobType common.JobType) interface{}
@@ -52,6 +51,7 @@ type Scheduler interface {
 	NewArchivingJob(tableName string, shardID int, cutoff uint32) Job
 	NewSnapshotJob(tableName string, shardID int) Job
 	NewPurgeJob(tableName string, shardID int, batchIDStart int, batchIDEnd int) Job
+	GetJobManager(jobType common.JobType) JobManager
 	utils.RWLocker
 }
 
@@ -62,7 +62,7 @@ func newScheduler(m *memStoreImpl) *schedulerImpl {
 		schedulerStopChan: make(chan struct{}),
 		jobBundleChan:     make(chan jobBundle),
 		executorStopChan:  make(chan struct{}),
-		jobManagers:       make(map[common.JobType]jobManager),
+		jobManagers:       make(map[common.JobType]JobManager),
 	}
 	s.jobManagers[common.ArchivingJobType] = newArchiveJobManager(s)
 	s.jobManagers[common.BackfillJobType] = newBackfillJobManager(s)
@@ -83,7 +83,7 @@ type schedulerImpl struct {
 	jobBundleChan chan jobBundle
 	// Stop executor loop.
 	executorStopChan chan struct{}
-	jobManagers      map[common.JobType]jobManager
+	jobManagers      map[common.JobType]JobManager
 	archivingStarted bool
 }
 
@@ -122,6 +122,11 @@ func (scheduler *schedulerImpl) DeleteTable(table string, isFactTable bool) {
 		return
 	}
 	scheduler.jobManagers[common.SnapshotJobType].deleteTable(table)
+}
+
+// GetJobManager retrieve the JobManager according to job type
+func (scheduler *schedulerImpl) GetJobManager(jobType common.JobType) JobManager {
+	return scheduler.jobManagers[jobType]
 }
 
 // NewArchivingJob returns a new ArchivingJob.
@@ -261,10 +266,7 @@ func (scheduler *schedulerImpl) SubmitJob(job Job) chan error {
 // run runs at every tick. It first generates a list of jobs to run based on current condition,
 // then it runs every job sequentially in the same process.
 func (scheduler *schedulerImpl) run() {
-	for jobType, jobManager := range scheduler.jobManagers {
-		if jobType == common.ArchivingJobType && !scheduler.archivingStarted {
-			continue
-		}
+	for _, jobManager := range scheduler.jobManagers {
 		for _, job := range jobManager.generateJobs() {
 			// Waiting for job to finish.
 			if err := <-scheduler.SubmitJob(job); err != nil {

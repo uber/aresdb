@@ -245,8 +245,8 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 
 			// If we get a record that is older than archiving cutoff time (exclusive) that means
 			// 1. during ingestion, the event should be put into a backfill queue
-			// 2. during recovery, the event should not be ignored, it is safer to put into backfill queue,
-			// and in backfill queue not means it will be in disk until a backfill job done.
+			// 2. during recovery, the event should be ignored, because it was already put into
+			//    a backfill queue at ingestion time.
 			if eventTime < shard.LiveStore.ArchivingCutoffHighWatermark {
 				if !skipBackfillRows {
 					// mark this row as backfill row

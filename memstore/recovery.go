@@ -238,7 +238,7 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 
 	if !schedulerOff {
 		// Archiving must wait for recovery to finish first
-		m.GetScheduler().StartArchiving()
+		m.GetScheduler().GetJobManager(memcom.ArchivingJobType).Enable(true)
 	}
 
 	// watch Shard ownership change
