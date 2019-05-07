@@ -459,12 +459,12 @@ var _ = ginkgo.Describe("ingestion", func() {
 		Ω(*(*uint8)(value)).Should(Equal(uint8(123)))
 
 		Ω(shard.LiveStore.LastReadRecord.Index).Should(Equal(uint32(1)))
-		redoFile := shard.LiveStore.RedoLogManager.CurrentFileCreationTime
+		redoFile := shard.LiveStore.RedoLogManager.(*fileRedologManager).CurrentFileCreationTime
 
 		// advance batch offset by 1.
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
-		Ω(shard.LiveStore.RedoLogManager.MaxEventTimePerFile[redoFile]).Should(Equal(uint32(23456)))
+		Ω(shard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile[redoFile]).Should(Equal(uint32(23456)))
 		Ω(shard.LiveStore.BackfillManager.CurrentRedoFile).Should(BeEquivalentTo(redoFile))
 		Ω(shard.LiveStore.BackfillManager.CurrentBatchOffset).Should(BeEquivalentTo(1))
 	})
@@ -497,12 +497,12 @@ var _ = ginkgo.Describe("ingestion", func() {
 		Ω(*(*uint8)(value)).Should(Equal(uint8(123)))
 
 		Ω(shard.LiveStore.LastReadRecord.Index).Should(Equal(uint32(1)))
-		redoFile := shard.LiveStore.RedoLogManager.CurrentFileCreationTime
+		redoFile := shard.LiveStore.RedoLogManager.(*fileRedologManager).CurrentFileCreationTime
 
 		// advance batch offset by 1.
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
-		Ω(shard.LiveStore.RedoLogManager.MaxEventTimePerFile[redoFile]).Should(Equal(uint32(0)))
+		Ω(shard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile[redoFile]).Should(Equal(uint32(0)))
 		Ω(shard.LiveStore.SnapshotManager.CurrentRedoFile).Should(BeEquivalentTo(redoFile))
 		Ω(shard.LiveStore.SnapshotManager.CurrentBatchOffset).Should(BeEquivalentTo(1))
 	})
