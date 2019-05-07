@@ -357,7 +357,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		request.Body.Cutoff = 200
 		job := new(memMocks.Job)
 		scheduler.On("NewArchivingJob", mock.Anything, mock.Anything, mock.Anything).Return(job)
-		scheduler.On("SubmitJob", job).Return(nil)
+		scheduler.On("SubmitJob", job).Return(nil, nil)
 		job.On("Run", mock.Anything).Return(nil)
 		correctURL := fmt.Sprintf("http://%s/debug/%s/%d/archive", hostPort, testTableName, testTableShardID)
 		contentType := "application/json"
@@ -922,7 +922,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		Ω(err).Should(BeNil())
 		job := new(memMocks.Job)
 		scheduler.On("NewBackfillJob", mock.Anything, mock.Anything, mock.Anything).Return(job)
-		scheduler.On("SubmitJob", job).Return(nil)
+		scheduler.On("SubmitJob", job).Return(nil, nil)
 		job.On("Run", mock.Anything).Return(nil)
 		correctURL := fmt.Sprintf("http://%s/debug/%s/%d/backfill", hostPort, testTableName, testTableShardID)
 		contentType := "application/json"
@@ -949,7 +949,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		bs, err := json.Marshal(request)
 		job := new(memMocks.Job)
 		scheduler.On("NewSnapshotJob", mock.Anything, mock.Anything, mock.Anything).Return(job)
-		scheduler.On("SubmitJob", job).Return(nil)
+		scheduler.On("SubmitJob", job).Return(nil, nil)
 		job.On("Run", mock.Anything).Return(nil)
 		correctURL := fmt.Sprintf("http://%s/debug/%s/%d/snapshot", hostPort, testTableName, testTableShardID)
 		contentType := "application/json"
@@ -976,7 +976,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		bs, err := json.Marshal(request)
 		job := new(memMocks.Job)
 		scheduler.On("NewPurgeJob", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(job)
-		scheduler.On("SubmitJob", job).Return(nil)
+		scheduler.On("SubmitJob", job).Return(nil, nil)
 		job.On("Run", mock.Anything).Return(nil)
 		correctURL := fmt.Sprintf("http://%s/debug/%s/%d/purge", hostPort, testTableName, testTableShardID)
 		contentType := "application/json"

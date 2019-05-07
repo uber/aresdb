@@ -39,6 +39,11 @@ func (j *countJob) String() string {
 	return "count"
 }
 
+func (j *countJob) JobType() common.JobType {
+	return "count"
+}
+
+
 var _ = ginkgo.Describe("scheduler", func() {
 	var counter int
 
@@ -63,7 +68,7 @@ var _ = ginkgo.Describe("scheduler", func() {
 		scheduler.Start()
 		for i := 0; i < 10; i++ {
 			expectedCount := i + 1
-			resChan := scheduler.SubmitJob(&countJob{
+			_, resChan := scheduler.SubmitJob(&countJob{
 				jobFunc: func() error {
 					counter++
 					if counter != expectedCount {
@@ -78,18 +83,21 @@ var _ = ginkgo.Describe("scheduler", func() {
 		scheduler.Stop()
 	})
 
-	ginkgo.It("Test jobmanager enabler", func() {
+	ginkgo.It("Test scheduler jobtype enable", func() {
 		scheduler := newScheduler(m)
 		Ω(scheduler).Should(Not(BeNil()))
-		jobManager := scheduler.GetJobManager(common.ArchivingJobType)
-		Ω(jobManager.IsEnabled()).Should(Equal(false))
-		jobManager.Enable(true)
-		Ω(jobManager.IsEnabled()).Should(Equal(true))
-		jobManager = scheduler.GetJobManager(common.BackfillJobType)
-		Ω(jobManager.IsEnabled()).Should(Equal(true))
-		jobManager = scheduler.GetJobManager(common.SnapshotJobType)
-		Ω(jobManager.IsEnabled()).Should(Equal(true))
-		jobManager = scheduler.GetJobManager(common.PurgeJobType)
-		Ω(jobManager.IsEnabled()).Should(Equal(true))
+		Ω(scheduler.IsJobTypeEnabled(common.ArchivingJobType)).Should(Equal(true))
+		Ω(scheduler.IsJobTypeEnabled(common.BackfillJobType)).Should(Equal(true))
+		Ω(scheduler.IsJobTypeEnabled(common.BackfillJobType)).Should(Equal(true))
+		Ω(scheduler.IsJobTypeEnabled(common.PurgeJobType)).Should(Equal(true))
+
+		scheduler.EnableJobType(common.ArchivingJobType, false)
+
+		Ω(scheduler.IsJobTypeEnabled(common.ArchivingJobType)).Should(Equal(false))
+		Ω(scheduler.IsJobTypeEnabled(common.BackfillJobType)).Should(Equal(true))
+
+		scheduler.EnableJobType(common.ArchivingJobType, true)
+		Ω(scheduler.IsJobTypeEnabled(common.ArchivingJobType)).Should(Equal(true))
+		Ω(scheduler.IsJobTypeEnabled(common.BackfillJobType)).Should(Equal(true))
 	})
 })

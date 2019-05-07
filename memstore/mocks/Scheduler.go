@@ -28,6 +28,11 @@ func (_m *Scheduler) DeleteTable(table string, isFactTable bool) {
 	_m.Called(table, isFactTable)
 }
 
+// EnableJobType provides a mock function with given fields: jobType, enable
+func (_m *Scheduler) EnableJobType(jobType common.JobType, enable bool) {
+	_m.Called(jobType, enable)
+}
+
 // GetJobDetails provides a mock function with given fields: jobType
 func (_m *Scheduler) GetJobDetails(jobType common.JobType) interface{} {
 	ret := _m.Called(jobType)
@@ -44,17 +49,15 @@ func (_m *Scheduler) GetJobDetails(jobType common.JobType) interface{} {
 	return r0
 }
 
-// GetJobManager provides a mock function with given fields: jobType
-func (_m *Scheduler) GetJobManager(jobType common.JobType) memstore.JobManager {
+// IsJobTypeEnabled provides a mock function with given fields: jobType
+func (_m *Scheduler) IsJobTypeEnabled(jobType common.JobType) bool {
 	ret := _m.Called(jobType)
 
-	var r0 memstore.JobManager
-	if rf, ok := ret.Get(0).(func(common.JobType) memstore.JobManager); ok {
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(common.JobType) bool); ok {
 		r0 = rf(jobType)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(memstore.JobManager)
-		}
+		r0 = ret.Get(0).(bool)
 	}
 
 	return r0
@@ -150,19 +153,26 @@ func (_m *Scheduler) Stop() {
 }
 
 // SubmitJob provides a mock function with given fields: job
-func (_m *Scheduler) SubmitJob(job memstore.Job) chan error {
+func (_m *Scheduler) SubmitJob(job memstore.Job) (error, chan error) {
 	ret := _m.Called(job)
 
-	var r0 chan error
-	if rf, ok := ret.Get(0).(func(memstore.Job) chan error); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(memstore.Job) error); ok {
 		r0 = rf(job)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(chan error)
+		r0 = ret.Error(0)
+	}
+
+	var r1 chan error
+	if rf, ok := ret.Get(1).(func(memstore.Job) chan error); ok {
+		r1 = rf(job)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(chan error)
 		}
 	}
 
-	return r0
+	return r0, r1
 }
 
 // Unlock provides a mock function with given fields:

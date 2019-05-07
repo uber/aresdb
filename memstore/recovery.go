@@ -228,6 +228,8 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 	if !schedulerOff {
 		// Start scheduler.
 		utils.GetLogger().Infof("Starting archiving scheduler")
+		// disable archiving during redolog replay
+		m.GetScheduler().EnableJobType(memcom.ArchivingJobType, false)
 		// this will start scheduler of all jobs except archiving, archiving will be started individually
 		m.GetScheduler().Start()
 	} else {
@@ -237,8 +239,8 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 	m.replayRedoLogs()
 
 	if !schedulerOff {
-		// Archiving must wait for recovery to finish first
-		m.GetScheduler().GetJobManager(memcom.ArchivingJobType).Enable(true)
+		// re-enable archiving after redolog replay
+		m.GetScheduler().EnableJobType(memcom.ArchivingJobType, true)
 	}
 
 	// watch Shard ownership change

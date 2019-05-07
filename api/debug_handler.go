@@ -307,12 +307,17 @@ func (handler *DebugHandler) Archive(w http.ResponseWriter, r *http.Request) {
 	shard.Users.Done()
 
 	scheduler := handler.memStore.GetScheduler()
-	go func() {
-		scheduler.SubmitJob(
-			scheduler.NewArchivingJob(request.TableName, request.ShardID, request.Body.Cutoff))
-	}()
+	err, errChan := scheduler.SubmitJob(
+		scheduler.NewArchivingJob(request.TableName, request.ShardID, request.Body.Cutoff))
+	if err == nil {
+		go func() {
+			<-errChan
+		}()
+		RespondJSONObjectWithCode(w, http.StatusOK, "Archiving job submitted")
+	} else {
+		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, err)
+	}
 
-	RespondJSONObjectWithCode(w, http.StatusOK, "Archiving job submitted")
 }
 
 // Backfill starts an backfill process on demand.
@@ -333,17 +338,14 @@ func (handler *DebugHandler) Backfill(w http.ResponseWriter, r *http.Request) {
 	shard.Users.Done()
 
 	scheduler := handler.memStore.GetScheduler()
-	jobManager := scheduler.GetJobManager(memCom.ArchivingJobType)
-	if jobManager.IsEnabled() {
+	err, errChan := scheduler.SubmitJob(
+		scheduler.NewBackfillJob(request.TableName, request.ShardID))
+	if err == nil {
 		go func() {
-			scheduler.SubmitJob(
-				scheduler.NewBackfillJob(request.TableName, request.ShardID))
+			<-errChan
 		}()
 
 		RespondJSONObjectWithCode(w, http.StatusOK, "Backfill job submitted")
-	} else {
-		// basically, this is to disable archive job submission during recovery
-		RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, "Archiving disabled")
 	}
 }
 
@@ -365,12 +367,15 @@ func (handler *DebugHandler) Snapshot(w http.ResponseWriter, r *http.Request) {
 	defer shard.Users.Done()
 
 	scheduler := handler.memStore.GetScheduler()
-	go func() {
-		scheduler.SubmitJob(
-			scheduler.NewSnapshotJob(request.TableName, request.ShardID))
-	}()
+	err, errChan := scheduler.SubmitJob(
+		scheduler.NewSnapshotJob(request.TableName, request.ShardID))
+	if err == nil {
+		go func() {
+			<-errChan
+		}()
 
-	RespondJSONObjectWithCode(w, http.StatusOK, "Snapshot job submitted")
+		RespondJSONObjectWithCode(w, http.StatusOK, "Snapshot job submitted")
+	}
 }
 
 // Purge starts an purge process on demand.
@@ -408,12 +413,15 @@ func (handler *DebugHandler) Purge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	scheduler := handler.memStore.GetScheduler()
-	go func() {
-		scheduler.SubmitJob(
-			scheduler.NewPurgeJob(request.TableName, request.ShardID, request.Body.BatchIDStart, request.Body.BatchIDEnd))
-	}()
+	err, errChan := scheduler.SubmitJob(
+		scheduler.NewPurgeJob(request.TableName, request.ShardID, request.Body.BatchIDStart, request.Body.BatchIDEnd))
+	if err == nil {
+		go func() {
+			<-errChan
+		}()
 
-	RespondJSONObjectWithCode(w, http.StatusOK, "Purge job submitted")
+		RespondJSONObjectWithCode(w, http.StatusOK, "Purge job submitted")
+	}
 }
 
 // ShowShardMeta shows the metadata for a table shard. It won't show the underlying data.

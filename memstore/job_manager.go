@@ -23,9 +23,7 @@ import (
 )
 
 // JobManager is responsible for generating new jobs to run and manages job related stats.
-type JobManager interface {
-	Enable(enable bool)
-	IsEnabled() bool
+type jobManager interface {
 	generateJobs() []Job
 	getJobDetails() interface{}
 	deleteTable(table string)
@@ -33,28 +31,8 @@ type JobManager interface {
 	reportJobDetail(key string, mutator jobDetailMutator)
 }
 
-// Enabler contains enabled variable to enable/disable job manager
-type enabler struct {
-	sync.RWMutex
-	enabled bool
-}
-
-// Enable to enable/disable job manager
-func (e *enabler) Enable(enable bool) {
-	e.Lock()
-	e.enabled = enable
-	e.Unlock()
-}
-
-// IsEnabled to check if the job manager is enabled
-func (e *enabler) IsEnabled() bool {
-	e.RLock()
-	defer e.RUnlock()
-	return e.enabled
-}
-
 type archiveJobManager struct {
-	enabler
+	sync.RWMutex
 	// archiveJobDetails for different tables, shard. Key is {tableName}|{shardID}|archiving,
 	// value is the job details.
 	jobDetails map[string]*ArchiveJobDetail
@@ -64,12 +42,11 @@ type archiveJobManager struct {
 }
 
 // newArchiveJobManager creates a new jobManager to manage archive jobs.
-func newArchiveJobManager(scheduler *schedulerImpl) JobManager {
+func newArchiveJobManager(scheduler *schedulerImpl) jobManager {
 	return &archiveJobManager{
 		jobDetails: make(map[string]*ArchiveJobDetail),
 		memStore:   scheduler.memStore,
 		scheduler:  scheduler,
-		enabler:    enabler{enabled: false},
 	}
 }
 
@@ -82,9 +59,6 @@ func (m *archiveJobManager) generateJobs() []Job {
 
 	now := uint32(utils.Now().Unix())
 	var jobs []Job
-	if !m.enabled {
-		return jobs
-	}
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
 			tableShard.Schema.RLock()
@@ -187,8 +161,13 @@ func (job *ArchivingJob) String() string {
 		job.tableName, job.shardID, job.cutoff)
 }
 
+// JobType return job type
+func (job *ArchivingJob) JobType() common.JobType {
+	return common.ArchivingJobType
+}
+
 type backfillJobManager struct {
-	enabler
+	sync.RWMutex
 	// backfillJobDetails for different tables, shard. Key is {tableName}|{shardID}|backfill,
 	jobDetails map[string]*BackfillJobDetail
 	// For accessing meta data like archiving delay and interval
@@ -197,12 +176,11 @@ type backfillJobManager struct {
 }
 
 // newBackfillJobManager creates a new jobManager to manage backfill jobs.
-func newBackfillJobManager(scheduler *schedulerImpl) JobManager {
+func newBackfillJobManager(scheduler *schedulerImpl) jobManager {
 	return &backfillJobManager{
 		jobDetails: make(map[string]*BackfillJobDetail),
 		memStore:   scheduler.memStore,
 		scheduler:  scheduler,
-		enabler:    enabler{enabled: true},
 	}
 }
 
@@ -214,9 +192,7 @@ func (m *backfillJobManager) generateJobs() []Job {
 
 	now := uint32(utils.Now().Unix())
 	var jobs []Job
-	if !m.enabled {
-		return jobs
-	}
+
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
 			tableShard.Schema.RLock()
@@ -328,8 +304,13 @@ func (job *BackfillJob) String() string {
 		job.tableName, job.shardID)
 }
 
+// JobType return job type
+func (job *BackfillJob) JobType() common.JobType {
+	return common.BackfillJobType
+}
+
 type snapshotJobManager struct {
-	enabler
+	sync.RWMutex
 	// snapshotJobDetails for different tables, shard. Key is {tableName}|{shardID}|snapshot,
 	jobDetails map[string]*SnapshotJobDetail
 	// For accessing meta data like archiving delay and interval
@@ -338,12 +319,11 @@ type snapshotJobManager struct {
 }
 
 // newSnapshotJobManager creates a new jobManager to manage snapshot jobs.
-func newSnapshotJobManager(scheduler *schedulerImpl) JobManager {
+func newSnapshotJobManager(scheduler *schedulerImpl) jobManager {
 	return &snapshotJobManager{
 		jobDetails: make(map[string]*SnapshotJobDetail),
 		memStore:   scheduler.memStore,
 		scheduler:  scheduler,
-		enabler:    enabler{enabled: true},
 	}
 }
 
@@ -353,9 +333,7 @@ func (m *snapshotJobManager) generateJobs() []Job {
 	m.memStore.RLock()
 	defer m.memStore.RUnlock()
 	var jobs []Job
-	if !m.enabled {
-		return jobs
-	}
+
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
 			tableShard.Schema.RLock()
@@ -454,8 +432,13 @@ func (job *SnapshotJob) String() string {
 		job.tableName, job.shardID)
 }
 
+// JobType return job type
+func (job *SnapshotJob) JobType() common.JobType {
+	return common.SnapshotJobType
+}
+
 type purgeJobManager struct {
-	enabler
+	sync.RWMutex
 	// purge job details for different tables, shard. Key is {tableName}|{shardID}|purge,
 	jobDetails map[string]*PurgeJobDetail
 	memStore   *memStoreImpl
@@ -463,12 +446,11 @@ type purgeJobManager struct {
 }
 
 // newPurgeJobManager creates a new jobManager to manage purge jobs.
-func newPurgeJobManager(scheduler *schedulerImpl) JobManager {
+func newPurgeJobManager(scheduler *schedulerImpl) jobManager {
 	return &purgeJobManager{
 		jobDetails: make(map[string]*PurgeJobDetail),
 		memStore:   scheduler.memStore,
 		scheduler:  scheduler,
-		enabler:    enabler{enabled: true},
 	}
 }
 
@@ -480,9 +462,6 @@ func (m *purgeJobManager) generateJobs() []Job {
 
 	nowInDay := int(utils.Now().Unix() / 86400)
 	var jobs []Job
-	if !m.enabled {
-		return jobs
-	}
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
 			retentionDays := tableShard.Schema.Schema.Config.RecordRetentionInDays
@@ -568,4 +547,9 @@ func (job *PurgeJob) GetIdentifier() string {
 func (job *PurgeJob) String() string {
 	return fmt.Sprintf("PurgeJob<Table: %s, ShardID: %d>",
 		job.tableName, job.shardID)
+}
+
+// JobType return job type
+func (job *PurgeJob) JobType() common.JobType {
+	return common.PurgeJobType
 }
