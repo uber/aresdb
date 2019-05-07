@@ -159,5 +159,7 @@ func (z *ZapLogger) Panicf(format string, args ...interface{}) {
 
 // With returns a logger with the specified key-value pair set, to be logged in a subsequent normal logging call
 func (z *ZapLogger) With(args ...interface{}) Logger {
-	return &ZapLogger{z.sugaredLogger.With(args...)}
+	return &ZapLogger{
+		z.sugaredLogger.With(args...),
+	}
 }
