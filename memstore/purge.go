@@ -30,6 +30,8 @@ func (m *memStoreImpl) Purge(tableName string, shardID, batchIDStart, batchIDEnd
 		reporter(jobKey, func(status *PurgeJobDetail) {
 			status.LastDuration = duration
 		})
+		utils.GetReporter(tableName, shardID).
+			GetCounter(utils.PurgeCount).Inc(1)
 	}()
 
 	shard, err := m.GetTableShard(tableName, shardID)
