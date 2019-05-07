@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package consumer
+package kafka
 
 import (
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	kafkaConfluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -85,8 +85,8 @@ var _ = Describe("KafkaConsumer", func() {
 		go kc.(*KafkaConsumer).startConsuming()
 
 		topic := "topic"
-		msg := &kafka.Message{
-			TopicPartition: kafka.TopicPartition{
+		msg := &kafkaConfluent.Message{
+			TopicPartition: kafkaConfluent.TopicPartition{
 				Topic:     &topic,
 				Partition: int32(0),
 				Offset:    0,
@@ -118,8 +118,8 @@ var _ = Describe("KafkaConsumer", func() {
 	It("KafkaMessage functions", func() {
 		topic := "topic"
 		message := &KafkaMessage{
-			&kafka.Message{
-				TopicPartition: kafka.TopicPartition{
+			&kafkaConfluent.Message{
+				TopicPartition: kafkaConfluent.TopicPartition{
 					Topic:     &topic,
 					Partition: int32(0),
 					Offset:    0,
@@ -150,7 +150,7 @@ var _ = Describe("KafkaConsumer", func() {
 		Ω(partition).Should(Equal(int32(0)))
 
 		message.Ack()
-		message.Consumer, _ = NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
+		message.Consumer, _ = kafka2.NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
 
 		message.Ack()
 

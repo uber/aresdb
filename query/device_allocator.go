@@ -89,7 +89,7 @@ func (p devicePointer) isNull() bool {
 func (p devicePointer) offset(offset int) devicePointer {
 	return devicePointer{
 		device:  p.device,
-		pointer: memutils.MemAccess(p.getPointer(), offset),
+		pointer: utils.MemAccess(p.getPointer(), offset),
 	}
 }
 

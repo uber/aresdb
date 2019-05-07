@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package consumer
+package kafka
 
 import (
 	"fmt"
+	"github.com/uber/aresdb/subscriber/common/consumer"
 	"sync"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	kafkaConfluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
@@ -29,15 +30,15 @@ import (
 
 // KafkaConsumer implements Consumer interface
 type KafkaConsumer struct {
-	*kafka.Consumer
-	kafka.ConfigMap
+	*kafkaConfluent.Consumer
+	kafkaConfluent.ConfigMap
 	sync.Mutex
 
 	TopicArray []string
 	Logger     *zap.Logger
 	Scope      tally.Scope
 	ErrCh      chan error
-	MsgCh      chan Message
+	MsgCh      chan consumer.Message
 
 	// WARNING: The following channels should not be closed by the lib users
 	CloseAttempted bool
@@ -47,19 +48,19 @@ type KafkaConsumer struct {
 
 // KafkaMessage implements Message interface
 type KafkaMessage struct {
-	*kafka.Message
+	*kafkaConfluent.Message
 
-	Consumer    Consumer
+	Consumer    consumer.Consumer
 	ClusterName string
 }
 
 // NewKafkaConsumer creates kafka consumer by using https://github.com/confluentinc/confluent-kafka-go.
-func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (Consumer, error) {
+func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (consumer.Consumer, error) {
 	offsetReset := "earliest"
 	if jobConfig.StreamingConfig.LatestOffset {
 		offsetReset = "latest"
 	}
-	cfg := kafka.ConfigMap{
+	cfg := kafkaConfluent.ConfigMap{
 		"bootstrap.servers":               jobConfig.StreamingConfig.KafkaBroker,
 		"group.id":                        GetConsumerGroupName(serviceConfig.Environment.Deployment, jobConfig.Name, jobConfig.AresTableConfig.Cluster),
 		"max.poll.interval.ms":            jobConfig.StreamingConfig.MaxPollIntervalMs,
@@ -74,7 +75,7 @@ func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceCo
 		zap.String("broker", jobConfig.StreamingConfig.KafkaBroker),
 		zap.Any("config", cfg))
 
-	c, err := kafka.NewConsumer(&cfg)
+	c, err := kafkaConfluent.NewConsumer(&cfg)
 	if err != nil {
 		return nil, utils.StackError(err, "Unable to initialize Kafka consumer")
 	}
@@ -100,7 +101,7 @@ func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceCo
 		Logger:     logger,
 		Scope:      scope,
 		ErrCh:      make(chan error, jobConfig.StreamingConfig.ChannelBufferSize),
-		MsgCh:      make(chan Message, jobConfig.StreamingConfig.ChannelBufferSize),
+		MsgCh:      make(chan consumer.Message, jobConfig.StreamingConfig.ChannelBufferSize),
 		CloseCh:    make(chan struct{}),
 	}
 
@@ -138,7 +139,7 @@ func (c *KafkaConsumer) Closed() <-chan struct{} {
 //
 // If the consumer is not configured with nonzero buffer size, the Errors()
 // channel must be read in conjunction with Messages() to prevent deadlocks.
-func (c *KafkaConsumer) Messages() <-chan Message {
+func (c *KafkaConsumer) Messages() <-chan consumer.Message {
 	return c.MsgCh
 }
 
@@ -146,16 +147,16 @@ func (c *KafkaConsumer) Messages() <-chan Message {
 // as processed. The last processed offset for each partition is periodically
 // flushed to ZooKeeper; on startup, consumers begin processing after the last
 // stored offset.
-func (c *KafkaConsumer) CommitUpTo(msg Message) error {
+func (c *KafkaConsumer) CommitUpTo(msg consumer.Message) error {
 	if concreteMsg, ok := msg.(*KafkaMessage); ok {
 		// Just unwrap the underlying message.
 		c.CommitMessage(concreteMsg.Message)
 	} else {
 		topic := msg.Topic()
-		c.CommitOffsets([]kafka.TopicPartition{
+		c.CommitOffsets([]kafkaConfluent.TopicPartition{
 			{&topic,
 				msg.Partition(),
-				kafka.Offset(msg.Offset()),
+				kafkaConfluent.Offset(msg.Offset()),
 				nil,
 			},
 		})
@@ -187,9 +188,9 @@ func (c *KafkaConsumer) startConsuming() {
 			run = false
 		case event := <-c.Events():
 			switch e := event.(type) {
-			case *kafka.Message:
+			case *kafkaConfluent.Message:
 				c.processMsg(e, msgCounter, msgByteCounter, msgOffsetGauge, msgLagGauge)
-			case kafka.Error:
+			case kafkaConfluent.Error:
 				c.ErrCh <- e
 				c.Logger.Error("Received error event", zap.Error(e))
 			default:
@@ -199,7 +200,7 @@ func (c *KafkaConsumer) startConsuming() {
 	}
 }
 
-func (c *KafkaConsumer) processMsg(msg *kafka.Message,
+func (c *KafkaConsumer) processMsg(msg *kafkaConfluent.Message,
 	msgCounter map[string]map[int32]tally.Counter,
 	msgByteCounter map[string]map[int32]tally.Counter,
 	msgOffsetGauge map[string]map[int32]tally.Gauge,

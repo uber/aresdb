@@ -440,7 +440,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(err).Should(BeNil())
 		Ω(valid).Should(Equal(true))
 		Ω(*(*uint64)(value)).Should(Equal(uint64(123)))
-		Ω(*(*uint64)(memutils.MemAccess(value, 8))).Should(Equal(uint64(456)))
+		Ω(*(*uint64)(utils.MemAccess(value, 8))).Should(Equal(uint64(456)))
 	})
 
 	ginkgo.It("Test batch extra bytes", func() {

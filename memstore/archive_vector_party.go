@@ -81,11 +81,11 @@ func (vp *archiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorPar
 		newVP.fillWithDefaultValue()
 	} else {
 		if vp.values != nil {
-			memutils.MemCopy(unsafe.Pointer(newVP.values.buffer), unsafe.Pointer(vp.values.buffer), vp.values.Bytes)
+			utils.MemEqual(unsafe.Pointer(newVP.values.buffer), unsafe.Pointer(vp.values.buffer), vp.values.Bytes)
 		}
 
 		if vp.nulls != nil {
-			memutils.MemCopy(unsafe.Pointer(newVP.nulls.buffer), unsafe.Pointer(vp.nulls.buffer), vp.nulls.Bytes)
+			utils.MemEqual(unsafe.Pointer(newVP.nulls.buffer), unsafe.Pointer(vp.nulls.buffer), vp.nulls.Bytes)
 		} else if vp.values != nil {
 			// All values present, we need to set all bits to 1.
 			newVP.nulls.SetAllValid()

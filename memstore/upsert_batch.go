@@ -394,7 +394,7 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 					writeBool(newCol.valueVector, newRow, boolValue)
 				} else {
 					valueBytes := valueBits / 8
-					memutils.MemCopy(unsafe.Pointer(&newCol.valueVector[newRow*valueBytes]),
+					utils.MemEqual(unsafe.Pointer(&newCol.valueVector[newRow*valueBytes]),
 						unsafe.Pointer(&oldCol.valueVector[oldRow*valueBytes]), valueBytes)
 				}
 			}

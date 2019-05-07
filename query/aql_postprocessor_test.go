@@ -139,7 +139,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 		ctx.OOPK = oopkContext
 		*(*float32)(oopkContext.dimensionVectorH) = 3.2
-		*(*uint8)(memutils.MemAccess(oopkContext.dimensionVectorH, 4)) = 1
+		*(*uint8)(utils.MemAccess(oopkContext.dimensionVectorH, 4)) = 1
 
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLQueryResult{
 			"3.2": nil,
@@ -173,7 +173,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 		ctx.OOPK = oopkContext
 		*(*float32)(oopkContext.dimensionVectorH) = 3.2
-		*(*uint8)(memutils.MemAccess(oopkContext.dimensionVectorH, 4)) = 1
+		*(*uint8)(utils.MemAccess(oopkContext.dimensionVectorH, 4)) = 1
 
 		Ω(ctx.Postprocess()).Should(Equal(queryCom.AQLQueryResult{
 			"headers":    []string{"someField"},
