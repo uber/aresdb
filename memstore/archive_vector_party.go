@@ -17,7 +17,6 @@ package memstore
 import (
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 	"sync"
 	"unsafe"
