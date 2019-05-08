@@ -434,7 +434,7 @@ func (c *CuckooIndex) findOrAddNew(key unsafe.Pointer, value RecordID, eventTime
 // randomly evict existing item with conflict hash and reinsert
 func (c *CuckooIndex) cuckooAdd(key unsafe.Pointer, recordID RecordID, eventTime uint32, hashResults [numHashes]hashResult) bool {
 	insertKey := make(Key, c.keyBytes)
-	memutils.MemCopy(unsafe.Pointer(&insertKey[0]), key, c.keyBytes)
+	utils.MemCopy(unsafe.Pointer(&insertKey[0]), key, c.keyBytes)
 
 	for trial := 0; trial < c.maxTrials; trial++ {
 		c.randomSwap(unsafe.Pointer(&insertKey[0]), &recordID, &eventTime, hashResults)
@@ -482,7 +482,7 @@ func (c *CuckooIndex) insert(key unsafe.Pointer, v RecordID, eventTime uint32) b
 }
 
 func (c *CuckooIndex) insertBucket(key unsafe.Pointer, recordID RecordID, signature uint8, eventTime uint32, bucket unsafe.Pointer, index int) {
-	memutils.MemCopy(c.getKey(bucket, index), key, c.keyBytes)
+	utils.MemCopy(c.getKey(bucket, index), key, c.keyBytes)
 	*c.getSignature(bucket, index) = signature
 	*c.getRecordID(bucket, index) = recordID
 	if c.hasEventTime {
