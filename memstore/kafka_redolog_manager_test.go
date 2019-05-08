@@ -6,6 +6,7 @@ import (
 	"github.com/Shopify/sarama/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/utils"
 )
 
 type GinkgoTestReporter struct{}
@@ -36,7 +37,7 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 
 		// create 2 * maxBatchesPerFile number of messages
 		for i := 0; i < 2*maxBatchesPerFile; i++ {
-			consumer.ExpectConsumePartition("test-test", 0, mocks.AnyOffset).
+			consumer.ExpectConsumePartition(utils.GetTopicFromTable("test", "test"), 0, mocks.AnyOffset).
 				YieldMessage(&sarama.ConsumerMessage{
 					Value: upsertBatchBytes,
 				})
