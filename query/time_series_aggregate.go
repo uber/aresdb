@@ -18,6 +18,7 @@ package query
 // #include "time_series_aggregate.h"
 import "C"
 import (
+	"github.com/uber/aresdb/utils"
 	"strconv"
 	"unsafe"
 
