@@ -29,7 +29,7 @@ func (shard *TableShard) ReplayRedoLogs() {
 	timer := utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetTimer(utils.RecoveryLatency).Start()
 	defer timer.Stop()
 
-	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Infof(
+	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Info(
 		"Replay redo logs")
 
 	var redoLogFilePersisted int64

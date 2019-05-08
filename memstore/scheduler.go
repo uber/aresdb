@@ -227,11 +227,6 @@ func (scheduler *schedulerImpl) Start() {
 	}()
 }
 
-// StartArchiving start archiving job generation
-func (scheduler *schedulerImpl) StartArchiving() {
-	scheduler.archivingStarted = true
-}
-
 func (scheduler *schedulerImpl) executeJob(jb *jobBundle) {
 	job := jb.Job
 	utils.GetLogger().Info(fmt.Sprintf("Running job %v", job))
