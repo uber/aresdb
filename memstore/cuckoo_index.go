@@ -350,7 +350,7 @@ func (c *CuckooIndex) randomSwap(key unsafe.Pointer, recordID *RecordID, eventTi
 
 	*c.getRecordID(hashResult.bucket, slotIndex), *recordID = *recordID, *c.getRecordID(hashResult.bucket, slotIndex)
 	*c.getSignature(hashResult.bucket, slotIndex) = hashResult.signature
-	memutils.MemSwap(c.getKey(hashResult.bucket, slotIndex), key, c.keyBytes)
+	utils.MemSwap(c.getKey(hashResult.bucket, slotIndex), key, c.keyBytes)
 
 	if c.hasEventTime {
 		*c.getEventTime(hashResult.bucket, slotIndex), *eventTime = *eventTime, *c.getEventTime(hashResult.bucket, slotIndex)
