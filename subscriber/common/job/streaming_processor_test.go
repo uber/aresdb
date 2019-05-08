@@ -24,7 +24,7 @@ import (
 	"github.com/uber/aresdb/client/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/subscriber/common/consumer"
+	kafka2 "github.com/uber/aresdb/subscriber/common/consumer/kafka"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/sink"
@@ -104,7 +104,7 @@ var _ = Describe("streaming_processor", func() {
 	}
 
 	topic := "topic"
-	msg := &consumer.KafkaMessage{
+	msg := &kafka2.KafkaMessage{
 		&kafka.Message{
 			TopicPartition: kafka.TopicPartition{
 				Topic:     &topic,
@@ -118,7 +118,7 @@ var _ = Describe("streaming_processor", func() {
 		"kafka-cluster1",
 	}
 
-	errMsg := &consumer.KafkaMessage{
+	errMsg := &kafka2.KafkaMessage{
 		&kafka.Message{
 			TopicPartition: kafka.TopicPartition{
 				Topic:     &topic,
@@ -235,7 +235,7 @@ var _ = Describe("streaming_processor", func() {
 		testServer.Close()
 	})
 	It("NewStreamingProcessor", func() {
-		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka2.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).Should(BeNil())
 		Ω(err).ShouldNot(BeNil())
@@ -247,7 +247,7 @@ var _ = Describe("streaming_processor", func() {
 		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
 			"dev01": sinkConfig,
 		}
-		p, err = NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err = NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka2.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).ShouldNot(BeNil())
 		Ω(p.(*StreamingProcessor).highLevelConsumer).ShouldNot(BeNil())
@@ -317,7 +317,7 @@ var _ = Describe("streaming_processor", func() {
 
 		go p.Run()
 		p.Restart()
-		p.(*StreamingProcessor).highLevelConsumer.(*consumer.KafkaConsumer).Close()
+		p.(*StreamingProcessor).highLevelConsumer.(*kafka2.KafkaConsumer).Close()
 
 		p.(*StreamingProcessor).reInitialize()
 		go p.Run()

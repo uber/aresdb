@@ -19,9 +19,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/subscriber/common/consumer/kafka"
 	"github.com/uber/aresdb/subscriber/common/sink"
-
-	"github.com/uber/aresdb/subscriber/common/consumer"
 
 	"encoding/json"
 	"fmt"
@@ -186,7 +185,7 @@ var _ = Describe("driver", func() {
 
 	It("NewDriver", func() {
 		driver, err := NewDriver(jobConfig, serviceConfig, nil, NewStreamingProcessor, sink.NewAresDatabase,
-			consumer.NewKafkaConsumer, message.NewDefaultDecoder)
+			kafka.NewKafkaConsumer, message.NewDefaultDecoder)
 		Ω(driver).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
 

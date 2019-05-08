@@ -250,14 +250,14 @@ func (v *Vector) GetSliceBytesAligned(lowerBound int, upperBound int) (buffer un
 	startIndex = lowerBound - startByte*8/v.unitBits
 	endByte := (v.unitBits*upperBound + 7) / 8
 	bytes = utils.AlignOffset(endByte-startByte, 64)
-	return memutils.MemAccess(v.Buffer(), startByte), startIndex, bytes
+	return utils.MemAccess(v.Buffer(), startByte), startIndex, bytes
 }
 
 // SetAllValid set all bits to be 1 in a bool typed vector.
 func (v *Vector) SetAllValid() {
 	// buffer are 64 bytes aligned so we can assign word by word.
 	for i := 0; i < v.Bytes; i += 4 {
-		*(*uint32)(memutils.MemAccess(unsafe.Pointer(v.buffer), i)) = 0xFFFFFFFF
+		*(*uint32)(utils.MemAccess(unsafe.Pointer(v.buffer), i)) = 0xFFFFFFFF
 	}
 }
 
@@ -270,14 +270,14 @@ func (v *Vector) CheckAllValid() bool {
 
 	// First check word by word.
 	for ; i < wordBoundary; i += 4 {
-		if !(*(*uint32)(memutils.MemAccess(unsafe.Pointer(v.buffer), i)) == 0xFFFFFFFF) {
+		if !(*(*uint32)(utils.MemAccess(unsafe.Pointer(v.buffer), i)) == 0xFFFFFFFF) {
 			return false
 		}
 	}
 
 	// then we check byte by byte.
 	for ; i < totalCompleteBytes; i++ {
-		if !(*(*uint8)(memutils.MemAccess(unsafe.Pointer(v.buffer), i)) == 0xFF) {
+		if !(*(*uint8)(utils.MemAccess(unsafe.Pointer(v.buffer), i)) == 0xFF) {
 			return false
 		}
 	}
@@ -288,5 +288,5 @@ func (v *Vector) CheckAllValid() bool {
 
 	// check remaining bits.
 	var mask uint8 = (1 << uint(remainingBits)) - 1
-	return ((*(*uint8)(memutils.MemAccess(unsafe.Pointer(v.buffer), i))) & mask) == mask
+	return ((*(*uint8)(utils.MemAccess(unsafe.Pointer(v.buffer), i))) & mask) == mask
 }

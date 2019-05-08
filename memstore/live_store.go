@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -366,7 +365,7 @@ func (s *LiveStore) LookupKey(keyStrs []string) (RecordID, bool) {
 			index++
 		} else {
 			for i := 0; i < common.DataTypeBits(columnType)/8; i++ {
-				key[index] = *(*byte)(memutils.MemAccess(dataValue.OtherVal, i))
+				key[index] = *(*byte)(utils.MemAccess(dataValue.OtherVal, i))
 				index++
 			}
 		}

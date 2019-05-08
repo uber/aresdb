@@ -27,8 +27,8 @@ type kafkaRedologManager struct {
 	MaxEventTimePerFile map[int64]uint32 `json:"maxEventTimePerFile"`
 	// FirstKafkaOffset per virtual redolog file
 	FirstKafkaOffsetPerFile map[int64]int64 `json:"firstKafkaOffsetPerFile"`
-	SizePerFile map[int64]int `json:"sizePerFile"`
-	TotalRedologSize int 		  `json:"totalRedologSize"`
+	SizePerFile             map[int64]int   `json:"sizePerFile"`
+	TotalRedologSize        int             `json:"totalRedologSize"`
 
 	consumer          sarama.Consumer
 	partitionConsumer sarama.PartitionConsumer
@@ -50,8 +50,8 @@ func NewKafkaRedologManager(namespace, table string, shard int, consumer sarama.
 		MaxEventTimePerFile:     make(map[int64]uint32),
 		FirstKafkaOffsetPerFile: make(map[int64]int64),
 		SizePerFile:             make(map[int64]int),
-		done:    make(chan struct{}),
-		batches: make(chan upsertBatchBundle, 1),
+		done:                    make(chan struct{}),
+		batches:                 make(chan upsertBatchBundle, 1),
 	}
 }
 

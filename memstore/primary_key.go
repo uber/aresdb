@@ -19,7 +19,6 @@ import (
 	"unsafe"
 
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -115,7 +114,7 @@ func GetPrimaryKeyBytes(primaryKeyValues []common.DataValue, keyLength int) ([]b
 			}
 		} else {
 			for i := 0; i < common.DataTypeBits(value.DataType)/8; i++ {
-				key = append(key, *(*byte)(memutils.MemAccess(value.OtherVal, i)))
+				key = append(key, *(*byte)(utils.MemAccess(value.OtherVal, i)))
 			}
 		}
 	}

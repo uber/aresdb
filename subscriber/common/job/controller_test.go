@@ -25,7 +25,7 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/subscriber/common/consumer"
+	"github.com/uber/aresdb/subscriber/common/consumer/kafka"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/sink"
@@ -272,7 +272,7 @@ var _ = Describe("controller", func() {
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
 			SinkInitFunc:     sink.NewAresDatabase,
-			ConsumerInitFunc: consumer.NewKafkaConsumer,
+			ConsumerInitFunc: kafka.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
 
@@ -307,7 +307,7 @@ var _ = Describe("controller", func() {
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
 			SinkInitFunc:     sink.NewAresDatabase,
-			ConsumerInitFunc: consumer.NewKafkaConsumer,
+			ConsumerInitFunc: kafka.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
 
@@ -339,7 +339,7 @@ var _ = Describe("controller", func() {
 			ServiceConfig:    serviceConfig,
 			JobConfigs:       rst.JobConfigs,
 			SinkInitFunc:     sink.NewAresDatabase,
-			ConsumerInitFunc: consumer.NewKafkaConsumer,
+			ConsumerInitFunc: kafka.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
 

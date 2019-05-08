@@ -56,9 +56,9 @@ type StringMessage struct {
 }
 
 func NewStringMessage(topic, msg string) *StringMessage {
-	return  &StringMessage {
+	return &StringMessage{
 		topic: topic,
-		msg: msg,
+		msg:   msg,
 	}
 }
 

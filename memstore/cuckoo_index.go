@@ -144,7 +144,7 @@ func (c *CuckooIndex) Update(key Key, value RecordID) bool {
 			existingSignature := *c.getSignature(hashResult.bucket, i)
 			if !c.recordExpired(hashResult.bucket, i) &&
 				existingSignature == hashResult.signature &&
-				memutils.MemEqual(c.getKey(hashResult.bucket, i), keyPtr, c.keyBytes) {
+				utils.MemEqual(c.getKey(hashResult.bucket, i), keyPtr, c.keyBytes) {
 				*c.getRecordID(hashResult.bucket, i) = value
 				return true
 			}
@@ -154,7 +154,7 @@ func (c *CuckooIndex) Update(key Key, value RecordID) bool {
 	for i := 0; i < stashSize; i++ {
 		if !c.isEmpty(c.stash, i) &&
 			!c.recordExpired(c.stash, i) &&
-			memutils.MemEqual(c.getKey(c.stash, i), keyPtr, c.keyBytes) {
+			utils.MemEqual(c.getKey(c.stash, i), keyPtr, c.keyBytes) {
 			*c.getRecordID(c.stash, i) = value
 			return true
 		}
@@ -171,7 +171,7 @@ func (c *CuckooIndex) Find(key Key) (RecordID, bool) {
 			existingSignature := *c.getSignature(hashResult.bucket, i)
 			if !c.recordExpired(hashResult.bucket, i) &&
 				existingSignature == hashResult.signature &&
-				memutils.MemEqual(c.getKey(hashResult.bucket, i), keyPtr, c.keyBytes) {
+				utils.MemEqual(c.getKey(hashResult.bucket, i), keyPtr, c.keyBytes) {
 				return *c.getRecordID(hashResult.bucket, i), true
 			}
 		}
@@ -180,7 +180,7 @@ func (c *CuckooIndex) Find(key Key) (RecordID, bool) {
 	for i := 0; i < stashSize; i++ {
 		if !c.isEmpty(c.stash, i) &&
 			!c.recordExpired(c.stash, i) &&
-			memutils.MemEqual(c.getKey(c.stash, i), keyPtr, c.keyBytes) {
+			utils.MemEqual(c.getKey(c.stash, i), keyPtr, c.keyBytes) {
 			return *c.getRecordID(c.stash, i), true
 		}
 	}
@@ -231,7 +231,7 @@ func (c *CuckooIndex) Delete(key Key) {
 		hashResults[hashIndex] = hashResult
 		for i := 0; i < bucketSize; i++ {
 			if *c.getSignature(hashResult.bucket, i) == hashResult.signature &&
-				memutils.MemEqual(c.getKey(hashResult.bucket, i), unsafe.Pointer(&key[0]), c.keyBytes) {
+				utils.MemEqual(c.getKey(hashResult.bucket, i), unsafe.Pointer(&key[0]), c.keyBytes) {
 				c.numBucketEntries--
 				*c.getSignature(hashResult.bucket, i) = emptySignature
 				return
@@ -241,7 +241,7 @@ func (c *CuckooIndex) Delete(key Key) {
 
 	for i := 0; i < stashSize; i++ {
 		if !c.isEmpty(c.stash, i) &&
-			memutils.MemEqual(c.getKey(c.stash, i), unsafe.Pointer(&key[0]), c.keyBytes) {
+			utils.MemEqual(c.getKey(c.stash, i), unsafe.Pointer(&key[0]), c.keyBytes) {
 			*c.getSignature(c.stash, i) = emptySignature
 			c.numStashEntries--
 			return
@@ -282,7 +282,7 @@ func (c *CuckooIndex) hash(key unsafe.Pointer, index int) hashResult {
 	hashValue := utils.Murmur3Sum32(key, c.keyBytes, c.seeds[index])
 
 	bucketIndex := hashValue % uint32(c.numBuckets)
-	bucket := memutils.MemAccess(c.buckets, int(bucketIndex)*c.bucketBytes)
+	bucket := utils.MemAccess(c.buckets, int(bucketIndex)*c.bucketBytes)
 	signature := c.extractSignatureByte(hashValue)
 
 	return hashResult{
@@ -312,23 +312,23 @@ func (c *CuckooIndex) extractSignatureByte(hashValue uint32) uint8 {
 }
 
 func (c *CuckooIndex) getSignature(bucket unsafe.Pointer, index int) *uint8 {
-	return (*uint8)(memutils.MemAccess(bucket, offsetToSignature+index))
+	return (*uint8)(utils.MemAccess(bucket, offsetToSignature+index))
 }
 
 func (c *CuckooIndex) getRecordID(bucket unsafe.Pointer, index int) *RecordID {
-	return (*RecordID)(memutils.MemAccess(bucket, index*recordIDBytes))
+	return (*RecordID)(utils.MemAccess(bucket, index*recordIDBytes))
 }
 
 // call should be aware there is no eventime present, this method will return incorrect
 func (c *CuckooIndex) getEventTime(bucket unsafe.Pointer, index int) *uint32 {
-	return (*uint32)(memutils.MemAccess(bucket, offsetToEventTime+index*4))
+	return (*uint32)(utils.MemAccess(bucket, offsetToEventTime+index*4))
 }
 
 func (c *CuckooIndex) getKey(bucket unsafe.Pointer, index int) unsafe.Pointer {
 	if !c.hasEventTime {
-		return memutils.MemAccess(bucket, offsetToKeyWithoutEventTime+index*c.keyBytes)
+		return utils.MemAccess(bucket, offsetToKeyWithoutEventTime+index*c.keyBytes)
 	}
-	return memutils.MemAccess(bucket, offsetToKeyWithEventTime+index*c.keyBytes)
+	return utils.MemAccess(bucket, offsetToKeyWithEventTime+index*c.keyBytes)
 }
 
 func (c *CuckooIndex) isEmpty(bucket unsafe.Pointer, index int) bool {
@@ -350,7 +350,7 @@ func (c *CuckooIndex) randomSwap(key unsafe.Pointer, recordID *RecordID, eventTi
 
 	*c.getRecordID(hashResult.bucket, slotIndex), *recordID = *recordID, *c.getRecordID(hashResult.bucket, slotIndex)
 	*c.getSignature(hashResult.bucket, slotIndex) = hashResult.signature
-	memutils.MemSwap(c.getKey(hashResult.bucket, slotIndex), key, c.keyBytes)
+	utils.MemSwap(c.getKey(hashResult.bucket, slotIndex), key, c.keyBytes)
 
 	if c.hasEventTime {
 		*c.getEventTime(hashResult.bucket, slotIndex), *eventTime = *eventTime, *c.getEventTime(hashResult.bucket, slotIndex)
@@ -401,7 +401,7 @@ func (c *CuckooIndex) findOrAddNew(key unsafe.Pointer, value RecordID, eventTime
 					signatureToInsert = hashResult.signature
 					isInsert = isEmpty
 				}
-			} else if *c.getSignature(hashResult.bucket, i) == hashResult.signature && memutils.MemEqual(c.getKey(hashResult.bucket, i), key, c.keyBytes) {
+			} else if *c.getSignature(hashResult.bucket, i) == hashResult.signature && utils.MemEqual(c.getKey(hashResult.bucket, i), key, c.keyBytes) {
 				existingFound = true
 				recordID = *c.getRecordID(hashResult.bucket, i)
 				return
@@ -412,7 +412,7 @@ func (c *CuckooIndex) findOrAddNew(key unsafe.Pointer, value RecordID, eventTime
 	// look for existing record in stash
 	for i := 0; i < stashSize; i++ {
 		if !c.recordExpired(c.stash, i) && !c.isEmpty(c.stash, i) &&
-			memutils.MemEqual(c.getKey(c.stash, i), key, c.keyBytes) {
+			utils.MemEqual(c.getKey(c.stash, i), key, c.keyBytes) {
 			existingFound = true
 			recordID = *c.getRecordID(c.stash, i)
 			return
@@ -434,7 +434,7 @@ func (c *CuckooIndex) findOrAddNew(key unsafe.Pointer, value RecordID, eventTime
 // randomly evict existing item with conflict hash and reinsert
 func (c *CuckooIndex) cuckooAdd(key unsafe.Pointer, recordID RecordID, eventTime uint32, hashResults [numHashes]hashResult) bool {
 	insertKey := make(Key, c.keyBytes)
-	memutils.MemCopy(unsafe.Pointer(&insertKey[0]), key, c.keyBytes)
+	utils.MemCopy(unsafe.Pointer(&insertKey[0]), key, c.keyBytes)
 
 	for trial := 0; trial < c.maxTrials; trial++ {
 		c.randomSwap(unsafe.Pointer(&insertKey[0]), &recordID, &eventTime, hashResults)
@@ -482,7 +482,7 @@ func (c *CuckooIndex) insert(key unsafe.Pointer, v RecordID, eventTime uint32) b
 }
 
 func (c *CuckooIndex) insertBucket(key unsafe.Pointer, recordID RecordID, signature uint8, eventTime uint32, bucket unsafe.Pointer, index int) {
-	memutils.MemCopy(c.getKey(bucket, index), key, c.keyBytes)
+	utils.MemCopy(c.getKey(bucket, index), key, c.keyBytes)
 	*c.getSignature(bucket, index) = signature
 	*c.getRecordID(bucket, index) = recordID
 	if c.hasEventTime {
@@ -511,7 +511,7 @@ func (c *CuckooIndex) resize(resizeFactor float32) (ok bool) {
 			bucket = c.stash
 			numElements = stashSize
 		} else {
-			bucket = memutils.MemAccess(c.buckets, i*c.bucketBytes)
+			bucket = utils.MemAccess(c.buckets, i*c.bucketBytes)
 		}
 
 		for j := 0; j < numElements; j++ {
@@ -567,7 +567,7 @@ func (c *CuckooIndex) allocate() {
 	totalBucketBytes := int(c.allocatedBytes())
 	// allocate buckets plus stash
 	c.buckets = memutils.HostAlloc(totalBucketBytes + c.bucketBytes)
-	c.stash = memutils.MemAccess(c.buckets, totalBucketBytes)
+	c.stash = utils.MemAccess(c.buckets, totalBucketBytes)
 }
 
 // newCuckooIndex create a cuckoo hashing index
