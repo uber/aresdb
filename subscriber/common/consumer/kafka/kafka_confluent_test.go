@@ -150,7 +150,7 @@ var _ = Describe("KafkaConsumer", func() {
 		Ω(partition).Should(Equal(int32(0)))
 
 		message.Ack()
-		message.Consumer, _ = kafka2.NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
+		message.Consumer, _ = NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
 
 		message.Ack()
 
