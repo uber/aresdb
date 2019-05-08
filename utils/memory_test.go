@@ -52,19 +52,19 @@ var _ = ginkgo.Describe("memory", func() {
 		Ω(key1).Should(Equal(key2))
 	})
 
-	ginkgo.It("MemDist should work", func() {
-		value := [20]byte{}
-		Ω(MemDist(unsafe.Pointer(&value[0]), unsafe.Pointer(&value[0]))).Should(BeZero())
-		Ω(MemDist(unsafe.Pointer(&value[1]), unsafe.Pointer(&value[0]))).Should(BeEquivalentTo(1))
-		Ω(MemDist(unsafe.Pointer(&value[0]), unsafe.Pointer(&value[1]))).Should(BeEquivalentTo(-1))
-		Ω(MemDist(unsafe.Pointer(&value[19]), unsafe.Pointer(&value[0]))).Should(BeEquivalentTo(19))
-	})
-
 	ginkgo.It("Memory swap should work", func() {
 		key1 := []byte{1, 1, 1, 1}
 		key2 := []byte{2, 2, 2, 2}
 		MemSwap(unsafe.Pointer(&key1[0]), unsafe.Pointer(&key2[0]), 4)
 		Ω(key1).Should(Equal([]byte{2, 2, 2, 2}))
 		Ω(key2).Should(Equal([]byte{1, 1, 1, 1}))
+	})
+
+	ginkgo.It("MemDist should work", func() {
+		value := [20]byte{}
+		Ω(MemDist(unsafe.Pointer(&value[0]), unsafe.Pointer(&value[0]))).Should(BeZero())
+		Ω(MemDist(unsafe.Pointer(&value[1]), unsafe.Pointer(&value[0]))).Should(BeEquivalentTo(1))
+		Ω(MemDist(unsafe.Pointer(&value[0]), unsafe.Pointer(&value[1]))).Should(BeEquivalentTo(-1))
+		Ω(MemDist(unsafe.Pointer(&value[19]), unsafe.Pointer(&value[0]))).Should(BeEquivalentTo(19))
 	})
 })

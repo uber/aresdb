@@ -19,6 +19,7 @@ import (
 	"unsafe"
 
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 )
 

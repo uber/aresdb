@@ -24,9 +24,9 @@ import (
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
-	"github.com/uber/aresdb/utils"
 )
 
 // DataTypeToCDataType mapps from memstore data type to c data types
@@ -177,7 +177,7 @@ func makeVectorPartySlice(column deviceVectorPartySlice) C.VectorPartySlice {
 		if basePtr == nil {
 			basePtr = nulls
 		} else {
-			nullsOffset = uint32(utils.MemDist(nulls, basePtr))
+			nullsOffset = uint32(memutils.MemDist(nulls, basePtr))
 		}
 	}
 
@@ -187,7 +187,7 @@ func makeVectorPartySlice(column deviceVectorPartySlice) C.VectorPartySlice {
 		if basePtr == nil {
 			basePtr = values
 		} else {
-			valuesOffset = uint32(utils.MemDist(values, basePtr))
+			valuesOffset = uint32(memutils.MemDist(values, basePtr))
 		}
 	}
 
@@ -246,7 +246,7 @@ func makeConstantInput(val interface{}, isValid bool) C.InputVector {
 func makeScratchSpaceInput(values unsafe.Pointer, nulls unsafe.Pointer, dataType C.enum_DataType) C.InputVector {
 	var scratchSpaceVector C.ScratchSpaceVector
 	scratchSpaceVector.Values = (*C.uint8_t)(values)
-	scratchSpaceVector.NullsOffset = (C.uint32_t)(utils.MemDist(nulls, values))
+	scratchSpaceVector.NullsOffset = (C.uint32_t)(memutils.MemDist(nulls, values))
 	scratchSpaceVector.DataType = dataType
 
 	var vector C.InputVector
@@ -285,7 +285,7 @@ func makeDimensionVectorOutput(dimensionVector unsafe.Pointer, valueOffset, null
 func makeScratchSpaceOutput(values unsafe.Pointer, nulls unsafe.Pointer, dataType C.enum_DataType) C.OutputVector {
 	var scratchSpaceVector C.ScratchSpaceVector
 	scratchSpaceVector.Values = (*C.uint8_t)(values)
-	scratchSpaceVector.NullsOffset = (C.uint32_t)(utils.MemDist(nulls, values))
+	scratchSpaceVector.NullsOffset = (C.uint32_t)(memutils.MemDist(nulls, values))
 	scratchSpaceVector.DataType = dataType
 
 	var vector C.OutputVector
