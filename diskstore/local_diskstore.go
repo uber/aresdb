@@ -120,6 +120,8 @@ func (l LocalDiskStore) DeleteLogFile(table string, shard int, creationTime int6
 	if err != nil {
 		return utils.StackError(err, "Failed to delete redolog file: %s", redologFilePath)
 	}
+	utils.GetLogger().With("action", "deletelogfile", "table", table, "shard", shard).Infof("Delete redolog file: %s", redologFilePath)
+
 	return nil
 }
 

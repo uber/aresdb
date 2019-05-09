@@ -44,13 +44,15 @@ type jobBundle struct {
 type Scheduler interface {
 	Start()
 	Stop()
-	SubmitJob(job Job) chan error
+	SubmitJob(job Job) (error, chan error)
 	DeleteTable(table string, isFactTable bool)
 	GetJobDetails(jobType common.JobType) interface{}
 	NewBackfillJob(tableName string, shardID int) Job
 	NewArchivingJob(tableName string, shardID int, cutoff uint32) Job
 	NewSnapshotJob(tableName string, shardID int) Job
 	NewPurgeJob(tableName string, shardID int, batchIDStart int, batchIDEnd int) Job
+	EnableJobType(jobType common.JobType, enable bool)
+	IsJobTypeEnabled(jobType common.JobType) bool
 	utils.RWLocker
 }
 
@@ -62,6 +64,7 @@ func newScheduler(m *memStoreImpl) *schedulerImpl {
 		jobBundleChan:     make(chan jobBundle),
 		executorStopChan:  make(chan struct{}),
 		jobManagers:       make(map[common.JobType]jobManager),
+		jobEnableFlags:    make(map[common.JobType]bool),
 	}
 	s.jobManagers[common.ArchivingJobType] = newArchiveJobManager(s)
 	s.jobManagers[common.BackfillJobType] = newBackfillJobManager(s)
@@ -83,6 +86,21 @@ type schedulerImpl struct {
 	// Stop executor loop.
 	executorStopChan chan struct{}
 	jobManagers      map[common.JobType]jobManager
+	jobEnableFlags   map[common.JobType]bool
+	archivingStarted bool
+}
+
+func (scheduler *schedulerImpl) EnableJobType(jobType common.JobType, enable bool) {
+	scheduler.Lock()
+	scheduler.jobEnableFlags[jobType] = enable
+	scheduler.Unlock()
+}
+
+func (scheduler *schedulerImpl) IsJobTypeEnabled(jobType common.JobType) bool {
+	scheduler.RLock()
+	defer scheduler.RUnlock()
+	enabled, ok := scheduler.jobEnableFlags[jobType]
+	return !ok || enabled
 }
 
 func (scheduler *schedulerImpl) reportJob(key string, mutator jobDetailMutator) {
@@ -120,6 +138,11 @@ func (scheduler *schedulerImpl) DeleteTable(table string, isFactTable bool) {
 		return
 	}
 	scheduler.jobManagers[common.SnapshotJobType].deleteTable(table)
+}
+
+// GetJobManager retrieve the JobManager according to job type
+func (scheduler *schedulerImpl) GetJobManager(jobType common.JobType) jobManager {
+	return scheduler.jobManagers[jobType]
 }
 
 // NewArchivingJob returns a new ArchivingJob.
@@ -243,22 +266,35 @@ func (scheduler *schedulerImpl) Stop() {
 // SubmitJob will submit a job to executor and block until it starts.
 // Job submitter can decide whether to wait for job to finish and get
 // the result.
-func (scheduler *schedulerImpl) SubmitJob(job Job) chan error {
+func (scheduler *schedulerImpl) SubmitJob(job Job) (error, chan error) {
+	if !scheduler.IsJobTypeEnabled(job.JobType()) {
+		// this check is to block request from debug handler
+		return fmt.Errorf("JobType %s disabled", job.JobType()), nil
+	}
+
 	jb := jobBundle{job, make(chan error, 1)}
 	scheduler.jobBundleChan <- jb
 	status := fmt.Sprintf("Submitted job %v", job)
 	utils.GetLogger().Info(status)
-	return jb.resChan
+	return nil, jb.resChan
 }
 
 // run runs at every tick. It first generates a list of jobs to run based on current condition,
 // then it runs every job sequentially in the same process.
 func (scheduler *schedulerImpl) run() {
-	for _, jobManager := range scheduler.jobManagers {
+	for jobType, jobManager := range scheduler.jobManagers {
+		if !scheduler.IsJobTypeEnabled(jobType) {
+			continue
+		}
 		for _, job := range jobManager.generateJobs() {
 			// Waiting for job to finish.
-			if err := <-scheduler.SubmitJob(job); err != nil {
-				utils.GetLogger().With("job", job).Panic("Panic due to failure to run job")
+			err, errChan := scheduler.SubmitJob(job)
+			if err == nil {
+				if err := <-errChan; err != nil {
+					utils.GetLogger().With("job", job).Panic("Panic due to failure to run job")
+				}
+			} else {
+				utils.GetLogger().With("job", job).Error("Fail to submit job: %v", job)
 			}
 		}
 	}
@@ -266,6 +302,7 @@ func (scheduler *schedulerImpl) run() {
 
 // Job defines the common interface for BackfillJob, ArchivingJob and SnapshotJob
 type Job interface {
+	JobType() common.JobType
 	Run() error
 	GetIdentifier() string
 	String() string

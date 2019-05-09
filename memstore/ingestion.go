@@ -181,6 +181,7 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 	var numRecordsIngested int64
 	var numRecordsAppended int64
 	var numRecordsUpdated int64
+	var numRecordsSkipped int64
 	var maxUpsertBatchEventTime uint32
 	for row := 0; row < upsertBatch.NumRows; row++ {
 		// Get primary key bytes for each record.
@@ -238,6 +239,10 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 				maxUpsertBatchEventTime = eventTime
 			}
 
+			// Update max event time so archiving won't purge redo log files that have records newer than
+			// archiving cut off time.
+			shard.LiveStore.RedoLogManager.UpdateMaxEventTime(eventTime, redoLogFile)
+
 			// If we get a record that is older than archiving cutoff time (exclusive) that means
 			// 1. during ingestion, the event should be put into a backfill queue
 			// 2. during recovery, the event should be ignored, because it was already put into
@@ -249,14 +254,11 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 					timeDiff := float64(shard.LiveStore.ArchivingCutoffHighWatermark - eventTime)
 					utils.GetReporter(tableName, shardID).
 						GetGauge(utils.BackfillRecordsTimeDifference).Update(timeDiff)
+				} else {
+					numRecordsSkipped++
 				}
-
 				continue
 			}
-
-			// Update max event time so archiving won't purge redo log files that have records newer than
-			// archiving cut off time.
-			shard.LiveStore.RedoLogManager.UpdateMaxEventTime(eventTime, redoLogFile)
 		}
 
 		numRecordsIngested++
@@ -314,6 +316,7 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 	utils.GetReporter(tableName, shardID).GetCounter(utils.AppendedRecords).Inc(numRecordsAppended)
 	utils.GetReporter(tableName, shardID).GetCounter(utils.UpdatedRecords).Inc(numRecordsUpdated)
 	utils.GetReporter(tableName, shardID).GetCounter(utils.BackfillRecords).Inc(int64(len(backfillRows)))
+	utils.GetReporter(tableName, shardID).GetCounter(utils.IngestSkippedRecords).Inc(numRecordsSkipped)
 
 	// update ratio gauge of backfill rows/total rows
 	if upsertBatch.NumRows > 0 {

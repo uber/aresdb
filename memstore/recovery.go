@@ -29,8 +29,8 @@ func (shard *TableShard) ReplayRedoLogs() {
 	timer := utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetTimer(utils.RecoveryLatency).Start()
 	defer timer.Stop()
 
-	utils.GetLogger().Infof("Replay redo logs for Shard %d of table %s",
-		shard.ShardID, shard.Schema.Schema.Name)
+	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Info(
+		"Replay redo logs")
 
 	var redoLogFilePersisted int64
 	var offsetPersisted uint32
@@ -40,7 +40,8 @@ func (shard *TableShard) ReplayRedoLogs() {
 	} else {
 		redoLogFilePersisted, offsetPersisted, _, _ = shard.LiveStore.SnapshotManager.GetLastSnapshotInfo()
 	}
-	utils.GetLogger().Infof("Checkpointed redoLogFile=%d offset=%d", redoLogFilePersisted, offsetPersisted)
+	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID, "redoLogFile",
+		redoLogFilePersisted, "offset", offsetPersisted).Info("Checkpointed redolog file")
 
 	// Replay redo logs to create LiveStore.
 	nextUpsertBatch := shard.LiveStore.RedoLogManager.NextUpsertBatch()
@@ -60,7 +61,6 @@ func (shard *TableShard) ReplayRedoLogs() {
 		// check if this batch has already been backfilled and persisted
 		skipBackfillRows := redoLogFile < redoLogFilePersisted ||
 			(redoLogFile == redoLogFilePersisted && offset <= offsetPersisted)
-
 		_, err := shard.ApplyUpsertBatch(upsertBatch, redoLogFile, offset, skipBackfillRows)
 
 		shard.LiveStore.WriterLock.Unlock()
@@ -227,13 +227,21 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 	// the backfill queue.
 	if !schedulerOff {
 		// Start scheduler.
-		utils.GetLogger().Infof("Starting archiving scheduler")
+		utils.GetLogger().Info("Starting archiving scheduler")
+		// disable archiving during redolog replay
+		m.GetScheduler().EnableJobType(memcom.ArchivingJobType, false)
+		// this will start scheduler of all jobs except archiving, archiving will be started individually
 		m.GetScheduler().Start()
 	} else {
-		utils.GetLogger().Infof("Scheduler is off")
+		utils.GetLogger().Info("Scheduler is off")
 	}
 
 	m.replayRedoLogs()
+
+	if !schedulerOff {
+		// re-enable archiving after redolog replay
+		m.GetScheduler().EnableJobType(memcom.ArchivingJobType, true)
+	}
 
 	// watch Shard ownership change
 	shardOwnershipChangeEvents, done, err := m.metaStore.WatchShardOwnershipEvents()

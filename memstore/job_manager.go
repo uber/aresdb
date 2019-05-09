@@ -22,7 +22,7 @@ import (
 	"sync"
 )
 
-// jobManager is responsible for generating new jobs to run and manages job related stats.
+// JobManager is responsible for generating new jobs to run and manages job related stats.
 type jobManager interface {
 	generateJobs() []Job
 	getJobDetails() interface{}
@@ -161,6 +161,11 @@ func (job *ArchivingJob) String() string {
 		job.tableName, job.shardID, job.cutoff)
 }
 
+// JobType return job type
+func (job *ArchivingJob) JobType() common.JobType {
+	return common.ArchivingJobType
+}
+
 type backfillJobManager struct {
 	sync.RWMutex
 	// backfillJobDetails for different tables, shard. Key is {tableName}|{shardID}|backfill,
@@ -187,6 +192,7 @@ func (m *backfillJobManager) generateJobs() []Job {
 
 	now := uint32(utils.Now().Unix())
 	var jobs []Job
+
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
 			tableShard.Schema.RLock()
@@ -298,6 +304,11 @@ func (job *BackfillJob) String() string {
 		job.tableName, job.shardID)
 }
 
+// JobType return job type
+func (job *BackfillJob) JobType() common.JobType {
+	return common.BackfillJobType
+}
+
 type snapshotJobManager struct {
 	sync.RWMutex
 	// snapshotJobDetails for different tables, shard. Key is {tableName}|{shardID}|snapshot,
@@ -322,6 +333,7 @@ func (m *snapshotJobManager) generateJobs() []Job {
 	m.memStore.RLock()
 	defer m.memStore.RUnlock()
 	var jobs []Job
+
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
 			tableShard.Schema.RLock()
@@ -418,6 +430,11 @@ func (job *SnapshotJob) GetIdentifier() string {
 func (job *SnapshotJob) String() string {
 	return fmt.Sprintf("SnapshotJob<Table: %s, ShardID: %d>",
 		job.tableName, job.shardID)
+}
+
+// JobType return job type
+func (job *SnapshotJob) JobType() common.JobType {
+	return common.SnapshotJobType
 }
 
 type purgeJobManager struct {
@@ -530,4 +547,9 @@ func (job *PurgeJob) GetIdentifier() string {
 func (job *PurgeJob) String() string {
 	return fmt.Sprintf("PurgeJob<Table: %s, ShardID: %d>",
 		job.tableName, job.shardID)
+}
+
+// JobType return job type
+func (job *PurgeJob) JobType() common.JobType {
+	return common.PurgeJobType
 }
