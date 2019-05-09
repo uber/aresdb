@@ -342,8 +342,8 @@ func (r *fileRedologManager) evictRedoLogData(creationTime int64) {
 func (r *fileRedologManager) CheckpointRedolog(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) error {
 	creationTimes := r.getRedoLogFilesToPurge(cutoff, redoFileCheckpointed, batchOffset)
 
-	utils.GetLogger().With("action", "purgeRedoLog", "table", r.tableName, "shard", r.shard).Infof(
-		"PurgeRedologFiles, cutoff: %d, redologfile: %d, batchoffset: %d, files: %d", cutoff, redoFileCheckpointed, batchOffset, len(creationTimes))
+	utils.GetLogger().With("action", "purgeRedoLog", "table", r.tableName, "shard", r.shard, "cutoff", cutoff,
+		"redologfile", redoFileCheckpointed, "batchoffset", batchOffset, "files", len(creationTimes)).Info("CheckpointRedolog")
 
 	for _, creationTime := range creationTimes {
 		if err := r.diskStore.DeleteLogFile(

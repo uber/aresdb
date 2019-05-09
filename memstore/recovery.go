@@ -40,8 +40,8 @@ func (shard *TableShard) ReplayRedoLogs() {
 	} else {
 		redoLogFilePersisted, offsetPersisted, _, _ = shard.LiveStore.SnapshotManager.GetLastSnapshotInfo()
 	}
-	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Infof(
-		"Checkpointed redoLogFile=%d offset=%d", redoLogFilePersisted, offsetPersisted)
+	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID, "redoLogFile",
+		redoLogFilePersisted, "offset", offsetPersisted).Info("Checkpointed redolog file")
 
 	// Replay redo logs to create LiveStore.
 	nextUpsertBatch := shard.LiveStore.RedoLogManager.NextUpsertBatch()
@@ -227,13 +227,13 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 	// the backfill queue.
 	if !schedulerOff {
 		// Start scheduler.
-		utils.GetLogger().Infof("Starting archiving scheduler")
+		utils.GetLogger().Info("Starting archiving scheduler")
 		// disable archiving during redolog replay
 		m.GetScheduler().EnableJobType(memcom.ArchivingJobType, false)
 		// this will start scheduler of all jobs except archiving, archiving will be started individually
 		m.GetScheduler().Start()
 	} else {
-		utils.GetLogger().Infof("Scheduler is off")
+		utils.GetLogger().Info("Scheduler is off")
 	}
 
 	m.replayRedoLogs()

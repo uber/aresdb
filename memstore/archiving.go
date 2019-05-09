@@ -125,9 +125,8 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 		})
 	}
 
-	utils.GetLogger().With("action", "archiving", "table", tableName, "shard", shardID).
-		Infof("Archiving records: %d, ignored: %d, oldCutoff: %d, newCutoff: %d",
-			numRecordsArchived, numRecordsIgnored, oldCutoff, cutoff)
+	utils.GetLogger().With("action", "archiving", "table", tableName, "shard", shardID, "numArchived",
+		numRecordsArchived, "numIgnored", numRecordsIgnored, "oldCutoff", oldCutoff, "newCutoff", cutoff).Info("createArchivingPatches")
 
 	utils.GetReporter(tableName, shardID).GetCounter(utils.ArchivingIgnoredRecords).Inc(numRecordsIgnored)
 	utils.GetReporter(tableName, shardID).GetCounter(utils.ArchivingRecords).Inc(numRecordsArchived)
