@@ -16,6 +16,8 @@ package job
 
 import (
 	"fmt"
+	"github.com/uber/aresdb/gateway"
+	"github.com/uber/aresdb/subscriber/common/sink"
 	"strconv"
 	"sync"
 	"time"
@@ -23,7 +25,6 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
 	"github.com/uber/aresdb/subscriber/common/consumer"
-	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/tools"
@@ -35,36 +36,44 @@ import (
 // NewConsumer is the type of function each consumer that implements Consumer should provide for initialization.
 type NewConsumer func(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (consumer.Consumer, error)
 
+// NewDecoder is the type of function each decoder that implements decoder should provide for initialization.
 type NewDecoder func(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (decoder message.Decoder, err error)
+
+// NewSink is the type of function each decoder that implements sink should provide for initialization.
+type NewSink func(
+	serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string,
+	sinkCfg config.SinkConfig, aresControllerClient gateway.ControllerClient) (sink.Sink, error)
 
 // StreamingProcessor defines a individual processor that connects to a Kafka high level consumer,
 // processes the messages based on the type of job and saves to database
 type StreamingProcessor struct {
-	ID                int
-	context           *ProcessorContext
-	jobConfig         *rules.JobConfig
-	cluster           string
-	serviceConfig     config.ServiceConfig
-	scope             tally.Scope
-	database          database.Database
-	highLevelConsumer consumer.Consumer
-	consumerInitFunc  NewConsumer
-	parser            *message.Parser
-	decoder           message.Decoder
-	batcher           *tools.Batcher
-	msgSizes          chan int64
-	shutdown          chan bool
-	close             chan bool
-	errors            chan ProcessorError
-	failureHandler    FailureHandler
+	ID                   int
+	context              *ProcessorContext
+	jobConfig            *rules.JobConfig
+	cluster              string
+	serviceConfig        config.ServiceConfig
+	scope                tally.Scope
+	aresControllerClient gateway.ControllerClient
+	sink                 sink.Sink
+	sinkInitFunc         NewSink
+	highLevelConsumer    consumer.Consumer
+	consumerInitFunc     NewConsumer
+	parser               *message.Parser
+	decoder              message.Decoder
+	batcher              *tools.Batcher
+	msgSizes             chan int64
+	shutdown             chan bool
+	close                chan bool
+	errors               chan ProcessorError
+	failureHandler       FailureHandler
 }
 
 // NewStreamingProcessor returns Processor to consume, process and save data to db.
-func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
+func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, aresControllerClient gateway.ControllerClient, sinkInitFunc NewSink, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
 	errors chan ProcessorError, msgSizes chan int64, serviceConfig config.ServiceConfig) (Processor, error) {
 	cluster := jobConfig.AresTableConfig.Cluster
 	// Initialize downstream DB
-	db, err := initDatabase(jobConfig, serviceConfig)
+	db, err := initSink(jobConfig, serviceConfig, aresControllerClient, sinkInitFunc)
 	if err != nil {
 		return nil, utils.StackError(err,
 			fmt.Sprintf("Failed to initialize database connection for job: %s, cluster: %s",
@@ -100,16 +109,18 @@ func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, consumerInitFunc 
 			"job":         jobConfig.Name,
 			"aresCluster": jobConfig.AresTableConfig.Cluster,
 		}),
-		database:          db,
-		failureHandler:    failureHandler,
-		highLevelConsumer: hlConsumer,
-		consumerInitFunc:  consumerInitFunc,
-		msgSizes:          msgSizes,
-		parser:            parser,
-		decoder:           decoder,
-		shutdown:          make(chan bool),
-		close:             make(chan bool),
-		errors:            errors,
+		aresControllerClient: aresControllerClient,
+		sink:                 db,
+		sinkInitFunc:         sinkInitFunc,
+		failureHandler:       failureHandler,
+		highLevelConsumer:    hlConsumer,
+		consumerInitFunc:     consumerInitFunc,
+		msgSizes:             msgSizes,
+		parser:               parser,
+		decoder:              decoder,
+		shutdown:             make(chan bool),
+		close:                make(chan bool),
+		errors:               errors,
 		context: &ProcessorContext{
 			StartTime: time.Now(),
 			Errors: processorErrors{
@@ -124,7 +135,7 @@ func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, consumerInitFunc 
 }
 
 func initFailureHandler(serviceConfig config.ServiceConfig,
-	jobConfig *rules.JobConfig, db database.Database) FailureHandler {
+	jobConfig *rules.JobConfig, db sink.Sink) FailureHandler {
 	if jobConfig.StreamingConfig.FailureHandler.Type == retryHandler {
 		return NewRetryFailureHandler(
 			jobConfig.StreamingConfig.FailureHandler.Config,
@@ -134,23 +145,21 @@ func initFailureHandler(serviceConfig config.ServiceConfig,
 }
 
 // initDatabase will initialize the database for writing ingest data
-func initDatabase(
-	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (database.Database, error) {
+func initSink(
+	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, aresControllerClient gateway.ControllerClient, sinkInitFunc NewSink) (sink.Sink, error) {
 	cluster := jobConfig.AresTableConfig.Cluster
 	serviceConfig.Logger.Info("Initialize database",
 		zap.String("job", jobConfig.Name),
 		zap.String("cluster", cluster))
 
-	var aresConfig client.ConnectorConfig
+	var aresConfig config.SinkConfig
 	var ok bool
 	if aresConfig, ok = serviceConfig.ActiveAresClusters[cluster]; !ok {
 		return nil, fmt.Errorf("Failed to get ares config for job: %s, cluster: %s",
 			jobConfig.Name, cluster)
 	}
 
-	db, err := database.NewAresDatabase(serviceConfig, jobConfig.Name, cluster, aresConfig)
-
-	return db, err
+	return sinkInitFunc(serviceConfig, jobConfig, cluster, aresConfig, aresControllerClient)
 }
 
 // GetID will return ID of this processor
@@ -263,7 +272,7 @@ func (s *StreamingProcessor) reInitialize() error {
 		zap.Int("ID", s.ID),
 		zap.String("job", s.jobConfig.Name),
 		zap.String("cluster", s.cluster))
-	db, err := initDatabase(s.jobConfig, s.serviceConfig)
+	db, err := initSink(s.jobConfig, s.serviceConfig, s.aresControllerClient, s.sinkInitFunc)
 	if err != nil {
 		err = utils.StackError(err, "Unable to initialize Database")
 		return err
@@ -277,9 +286,9 @@ func (s *StreamingProcessor) reInitialize() error {
 		return err
 	}
 
-	s.database = db
+	s.sink = db
 	s.highLevelConsumer = hlConsumer
-	s.failureHandler = initFailureHandler(s.serviceConfig, s.jobConfig, s.database)
+	s.failureHandler = initFailureHandler(s.serviceConfig, s.jobConfig, s.sink)
 	s.initBatcher()
 	s.shutdown = make(chan bool)
 
@@ -303,7 +312,7 @@ func (s *StreamingProcessor) Run() {
 	defer func() {
 		s.highLevelConsumer.Close()
 		s.batcher.Close()
-		s.database.Shutdown()
+		s.sink.Shutdown()
 		s.context.Lock()
 		s.context.Stopped = true
 		s.context.Unlock()
@@ -393,14 +402,21 @@ func (s *StreamingProcessor) decodeMessage(msg consumer.Message) (*message.Messa
 
 // saveToDestination will parse given decoded message based on transformations in JobConfig
 // and save it to configured destination
-func (s *StreamingProcessor) saveToDestination(batch []interface{}, destination database.Destination) {
+func (s *StreamingProcessor) saveToDestination(batch []interface{}, destination sink.Destination) {
 	s.scope.Gauge("batcherBatchSize").Update(float64(len(batch)))
 
 	rows := []client.Row{}
 	for _, b := range batch {
 		msg := b.(*message.Message).DecodedMessage[message.MsgPrefix].(map[string]interface{})
+		if s.parser.IsMessageValid(msg, destination) != nil {
+			s.serviceConfig.Logger.Debug("Invalid message", zap.Any("msg", msg))
+			continue
+		}
 		row, err := s.parser.ParseMessage(msg, destination)
-		if err == nil {
+		if err == nil &&
+			s.parser.CheckPrimaryKeys(destination, row) == nil &&
+			s.parser.CheckTimeColumnExistence(
+				s.jobConfig.AresTableConfig.Table, s.jobConfig.GetColumnDict(), destination, row) == nil {
 			rows = append(rows, row)
 		} else {
 			s.context.Lock()
@@ -418,8 +434,8 @@ func (s *StreamingProcessor) saveToDestination(batch []interface{}, destination 
 
 }
 
-func (s *StreamingProcessor) writeRow(rows []client.Row, destination database.Destination) {
-	err := s.database.Save(destination, rows)
+func (s *StreamingProcessor) writeRow(rows []client.Row, destination sink.Destination) {
+	err := s.sink.Save(destination, rows)
 	if err != nil {
 		s.serviceConfig.Logger.Error(
 			"Unable to save rows to database",

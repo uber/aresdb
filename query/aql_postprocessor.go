@@ -65,7 +65,7 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLQueryResult {
 		for dimIndex := range oopkContext.Dimensions {
 			offsets := dimOffsets[dimIndex]
 			valueOffset, nullOffset := offsets[0], offsets[1]
-			valuePtr, nullPtr := memutils.MemAccess(oopkContext.dimensionVectorH, valueOffset), memutils.MemAccess(oopkContext.dimensionVectorH, nullOffset)
+			valuePtr, nullPtr := utils.MemAccess(oopkContext.dimensionVectorH, valueOffset), utils.MemAccess(oopkContext.dimensionVectorH, nullOffset)
 
 			if qc.Query.Dimensions[dimIndex].isTimeDimension() && dimensionValueCache[dimIndex] == nil {
 				dimensionValueCache[dimIndex] = make(map[queryCom.TimeDimensionMeta]map[int64]string)
@@ -101,7 +101,7 @@ func (qc *AQLQueryContext) Postprocess() queryCom.AQLQueryResult {
 			}
 
 			measureValue := readMeasure(
-				memutils.MemAccess(oopkContext.measureVectorH, i*oopkContext.MeasureBytes), oopkContext.Measure,
+				utils.MemAccess(oopkContext.measureVectorH, i*oopkContext.MeasureBytes), oopkContext.Measure,
 				measureBytes)
 
 			result.Set(dimValues, measureValue)

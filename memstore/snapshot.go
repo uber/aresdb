@@ -33,6 +33,8 @@ func (m *memStoreImpl) Snapshot(table string, shardID int, reporter SnapshotJobD
 		reporter(jobKey, func(status *SnapshotJobDetail) {
 			status.LastDuration = duration
 		})
+		utils.GetReporter(table, shardID).
+			GetCounter(utils.SnapshotCount).Inc(1)
 	}()
 
 	shard, err := m.GetTableShard(table, shardID)

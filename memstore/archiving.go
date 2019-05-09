@@ -240,6 +240,8 @@ func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporte
 		reporter(jobKey, func(status *ArchiveJobDetail) {
 			status.LastDuration = duration
 		})
+		utils.GetReporter(table, shardID).
+			GetCounter(utils.ArchivingCount).Inc(1)
 	}()
 
 	reporter(jobKey, func(status *ArchiveJobDetail) {
@@ -282,7 +284,7 @@ func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporte
 
 	backfillMgr := shard.LiveStore.BackfillManager
 	if err := shard.LiveStore.RedoLogManager.
-		PurgeRedologFileAndData(cutoff, backfillMgr.LastRedoFile,
+		CheckpointRedolog(cutoff, backfillMgr.LastRedoFile,
 			backfillMgr.LastBatchOffset); err != nil {
 		return err
 	}

@@ -73,30 +73,66 @@ type ServiceConfig struct {
 	Scope       tally.Scope
 	Config      cfgfx.Provider
 
-	Service            string                            `yaml:"service.name"`
-	BackendPort        int                               `yaml:"rest.http.address"`
-	AresNSConfig       AresNSConfig                      `yaml:"ares"`
-	JobNSConfig        JobNSConfig                       `yaml:"jobs"`
-	ActiveAresClusters map[string]client.ConnectorConfig `yaml:"-"`
-	ActiveJobs         []string                          `yaml:"-"`
-	ControllerConfig   *ControllerConfig                 `yaml:"controller"`
-	ZooKeeperConfig    ZooKeeperConfig                   `yaml:"zookeeper"`
-	EtcdConfig         *etcd.Configuration               `yaml:"etcd"`
-	HeartbeatConfig    *HeartBeatConfig                  `yaml:"heartbeat"`
+	Service            string                `yaml:"service.name"`
+	BackendPort        int                   `yaml:"rest.http.address"`
+	AresNSConfig       AresNSConfig          `yaml:"ares"`
+	JobNSConfig        JobNSConfig           `yaml:"jobs"`
+	ActiveAresClusters map[string]SinkConfig `yaml:"-"`
+	ActiveJobs         []string              `yaml:"-"`
+	ControllerConfig   *ControllerConfig     `yaml:"controller"`
+	ZooKeeperConfig    ZooKeeperConfig       `yaml:"zookeeper"`
+	EtcdConfig         *etcd.Configuration   `yaml:"etcd"`
+	HeartbeatConfig    *HeartBeatConfig      `yaml:"heartbeat"`
 }
 
 // HeartBeatConfig represents heartbeat config
 type HeartBeatConfig struct {
-	Enabled       *bool          `yaml:"enabled"`
-	Timeout       *time.Duration `yaml:"timeout"`
-	Interval      *time.Duration `yaml:"interval"`
-	CheckInterval *time.Duration `yaml:"checkInterval"`
+	Enabled       bool `yaml:"enabled"`
+	Timeout       int  `yaml:"timeout"`
+	Interval      int  `yaml:"interval"`
+	CheckInterval int  `yaml:"checkInterval"`
+}
+
+// SinkMode defines the subscriber sink mode
+type SinkMode int
+
+const (
+	Sink_Undefined SinkMode = iota
+	Sink_AresDB
+	Sink_Kafka
+)
+
+var sinkModeStr = map[string]SinkMode{
+	"undefined": Sink_Undefined,
+	"aresDB":    Sink_AresDB,
+	"kafka":     Sink_Kafka,
+}
+
+// SinkConfig wraps sink configurations
+type SinkConfig struct {
+	// SinkMode defines the subscriber sink mode
+	SinkModeStr string `yaml:"sinkMode"`
+	// AresDBConnectorConfig defines aresDB client config
+	AresDBConnectorConfig client.ConnectorConfig `yaml:"aresDB"`
+	// KafkaProducerConfig defines Kafka producer config
+	KafkaProducerConfig KafkaProducerConfig `yaml:"kafkaProducer"`
+}
+
+// KafkaProducerConfig represents Kafka producer configuration
+type KafkaProducerConfig struct {
+	// Brokers defines a list of broker addresses separated by comma
+	Brokers string `yaml:"brokers"`
+	// RetryMax is the max number of times to retry sending a message (default 3).
+	RetryMax int `yaml:"retryMax"`
+	// TimeoutInMSec is the max duration the broker will wait
+	// the receipt of the number of RequiredAcks (defaults to 10 seconds)
+	TimeoutInSec int `yaml:"timeoutInSec"`
 }
 
 // AresNSConfig defines the mapping b/w ares namespace and its clusters
 type AresNSConfig struct {
-	AresNameSpaces map[string][]string               `yaml:"namespaces"`
-	AresClusters   map[string]client.ConnectorConfig `yaml:"clusters"`
+	AresNameSpaces map[string][]string   `yaml:"namespaces"`
+	AresClusters   map[string]SinkConfig `yaml:"clusters"`
 }
 
 // JobNSConfig defines the mapping b/w job namespace and its clusters
@@ -147,7 +183,7 @@ func NewServiceConfig(p Params) (Result, error) {
 		"application": p.Environment.ApplicationID,
 	})
 	serviceConfig.Config = p.Config
-	serviceConfig.ActiveAresClusters = make(map[string]client.ConnectorConfig)
+	serviceConfig.ActiveAresClusters = make(map[string]SinkConfig)
 
 	// Skip local job and aresCluster config if controller is enabled
 	if serviceConfig.ControllerConfig.Enable {
@@ -190,4 +226,11 @@ func NewServiceConfig(p Params) (Result, error) {
 	return Result{
 		ServiceConfig: serviceConfig,
 	}, nil
+}
+
+func (s SinkConfig) GetSinkMode() SinkMode {
+	if val, ok := sinkModeStr[s.SinkModeStr]; ok {
+		return val
+	}
+	return Sink_Undefined
 }

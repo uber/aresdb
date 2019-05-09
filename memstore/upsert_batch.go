@@ -21,7 +21,6 @@ import (
 
 	"bytes"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"math"
@@ -324,21 +323,19 @@ func (u *UpsertBatch) GetPrimaryKeyCols(primaryKeyColumnIDs []int) ([]int, error
 
 // GetPrimaryKeyBytes returns primary key bytes for a given row. Note primaryKeyCol is not list of primary key
 // columnIDs.
-func (u *UpsertBatch) GetPrimaryKeyBytes(row int, primaryKeyCols []int, key []byte) error {
-	primaryKeyValues := make([]memCom.DataValue, len(primaryKeyCols))
+func (u *UpsertBatch) GetPrimaryKeyBytes(row int, primaryKeyCols []int, keyLength int) ([]byte, error) {
+	var key []byte
 	var err error
+	primaryKeyValues := make([]memCom.DataValue, len(primaryKeyCols))
 	for i, col := range primaryKeyCols {
 		primaryKeyValues[i], err = u.GetDataValue(row, col)
 		if err != nil {
-			return utils.StackError(err, "Failed to read primary key at row %d, col %d",
+			return key, utils.StackError(err, "Failed to read primary key at row %d, col %d",
 				row, col)
 		}
 	}
 
-	if err := GetPrimaryKeyBytes(primaryKeyValues, key); err != nil {
-		return err
-	}
-	return nil
+	return GetPrimaryKeyBytes(primaryKeyValues, keyLength)
 }
 
 // ExtractBackfillBatch extracts given rows and stores in a new UpsertBatch
@@ -396,7 +393,7 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 					writeBool(newCol.valueVector, newRow, boolValue)
 				} else {
 					valueBytes := valueBits / 8
-					memutils.MemCopy(unsafe.Pointer(&newCol.valueVector[newRow*valueBytes]),
+					utils.MemCopy(unsafe.Pointer(&newCol.valueVector[newRow*valueBytes]),
 						unsafe.Pointer(&oldCol.valueVector[oldRow*valueBytes]), valueBytes)
 				}
 			}

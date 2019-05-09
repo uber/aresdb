@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/getlantern/deepcopy"
-	"github.com/uber/aresdb/client"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/config"
@@ -67,10 +66,15 @@ type JobConfig struct {
 	StreamingConfig StreamingConfig `json:"streamConfig" yaml:"streamConfig"`
 	// AresTableConfig contains destination ares table schema
 	AresTableConfig AresTableConfig `json:"aresTableConfig" yaml:"aresTableConfig"`
+	// NumShards is the number of shards defined in this aresCluster
+	NumShards uint32
 
+	// maps from column name to columnID for convenience
+	columnDict      map[string]int
 	destinations    map[string]*DestinationConfig
 	transformations map[string]*TransformationConfig
-	primaryKeys     map[string]interface{}
+	primaryKeys     map[string]int
+	primaryKeyBytes int
 }
 
 // AresTableConfig contains ares table schema and cluster informaiton
@@ -151,7 +155,7 @@ type Assignment struct {
 	// Jobs is a list of jobConfigs for the ares-subscriber instance
 	Jobs []*JobConfig `json:"jobs"`
 	// AresClusters is a table of aresClusters for the ares-subscriber instance
-	AresClusters map[string]client.ConnectorConfig `json:"instances"`
+	AresClusters map[string]config.SinkConfig `json:"instances"`
 }
 
 // NewJobConfigs creates JobConfigs object
@@ -176,24 +180,52 @@ func (j *JobConfig) GetTranformations() map[string]*TransformationConfig {
 }
 
 // GetPrimaryKeys returns a job's primaryKeys definition
-func (j *JobConfig) GetPrimaryKeys() map[string]interface{} {
+func (j *JobConfig) GetPrimaryKeys() map[string]int {
 	return j.primaryKeys
+}
+
+// SetPrimaryKeyBytes sets the number of bytes needed by primaryKey
+func (j *JobConfig) SetPrimaryKeyBytes(primaryKeyBytes int) {
+	j.primaryKeyBytes = primaryKeyBytes
+}
+
+// GetPrimaryKeyBytes returns the number of bytes needed by primaryKey
+func (j *JobConfig) GetPrimaryKeyBytes() int {
+	return j.primaryKeyBytes
+}
+
+// GetColumnDict returns a job's columnDict definition
+func (j *JobConfig) GetColumnDict() map[string]int {
+	return j.columnDict
 }
 
 // PopulateAresTableConfig populates information into jobConfig fields
 func (j *JobConfig) PopulateAresTableConfig() error {
-	// set primaryKeys
-	j.primaryKeys = make(map[string]interface{}, len(j.AresTableConfig.Table.PrimaryKeyColumns))
+	// set primaryKeys and primaryKeyBytes
+	j.primaryKeyBytes = 0
+	j.primaryKeys = make(map[string]int, len(j.AresTableConfig.Table.PrimaryKeyColumns))
 	for _, pk := range j.AresTableConfig.Table.PrimaryKeyColumns {
 		j.primaryKeys[j.AresTableConfig.Table.Columns[pk].Name] = pk
+		columnType := j.AresTableConfig.Table.Columns[pk].Type
+		dataBits := memCom.DataTypeBits(memCom.DataTypeFromString(columnType))
+		if dataBits < 8 {
+			dataBits = 8
+		}
+		j.primaryKeyBytes += dataBits / 8
 	}
 
 	size := len(j.AresTableConfig.Table.Columns)
 	j.destinations = make(map[string]*DestinationConfig, size)
 	j.transformations = make(map[string]*TransformationConfig, size)
+	j.columnDict = make(map[string]int, size)
 
 	// set destinations and transformations
-	for _, column := range j.AresTableConfig.Table.Columns {
+	for columnID, column := range j.AresTableConfig.Table.Columns {
+		if column.Deleted {
+			continue
+		}
+		j.columnDict[column.Name] = columnID
+
 		updateMode := j.getUpdateMode(column.Name)
 		j.destinations[column.Name] = &DestinationConfig{
 			Table:      j.AresTableConfig.Table.Name,
@@ -341,7 +373,7 @@ func CloneJobConfig(src *JobConfig, serviceConfig config.ServiceConfig, aresClus
 	}
 
 	// copy primaryKeys map[string]interface{}
-	dst.primaryKeys = make(map[string]interface{}, len(src.primaryKeys))
+	dst.primaryKeys = make(map[string]int, len(src.primaryKeys))
 	for k, v := range src.primaryKeys {
 		dst.primaryKeys[k] = v
 	}

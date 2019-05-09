@@ -549,8 +549,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
 		ctx.processExpression(exp, nil, tableScanners, foreignTables, stream, 0, ctx.filterAction)
 		Ω(ctx.size).Should(Equal(2))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.indexVectorD.getPointer(), 0))).Should(Equal(uint32(0)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.indexVectorD.getPointer(), 4))).Should(Equal(uint32(4)))
+		Ω(*(*uint32)(utils.MemAccess(ctx.indexVectorD.getPointer(), 0))).Should(Equal(uint32(0)))
+		Ω(*(*uint32)(utils.MemAccess(ctx.indexVectorD.getPointer(), 4))).Should(Equal(uint32(4)))
 		ctx.cleanupBeforeAggregation()
 		ctx.swapResultBufferForNextBatch()
 	})
@@ -791,11 +791,11 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		ctx.processExpression(exp, nil, tableScanners, foreignTables, stream, 0, measureExprRootAction)
 
 		Ω(*(*uint32)(ctx.measureVectorD[0].getPointer())).Should(Equal(uint32(0)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 4))).Should(Equal(uint32(1)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 8))).Should(Equal(uint32(1)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 12))).Should(Equal(uint32(1)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 16))).Should(Equal(uint32(0)))
-		Ω(*(*uint32)(memutils.MemAccess(ctx.measureVectorD[0].getPointer(), 20))).Should(Equal(uint32(10)))
+		Ω(*(*uint32)(utils.MemAccess(ctx.measureVectorD[0].getPointer(), 4))).Should(Equal(uint32(1)))
+		Ω(*(*uint32)(utils.MemAccess(ctx.measureVectorD[0].getPointer(), 8))).Should(Equal(uint32(1)))
+		Ω(*(*uint32)(utils.MemAccess(ctx.measureVectorD[0].getPointer(), 12))).Should(Equal(uint32(1)))
+		Ω(*(*uint32)(utils.MemAccess(ctx.measureVectorD[0].getPointer(), 16))).Should(Equal(uint32(0)))
+		Ω(*(*uint32)(utils.MemAccess(ctx.measureVectorD[0].getPointer(), 20))).Should(Equal(uint32(10)))
 		ctx.cleanupBeforeAggregation()
 		ctx.swapResultBufferForNextBatch()
 		ctx.cleanupDeviceResultBuffers()
@@ -1385,8 +1385,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			uuidValue, _ := memCom.ValueFromString(shapeUUIDs[i], memCom.UUID)
 			shapeUUIDLiveVP.SetDataValue(i, uuidValue, memstore.IgnoreCount)
 			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, memstore.IgnoreCount)
-			key := make([]byte, 16)
-			err := memstore.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, key)
+			key, err := memstore.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
 			Ω(err).Should(BeNil())
 			geoFenceLiveStore.PrimaryKey.FindOrInsert(
 				key,
@@ -1654,8 +1653,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			uuidValue, _ := memCom.ValueFromString(shapeUUIDs[i], memCom.UUID)
 			shapeUUIDLiveVP.SetDataValue(i, uuidValue, memstore.IgnoreCount)
 			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, memstore.IgnoreCount)
-			key := make([]byte, 16)
-			err := memstore.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, key)
+			key, err := memstore.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
 			Ω(err).Should(BeNil())
 			geoFenceLiveStore.PrimaryKey.FindOrInsert(
 				key,

@@ -32,8 +32,10 @@ const (
 	ArchivingTimingTotal
 	ArchivingHighWatermark
 	ArchivingLowWatermark
+	ArchivingCount
 	BackfillTimingTotal
 	BackfillLockTiming
+	BackfillCount
 	EstimatedDeviceMemory
 	HTTPHandlerCall
 	HTTPHandlerLatency
@@ -73,6 +75,7 @@ const (
 	QueryFailed
 	QuerySucceeded
 	QueryLatency
+	QuerySQLParsingLatency
 	QueryWaitForMemoryDuration
 	QueryReceived
 	QueryLiveRecordsProcessed
@@ -86,12 +89,14 @@ const (
 	SnapshotTimingTotal
 	SnapshotTimingLoad
 	SnapshotTimingBuildIndex
+	SnapshotCount
 	TimezoneLookupTableCreationTime
 	RedoLogFileCorrupt
 	MemoryOverflow
 	PreloadingZoneEvicted
 	PurgeTimingTotal
 	PurgedBatches
+	PurgeCount
 	RecordsFromFuture
 	BatchSize
 	BatchSizeReportTime
@@ -164,6 +169,7 @@ const (
 	scopeNameUpsertBatchSize                 = "upsert_batch_size"
 	scopeNameLoad                            = "load"
 	scopeNameTotal                           = "total"
+	scopeNameCount                           = "count"
 	scopeNameBuildIndex                      = "build_index"
 	scopeNameTotalMemorySize                 = "total_memory_size"
 	scopeNameUnmanagedMemorySize             = "unmanaged_memory_size"
@@ -180,6 +186,7 @@ const (
 	scopeNameQueryFailed                     = "query_failed"
 	scopeNameQuerySucceeded                  = "query_succeeded"
 	scopeNameQueryLatency                    = "query_latency"
+	scopeNameQuerySQLParsingLatency          = "sql_parsing_latency"
 	scopeNameQueryWaitForMemoryDuration      = "query_wait_for_memory_duration"
 	scopeNameQueryReceived                   = "query_received"
 	scopeNameQueryRecordsProcessed           = "records_processed"
@@ -255,6 +262,14 @@ var metricsDefs = map[MetricName]metricDefinition{
 			metricsTagComponent: metricsComponentMemStore,
 		},
 	},
+	ArchivingCount: {
+		name:       scopeNameCount,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationArchiving,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
 	ArchivingRecords: {
 		name:       scopeNameArchivingRecords,
 		metricType: Counter,
@@ -298,6 +313,14 @@ var metricsDefs = map[MetricName]metricDefinition{
 	BackfillLockTiming: {
 		name:       scopeNameBackfillLockTiming,
 		metricType: Timer,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationBackfill,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	BackfillCount: {
+		name:       scopeNameCount,
+		metricType: Counter,
 		tags: map[string]string{
 			metricsTagOperation: metricsOperationBackfill,
 			metricsTagComponent: metricsComponentMemStore,
@@ -596,6 +619,13 @@ var metricsDefs = map[MetricName]metricDefinition{
 			metricsTagComponent: metricsComponentQuery,
 		},
 	},
+	QuerySQLParsingLatency: {
+		name:       scopeNameQuerySQLParsingLatency,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
 	QueryWaitForMemoryDuration: {
 		name:       scopeNameQueryWaitForMemoryDuration,
 		metricType: Timer,
@@ -692,6 +722,14 @@ var metricsDefs = map[MetricName]metricDefinition{
 	SnapshotTimingBuildIndex: {
 		name:       scopeNameBuildIndex,
 		metricType: Timer,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationSnapshot,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	SnapshotCount: {
+		name:       scopeNameCount,
+		metricType: Counter,
 		tags: map[string]string{
 			metricsTagOperation: metricsOperationSnapshot,
 			metricsTagComponent: metricsComponentMemStore,
@@ -796,6 +834,14 @@ var metricsDefs = map[MetricName]metricDefinition{
 		metricType: Counter,
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentMetaStore,
+		},
+	},
+	PurgeCount: {
+		name:       scopeNameCount,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationPurge,
+			metricsTagComponent: metricsComponentMemStore,
 		},
 	},
 }

@@ -300,7 +300,8 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 		return nil
 	}
 
-	key := make([]byte, b.Shard.Schema.PrimaryKeyBytes)
+	var key []byte
+	var err error
 	primaryKeyValues := make([]common.DataValue, len(primaryKeyColumns))
 
 	// we need to use sortedColumnIterator to advance sort column.
@@ -335,7 +336,7 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 		}
 
 		// Get primary key for each record.
-		if err := GetPrimaryKeyBytes(primaryKeyValues, key); err != nil {
+		if key, err = GetPrimaryKeyBytes(primaryKeyValues, b.Shard.Schema.PrimaryKeyBytes); err != nil {
 			return err
 		}
 

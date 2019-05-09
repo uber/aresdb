@@ -82,8 +82,10 @@ func (_m *ControllerClient) GetAssignment(jobNamespace, instance string) (*rules
 		Scope:  tally.NoopScope,
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
-	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
+	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+		"dev01": {
+			AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
+		},
 	}
 	rootPath := tools.GetModulePath("")
 	os.Chdir(rootPath)
@@ -93,9 +95,9 @@ func (_m *ControllerClient) GetAssignment(jobNamespace, instance string) (*rules
 		jobConfigs["job1"]["dev01"],
 	}
 
-	aresClusters := map[string]client.ConnectorConfig{
+	aresClusters := map[string]config.SinkConfig{
 		"dev01": {
-			Address: "localhost:5436",
+			AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:5436"},
 		},
 	}
 
@@ -105,4 +107,78 @@ func (_m *ControllerClient) GetAssignment(jobNamespace, instance string) (*rules
 		AresClusters: aresClusters,
 	}
 	return assignment, nil
+}
+
+// FetchAllSchemas fetches all schemas
+func (_m *ControllerClient) FetchAllSchemas() ([]common.Table, error) {
+	return _m.GetAllSchema("")
+}
+
+// FetchSchema fetch one schema for given table
+func (_m *ControllerClient) FetchSchema(table string) (*common.Table, error) {
+	ret := _m.Called(table)
+
+	var r0 *common.Table
+	if rf, ok := ret.Get(0).(func(string) *common.Table); ok {
+		r0 = rf(table)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.Table)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(table)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// FetchAllEnums fetches all enums for given table and column
+func (_m *ControllerClient) FetchAllEnums(tableName string, columnName string) ([]string, error) {
+	ret := _m.Called(tableName, columnName)
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func(string, string) []string); ok {
+		r0 = rf(tableName, columnName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(tableName, columnName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ExtendEnumCases extends enum cases to given table column
+func (_m *ControllerClient) ExtendEnumCases(tableName, columnName string, enumCases []string) ([]int, error) {
+	ret := _m.Called(tableName, columnName, enumCases)
+
+	var r0 []int
+	if rf, ok := ret.Get(0).(func(string, string, []string) []int); ok {
+		r0 = rf(tableName, columnName, enumCases)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string, []string) error); ok {
+		r1 = rf(tableName, columnName, enumCases)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }

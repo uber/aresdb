@@ -24,10 +24,10 @@ import (
 	"github.com/uber/aresdb/client/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/subscriber/common/consumer"
-	"github.com/uber/aresdb/subscriber/common/database"
+	kafka2 "github.com/uber/aresdb/subscriber/common/consumer/kafka"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
+	"github.com/uber/aresdb/subscriber/common/sink"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
@@ -52,8 +52,12 @@ var _ = Describe("streaming_processor", func() {
 		Scope:  tally.NoopScope,
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
-	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
+	sinkConfig := config.SinkConfig{
+		SinkModeStr:           "aresDB",
+		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
+	}
+	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+		"dev01": sinkConfig,
 	}
 
 	rootPath := tools.GetModulePath("")
@@ -73,13 +77,13 @@ var _ = Describe("streaming_processor", func() {
 	mockConnector := mocks.Connector{}
 	table := "test"
 	columnNames := []string{"c1", "c2", "c3"}
-	pk := map[string]interface{}{"c1": nil}
+	pk := map[string]int{"c1": 0}
 	modes := []memCom.ColumnUpdateMode{
 		memCom.UpdateOverwriteNotNull,
 		memCom.UpdateOverwriteNotNull,
 		memCom.UpdateOverwriteNotNull,
 	}
-	destination := database.Destination{
+	destination := sink.Destination{
 		Table:           table,
 		ColumnNames:     columnNames,
 		PrimaryKeys:     pk,
@@ -91,16 +95,16 @@ var _ = Describe("streaming_processor", func() {
 		{"v31", "v32", "v33"},
 	}
 
-	aresDB := &database.AresDatabase{
+	aresDB := &sink.AresDatabase{
 		ServiceConfig: serviceConfig,
 		Scope:         tally.NoopScope,
 		ClusterName:   "dev01",
 		Connector:     &mockConnector,
-		JobName:       "job1",
+		JobConfig:     jobConfig,
 	}
 
 	topic := "topic"
-	msg := &consumer.KafkaMessage{
+	msg := &kafka2.KafkaMessage{
 		&kafka.Message{
 			TopicPartition: kafka.TopicPartition{
 				Topic:     &topic,
@@ -114,7 +118,7 @@ var _ = Describe("streaming_processor", func() {
 		"kafka-cluster1",
 	}
 
-	errMsg := &consumer.KafkaMessage{
+	errMsg := &kafka2.KafkaMessage{
 		&kafka.Message{
 			TopicPartition: kafka.TopicPartition{
 				Topic:     &topic,
@@ -231,19 +235,23 @@ var _ = Describe("streaming_processor", func() {
 		testServer.Close()
 	})
 	It("NewStreamingProcessor", func() {
-		p, err := NewStreamingProcessor(1, jobConfig, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka2.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).Should(BeNil())
 		Ω(err).ShouldNot(BeNil())
 
-		serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-			"dev01": client.ConnectorConfig{Address: address},
+		sinkConfig := config.SinkConfig{
+			SinkModeStr:           "aresDB",
+			AresDBConnectorConfig: client.ConnectorConfig{Address: address},
 		}
-		p, err = NewStreamingProcessor(1, jobConfig, consumer.NewKafkaConsumer, message.NewDefaultDecoder,
+		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+			"dev01": sinkConfig,
+		}
+		p, err = NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka2.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).ShouldNot(BeNil())
 		Ω(p.(*StreamingProcessor).highLevelConsumer).ShouldNot(BeNil())
-		Ω(p.(*StreamingProcessor).database).ShouldNot(BeNil())
+		Ω(p.(*StreamingProcessor).sink).ShouldNot(BeNil())
 		Ω(p.(*StreamingProcessor).context).ShouldNot(BeNil())
 		Ω(p.GetID()).Should(Equal(1))
 		Ω(p.GetContext()).ShouldNot(BeNil())
@@ -262,7 +270,7 @@ var _ = Describe("streaming_processor", func() {
 			"c2": &rules.TransformationConfig{},
 			"c3": &rules.TransformationConfig{},
 		}
-		p.(*StreamingProcessor).database = aresDB
+		p.(*StreamingProcessor).sink = aresDB
 		mockConnector.On("Insert",
 			table, columnNames, rows).
 			Return(6, nil)
@@ -309,7 +317,7 @@ var _ = Describe("streaming_processor", func() {
 
 		go p.Run()
 		p.Restart()
-		p.(*StreamingProcessor).highLevelConsumer.(*consumer.KafkaConsumer).Close()
+		p.(*StreamingProcessor).highLevelConsumer.(*kafka2.KafkaConsumer).Close()
 
 		p.(*StreamingProcessor).reInitialize()
 		go p.Run()

@@ -49,6 +49,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 	var aqlQueries []query.AQLQuery
 	if sqlRequest.Body.Queries != nil {
 		aqlQueries = make([]query.AQLQuery, len(sqlRequest.Body.Queries))
+		startTs := utils.Now()
 		for i, sqlQuery := range sqlRequest.Body.Queries {
 			parsedAQLQuery, err := query.Parse(sqlQuery, utils.GetLogger())
 			if err != nil {
@@ -57,6 +58,10 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 			}
 			aqlQueries[i] = *parsedAQLQuery
 		}
+		sqlParseTimer := utils.GetRootReporter().GetTimer(utils.QuerySQLParsingLatency)
+		duration := utils.Now().Sub(startTs)
+		sqlParseTimer.Record(duration)
+
 	}
 
 	aqlRequest := AQLRequest{

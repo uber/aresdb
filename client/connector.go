@@ -102,6 +102,14 @@ type ConnectorConfig struct {
 	SchemaRefreshInterval int `yaml:"schemaRefreshInterval"`
 }
 
+func NewUpsertBatchBuilderImpl(logger *zap.SugaredLogger, scope tally.Scope, schemaHandler *CachedSchemaHandler) UpsertBatchBuilder {
+	return &UpsertBatchBuilderImpl{
+		logger:        logger,
+		metricScope:   scope,
+		schemaHandler: schemaHandler,
+	}
+}
+
 // NewConnector returns a new ares Connector
 func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope tally.Scope) (Connector, error) {
 	if cfg.SchemaRefreshInterval <= 0 {

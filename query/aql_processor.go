@@ -637,10 +637,10 @@ func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length,
 	bytesToCopy := length * dimBytes
 	for _, numDim := range numDimsPerDimWidth {
 		for i := 0; i < int(numDim); i++ {
-			ptrTemp := memutils.MemAccess(ptrTo, dimBytes*offset)
+			ptrTemp := utils.MemAccess(ptrTo, dimBytes*offset)
 			copyFunc(ptrTemp, ptrFrom, bytesToCopy, stream, device)
-			ptrTo = memutils.MemAccess(ptrTo, dimBytes*toVectorCapacity)
-			ptrFrom = memutils.MemAccess(ptrFrom, dimBytes*fromVectorCapacity)
+			ptrTo = utils.MemAccess(ptrTo, dimBytes*toVectorCapacity)
+			ptrFrom = utils.MemAccess(ptrFrom, dimBytes*fromVectorCapacity)
 		}
 		dimBytes >>= 1
 		bytesToCopy = length * dimBytes
@@ -648,10 +648,10 @@ func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length,
 
 	// copy null bytes
 	for i := 0; i < numNullVectors; i++ {
-		ptrTemp := memutils.MemAccess(ptrTo, offset)
+		ptrTemp := utils.MemAccess(ptrTo, offset)
 		copyFunc(ptrTemp, ptrFrom, length, stream, device)
-		ptrTo = memutils.MemAccess(ptrTo, toVectorCapacity)
-		ptrFrom = memutils.MemAccess(ptrFrom, fromVectorCapacity)
+		ptrTo = utils.MemAccess(ptrTo, toVectorCapacity)
+		ptrFrom = utils.MemAccess(ptrFrom, fromVectorCapacity)
 	}
 }
 

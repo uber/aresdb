@@ -19,8 +19,8 @@ import (
 
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/subscriber/common/database"
 	"github.com/uber/aresdb/subscriber/common/rules"
+	"github.com/uber/aresdb/subscriber/common/sink"
 	"github.com/uber/aresdb/subscriber/config"
 )
 
@@ -33,7 +33,7 @@ const defaultMaxElapsedTime = 10 * time.Minute
 type RetryFailureHandler struct {
 	serviceConfig  config.ServiceConfig
 	scope          tally.Scope
-	database       database.Database
+	sink           sink.Sink
 	jobName        string
 	maxElapsedTime time.Duration
 	elapsedTime    time.Duration
@@ -45,7 +45,7 @@ type RetryFailureHandler struct {
 func NewRetryFailureHandler(
 	config rules.RetryFailureHandlerConfig,
 	serviceConfig config.ServiceConfig,
-	db database.Database,
+	db sink.Sink,
 	jobName string) *RetryFailureHandler {
 	maxElapsedTime := defaultMaxElapsedTime
 	if config.MaxRetryMinutes > 0 {
@@ -69,7 +69,7 @@ func NewRetryFailureHandler(
 			"job":         jobName,
 			"aresCluster": db.Cluster(),
 		}),
-		database:       db,
+		sink:           db,
 		jobName:        jobName,
 		maxElapsedTime: maxElapsedTime,
 		elapsedTime:    0,
@@ -79,13 +79,13 @@ func NewRetryFailureHandler(
 }
 
 // HandleFailure handles failure with retry
-func (handler *RetryFailureHandler) HandleFailure(destination database.Destination, rows []client.Row) (err error) {
+func (handler *RetryFailureHandler) HandleFailure(destination sink.Destination, rows []client.Row) (err error) {
 	timer := time.NewTimer(0)
 	for handler.elapsedTime+handler.interval < handler.maxElapsedTime {
 		timer.Reset(handler.interval)
 		select {
 		case <-timer.C:
-			err = handler.database.Save(destination, rows)
+			err = handler.sink.Save(destination, rows)
 			if err == nil {
 				timer.Stop()
 				handler.elapsedTime = 0

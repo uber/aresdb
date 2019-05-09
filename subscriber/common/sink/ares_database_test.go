@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package database
+package sink
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -21,17 +21,17 @@ import (
 	"github.com/uber/aresdb/client"
 	"github.com/uber/aresdb/client/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"go.uber.org/zap"
 )
 
 var _ = Describe("AresDatabase client", func() {
 	mockConnector := mocks.Connector{}
-	jobName := "test"
 	cluster := "ares-dev"
 	table := "test"
 	columnNames := []string{"c1", "c2", "c3"}
-	pk := map[string]interface{}{"c1": nil}
+	pk := map[string]int{"c1": 0}
 	modes := []memCom.ColumnUpdateMode{
 		memCom.UpdateOverwriteNotNull,
 		memCom.UpdateOverwriteNotNull,
@@ -52,18 +52,25 @@ var _ = Describe("AresDatabase client", func() {
 		Logger: zap.NewNop(),
 		Scope:  tally.NoopScope,
 	}
+	jobConfig := rules.JobConfig{
+		Name: "test",
+	}
 	aresDB := &AresDatabase{
 		ServiceConfig: serviceConfig,
+		JobConfig:     &jobConfig,
 		Scope:         tally.NoopScope,
 		ClusterName:   cluster,
 		Connector:     &mockConnector,
-		JobName:       jobName,
 	}
 	It("NewAresDatabase", func() {
-		config := client.ConnectorConfig{
+		cfg := client.ConnectorConfig{
 			Address: "localhost:8081",
 		}
-		_, err := NewAresDatabase(serviceConfig, jobName, cluster, config)
+		sinkCfg := config.SinkConfig{
+			SinkModeStr:           "aresDB",
+			AresDBConnectorConfig: cfg,
+		}
+		_, err := NewAresDatabase(serviceConfig, &jobConfig, cluster, sinkCfg, nil)
 		Ω(err).ShouldNot(BeNil())
 	})
 	It("Save", func() {

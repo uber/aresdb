@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -66,7 +65,7 @@ type LiveStore struct {
 	ArchivingCutoffHighWatermark uint32
 
 	// Logs.
-	RedoLogManager RedoLogManager
+	RedoLogManager RedologManager
 
 	// Manage backfill queue during ingestion.
 	BackfillManager *BackfillManager
@@ -112,8 +111,7 @@ func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
 		LastReadRecord:  RecordID{BatchID: BaseBatchID, Index: 0},
 		NextWriteRecord: RecordID{BatchID: BaseBatchID, Index: 0},
 		PrimaryKey:      NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable, schema.Schema.Config.InitialPrimaryKeyNumBuckets, shard.HostMemoryManager),
-		// TODO: support table specific log rotation interval.
-		RedoLogManager: NewRedoLogManager(int64(tableCfg.RedoLogRotationInterval), int64(tableCfg.MaxRedoLogFileSize),
+		RedoLogManager: NewFileRedoLogManager(int64(tableCfg.RedoLogRotationInterval), int64(tableCfg.MaxRedoLogFileSize),
 			shard.diskStore, schema.Schema.Name, shard.ShardID),
 		HostMemoryManager: shard.HostMemoryManager,
 	}
@@ -277,7 +275,10 @@ func (s *LiveStore) Destruct() {
 				-int64(s.BackfillManager.MaxBufferSize * utils.GolangMemoryFootprintFactor))
 		}()
 	}
-	s.RedoLogManager.Close()
+	if s.RedoLogManager != nil {
+		s.RedoLogManager.Close()
+		s.RedoLogManager = nil
+	}
 }
 
 // PurgeBatches purges the specified batches.
@@ -364,7 +365,7 @@ func (s *LiveStore) LookupKey(keyStrs []string) (RecordID, bool) {
 			index++
 		} else {
 			for i := 0; i < common.DataTypeBits(columnType)/8; i++ {
-				key[index] = *(*byte)(memutils.MemAccess(dataValue.OtherVal, i))
+				key[index] = *(*byte)(utils.MemAccess(dataValue.OtherVal, i))
 				index++
 			}
 		}

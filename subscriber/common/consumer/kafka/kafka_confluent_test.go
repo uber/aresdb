@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package consumer
+package kafka
 
 import (
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	kafkaConfluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -39,8 +39,12 @@ var _ = Describe("KafkaConsumer", func() {
 		Scope:  tally.NoopScope,
 	}
 	serviceConfig.ActiveJobs = []string{"job1"}
-	serviceConfig.ActiveAresClusters = map[string]client.ConnectorConfig{
-		"dev01": client.ConnectorConfig{Address: "localhost:8888"},
+	sinkConfig := config.SinkConfig{
+		SinkModeStr:           "kafka",
+		AresDBConnectorConfig: client.ConnectorConfig{Address: "localhost:8888"},
+	}
+	serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
+		"dev01": sinkConfig,
 	}
 
 	rootPath := tools.GetModulePath("")
@@ -81,8 +85,8 @@ var _ = Describe("KafkaConsumer", func() {
 		go kc.(*KafkaConsumer).startConsuming()
 
 		topic := "topic"
-		msg := &kafka.Message{
-			TopicPartition: kafka.TopicPartition{
+		msg := &kafkaConfluent.Message{
+			TopicPartition: kafkaConfluent.TopicPartition{
 				Topic:     &topic,
 				Partition: int32(0),
 				Offset:    0,
@@ -114,8 +118,8 @@ var _ = Describe("KafkaConsumer", func() {
 	It("KafkaMessage functions", func() {
 		topic := "topic"
 		message := &KafkaMessage{
-			&kafka.Message{
-				TopicPartition: kafka.TopicPartition{
+			&kafkaConfluent.Message{
+				TopicPartition: kafkaConfluent.TopicPartition{
 					Topic:     &topic,
 					Partition: int32(0),
 					Offset:    0,

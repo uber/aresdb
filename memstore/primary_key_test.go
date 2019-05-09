@@ -24,7 +24,6 @@ import (
 
 var _ = ginkgo.Describe("primary key", func() {
 	ginkgo.It("GetPrimaryKeyBytes should work", func() {
-		key := make([]byte, 7)
 		var v1 uint16 = 0xA0B0
 		var v2 uint32 = 0xC0D0E0F0
 		dataValues := []common.DataValue{
@@ -46,7 +45,8 @@ var _ = ginkgo.Describe("primary key", func() {
 			},
 		}
 
-		Ω(GetPrimaryKeyBytes(dataValues, key)).Should(BeNil())
+		key, err := GetPrimaryKeyBytes(dataValues, 7)
+		Ω(err).Should(BeNil())
 		Ω(key).Should(BeEquivalentTo([]byte{1, 0xB0, 0XA0, 0xF0, 0xE0, 0xD0, 0xC0}))
 	})
 })
