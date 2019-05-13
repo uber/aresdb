@@ -186,7 +186,6 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 	// Process live batches.
 	if qc.toTime == nil || cutoff < uint32(qc.toTime.Time.Unix()) {
 		batchIDs, numRecordsInLastBatch := shard.LiveStore.GetBatchIDs()
-		utils.GetLogger().Debugf("live batchIDs %+V", batchIDs)
 		for i, batchID := range batchIDs {
 			if qc.OOPK.done {
 				break

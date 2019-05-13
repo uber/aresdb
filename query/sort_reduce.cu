@@ -85,6 +85,7 @@ CGoCallResHandle Expand(DimensionColumnVector inputKeys,
                         uint32_t *baseCounts,
                         uint32_t *indexVector,
                         int indexVectorLen,
+                        int outputOccupiedLen,
                         void *stream,
                         int device) {
   CGoCallResHandle resHandle = {nullptr, nullptr};
@@ -97,6 +98,7 @@ CGoCallResHandle Expand(DimensionColumnVector inputKeys,
                                                           baseCounts,
                                                           indexVector,
                                                           indexVectorLen,
+                                                          outputOccupiedLen,
                                                           cudaStream));
     CheckCUDAError("Expand");
     return resHandle;
@@ -276,8 +278,9 @@ int expand(DimensionColumnVector inputKeys,
            uint32_t *baseCounts,
            uint32_t *indexVector,
            int indexVectorLen,
+           int outputOccupiedLen,
            cudaStream_t cudaStream) {
-  // create count iterator from baseCount and indexVector
+  // create count interator from baseCount and indexVector
   IndexCountIterator countIter = IndexCountIterator(baseCounts, indexVector);
 
   // total item counts by adding counts together
@@ -311,7 +314,8 @@ int expand(DimensionColumnVector inputKeys,
   // get the raw pointer from device/host vector
   uint32_t * newIndexVector = thrust::raw_pointer_cast(&indices[0]);
 
-  int outputLen = min(totalCount, outputKeys.VectorCapacity);
+  int outputLen = min(totalCount, outputKeys.VectorCapacity
+                        - outputOccupiedLen);
   // start the real copy operation
   DimensionColumnPermutateIterator iterIn(
       inputKeys.DimValues, newIndexVector, inputKeys.VectorCapacity,
@@ -320,7 +324,7 @@ int expand(DimensionColumnVector inputKeys,
   DimensionColumnOutputIterator iterOut(outputKeys.DimValues,
                                         outputKeys.VectorCapacity, outputLen,
                                         inputKeys.NumDimsPerDimWidth,
-                                        0);
+                                        outputOccupiedLen);
 
   int numDims = 0;
   for (int i = 0; i < NUM_DIM_WIDTH; i++) {
@@ -330,7 +334,7 @@ int expand(DimensionColumnVector inputKeys,
   thrust::copy(GET_EXECUTION_POLICY(cudaStream), iterIn,
                 iterIn + numDims * 2 * outputLen, iterOut);
   // return total count in the output dimensionVector
-  return outputLen;
+  return outputLen + outputOccupiedLen;
 }
 
 }  // namespace ares

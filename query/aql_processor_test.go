@@ -2080,7 +2080,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				From:   "1970-01-01",
 				To:     "1970-01-02",
 			},
-			Limit: 10,
+			Limit: 20,
 		}
 		qc.Query = q
 
@@ -2110,7 +2110,9 @@ var _ = ginkgo.Describe("aql_processor", func() {
           		["120", "0", "1.2"],
           		["0", "NULL", "NULL"],
           		["10", "NULL", "1.1"],
-          		["20", "NULL", "1.2"]
+          		["20", "NULL", "1.2"],
+          		["30", "0", "1.3"],
+          		["40", "1", "NULL"]
 			]
 		  }`))
 

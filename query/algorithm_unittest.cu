@@ -1799,6 +1799,76 @@ TEST(ExpandTest, testOverFill) {
                            inputIndexVector,
                            length,
                            0,
+                           0,
+                           0);
+    EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 10);
+    EXPECT_EQ(resHandle.pStrErr, nullptr);
+    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100,
+                        expectedDimValues));
+}
+
+TEST(ExpandTest, testAppend) {
+    // test with 3 dimensions (4-byte, 2-byte, 1-byte)
+    // each dimension vector has 6 elements with values assigned as
+    // [1,2,3,2,3,1]
+    uint8_t inputDimValuesH[60] = {
+        1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 2, 0, 3, 0, 2, 0, 3, 0, 1, 0,
+        1, 2, 3, 2, 3, 1, 1,
+        1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1
+    };
+    uint32_t inputIndexVectorH[6] = {1, 2, 4, 7, 9, 12};
+    uint32_t baseCountVectorH[16] = {
+        0, 0, 1, 3, 4, 7, 8, 10, 13, 14, 16, 19, 22, 23, 26, 30
+    };
+    // => counts{1, 2, 3, 3, 2, 1}
+    // so normal result will be {1, 2, 2, 3, 3, 3, 2, 2, 2, 3, 3, 1}
+    // and only append the first 5 elem to the last 5 elem of output
+
+    uint8_t outputDimValuesH[100] = {0};
+    uint8_t expectedDimValues[100] = {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 2, 0, 3, 0, 3, 0,
+        0, 0, 0, 0, 0, 1, 2, 2, 3, 3,
+        0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+    };
+
+    uint8_t *inputDimValues = allocate(inputDimValuesH, 60);
+    uint32_t *inputIndexVector = allocate(inputIndexVectorH, 6);
+    uint32_t *baseCountVector = allocate(baseCountVectorH, 16);
+
+    uint8_t *outputDimValues = allocate(outputDimValuesH, 100);
+
+    int length = 6;
+    int vectorCapacity = 6;
+    int outCapacity =  10;
+
+    DimensionColumnVector inputKeys = {
+        inputDimValues,
+        NULL,
+        NULL,
+        vectorCapacity,
+        {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
+
+    DimensionColumnVector outputKeys = {
+        outputDimValues,
+        NULL,
+        NULL,
+        outCapacity,
+        {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
+    CGoCallResHandle
+        resHandle = Expand(inputKeys,
+                           outputKeys,
+                           baseCountVector,
+                           inputIndexVector,
+                           length,
+                           5,
+                           0,
                            0);
     EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 10);
     EXPECT_EQ(resHandle.pStrErr, nullptr);
@@ -1865,6 +1935,7 @@ TEST(ExpandTest, testFillPartial) {
                            baseCountVector,
                            inputIndexVector,
                            length,
+                           0,
                            0,
                            0);
     EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 6);

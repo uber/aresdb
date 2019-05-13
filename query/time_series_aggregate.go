@@ -679,9 +679,9 @@ func (bc *oopkBatchContext) expand(numDims common.DimCountsPerDimWidth, stream u
 
 	bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {
 		return C.Expand(inputKeys, outputKeys, (*C.uint32_t)(bc.baseCountD.getPointer()), (*C.uint32_t)(bc.indexVectorD.getPointer()),
-			C.int(bc.size), stream, C.int(device))
+			C.int(bc.size), 0, stream, C.int(device))
 	}))
-	//bc.dimensionVectorD[0], bc.dimensionVectorD[1] = bc.dimensionVectorD[1], bc.dimensionVectorD[0]
+	bc.dimensionVectorD[0], bc.dimensionVectorD[1] = bc.dimensionVectorD[1], bc.dimensionVectorD[0]
 }
 
 func (bc *oopkBatchContext) allocateStackFrame() (values, nulls devicePointer) {

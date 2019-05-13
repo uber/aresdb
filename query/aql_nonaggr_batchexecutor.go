@@ -96,7 +96,6 @@ func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
 		e.qc.OOPK.done = true
 	}
 
-	//e.BatchExecutorImpl.postExec(start)
 	bc.size = 0
 	e.qc.reportTimingForCurrentBatch(e.stream, &start, cleanupTiming)
 	e.qc.reportBatch(e.batchID > 0)
