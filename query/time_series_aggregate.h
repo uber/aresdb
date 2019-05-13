@@ -531,15 +531,12 @@ CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
  @indexVector index vector of the dimension keys
  @indexVectorLen length of index vector will be used for the output, it should
   be less or equal to length of keys in inputKeys
- @outputOccupiedLen number of rows already in the outputKeys, as this will
-  be append operation
 */
 CGoCallResHandle Expand(DimensionColumnVector inputKeys,
                         DimensionColumnVector outputKeys,
                         uint32_t *baseCounts,
                         uint32_t *indexVector,
                         int indexVectorLen,
-                        int outputOccupiedLen,
                         void *cudaStream,
                         int device);
 

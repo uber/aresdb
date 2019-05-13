@@ -27,6 +27,7 @@ import (
 	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 )
 
 // DataTypeToCDataType mapps from memstore data type to c data types
@@ -401,6 +402,7 @@ func (bc *oopkBatchContext) makeWriteToDimensionVectorAction(valueOffset, nullOf
 
 		dataType := getDimensionDataType(exp)
 		dataBytes := getDimensionDataBytes(exp)
+		utils.GetLogger().Debugf("makeWriteToDimensionVectorAction batch %d bc.size %d", bc.stats.batchID, bc.size)
 		outputVector := makeDimensionVectorOutput(
 			bc.dimensionVectorD[0].getPointer(),
 			// move dimensionVectorD to the start position of current batch
@@ -671,7 +673,8 @@ func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, val
 	}))
 }
 
-func (bc *oopkBatchContext) expand(numDims common.DimCountsPerDimWidth, lenWanted int, stream unsafe.Pointer, device int) {
+func (bc *oopkBatchContext) expand(numDims common.DimCountsPerDimWidth, stream unsafe.Pointer, device int) {
+	utils.GetLogger().Debug("expanding")
 	inputKeys := makeDimensionColumnVector(
 		bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(), bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
 	outputKeys := makeDimensionColumnVector(
@@ -679,8 +682,9 @@ func (bc *oopkBatchContext) expand(numDims common.DimCountsPerDimWidth, lenWante
 
 	bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {
 		return C.Expand(inputKeys, outputKeys, (*C.uint32_t)(bc.baseCountD.getPointer()), (*C.uint32_t)(bc.indexVectorD.getPointer()),
-			C.int(lenWanted), C.int(bc.resultSize), stream, C.int(device))
+			C.int(bc.size), stream, C.int(device))
 	}))
+	//bc.dimensionVectorD[0], bc.dimensionVectorD[1] = bc.dimensionVectorD[1], bc.dimensionVectorD[0]
 }
 
 func (bc *oopkBatchContext) allocateStackFrame() (values, nulls devicePointer) {

@@ -19,6 +19,7 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"unsafe"
 	"time"
+	"github.com/uber/aresdb/utils"
 )
 
 // NonAggrBatchExecutorImpl is batch executor implementation for non-aggregation query
@@ -44,15 +45,18 @@ func (e *NonAggrBatchExecutorImpl) project() {
 
 func (e *NonAggrBatchExecutorImpl) prepareForDimEval(
 	dimRowBytes int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth, stream unsafe.Pointer) {
-
 	bc := &e.qc.OOPK.currentBatch
-	lenWanted := e.qc.Query.Limit - e.qc.numberOfRowsWritten
-	if bc.size > lenWanted {
-		bc.size = lenWanted
-	}
-
+	utils.GetLogger().Debugf("prepareForDimEval %d", bc.stats.batchID)
+	// only allocate dimension vector once
 	if bc.resultCapacity == 0 {
-		bc.resultCapacity = bc.size
+		bc.resultCapacity = e.qc.maxBatchSizeAfterPrefilter
+		lenWanted := e.getNumberOfRecordsNeeded()
+		if bc.resultCapacity > lenWanted {
+			bc.resultCapacity = lenWanted
+		}
+		// Extra budget for future proofing.
+		bc.resultCapacity += bc.resultCapacity / 8
+		utils.GetLogger().Debugf("non agg query allocating dimensionVectorD. capacity: %d", bc.resultCapacity)
 		bc.dimensionVectorD = [2]devicePointer{
 			deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device),
 			deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device),
@@ -63,34 +67,61 @@ func (e *NonAggrBatchExecutorImpl) prepareForDimEval(
 func (e *NonAggrBatchExecutorImpl) expandDimensions(numDims queryCom.DimCountsPerDimWidth) {
 	bc := &e.qc.OOPK.currentBatch
 
+	utils.GetLogger().Debugf("expandDimensions %d", bc.stats.batchID)
+	lenWanted := e.getNumberOfRecordsNeeded()
+
 	if bc.size != 0 && !bc.baseCountD.isNull() {
 		e.qc.doProfile(func() {
-			e.qc.OOPK.currentBatch.expand(numDims, bc.size, e.stream, e.qc.Device)
+			e.qc.OOPK.currentBatch.expand(numDims, e.stream, e.qc.Device)
 			e.qc.reportTimingForCurrentBatch(e.stream, &e.start, expandEvalTiming)
 		}, "expand", e.stream)
+	} else {
+		bc.resultSize = bc.sizeAfterPreFilter
+		if bc.stats.batchID < 0 {
+			bc.resultSize = bc.size
+		}
 	}
+	if bc.resultSize > lenWanted {
+		bc.resultSize = lenWanted
+	}
+	utils.GetLogger().Debugf("%d resultSize after expansion: %d", bc.stats.batchID, bc.resultSize)
 }
 
 func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
+	bc := e.qc.OOPK.currentBatch
+	utils.GetLogger().Debugf("postExec %d", bc.stats.batchID)
 	// transfer current batch result from device to host
-	e.qc.OOPK.dimensionVectorH = memutils.HostAlloc(e.qc.OOPK.currentBatch.size * e.qc.OOPK.DimRowBytes)
-	asyncCopyDimensionVector(e.qc.OOPK.dimensionVectorH, e.qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), e.qc.OOPK.currentBatch.size, 0,
-		e.qc.OOPK.NumDimsPerDimWidth, e.qc.OOPK.currentBatch.size, e.qc.OOPK.currentBatch.resultCapacity,
+	utils.GetLogger().Debugf("transfer %d from device to host. resultSize %d", bc.stats.batchID, bc.resultSize)
+	e.qc.OOPK.dimensionVectorH = memutils.HostAlloc(bc.resultSize * e.qc.OOPK.DimRowBytes)
+	asyncCopyDimensionVector(e.qc.OOPK.dimensionVectorH, bc.dimensionVectorD[0].getPointer(), bc.resultSize, 0,
+		e.qc.OOPK.NumDimsPerDimWidth, bc.resultCapacity, bc.resultCapacity,
 		memutils.AsyncCopyDeviceToHost, e.qc.cudaStreams[0], e.qc.Device)
 	memutils.WaitForCudaStream(e.qc.cudaStreams[0], e.qc.Device)
 
-	// flush current results from current batch
-	e.qc.OOPK.ResultSize = e.qc.OOPK.currentBatch.size
+	// flush current batches results to result buffer
+	utils.GetLogger().Debugf("flushing to result buffer. resultSize %d", bc.resultSize)
+	e.qc.OOPK.ResultSize = bc.resultSize
 	e.qc.flushResultBuffer()
-	e.qc.numberOfRowsWritten += e.qc.OOPK.currentBatch.size
-	if e.qc.numberOfRowsWritten >= e.qc.Query.Limit {
+	utils.GetLogger().Debug(e.qc.Results)
+	e.qc.numberOfRowsWritten += bc.resultSize
+	if e.getNumberOfRecordsNeeded() <= 0 {
 		e.qc.OOPK.done = true
 	}
 
-	e.BatchExecutorImpl.postExec(start)
+	//e.BatchExecutorImpl.postExec(start)
+	e.qc.reportTimingForCurrentBatch(e.stream, &start, cleanupTiming)
+	e.qc.reportBatch(e.batchID > 0)
+
+	// Only profile one batch.
+	e.qc.Profiling = ""
 }
 
 
 func (e *NonAggrBatchExecutorImpl) reduce() {
 	// nothing need to do for non-aggregation query
+}
+
+// getNumberOfRecordsNeeded is a helper function
+func (e *NonAggrBatchExecutorImpl) getNumberOfRecordsNeeded() int {
+	return e.qc.Query.Limit - e.qc.numberOfRowsWritten
 }

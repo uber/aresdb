@@ -20,6 +20,7 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"time"
 	"unsafe"
+	"github.com/uber/aresdb/utils"
 )
 
 // BatchExecutor is batch executor interface for both Non-aggregation query and Aggregation query
@@ -175,6 +176,7 @@ func (e *BatchExecutorImpl) evalMeasures() {
 
 // evalDimensions is to fill dimension values
 func (e *BatchExecutorImpl) evalDimensions(prevResultSize int) {
+	utils.GetLogger().Debugf("evalDimensions %d", e.qc.OOPK.currentBatch.stats.batchID)
 	// dimension expression evaluation.
 	for dimIndex, dimension := range e.qc.OOPK.Dimensions {
 		e.qc.doProfile(func() {

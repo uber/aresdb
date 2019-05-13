@@ -171,6 +171,7 @@ type oopkBatchContext struct {
 	// Notice that this size is not necessarily number of database rows
 	// when columns[0] is compressed.
 	size int
+	sizeAfterPreFilter int
 
 	// Scratch vectors for evaluating the current AST expr in device memory.
 	// [0] stores the values and [1] stores the validities (NULLs).
@@ -211,7 +212,8 @@ type oopkBatchContext struct {
 	// Except SUM that uses 8 bytes
 	measureVectorD [2]devicePointer
 
-	// Size of the results from prior batches.
+	// For aggregate queries: Size of the results from prior batches.
+	// For non aggregate queries: result size for current batch, after decompression
 	resultSize int
 
 	// Capacity of the result dimension and measure vector, should be at least
@@ -394,6 +396,7 @@ type AQLQueryContext struct {
 	// Flag to indicate if this query is not aggregation query
 	isNonAggregationQuery bool
 	numberOfRowsWritten   int
+	maxBatchSizeAfterPrefilter int
 }
 
 // IsHLL return if the aggregation function is HLL

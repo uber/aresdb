@@ -42,6 +42,7 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"fmt"
 )
 
 // readDeviceVPSlice reads a vector party from file and also translate it to device vp format:
@@ -2064,6 +2065,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 	ginkgo.It("ProcessQuery for non-aggregation query should work", func() {
 		shard.ArchiveStore.CurrentVersion.Batches[0] = archiveBatch1
+		fmt.Println("len", len(shard.ArchiveStore.CurrentVersion.Batches))
 		qc := &AQLQueryContext{}
 		q := &AQLQuery{
 			Table: table,
@@ -2086,6 +2088,11 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc = q.Compile(memStore, false)
 		Ω(qc.Error).Should(BeNil())
+		qc.calculateMemoryRequirement(memStore)
+		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
+			shard.Users.Add(1)
+		}).Return(shard, nil).Once()
+		//qc.maxBatchSizeAfterPrefilter = 5
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
 

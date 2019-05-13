@@ -36,7 +36,7 @@ const (
 // from host memory to device memory. hostVPs will be the columns to be released after transfer. startRow
 // is used to slice the vector party.
 type batchTransferExecutor func(stream unsafe.Pointer) (deviceColumns []deviceVectorPartySlice,
-	hostVPs []memCom.VectorParty, firstColumn, startRow, totalBytes, numTransfers int)
+	hostVPs []memCom.VectorParty, firstColumn, startRow, totalBytes, numTransfers, sizeAfterPrefilter int)
 
 // customFilterExecutor is the functor to apply custom filters depends on the batch type. For archive batch,
 // the custom filter will be the time filter and will only be applied to first or last batch. For live batch,
@@ -186,6 +186,7 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 	// Process live batches.
 	if qc.toTime == nil || cutoff < uint32(qc.toTime.Time.Unix()) {
 		batchIDs, numRecordsInLastBatch := shard.LiveStore.GetBatchIDs()
+		utils.GetLogger().Debugf("live batchIDs %+V", batchIDs)
 		for i, batchID := range batchIDs {
 			if qc.OOPK.done {
 				break
@@ -510,7 +511,7 @@ func (qc *AQLQueryContext) prepareTimezoneTable(store memstore.MemStore) {
 // party of a live batch. Start row will always be zero as well.
 func (qc *AQLQueryContext) transferLiveBatch(batch *memstore.LiveBatch, size int) batchTransferExecutor {
 	return func(stream unsafe.Pointer) (deviceColumns []deviceVectorPartySlice, hostVPs []memCom.VectorParty,
-		firstColumn, startRow, totalBytes, numTransfers int) {
+		firstColumn, startRow, totalBytes, numTransfers, sizeAfterPrefilter int) {
 		// Allocate column inputs.
 		firstColumn = -1
 		deviceColumns = make([]deviceVectorPartySlice, len(qc.TableScanners[0].Columns))
@@ -532,6 +533,7 @@ func (qc *AQLQueryContext) transferLiveBatch(batch *memstore.LiveBatch, size int
 				numTransfers += t
 			}
 		}
+		sizeAfterPrefilter = size
 		return
 	}
 }
@@ -568,7 +570,7 @@ func (qc *AQLQueryContext) liveBatchCustomFilterExecutor(cutoff uint32) customFi
 func (qc *AQLQueryContext) transferArchiveBatch(batch *memstore.ArchiveBatch,
 	isFirstOrLast bool) batchTransferExecutor {
 	return func(stream unsafe.Pointer) (deviceSlices []deviceVectorPartySlice, hostVPs []memCom.VectorParty,
-		firstColumn, startRow, totalBytes, numTransfers int) {
+		firstColumn, startRow, totalBytes, numTransfers, sizeAfterPreFilter int) {
 		matchedColumnUsages := columnUsedByAllBatches
 		if isFirstOrLast {
 			matchedColumnUsages |= columnUsedByFirstArchiveBatch | columnUsedByLastArchiveBatch
@@ -615,6 +617,7 @@ func (qc *AQLQueryContext) transferArchiveBatch(batch *memstore.ArchiveBatch,
 				numTransfers += t
 			}
 		}
+		sizeAfterPreFilter = endRow - startRow
 		return
 	}
 }
@@ -742,6 +745,7 @@ func (bc *oopkBatchContext) prepareForFiltering(
 
 	if firstColumn >= 0 {
 		bc.size = columns[firstColumn].length
+		utils.GetLogger().Debugf("size in prepare filter %d", bc.size)
 		// Allocate twice of the size to save number of allocations of temporary index vector.
 		bc.indexVectorD = deviceAllocate(bc.size*4, bc.device)
 		bc.predicateVectorD = deviceAllocate(bc.size, bc.device)
@@ -831,6 +835,7 @@ func (qc *AQLQueryContext) doProfile(action func(), profileName string, stream u
 func (qc *AQLQueryContext) processBatch(
 	batch *memstore.Batch, batchID int32, batchSize int, transferFunc batchTransferExecutor,
 	customFilterFunc customFilterExecutor, previousBatchExecutor BatchExecutor, needToUnlockBatch bool) BatchExecutor {
+	utils.GetLogger().Debugf("processing batch %d", batchID)
 	defer func() {
 		if needToUnlockBatch {
 			batch.RUnlock()
@@ -852,7 +857,7 @@ func (qc *AQLQueryContext) processBatch(
 
 	// Async transfer.
 	stream := qc.cudaStreams[0]
-	deviceSlices, hostVPs, firstColumn, startRow, totalBytes, numTransfers := transferFunc(stream)
+	deviceSlices, hostVPs, firstColumn, startRow, totalBytes, numTransfers, sizeAfterPreFilter := transferFunc(stream)
 	qc.OOPK.currentBatch.stats.bytesTransferred += totalBytes
 	qc.OOPK.currentBatch.stats.numTransferCalls += numTransfers
 
@@ -916,6 +921,7 @@ func (qc *AQLQueryContext) processBatch(
 
 	// no prefilter slicing in livebatch, startRow is always 0
 	qc.OOPK.currentBatch.size = batchSize
+	qc.OOPK.currentBatch.sizeAfterPreFilter = sizeAfterPreFilter
 	qc.OOPK.currentBatch.prepareForFiltering(deviceSlices, firstColumn, startRow, stream)
 
 	qc.reportTimingForCurrentBatch(stream, &start, prepareForFilteringTiming)
@@ -1063,7 +1069,10 @@ func (qc *AQLQueryContext) estimateLiveBatchMemoryUsage(batch *memstore.LiveBatc
 		}
 		columnMemUsage += int(sourceVP.GetBytes())
 	}
-
+	utils.GetLogger().Debugf("live batch capacity %d", batch.Capacity)
+	if batch.Capacity > qc.maxBatchSizeAfterPrefilter {
+		qc.maxBatchSizeAfterPrefilter = batch.Capacity
+	}
 	totalBytes := qc.estimateMemUsageForBatch(batch.Capacity, columnMemUsage, batch.Capacity)
 	utils.GetQueryLogger().Debugf("Live batch %+v needs memory: %d", batch, totalBytes)
 	return totalBytes
@@ -1097,8 +1106,8 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 
 		if usage&matchedColumnUsages != 0 || usage&columnUsedByPrefilter != 0 {
 			startRow, endRow, hostSlice = qc.prefilterSlice(sourceVP, prefilterIndex, startRow, endRow)
-			if hostSlice.Length < maxSizeAfterPreFilter {
-				maxSizeAfterPreFilter = hostSlice.Length
+			if endRow - startRow < maxSizeAfterPreFilter {
+				maxSizeAfterPreFilter = endRow - startRow
 			}
 			prefilterIndex++
 			if usage&matchedColumnUsages != 0 {
@@ -1107,6 +1116,9 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 			}
 		}
 		sourceVP.Release()
+	}
+	if maxSizeAfterPreFilter > qc.maxBatchSizeAfterPrefilter {
+		qc.maxBatchSizeAfterPrefilter = maxSizeAfterPreFilter
 	}
 
 	totalBytes := qc.estimateMemUsageForBatch(firstColumnSize, columnMemUsage, maxSizeAfterPreFilter)
