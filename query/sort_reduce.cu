@@ -311,13 +311,14 @@ int expand(DimensionColumnVector inputKeys,
   // get the raw pointer from device/host vector
   uint32_t * newIndexVector = thrust::raw_pointer_cast(&indices[0]);
 
+  int outputLen = min(totalCount, outputKeys.VectorCapacity);
   // start the real copy operation
   DimensionColumnPermutateIterator iterIn(
       inputKeys.DimValues, newIndexVector, inputKeys.VectorCapacity,
-      totalCount, inputKeys.NumDimsPerDimWidth);
+      outputLen, inputKeys.NumDimsPerDimWidth);
 
   DimensionColumnOutputIterator iterOut(outputKeys.DimValues,
-                                        outputKeys.VectorCapacity, totalCount,
+                                        outputKeys.VectorCapacity, outputLen,
                                         inputKeys.NumDimsPerDimWidth,
                                         0);
 
@@ -327,9 +328,9 @@ int expand(DimensionColumnVector inputKeys,
   }
   // copy dim values into output
   thrust::copy(GET_EXECUTION_POLICY(cudaStream), iterIn,
-                iterIn + numDims * 2 * totalCount, iterOut);
+                iterIn + numDims * 2 * outputLen, iterOut);
   // return total count in the output dimensionVector
-  return totalCount;
+  return outputLen;
 }
 
 }  // namespace ares

@@ -701,6 +701,7 @@ func (bc *oopkBatchContext) cleanupDeviceResultBuffers() {
 	deviceFreeAndSetNil(&bc.measureVectorD[0])
 	deviceFreeAndSetNil(&bc.measureVectorD[1])
 
+	bc.size = 0
 	bc.resultSize = 0
 	bc.resultCapacity = 0
 }
@@ -745,7 +746,6 @@ func (bc *oopkBatchContext) prepareForFiltering(
 
 	if firstColumn >= 0 {
 		bc.size = columns[firstColumn].length
-		utils.GetLogger().Debugf("size in prepare filter %d", bc.size)
 		// Allocate twice of the size to save number of allocations of temporary index vector.
 		bc.indexVectorD = deviceAllocate(bc.size*4, bc.device)
 		bc.predicateVectorD = deviceAllocate(bc.size, bc.device)
@@ -835,7 +835,6 @@ func (qc *AQLQueryContext) doProfile(action func(), profileName string, stream u
 func (qc *AQLQueryContext) processBatch(
 	batch *memstore.Batch, batchID int32, batchSize int, transferFunc batchTransferExecutor,
 	customFilterFunc customFilterExecutor, previousBatchExecutor BatchExecutor, needToUnlockBatch bool) BatchExecutor {
-	utils.GetLogger().Debugf("processing batch %d", batchID)
 	defer func() {
 		if needToUnlockBatch {
 			batch.RUnlock()
@@ -1069,7 +1068,6 @@ func (qc *AQLQueryContext) estimateLiveBatchMemoryUsage(batch *memstore.LiveBatc
 		}
 		columnMemUsage += int(sourceVP.GetBytes())
 	}
-	utils.GetLogger().Debugf("live batch capacity %d", batch.Capacity)
 	if batch.Capacity > qc.maxBatchSizeAfterPrefilter {
 		qc.maxBatchSizeAfterPrefilter = batch.Capacity
 	}
