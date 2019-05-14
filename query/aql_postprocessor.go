@@ -111,6 +111,7 @@ func (qc *AQLQueryContext) flushResultBuffer() {
 		}
 
 		if qc.isNonAggregationQuery {
+			// TODO: @shz eagerly flush out to connection instead of host memory
 			qc.Results.Append(dimValues)
 		} else {
 			measureBytes := oopkContext.MeasureBytes

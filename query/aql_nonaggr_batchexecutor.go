@@ -76,6 +76,7 @@ func (e *NonAggrBatchExecutorImpl) expandDimensions(numDims queryCom.DimCountsPe
 }
 
 func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
+	// TODO: @shz experiment with on demand flush when next batch can not fit in buffer
 	bc := e.qc.OOPK.currentBatch
 	// transfer current batch result from device to host
 	e.qc.OOPK.dimensionVectorH = memutils.HostAlloc(bc.resultSize * e.qc.OOPK.DimRowBytes)
