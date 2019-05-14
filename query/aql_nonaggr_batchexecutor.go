@@ -48,10 +48,6 @@ func (e *NonAggrBatchExecutorImpl) prepareForDimEval(
 	// only allocate dimension vector once
 	if bc.resultCapacity == 0 {
 		bc.resultCapacity = e.qc.maxBatchSizeAfterPrefilter
-		lenWanted := e.getNumberOfRecordsNeeded()
-		if bc.resultCapacity > lenWanted {
-			bc.resultCapacity = lenWanted
-		}
 		// Extra budget for future proofing.
 		bc.resultCapacity += bc.resultCapacity / 8
 		bc.dimensionVectorD = [2]devicePointer{
