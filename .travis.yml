@@ -40,9 +40,15 @@ install:
   - .travis/install_cuda.sh
   - ./build/cmake/bin/cmake .
   - .travis/install_golang_tools.sh
+
+before_script:
+  - "curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | sudo bash"
+
 script:
   - make lint
   - make travis
+  - fossa
+  
 after_success:
   # generate coverage output file
   - gover . coverage.txt
