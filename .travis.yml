@@ -43,12 +43,12 @@ install:
 
 before_script:
   - "curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | sudo bash"
+  - fossa
 
 script:
   - make lint
   - make travis
-  - fossa
-  
+
 after_success:
   # generate coverage output file
   - gover . coverage.txt
