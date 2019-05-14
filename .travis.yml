@@ -35,15 +35,16 @@ branches:
   only:
     - master
 install:
+  - "curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | sudo bash"
+  - fossa
   - rm -rf ./build && mkdir -p build
   - .travis/install_clang_tools.sh
   - .travis/install_cuda.sh
   - ./build/cmake/bin/cmake .
   - .travis/install_golang_tools.sh
-
-before_script:
-  - "curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | sudo bash"
-  - fossa
+#before_script:
+#  - "curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | sudo bash"
+#  - fossa
 
 script:
   - make lint
