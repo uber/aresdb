@@ -45,6 +45,11 @@ var (
 	logger = zap.NewExample().Sugar()
 )
 
+type TableCreationResp struct {
+	Message string `json:"message"`
+	Cause   string `json:"cause"`
+}
+
 func parseAndGenerateRandomTime(timeStr string) uint32 {
 	timeStr = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(timeStr, "{"), "}"))
 
@@ -66,6 +71,10 @@ func panicIfErr(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func logError(msg string) {
+	os.Stderr.WriteString(msg + "\n")
 }
 
 func queryDataSet() {
@@ -153,8 +162,25 @@ func createTable(tableName string, tableSchemaPath string) {
 	rsp, err := http.Post(schemaCreationURL, "application/json", schemaFile)
 	panicIfErr(err)
 
+	if rsp.Body != nil {
+		defer rsp.Body.Close()
+	}
+
 	if rsp.StatusCode != http.StatusOK {
-		panic(fmt.Sprintf("schema creation failed with status code %d", rsp.StatusCode))
+		msg := fmt.Sprintf("schema creation failed with status code %d\n", rsp.StatusCode)
+		if rsp.Body != nil {
+			respBody, err := ioutil.ReadAll(rsp.Body)
+			panicIfErr(err)
+			// TODO(lucafuji): need a better error code mapping here to tell it's a table exists error.
+			var tableCreationResp TableCreationResp
+			err = json.Unmarshal(respBody, &tableCreationResp)
+			panicIfErr(err)
+			if tableCreationResp.Message == "Table already exists" {
+				logError(fmt.Sprintf("Table %s already exists", tableName))
+				return
+			}
+		}
+		panic(msg)
 	}
 	fmt.Printf("table %s created\n", tableName)
 }
@@ -183,7 +209,6 @@ func ingestDataForTable(connector client.Connector, tableName string, dataPath s
 		}
 		rows = append(rows, row)
 	}
-
 	rowsInserted, err := connector.Insert(tableName, columnNames, rows)
 	panicIfErr(err)
 
