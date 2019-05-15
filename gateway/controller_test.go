@@ -172,8 +172,8 @@ var _ = ginkgo.Describe("Controller", func() {
 		c.SetNamespace("ns1")
 		tableAddressesGot, err := c.FetchAllSchemas()
 		Ω(err).Should(BeNil())
-		Ω(tableAddressesGot[0]).Should(Equal(&table))
-		Ω(tableAddressesGot[1]).Should(Equal(&table1))
+		Ω(*tableAddressesGot[0]).Should(Equal(table))
+		Ω(*tableAddressesGot[1]).Should(Equal(table1))
 
 		tableGot, err := c.FetchSchema("test1")
 		Ω(err).Should(BeNil())

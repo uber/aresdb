@@ -185,8 +185,8 @@ func (c *ControllerHTTPClient) FetchAllSchemas() (tables []*common.Table, err er
 		return
 	}
 	tables = make([]*common.Table, 0, len(schemas))
-	for _, schema := range schemas {
-		tables = append(tables, &schema)
+	for i, _ := range schemas {
+		tables = append(tables, &schemas[i])
 	}
 	return
 }
