@@ -110,8 +110,17 @@ func (_m *ControllerClient) GetAssignment(jobNamespace, instance string) (*rules
 }
 
 // FetchAllSchemas fetches all schemas
-func (_m *ControllerClient) FetchAllSchemas() ([]common.Table, error) {
-	return _m.GetAllSchema("")
+func (_m *ControllerClient) FetchAllSchemas() ([]*common.Table, error) {
+	schemas, err := _m.GetAllSchema("")
+	if err != nil {
+		return nil, err
+	}
+	tables := make([]*common.Table, 0, len(schemas))
+	for _, schema := range schemas {
+		tables = append(tables, &schema)
+	}
+
+	return tables, nil
 }
 
 // FetchSchema fetch one schema for given table
