@@ -36,7 +36,7 @@ const (
 // from host memory to device memory. hostVPs will be the columns to be released after transfer. startRow
 // is used to slice the vector party.
 type batchTransferExecutor func(stream unsafe.Pointer) (deviceColumns []deviceVectorPartySlice,
-	hostVPs []memCom.VectorParty, firstColumn, startRow, totalBytes, numTransfers int)
+	hostVPs []memCom.VectorParty, firstColumn, startRow, totalBytes, numTransfers, sizeAfterPrefilter int)
 
 // customFilterExecutor is the functor to apply custom filters depends on the batch type. For archive batch,
 // the custom filter will be the time filter and will only be applied to first or last batch. For live batch,
@@ -105,6 +105,17 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		}
 	}
 
+	if qc.isNonAggregationQuery {
+		qc.Results = make(queryCom.AQLQueryResult)
+		headers := make([]string, len(qc.Query.Dimensions))
+		for i, dim := range qc.Query.Dimensions {
+			headers[i] = dim.Expr
+		}
+		qc.Results.SetHeaders(headers)
+	}
+
+	qc.initResultFlushContext()
+
 	for _, shardID := range qc.TableScanners[0].Shards {
 		previousBatchExecutor = qc.processShard(memStore, shardID, previousBatchExecutor)
 		if qc.Error != nil {
@@ -134,19 +145,19 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		if qc.OOPK.IsHLL() {
 			qc.HLLQueryResult, qc.Error = qc.PostprocessAsHLLData()
 		} else {
-			// copy dimensions
-			qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
-			asyncCopyDimensionVector(qc.OOPK.dimensionVectorH, qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), qc.OOPK.ResultSize, 0,
-				qc.OOPK.NumDimsPerDimWidth, qc.OOPK.ResultSize, qc.OOPK.currentBatch.resultCapacity,
-				memutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
 			if !qc.isNonAggregationQuery {
+				// copy dimensions
+				qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
+				asyncCopyDimensionVector(qc.OOPK.dimensionVectorH, qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), qc.OOPK.ResultSize, 0,
+					qc.OOPK.NumDimsPerDimWidth, qc.OOPK.ResultSize, qc.OOPK.currentBatch.resultCapacity,
+					memutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
 				// copy measures
 				qc.OOPK.measureVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.MeasureBytes)
 				memutils.AsyncCopyDeviceToHost(
 					qc.OOPK.measureVectorH, qc.OOPK.currentBatch.measureVectorD[0].getPointer(),
 					qc.OOPK.ResultSize*qc.OOPK.MeasureBytes, qc.cudaStreams[0], qc.Device)
+				memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 			}
-			memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 		}
 	}
 	qc.reportTiming(qc.cudaStreams[0], &start, resultTransferTiming)
@@ -499,7 +510,7 @@ func (qc *AQLQueryContext) prepareTimezoneTable(store memstore.MemStore) {
 // party of a live batch. Start row will always be zero as well.
 func (qc *AQLQueryContext) transferLiveBatch(batch *memstore.LiveBatch, size int) batchTransferExecutor {
 	return func(stream unsafe.Pointer) (deviceColumns []deviceVectorPartySlice, hostVPs []memCom.VectorParty,
-		firstColumn, startRow, totalBytes, numTransfers int) {
+		firstColumn, startRow, totalBytes, numTransfers, sizeAfterPrefilter int) {
 		// Allocate column inputs.
 		firstColumn = -1
 		deviceColumns = make([]deviceVectorPartySlice, len(qc.TableScanners[0].Columns))
@@ -521,6 +532,7 @@ func (qc *AQLQueryContext) transferLiveBatch(batch *memstore.LiveBatch, size int
 				numTransfers += t
 			}
 		}
+		sizeAfterPrefilter = size
 		return
 	}
 }
@@ -557,7 +569,7 @@ func (qc *AQLQueryContext) liveBatchCustomFilterExecutor(cutoff uint32) customFi
 func (qc *AQLQueryContext) transferArchiveBatch(batch *memstore.ArchiveBatch,
 	isFirstOrLast bool) batchTransferExecutor {
 	return func(stream unsafe.Pointer) (deviceSlices []deviceVectorPartySlice, hostVPs []memCom.VectorParty,
-		firstColumn, startRow, totalBytes, numTransfers int) {
+		firstColumn, startRow, totalBytes, numTransfers, sizeAfterPreFilter int) {
 		matchedColumnUsages := columnUsedByAllBatches
 		if isFirstOrLast {
 			matchedColumnUsages |= columnUsedByFirstArchiveBatch | columnUsedByLastArchiveBatch
@@ -604,6 +616,7 @@ func (qc *AQLQueryContext) transferArchiveBatch(batch *memstore.ArchiveBatch,
 				numTransfers += t
 			}
 		}
+		sizeAfterPreFilter = endRow - startRow
 		return
 	}
 }
@@ -687,6 +700,7 @@ func (bc *oopkBatchContext) cleanupDeviceResultBuffers() {
 	deviceFreeAndSetNil(&bc.measureVectorD[0])
 	deviceFreeAndSetNil(&bc.measureVectorD[1])
 
+	bc.size = 0
 	bc.resultSize = 0
 	bc.resultCapacity = 0
 }
@@ -841,7 +855,7 @@ func (qc *AQLQueryContext) processBatch(
 
 	// Async transfer.
 	stream := qc.cudaStreams[0]
-	deviceSlices, hostVPs, firstColumn, startRow, totalBytes, numTransfers := transferFunc(stream)
+	deviceSlices, hostVPs, firstColumn, startRow, totalBytes, numTransfers, sizeAfterPreFilter := transferFunc(stream)
 	qc.OOPK.currentBatch.stats.bytesTransferred += totalBytes
 	qc.OOPK.currentBatch.stats.numTransferCalls += numTransfers
 
@@ -905,6 +919,7 @@ func (qc *AQLQueryContext) processBatch(
 
 	// no prefilter slicing in livebatch, startRow is always 0
 	qc.OOPK.currentBatch.size = batchSize
+	qc.OOPK.currentBatch.sizeAfterPreFilter = sizeAfterPreFilter
 	qc.OOPK.currentBatch.prepareForFiltering(deviceSlices, firstColumn, startRow, stream)
 
 	qc.reportTimingForCurrentBatch(stream, &start, prepareForFilteringTiming)
@@ -1052,8 +1067,10 @@ func (qc *AQLQueryContext) estimateLiveBatchMemoryUsage(batch *memstore.LiveBatc
 		}
 		columnMemUsage += int(sourceVP.GetBytes())
 	}
-
-	totalBytes := qc.estimateMemUsageForBatch(batch.Capacity, columnMemUsage)
+	if batch.Capacity > qc.maxBatchSizeAfterPrefilter {
+		qc.maxBatchSizeAfterPrefilter = batch.Capacity
+	}
+	totalBytes := qc.estimateMemUsageForBatch(batch.Capacity, columnMemUsage, batch.Capacity)
 	utils.GetQueryLogger().Debugf("Live batch %+v needs memory: %d", batch, totalBytes)
 	return totalBytes
 }
@@ -1075,6 +1092,8 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 	}
 
 	prefilterIndex := 0
+	// max number of rows after pre-filtering. used for non-agg query
+	maxSizeAfterPreFilter := batch.Size
 	for i := len(qc.TableScanners[0].Columns) - 1; i >= 0; i-- {
 		columnID := qc.TableScanners[0].Columns[i]
 		usage := qc.TableScanners[0].ColumnUsages[columnID]
@@ -1084,6 +1103,9 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 
 		if usage&matchedColumnUsages != 0 || usage&columnUsedByPrefilter != 0 {
 			startRow, endRow, hostSlice = qc.prefilterSlice(sourceVP, prefilterIndex, startRow, endRow)
+			if endRow - startRow < maxSizeAfterPreFilter {
+				maxSizeAfterPreFilter = endRow - startRow
+			}
 			prefilterIndex++
 			if usage&matchedColumnUsages != 0 {
 				columnMemUsage += hostSlice.ValueBytes + hostSlice.NullBytes + hostSlice.CountBytes
@@ -1092,8 +1114,11 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 		}
 		sourceVP.Release()
 	}
+	if maxSizeAfterPreFilter > qc.maxBatchSizeAfterPrefilter {
+		qc.maxBatchSizeAfterPrefilter = maxSizeAfterPreFilter
+	}
 
-	totalBytes := qc.estimateMemUsageForBatch(firstColumnSize, columnMemUsage)
+	totalBytes := qc.estimateMemUsageForBatch(firstColumnSize, columnMemUsage, maxSizeAfterPreFilter)
 	utils.GetQueryLogger().Debugf("Archive batch %d needs memory: %d", batch.BatchID, totalBytes)
 	return totalBytes
 }
@@ -1105,7 +1130,7 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 // * Measurement
 // * Sort (hash/index)
 // * Reduce
-func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize int, columnMemUsage int) (memUsage int) {
+func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize, columnMemUsage, maxSizeAfterPreFilter int) (memUsage int) {
 	// 1. columnMemUsage
 	memUsageBeforeAgg := columnMemUsage
 
@@ -1127,10 +1152,21 @@ func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize int, columnM
 	}
 
 	// 7. max(memUsageBeforeAgg, sortReduceMemoryUsage)
-	memUsage = int(math.Max(float64(memUsageBeforeAgg), float64(estimateSortReduceMemUsage(firstColumnSize))))
+	memUsage = memUsageBeforeAgg
+	if !qc.isNonAggregationQuery {
+		memUsage = int(math.Max(float64(memUsage), float64(estimateSortReduceMemUsage(firstColumnSize))))
+	}
 
 	// 8. Dimension vector memory usage (input + output)
-	memUsage += firstColumnSize * qc.OOPK.DimRowBytes * 2
+	if qc.isNonAggregationQuery {
+		maxRowsPerBatch := maxSizeAfterPreFilter
+		if qc.Query.Limit < maxRowsPerBatch {
+			maxRowsPerBatch = qc.Query.Limit
+		}
+		memUsage += maxRowsPerBatch * qc.OOPK.DimRowBytes * 2
+	} else {
+		memUsage += firstColumnSize * qc.OOPK.DimRowBytes * 2
+	}
 
 	// 9. Measure vector memory usage (input + output)
 	memUsage += firstColumnSize * qc.OOPK.MeasureBytes * 2

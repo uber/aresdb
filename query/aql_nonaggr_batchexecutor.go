@@ -18,6 +18,7 @@ import (
 	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"unsafe"
+	"time"
 )
 
 // NonAggrBatchExecutorImpl is batch executor implementation for non-aggregation query
@@ -26,9 +27,9 @@ type NonAggrBatchExecutorImpl struct {
 }
 
 // project for non-aggregation query will only calculate the selected columns
-// measure calculation, reduce will be skipped, once the generated result reaches limit, it will return and cancel all other ongoing processing.
+// dimension calculation, reduce will be skipped, once the generated result reaches limit, it will return and cancel all other ongoing processing.
 func (e *NonAggrBatchExecutorImpl) project() {
-	// Prepare for dimension and measure evaluation.
+	// Prepare for dimension evaluation.
 	e.prepareForDimEval(e.qc.OOPK.DimRowBytes, e.qc.OOPK.NumDimsPerDimWidth, e.stream)
 
 	e.qc.reportTimingForCurrentBatch(e.stream, &e.start, prepareForDimAndMeasureTiming)
@@ -39,53 +40,73 @@ func (e *NonAggrBatchExecutorImpl) project() {
 	// wait for stream to clean up non used buffer before final aggregation
 	memutils.WaitForCudaStream(e.stream, e.qc.Device)
 	e.qc.OOPK.currentBatch.cleanupBeforeAggregation()
-
-	if e.qc.OOPK.currentBatch.resultSize >= e.qc.Query.Limit {
-		e.qc.OOPK.done = true
-	}
-}
-
-func (e *NonAggrBatchExecutorImpl) reduce() {
-	// nothing need to do for non-aggregation query
-}
-
-func (e *NonAggrBatchExecutorImpl) expandDimensions(numDims queryCom.DimCountsPerDimWidth) {
-	bc := &e.qc.OOPK.currentBatch
-	if bc.size == 0 {
-		//nothing to do
-		return
-	}
-
-	if bc.baseCountD.isNull() {
-		// baseCountD is null, no uncompression is needed
-		asyncCopyDimensionVector(bc.dimensionVectorD[1].getPointer(), bc.dimensionVectorD[0].getPointer(), bc.size, bc.resultSize,
-			numDims, bc.resultCapacity, bc.resultCapacity, memutils.AsyncCopyDeviceToDevice, e.stream, e.qc.Device)
-		bc.resultSize += bc.size
-		return
-	}
-
-	e.qc.doProfile(func() {
-		e.qc.OOPK.currentBatch.expand(numDims, bc.size, e.stream, e.qc.Device)
-		e.qc.reportTimingForCurrentBatch(e.stream, &e.start, expandEvalTiming)
-	}, "expand", e.stream)
 }
 
 func (e *NonAggrBatchExecutorImpl) prepareForDimEval(
 	dimRowBytes int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth, stream unsafe.Pointer) {
-
 	bc := &e.qc.OOPK.currentBatch
+	// only allocate dimension vector once
 	if bc.resultCapacity == 0 {
-		bc.resultCapacity = e.qc.Query.Limit
+		bc.resultCapacity = e.qc.maxBatchSizeAfterPrefilter
+		// Extra budget for future proofing.
+		bc.resultCapacity += bc.resultCapacity / 8
 		bc.dimensionVectorD = [2]devicePointer{
 			deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device),
 			deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device),
 		}
 	}
-	// to keep the consistency of the output dimension vector
-	bc.dimensionVectorD[0], bc.dimensionVectorD[1] = bc.dimensionVectorD[1], bc.dimensionVectorD[0]
-	// maximum rows needed from filter result
-	lenWanted := bc.resultCapacity - bc.resultSize
-	if bc.size > lenWanted {
-		bc.size = lenWanted
+}
+
+func (e *NonAggrBatchExecutorImpl) expandDimensions(numDims queryCom.DimCountsPerDimWidth) {
+	bc := &e.qc.OOPK.currentBatch
+
+	lenWanted := e.getNumberOfRecordsNeeded()
+
+	if bc.size != 0 && !bc.baseCountD.isNull() {
+		e.qc.doProfile(func() {
+			e.qc.OOPK.currentBatch.expand(numDims, e.stream, e.qc.Device)
+			e.qc.reportTimingForCurrentBatch(e.stream, &e.start, expandEvalTiming)
+		}, "expand", e.stream)
+	} else {
+		bc.resultSize = bc.size
 	}
+	if bc.resultSize > lenWanted {
+		bc.resultSize = lenWanted
+	}
+}
+
+func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
+	// TODO: @shz experiment with on demand flush when next batch can not fit in buffer
+	bc := e.qc.OOPK.currentBatch
+	// transfer current batch result from device to host
+	e.qc.OOPK.dimensionVectorH = memutils.HostAlloc(bc.resultSize * e.qc.OOPK.DimRowBytes)
+	asyncCopyDimensionVector(e.qc.OOPK.dimensionVectorH, bc.dimensionVectorD[0].getPointer(), bc.resultSize, 0,
+		e.qc.OOPK.NumDimsPerDimWidth, bc.resultSize, bc.resultCapacity,
+		memutils.AsyncCopyDeviceToHost, e.qc.cudaStreams[0], e.qc.Device)
+	memutils.WaitForCudaStream(e.qc.cudaStreams[0], e.qc.Device)
+
+	// flush current batches results to result buffer
+	e.qc.OOPK.ResultSize = bc.resultSize
+	e.qc.flushResultBuffer()
+	e.qc.numberOfRowsWritten += bc.resultSize
+	if e.getNumberOfRecordsNeeded() <= 0 {
+		e.qc.OOPK.done = true
+	}
+
+	bc.size = 0
+	e.qc.reportTimingForCurrentBatch(e.stream, &start, cleanupTiming)
+	e.qc.reportBatch(e.batchID > 0)
+
+	// Only profile one batch.
+	e.qc.Profiling = ""
+}
+
+
+func (e *NonAggrBatchExecutorImpl) reduce() {
+	// nothing need to do for non-aggregation query
+}
+
+// getNumberOfRecordsNeeded is a helper function
+func (e *NonAggrBatchExecutorImpl) getNumberOfRecordsNeeded() int {
+	return e.qc.Query.Limit - e.qc.numberOfRowsWritten
 }

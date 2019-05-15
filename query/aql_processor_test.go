@@ -988,7 +988,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(qc.Error).Should(BeNil())
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		qc.ReleaseHostResultsBuffers()
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -1189,7 +1189,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.OOPK.currentBatch.timezoneLookupDSize).Should(Equal(3))
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		qc.ReleaseHostResultsBuffers()
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -1519,7 +1519,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc.ProcessQuery(mockMemStore)
 		Ω(qc.Error).Should(BeNil())
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		Ω(qc.Error).Should(BeNil())
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -1795,7 +1795,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc.ProcessQuery(mockMemStore)
 		Ω(qc.Error).Should(BeNil())
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		Ω(qc.Error).Should(BeNil())
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -2048,7 +2048,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc.ProcessQuery(mockMemStore)
 		Ω(qc.Error).Should(BeNil())
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		Ω(qc.Error).Should(BeNil())
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -2078,16 +2078,20 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				From:   "1970-01-01",
 				To:     "1970-01-02",
 			},
-			Limit: 10,
+			Limit: 20,
 		}
 		qc.Query = q
 
 		qc = q.Compile(memStore, false)
 		Ω(qc.Error).Should(BeNil())
+		qc.calculateMemoryRequirement(memStore)
+		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
+			shard.Users.Add(1)
+		}).Return(shard, nil).Once()
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
 
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		qc.ReleaseHostResultsBuffers()
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
@@ -2104,7 +2108,9 @@ var _ = ginkgo.Describe("aql_processor", func() {
           		["120", "0", "1.2"],
           		["0", "NULL", "NULL"],
           		["10", "NULL", "1.1"],
-          		["20", "NULL", "1.2"]
+          		["20", "NULL", "1.2"],
+          		["30", "0", "1.3"],
+          		["40", "1", "NULL"]
 			]
 		  }`))
 
@@ -2169,7 +2175,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
 
-		qc.Results = qc.Postprocess()
+		qc.Postprocess()
 		qc.ReleaseHostResultsBuffers()
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
