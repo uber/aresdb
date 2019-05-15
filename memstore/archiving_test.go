@@ -368,4 +368,51 @@ var _ = ginkgo.Describe("archiving", func() {
 		batchIDs := liveStore.getBatchIDsToPurge(cutoff)
 		Ω(batchIDs).Should(Equal([]int32{-110}))
 	})
+
+	ginkgo.It("archive skip purge when disk purge is disabled", func() {
+		tableShard := shardMap[shardID]
+
+		// disable disk purge
+		tableShard.SetDiskPurgeEnabled(false)
+		defer tableShard.SetDiskPurgeEnabled(true)
+
+		// reset calls
+		(m.diskStore).(*diskMocks.DiskStore).Calls = []mock.Call{}
+		// Following calls are expected.
+		(m.metaStore).(*metaMocks.MetaStore).On(
+			"AddArchiveBatchVersion", table, shardID, day, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		(m.metaStore).(*metaMocks.MetaStore).On(
+			"UpdateArchivingCutoff", table, shardID, mock.Anything).Return(nil)
+		(m.diskStore).(*diskMocks.DiskStore).On(
+			"DeleteLogFile", table, shardID, int64(1)).Return(nil)
+
+		writer := new(utilsMocks.WriteCloser)
+		writer.On("Write", mock.Anything).Return(0, nil)
+		writer.On("Close").Return(nil)
+
+		(m.diskStore).(*diskMocks.DiskStore).On(
+			"OpenVectorPartyFileForWrite", table, mock.Anything, shardID, day, mock.Anything, mock.Anything).Return(writer, nil)
+
+		tableShard.LiveStore.RedoLogManager.(*fileRedologManager).CurrentFileCreationTime = 2
+
+		timeIncrementer := &utils.TimeIncrementer{IncBySecond: 1}
+		utils.SetClockImplementation(timeIncrementer.Now)
+		err := m.Archive(table, shardID, cutoff, jobManager.reportArchiveJobDetail)
+		jobManager.RLock()
+		jobManager.jobDetails[key].LastDuration = 0
+		jobManager.RUnlock()
+		Ω(err).Should(BeNil())
+
+		// verify delete batch versions not called
+		Ω((m.diskStore).(*diskMocks.DiskStore).AssertNotCalled(utils.TestingT, "DeleteBatchVersions", table, shardID, day, mock.Anything, mock.Anything)).
+			Should(BeTrue())
+
+		// in memory data should still purged.
+		for _, column := range archiveBatch0.Columns {
+			Ω(column.(*archiveVectorParty).values).Should(BeNil())
+			Ω(column.(*archiveVectorParty).nulls).Should(BeNil())
+			Ω(column.(*archiveVectorParty).counts).Should(BeNil())
+		}
+		utils.ResetClockImplementation()
+	})
 })

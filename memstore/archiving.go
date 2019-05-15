@@ -288,14 +288,19 @@ func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporte
 		return err
 	}
 
+	// from this point on, new cutoff is in effect
+	diskPurgeEnabled := shard.IsDiskPurgeEnabled()
+
 	// Delete obsolete (merged base batch) vector parties in oldArchivedStore. We don't need any lock since all queries
 	// should already finish processing the old version.
 	for day := range patchByDay {
 		// We don't need to check existence again since it should be already created if missing in merge stage.
 		batch := oldVersion.Batches[day]
 		// Purge archive batch on disk.
-		if err := m.diskStore.DeleteBatchVersions(table, shardID, int(day), batch.Version, batch.SeqNum); err != nil {
-			return err
+		if diskPurgeEnabled {
+			if err := m.diskStore.DeleteBatchVersions(table, shardID, int(day), batch.Version, batch.SeqNum); err != nil {
+				return err
+			}
 		}
 		// Purge archive batch in memory.
 		batch.SafeDestruct()

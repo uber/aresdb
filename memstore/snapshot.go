@@ -17,6 +17,7 @@ package memstore
 import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
+	"math"
 )
 
 //Snapshot is the process to write the current content of dimension table live store in memory to disk in order to
@@ -81,6 +82,26 @@ func (m *memStoreImpl) Snapshot(table string, shardID int, reporter SnapshotJobD
 		"table", table).Infof("Snapshot done")
 
 	return nil
+}
+
+func (shard *TableShard) cleanOldSnapshotAndLogs(redoLogFile int64, offset uint32) {
+	tableName := shard.Schema.Schema.Name
+	// snapshot won't care about the cutoff.
+	if err := shard.LiveStore.RedoLogManager.CheckpointRedolog(math.MaxUint32, redoLogFile, offset); err != nil {
+		utils.GetLogger().With(
+			"job", "snapshot_cleanup",
+			"table", tableName).Errorf(
+			"Purge redologs failed, shard: %d, error: %v", shard.ShardID, err)
+	}
+	// delete old snapshots
+	if shard.IsDiskPurgeEnabled() {
+		if err := shard.diskStore.DeleteSnapshot(shard.Schema.Schema.Name, shard.ShardID, redoLogFile, offset); err != nil {
+			utils.GetLogger().With(
+				"job", "snapshot_cleanup",
+				"table", tableName).Errorf(
+				"Delete snapshots failed, shard: %d, error: %v", shard.ShardID, err)
+		}
+	}
 }
 
 func (m *memStoreImpl) createSnapshot(shard *TableShard, redoFile int64, batchOffset uint32) error {

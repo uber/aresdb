@@ -22,6 +22,7 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	"github.com/uber/aresdb/utils"
 	utilsMocks "github.com/uber/aresdb/utils/mocks"
 	"sync"
 )
@@ -401,6 +402,31 @@ var _ = ginkgo.Describe("backfill", func() {
 			Stage: "apply patch",
 		}))
 		jobManager.RUnlock()
+	})
+
+	ginkgo.It("disable disk purge in backfill should work", func() {
+		(m.diskStore).(*diskMocks.DiskStore).Calls = []mock.Call{}
+		shard.SetDiskPurgeEnabled(false)
+		defer shard.SetDiskPurgeEnabled(true)
+		backfillPatches, err := createBackfillPatches(upsertBatches[:], jobManager.reportBackfillJobDetail, jobKey)
+		Ω(err).Should(BeNil())
+		err = shard.createNewArchiveStoreVersionForBackfill(backfillPatches, jobManager.reportBackfillJobDetail, jobKey)
+		Ω(err).Should(BeNil())
+
+		jobManager.RLock()
+		jobManager.jobDetails[jobKey].LockDuration = 0
+		Ω(*(jobManager.jobDetails[jobKey])).Should(Equal(BackfillJobDetail{
+			JobDetail: JobDetail{
+				Current:         1,
+				Total:           1,
+				NumRecords:      7,
+				NumAffectedDays: 1,
+			},
+			Stage: "apply patch",
+		}))
+		jobManager.RUnlock()
+		Ω((m.diskStore).(*diskMocks.DiskStore).AssertNotCalled(utils.TestingT, "DeleteBatchVersions", table, shardID,
+			0, uint32(0), uint32(0))).Should(BeTrue())
 	})
 
 	ginkgo.It("Live store with batch size of 1 should work", func() {

@@ -15,6 +15,7 @@
 package memstore
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/uber/aresdb/memstore/common"
@@ -213,8 +214,11 @@ func (shard *TableShard) createNewArchiveStoreVersionForBackfill(
 		totalLockDuration += utils.Now().Sub(lockStart)
 
 		oldBatch := backfillCtx.base
+
 		// Purge batches on disk.
-		if purgeOldBatch {
+		diskPurgeEnabled := shard.IsDiskPurgeEnabled()
+		if purgeOldBatch && diskPurgeEnabled {
+			fmt.Println("hello should purge ===> ", purgeOldBatch, diskPurgeEnabled)
 			if err = shard.diskStore.DeleteBatchVersions(shard.Schema.Schema.Name, shard.ShardID,
 				int(oldBatch.BatchID), oldBatch.Version, oldBatch.SeqNum); err != nil {
 				return

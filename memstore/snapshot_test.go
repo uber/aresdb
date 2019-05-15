@@ -180,6 +180,41 @@ var _ = ginkgo.Describe("snapshot", func() {
 		diskStore.AssertCalled(utils.TestingT, "DeleteSnapshot", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
 
+	ginkgo.It("disable disk purge in snapshot should work", func() {
+		err := ingestValues()
+		Ω(err).Should(BeNil())
+
+		snapshotJobM := &snapshotJobManager{
+			jobDetails: make(map[string]*SnapshotJobDetail),
+			memStore:   memStore,
+		}
+		shard.LiveStore.SnapshotManager.LastRedoFile = 0
+		shard.LiveStore.SnapshotManager.ApplyUpsertBatch(redoLogFile+10, offset, 10, currentRecord)
+
+		shard.SetDiskPurgeEnabled(false)
+		defer shard.SetDiskPurgeEnabled(true)
+
+		writer := new(utilsMocks.WriteCloser)
+		writer.On("Write", mock.Anything).Return(0, nil)
+		writer.On("Close").Return(nil)
+
+		diskStore.On(
+			"OpenSnapshotVectorPartyFileForWrite", tableName, 0, redoLogFile+10, offset, mock.Anything, mock.Anything).
+			Return(writer, nil)
+		diskStore.On("DeleteSnapshot", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		metaStore.On("UpdateSnapshotProgress", tableName, 0, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		err = memStore.Snapshot(tableName, 0, snapshotJobM.reportSnapshotJobDetail)
+		Ω(err).Should(BeNil())
+
+		lastRedoLogFile, lastOffset, _, lastRecordID := shard.LiveStore.SnapshotManager.GetLastSnapshotInfo()
+		Ω(lastRedoLogFile).Should(Equal(redoLogFile + 10))
+		Ω(lastOffset).Should(Equal(offset))
+		Ω(lastRecordID).Should(Equal(currentRecord))
+		diskStore.AssertNotCalled(utils.TestingT, "DeleteSnapshot", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+
 	ginkgo.It("dimension table snapshot and recovery", func() {
 		err := ingestValues()
 		Ω(err).Should(BeNil())

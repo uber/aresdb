@@ -16,6 +16,7 @@ package memstore
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
@@ -36,6 +37,9 @@ type TableShard struct {
 	// For convenience.
 	metaStore metastore.MetaStore
 	diskStore diskstore.DiskStore
+
+	// flag for determine whether disk purge is disabled
+	diskPurgeDisabled uint32
 
 	// Live store. Its locks also cover the primary key.
 	LiveStore *LiveStore `json:"liveStore"`
@@ -65,6 +69,21 @@ func NewTableShard(schema *TableSchema, metaStore metastore.MetaStore,
 	tableShard.ArchiveStore = archiveStore
 	tableShard.LiveStore = NewLiveStore(schema.Schema.Config.BatchSize, tableShard)
 	return tableShard
+}
+
+// SetDiskPurgeEnabled set whether disk purge is enabled
+func (shard *TableShard) SetDiskPurgeEnabled(enabled bool) {
+	var disabled uint32 = 0
+	if !enabled {
+		disabled = 1
+	}
+	atomic.StoreUint32(&shard.diskPurgeDisabled, disabled)
+}
+
+// IsDiskPurgeEnabled check whether disk purge is enabled
+func (shard *TableShard) IsDiskPurgeEnabled() bool {
+	disabled := atomic.LoadUint32(&shard.diskPurgeDisabled)
+	return disabled != 1
 }
 
 // Destruct destructs the table shard.
