@@ -30,9 +30,21 @@ var _ = ginkgo.Describe("Controller", func() {
 			},
 		},
 	}
+	table1 := common.Table{
+		Version: 0,
+		Name:    "test2",
+		Columns: []common.Column{
+			{
+				Name: "col1",
+				Type: "bool",
+			},
+		},
+	}
 	tableBytes, _ := json.Marshal(table)
+	tableBytes1, _ := json.Marshal(table1)
 	tables := []common.Table{
 		table,
+		table1,
 	}
 
 	column2EnumCases := []string{"1"}
@@ -109,6 +121,9 @@ var _ = ginkgo.Describe("Controller", func() {
 		testRouter.HandleFunc("/schema/ns1/tables/test1", func(w http.ResponseWriter, r *http.Request) {
 			w.Write(tableBytes)
 		})
+		testRouter.HandleFunc("/schema/ns1/tables/test2", func(w http.ResponseWriter, r *http.Request) {
+			w.Write(tableBytes1)
+		})
 		testRouter.HandleFunc("/enum/ns1/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodGet {
 				w.Write(enumCasesBytes)
@@ -155,9 +170,10 @@ var _ = ginkgo.Describe("Controller", func() {
 		Ω(err).Should(BeNil())
 
 		c.SetNamespace("ns1")
-		tablesGot, err = c.FetchAllSchemas()
+		tableAddressesGot, err := c.FetchAllSchemas()
 		Ω(err).Should(BeNil())
-		Ω(tablesGot).Should(Equal(tables))
+		Ω(*tableAddressesGot[0]).Should(Equal(table))
+		Ω(*tableAddressesGot[1]).Should(Equal(table1))
 
 		tableGot, err := c.FetchSchema("test1")
 		Ω(err).Should(BeNil())
