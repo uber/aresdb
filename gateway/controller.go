@@ -178,8 +178,16 @@ func (c *ControllerHTTPClient) SetNamespace(namespace string) {
 }
 
 // FetchAllSchemas fetches all schemas
-func (c *ControllerHTTPClient) FetchAllSchemas() (tables []common.Table, err error) {
-	return c.GetAllSchema(c.namespace)
+func (c *ControllerHTTPClient) FetchAllSchemas() (tables []*common.Table, err error) {
+	schemas, err := c.GetAllSchema(c.namespace)
+	if err != nil {
+		return
+	}
+	tables = make([]*common.Table, 0, len(schemas))
+	for _, schema := range schemas {
+		tables = append(tables, &schema)
+	}
+	return
 }
 
 // FetchSchema fetch one schema for given table

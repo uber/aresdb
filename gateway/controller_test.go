@@ -34,6 +34,9 @@ var _ = ginkgo.Describe("Controller", func() {
 	tables := []common.Table{
 		table,
 	}
+	tableAddresses := []*common.Table{
+		&table,
+	}
 
 	column2EnumCases := []string{"1"}
 	enumCasesBytes, _ := json.Marshal(column2EnumCases)
@@ -155,9 +158,9 @@ var _ = ginkgo.Describe("Controller", func() {
 		Ω(err).Should(BeNil())
 
 		c.SetNamespace("ns1")
-		tablesGot, err = c.FetchAllSchemas()
+		tableAddressesGot, err := c.FetchAllSchemas()
 		Ω(err).Should(BeNil())
-		Ω(tablesGot).Should(Equal(tables))
+		Ω(tableAddressesGot).Should(Equal(tableAddresses))
 
 		tableGot, err := c.FetchSchema("test1")
 		Ω(err).Should(BeNil())
