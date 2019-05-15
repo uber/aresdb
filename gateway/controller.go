@@ -179,7 +179,8 @@ func (c *ControllerHTTPClient) SetNamespace(namespace string) {
 
 // FetchAllSchemas fetches all schemas
 func (c *ControllerHTTPClient) FetchAllSchemas() (tables []*common.Table, err error) {
-	schemas, err := c.GetAllSchema(c.namespace)
+	var schemas []common.Table
+	schemas, err = c.GetAllSchema(c.namespace)
 	if err != nil {
 		return
 	}
