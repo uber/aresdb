@@ -7,16 +7,18 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/utils"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	"github.com/stretchr/testify/mock"
 )
 
 type GinkgoTestReporter struct{}
 
 func (g GinkgoTestReporter) Errorf(format string, args ...interface{}) {
-	ginkgo.Fail(fmt.Sprintf(format, args))
+	ginkgo.Fail(fmt.Sprintf(format, args...))
 }
 
 func (g GinkgoTestReporter) Fatalf(format string, args ...interface{}) {
-	ginkgo.Fail(fmt.Sprintf(format, args))
+	ginkgo.Fail(fmt.Sprintf(format, args...))
 }
 
 var _ = ginkgo.Describe("kafka redolog manager", func() {
@@ -27,24 +29,36 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 		config.ChannelBufferSize = 2 * maxBatchesPerFile
 		consumer := mocks.NewConsumer(t, config)
 		commitedOffset := make([]int64, 0)
-		commitFunc := func(offset int64) error {
+
+		metaStore := &metaMocks.MetaStore{}
+		metaStore.On("GetIngestionCommitOffset", mock.Anything, mock.Anything).Return(int64(2 * maxBatchesPerFile), nil)
+		metaStore.On("GetIngestionCheckpointOffset", mock.Anything, mock.Anything).Return(int64(1), nil)
+		metaStore.On("UpdateIngestionCommitOffset", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		metaStore.On("UpdateIngestionCheckpointOffset", mock.Anything, mock.Anything, mock.Anything).Return(func(table string, shard int, offset int64) error {
 			commitedOffset = append(commitedOffset, offset)
 			return nil
+		})
+
+		ns := "ns1"
+		table := "table1"
+		shard := 0
+		partitionConsumer := consumer.ExpectConsumePartition(utils.GetTopicFromTable(ns, table), int32(shard), mocks.AnyOffset)
+		factory := &KafkaIngestorFactory{
+			consumer: consumer,
+			namespace: ns,
 		}
 
+		partitionIngestor :=  factory.NewPartitionIngestor(table, shard).(*KafkaPartitionIngestor)
+
 		upsertBatchBytes := []byte{1, 0, 237, 254, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 0, 123, 0, 1, 0, 0, 0, 0, 0, 135, 0, 0, 0, 0, 0, 0, 0}
-		redoManager := NewKafkaRedologManager("test", "test", 0, consumer, commitFunc)
+		redoManager := NewKafkaRedologManager(ns, table, shard, partitionIngestor, metaStore)
 
 		// create 2 * maxBatchesPerFile number of messages
 		for i := 0; i < 2*maxBatchesPerFile; i++ {
-			consumer.ExpectConsumePartition(utils.GetTopicFromTable("test", "test"), 0, mocks.AnyOffset).
-				YieldMessage(&sarama.ConsumerMessage{
+			partitionConsumer.YieldMessage(&sarama.ConsumerMessage{
 					Value: upsertBatchBytes,
-				})
+			})
 		}
-
-		err := redoManager.ConsumeFrom(0)
-		Ω(err).Should(BeNil())
 
 		// since offset starts from 1, we will have three files
 		fileIDs := map[int64]struct{}{}
@@ -63,7 +77,7 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 		Ω(fileIDs).Should(HaveKey(int64(1)))
 		Ω(fileIDs).Should(HaveKey(int64(2)))
 
-		err = redoManager.CheckpointRedolog(1, 1, 0)
+		err := redoManager.CheckpointRedolog(1, 1, 0)
 		Ω(err).Should(BeNil())
 		Ω(commitedOffset).Should(ConsistOf(int64(maxBatchesPerFile)))
 		redoManager.Close()

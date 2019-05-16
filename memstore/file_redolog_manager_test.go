@@ -41,7 +41,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(buffer)
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.RecordUpsertBatch(upsertBatch, 0)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(5)))
 		Ω(len(redoManager.MaxEventTimePerFile)).Should(Equal(1))
@@ -57,7 +57,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(buffer)
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.RecordUpsertBatch(upsertBatch, 0)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(5)))
 
@@ -65,7 +65,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 			return time.Unix(int64(7), 0)
 		})
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.RecordUpsertBatch(upsertBatch, 0)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(5)))
 
@@ -80,7 +80,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(buffer)
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.RecordUpsertBatch(upsertBatch, 0)
 		redoManager.MaxEventTimePerFile[redoManager.CurrentFileCreationTime] = uint32(234)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(5)))
@@ -89,7 +89,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 			return time.Unix(int64(15), 0)
 		})
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.RecordUpsertBatch(upsertBatch, 0)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(15)))
 		Ω(redoManager.MaxEventTimePerFile).ShouldNot(BeEmpty())

@@ -23,6 +23,7 @@ import (
 
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
+	"github.com/uber/aresdb/metastore"
 )
 
 // BaseBatchID is the starting id of all batches.
@@ -67,6 +68,9 @@ type LiveStore struct {
 	// Logs.
 	RedoLogManager RedologManager
 
+	// shard level ingestor
+	Ingestor PartitionIngestor
+
 	// Manage backfill queue during ingestion.
 	BackfillManager *BackfillManager
 
@@ -101,18 +105,29 @@ type LiveStore struct {
 }
 
 // NewLiveStore creates a new live batch.
-func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
+func NewLiveStore(batchSize int, shard *TableShard, metaStore metastore.MetaStore, redoLogManagerFactory *RedoLogManagerFactory) *LiveStore {
 	schema := shard.Schema
 	tableCfg := schema.Schema.Config
+
+	var redoLogManager RedologManager
+	if redoLogManagerFactory != nil {
+		var err error
+		redoLogManager, err = redoLogManagerFactory.NewRedologManager(schema.Schema.Name, shard.ShardID,
+			shard.diskStore, int64(tableCfg.RedoLogRotationInterval), int64(tableCfg.MaxRedoLogFileSize), metaStore)
+
+		if err != nil {
+			utils.GetLogger().Fatal("Fail to create redolog manager", err)
+		}
+	}
+
 	ls := &LiveStore{
-		BatchSize:       batchSize,
-		Batches:         make(map[int32]*LiveBatch),
-		tableSchema:     schema,
-		LastReadRecord:  RecordID{BatchID: BaseBatchID, Index: 0},
-		NextWriteRecord: RecordID{BatchID: BaseBatchID, Index: 0},
-		PrimaryKey:      NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable, schema.Schema.Config.InitialPrimaryKeyNumBuckets, shard.HostMemoryManager),
-		RedoLogManager: NewFileRedoLogManager(int64(tableCfg.RedoLogRotationInterval), int64(tableCfg.MaxRedoLogFileSize),
-			shard.diskStore, schema.Schema.Name, shard.ShardID),
+		BatchSize:         batchSize,
+		Batches:           make(map[int32]*LiveBatch),
+		tableSchema:       schema,
+		LastReadRecord:    RecordID{BatchID: BaseBatchID, Index: 0},
+		NextWriteRecord:   RecordID{BatchID: BaseBatchID, Index: 0},
+		PrimaryKey:        NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable, schema.Schema.Config.InitialPrimaryKeyNumBuckets, shard.HostMemoryManager),
+		RedoLogManager:    redoLogManager,
 		HostMemoryManager: shard.HostMemoryManager,
 	}
 
@@ -258,6 +273,10 @@ func (s *LiveStore) PurgeBatch(id int32) {
 // Destruct deletes all vectors allocated in C.
 // Caller must detach the Shard first and wait until all users are finished.
 func (s *LiveStore) Destruct() {
+	if s.Ingestor != nil {
+		s.Ingestor.Close()
+		s.Ingestor = nil
+	}
 	s.PrimaryKey.Destruct()
 	for batchID := range s.Batches {
 		s.PurgeBatch(batchID)

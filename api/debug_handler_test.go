@@ -157,6 +157,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		testShard.LiveStore = memstore.NewLiveStore(
 			10,
 			testShard,
+			mockMetaStore,
+			nil,
 		)
 
 		testArchiveBatch.Shard = testShard
@@ -187,7 +189,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		redoLogTableSchema := &memstore.TableSchema{
 			Schema: *redoLogTable,
 		}
-		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID)
+		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID, nil, nil)
 
 		mockShardNotExistErr := convertToAPIError(errors.New("Failed to get shard"))
 		memStore.On("GetTableShard", redoLogTableName, redoLogShardID).Return(redoLogShard, nil).

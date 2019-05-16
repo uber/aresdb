@@ -21,6 +21,7 @@ import (
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
+	"math"
 )
 
 // TableShard stores the data for one table shard in memory.
@@ -36,6 +37,8 @@ type TableShard struct {
 	// For convenience.
 	metaStore metastore.MetaStore
 	diskStore diskstore.DiskStore
+	// Ingestor
+	ingestor PartitionIngestor
 
 	// Live store. Its locks also cover the primary key.
 	LiveStore *LiveStore `json:"liveStore"`
@@ -52,8 +55,10 @@ type TableShard struct {
 }
 
 // NewTableShard creates and initiates a table shard based on the schema.
-func NewTableShard(schema *TableSchema, metaStore metastore.MetaStore,
-	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int) *TableShard {
+func NewTableShard(schema *TableSchema, metaStore metastore.MetaStore, diskStore diskstore.DiskStore,
+	hostMemoryManager common.HostMemoryManager, shard int, ingestorManager *IngestorManager,
+	redoLogManagerFactory *RedoLogManagerFactory) *TableShard {
+
 	tableShard := &TableShard{
 		ShardID:           shard,
 		Schema:            schema,
@@ -61,9 +66,13 @@ func NewTableShard(schema *TableSchema, metaStore metastore.MetaStore,
 		metaStore:         metaStore,
 		HostMemoryManager: hostMemoryManager,
 	}
+	if ingestorManager != nil {
+		ingestorManager.IngestPartition(schema.Schema.Name, shard)
+	}
+
 	archiveStore := NewArchiveStore(tableShard)
 	tableShard.ArchiveStore = archiveStore
-	tableShard.LiveStore = NewLiveStore(schema.Schema.Config.BatchSize, tableShard)
+	tableShard.LiveStore = NewLiveStore(schema.Schema.Config.BatchSize, tableShard, metaStore, redoLogManagerFactory)
 	return tableShard
 }
 
@@ -71,6 +80,11 @@ func NewTableShard(schema *TableSchema, metaStore metastore.MetaStore,
 // Caller must detach the shard from memstore first.
 func (shard *TableShard) Destruct() {
 	// TODO: if this blocks on archiving for too long, figure out a way to cancel it.
+	if shard.ingestor != nil {
+		shard.ingestor.Close()
+		shard.ingestor = nil
+	}
+
 	shard.Users.Wait()
 
 	shard.LiveStore.Destruct()
@@ -78,6 +92,67 @@ func (shard *TableShard) Destruct() {
 	if shard.Schema.Schema.IsFactTable {
 		shard.ArchiveStore.Destruct()
 	}
+}
+
+// StartIngestion start ingestion for this table/shard
+func (s *TableShard) StartIngestion() error {
+	if s.ingestor == nil {
+		return nil
+	}
+	table := s.Schema.Schema.Name
+
+	utils.GetLogger().With("action", IngestionAction, "table", table, "shard", s.ShardID).Info("Start ingesting")
+
+	offset, err := s.metaStore.GetIngestionCheckpointOffset(table, s.ShardID)
+	if err != nil {
+		return utils.StackError(err, "Failed to get ingestion checkpoint offset, table: %s, shard: %d", table, s.ShardID)
+	}
+
+	err = s.ingestor.Ingest(offset, math.MaxInt64, false)
+	if err != nil {
+		return utils.StackError(err, "Failed to start ingestion, table: %s, shard: %d", table, s.ShardID)
+	}
+
+	go func() {
+		for {
+			batch := s.ingestor.Next()
+			if batch == nil {
+				utils.GetLogger().With("action", IngestionAction, "table", table, "shard", s.ShardID).Info("Ingestion stopped")
+				return
+			}
+			s.WriteUpsertBatch(batch.Batch, batch.Offset)
+		}
+	}()
+	return nil
+}
+
+func (s *TableShard) WriteUpsertBatch(upsertBatch *UpsertBatch, offset int64) error {
+	utils.GetReporter(s.Schema.Schema.Name, s.ShardID).GetCounter(utils.IngestedUpsertBatches).Inc(1)
+	utils.GetReporter(s.Schema.Schema.Name, s.ShardID).GetGauge(utils.UpsertBatchSize).Update(float64(len(upsertBatch.buffer)))
+
+	s.Users.Add(1)
+	defer s.Users.Done()
+
+	// Put the memStore in writer lock mode so other writers cannot enter.
+	s.LiveStore.WriterLock.Lock()
+
+	// Persist upsertbatch or offset info to disk first.
+	redoFile, batchOffset := s.LiveStore.RedoLogManager.RecordUpsertBatch(upsertBatch, offset)
+
+	// Apply it to the memstore shard.
+	needToWaitForBackfillBuffer, err := s.ApplyUpsertBatch(upsertBatch, redoFile, batchOffset, false)
+
+	s.LiveStore.WriterLock.Unlock()
+
+	// return immediately if it does not need to wait for backfill buffer availability
+	if !needToWaitForBackfillBuffer {
+		return err
+	}
+
+	// otherwise: block until backfill buffer becomes available again
+	s.LiveStore.BackfillManager.WaitForBackfillBufferAvailability()
+
+	return nil
 }
 
 // DeleteColumn deletes the data for the specified column.

@@ -25,6 +25,7 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
+	config "github.com/uber/aresdb/common"
 )
 
 func CreateMockDiskStore() *mocks.DiskStore {
@@ -58,11 +59,11 @@ func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType
 	for i := range columnTypes {
 		schema.SetDefaultValue(i)
 	}
-
-	memStore := NewMemStore(metaStore, diskStore).(*memStoreImpl)
+	redoLogManagerFactory, _ := NewRedoLogManagerFactory("test", config.IngestionConfig{})
+	memStore := NewMemStore(metaStore, diskStore, nil, redoLogManagerFactory).(*memStoreImpl)
 	// Create shards.
 	shards := map[int]*TableShard{
-		shardID: NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(memStore, 1<<32), shardID),
+		shardID: NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(memStore, 1<<32), shardID, nil, redoLogManagerFactory),
 	}
 	memStore.TableShards[tableName] = shards
 	memStore.TableSchemas[tableName] = schema

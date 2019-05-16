@@ -33,7 +33,7 @@ var _ = ginkgo.Describe("live store", func() {
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
 		}
-		vs := NewLiveStore(0, shard)
+		vs := NewLiveStore(0, shard, nil, nil)
 
 		Ω(vs.LastReadRecord.BatchID).Should(Equal(BaseBatchID))
 		Ω(vs.LastReadRecord.Index).Should(Equal(uint32(0)))
@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("live store", func() {
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
 		}
-		vs := NewLiveStore(16, shard)
+		vs := NewLiveStore(16, shard, nil, nil)
 
 		vs.appendBatch(BaseBatchID)
 		b := vs.GetBatchForRead(BaseBatchID)
@@ -107,7 +107,7 @@ var _ = ginkgo.Describe("live store", func() {
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
 		}
-		vs := NewLiveStore(0, shard)
+		vs := NewLiveStore(0, shard, nil, nil)
 
 		vs.appendBatch(BaseBatchID)
 		b := vs.GetBatchForRead(BaseBatchID)
@@ -149,7 +149,7 @@ var _ = ginkgo.Describe("live store", func() {
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
 		}
-		vs := NewLiveStore(16, shard)
+		vs := NewLiveStore(16, shard, nil, nil)
 
 		vs.appendBatch(BaseBatchID)
 		vs.appendBatch(BaseBatchID + 1)
@@ -184,7 +184,7 @@ var _ = ginkgo.Describe("live store", func() {
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
 		}
-		vs := NewLiveStore(0, shard)
+		vs := NewLiveStore(0, shard, nil, nil)
 		vs.PrimaryKey = pk
 
 		key := []byte{1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1}
@@ -207,7 +207,7 @@ var _ = ginkgo.Describe("live store", func() {
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
 		}
-		vs := NewLiveStore(0, shard)
+		vs := NewLiveStore(0, shard, nil, nil)
 		liveBatch1 := vs.getOrCreateBatch(-1)
 		Ω(liveBatch1).ShouldNot(BeNil())
 		liveBatch1.Unlock()

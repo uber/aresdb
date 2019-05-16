@@ -27,6 +27,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"strings"
 	"sync"
+	config "github.com/uber/aresdb/common"
 )
 
 const (
@@ -48,7 +49,8 @@ type TestFactoryT struct {
 
 // NewMockMemStore returns a new memstore with mocked diskstore and metastore.
 func (t TestFactoryT) NewMockMemStore() *memStoreImpl {
-	return NewMemStore(new(metaMocks.MetaStore), new(diskMocks.DiskStore)).(*memStoreImpl)
+	redoLogManagerFactory, _ := NewRedoLogManagerFactory("test", config.IngestionConfig{})
+	return NewMemStore(new(metaMocks.MetaStore), new(diskMocks.DiskStore), nil, redoLogManagerFactory).(*memStoreImpl)
 }
 
 // ReadArchiveBatch read batch and do pruning for every columns.

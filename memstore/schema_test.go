@@ -159,7 +159,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		testMemstore.TableSchemas[testTable.Name] = tableSchema
 
 		testTableShard := NewTableShard(tableSchema, mockMetastore, mockDiskstore,
-			NewHostMemoryManager(&testMemstore, 1<<32), 0)
+			NewHostMemoryManager(&testMemstore, 1<<32), 0, nil, nil)
 
 		testMemstore.TableShards[testTable.Name] = map[int]*TableShard{
 			0: testTableShard,

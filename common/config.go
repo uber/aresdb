@@ -18,6 +18,10 @@ import (
 	"net/http"
 )
 
+const (
+	KafkaIngestion   = "kafka"
+	KafkaRedolog     = "kafka"
+)
 // TimezoneConfig is the static config for timezone column support
 type TimezoneConfig struct {
 	// table to lookup timezone columns
@@ -68,6 +72,16 @@ type ClusterConfig struct {
 	InstanceName string `yaml:"instance_name"`
 }
 
+// KafkaIngestionConfig is the config used for Kafka ingestion
+type IngestionConfig struct {
+	// Ingestion mode, will be http or kafka for now
+	IngestionMode string `yaml:"mode"`
+	// Namespace are namespace for this node
+	Namespace string `yaml:"namespace"`
+	// Brokers are the kafka broker list
+	Brokers []string `yaml:"brokers"`
+}
+
 // AresServerConfig is config specific for ares server.
 type AresServerConfig struct {
 	// HTTP port for serving.
@@ -96,4 +110,13 @@ type AresServerConfig struct {
 	HTTP      HTTPConfig      `yaml:"http"`
 	Cluster   ClusterConfig   `yaml:"cluster"`
 	Gateway   GatewayConfig   `yaml:"gateway"`
+
+	// Redolog storage: (file or kafka)
+	// 1. file system, all ingestion data will saving into file (ingestion can be from http and/or kafka)
+	// 2. kafka, this is only supported when ingestion is from kafka, and there is no real data publish to kafka,
+	//    we just save the kafka conumption offset in kafka
+	RedologStorage string `yaml:"redologStorage"`
+
+	// ingestion config
+	IngestionConfig IngestionConfig `yaml:"ingestion"`
 }

@@ -57,9 +57,8 @@ func CreateMockHostMemoryManger() *memComMocks.HostMemoryManager {
 // CreateMemStore creates a mocked MemStore for testing.
 func CreateMemStore(schema *memstore.TableSchema, shardID int, metaStore metastore.MetaStore,
 	diskStore diskstore.DiskStore) *memMocks.MemStore {
-	shard := memstore.NewTableShard(schema, metaStore, diskStore, CreateMockHostMemoryManger(), shardID)
-
 	memStore := new(memMocks.MemStore)
+	shard := memstore.NewTableShard(schema, metaStore, diskStore, CreateMockHostMemoryManger(), shardID, nil, nil)
 	memStore.On("GetTableShard", schema.Schema.Name, shardID).Return(shard, nil).
 		Run(func(arguments mock.Arguments) {
 			shard.Users.Add(1)

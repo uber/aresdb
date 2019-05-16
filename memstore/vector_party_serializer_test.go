@@ -238,8 +238,8 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		})
 		diskStore := &mocks.DiskStore{}
 
-		shard := NewTableShard(schema, nil, diskStore,
-			NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32), 0)
+		shard := NewTableShard(schema, m.metaStore, diskStore,
+			NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32), 0, nil, nil)
 		archiveSerializer := NewVectorPartyArchiveSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID, 0, 0, 0, 0)
 		snapshotSerializer := NewVectorPartySnapshotSerializer(shard, 0, 0, 0, 0, 0, 0)
 

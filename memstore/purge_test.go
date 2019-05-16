@@ -71,7 +71,7 @@ var _ = ginkgo.Describe("Purge", func() {
 			HostMemManager: hostMemoryManager,
 		}
 		hostMemoryManager = NewHostMemoryManager(memStore, 1<<10)
-		tableShard = NewTableShard(tableSchema, metaStore, diskStore, hostMemoryManager, testShardID)
+		tableShard = NewTableShard(tableSchema, metaStore, diskStore, hostMemoryManager, testShardID, nil, nil)
 
 		archiveBatch0, err := testFactory.ReadArchiveBatch("archiving/archiveBatch0")
 		Ω(err).Should(BeNil())

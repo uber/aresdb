@@ -132,9 +132,9 @@ func (r *fileRedologManager) openFileForWrite(upsertBatchSize uint32) {
 	r.CurrentRedoLogSize = 4
 }
 
-// WriteUpsertBatch saves an upsert batch into disk before applying it. Any errors from diskStore
+// RecordUpsertBatch saves an upsert batch into disk before applying it. Any errors from diskStore
 // will trigger system panic.
-func (r *fileRedologManager) WriteUpsertBatch(upsertBatch *UpsertBatch) (int64, uint32) {
+func (r *fileRedologManager) RecordUpsertBatch(upsertBatch *UpsertBatch, offset int64) (int64, uint32) {
 	r.openFileForWrite(uint32(len(upsertBatch.buffer)))
 
 	buffer := upsertBatch.GetBuffer()

@@ -23,35 +23,14 @@ import (
 
 // HandleIngestion logs an upsert batch and applies it to the in-memory store.
 func (m *memStoreImpl) HandleIngestion(table string, shardID int, upsertBatch *UpsertBatch) error {
-	utils.GetReporter(table, shardID).GetCounter(utils.IngestedUpsertBatches).Inc(1)
-	utils.GetReporter(table, shardID).GetGauge(utils.UpsertBatchSize).Update(float64(len(upsertBatch.buffer)))
 	shard, err := m.GetTableShard(table, shardID)
 	if err != nil {
 		return utils.StackError(nil, "Failed to get shard %d for table %s for upsert batch", shardID, table)
 	}
 	// Release the wait group that proctects the shard to be deleted.
-	defer shard.Users.Done()
+	shard.Users.Done()
 
-	// Put the memStore in writer lock mode so other writers cannot enter.
-	shard.LiveStore.WriterLock.Lock()
-
-	// Persist to disk first.
-	redoFile, offset := shard.LiveStore.RedoLogManager.WriteUpsertBatch(upsertBatch)
-
-	// Apply it to the memstore shard.
-	needToWaitForBackfillBuffer, err := shard.ApplyUpsertBatch(upsertBatch, redoFile, offset, false)
-
-	shard.LiveStore.WriterLock.Unlock()
-
-	// return immediately if it does not need to wait for backfill buffer availability
-	if !needToWaitForBackfillBuffer {
-		return err
-	}
-
-	// otherwise: block until backfill buffer becomes available again
-	shard.LiveStore.BackfillManager.WaitForBackfillBufferAvailability()
-
-	return nil
+	return shard.WriteUpsertBatch(upsertBatch, 0)
 }
 
 // ApplyUpsertBatch applies the upsert batch to the memstore shard.

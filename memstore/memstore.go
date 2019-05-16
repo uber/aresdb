@@ -96,6 +96,10 @@ type memStoreImpl struct {
 	metaStore metastore.MetaStore
 	diskStore diskstore.DiskStore
 
+	ingestorManager *IngestorManager
+
+	redoLogManagerFactory * RedoLogManagerFactory
+
 	// each MemStore should only have one scheduler instance.
 	scheduler Scheduler
 }
@@ -105,16 +109,21 @@ func getTableShardKey(tableName string, shardID int) string {
 }
 
 // NewMemStore creates a MemStore from the specified MetaStore.
-func NewMemStore(metaStore metastore.MetaStore, diskStore diskstore.DiskStore) MemStore {
+func NewMemStore(metaStore metastore.MetaStore, diskStore diskstore.DiskStore,
+	ingestorFactory IngestorFactory, redologManagerFactory *RedoLogManagerFactory) MemStore {
 	memStore := &memStoreImpl{
-		TableShards:  make(map[string]map[int]*TableShard),
-		TableSchemas: make(map[string]*TableSchema),
-		metaStore:    metaStore,
-		diskStore:    diskStore,
+		TableShards:  			make(map[string]map[int]*TableShard),
+		TableSchemas: 			make(map[string]*TableSchema),
+		metaStore:    			metaStore,
+		diskStore:    			diskStore,
+		redoLogManagerFactory:  redologManagerFactory,
 	}
 	// Create HostMemoryManager
 	memStore.HostMemManager = NewHostMemoryManager(memStore, utils.GetConfig().TotalMemorySize)
 	memStore.scheduler = newScheduler(memStore)
+	if ingestorFactory != nil {
+		memStore.ingestorManager = NewIngestorManager(ingestorFactory.GetNamespace(), ingestorFactory)
+	}
 	return memStore
 }
 

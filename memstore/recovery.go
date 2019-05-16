@@ -79,6 +79,7 @@ func (shard *TableShard) ReplayRedoLogs() {
 		shard.LiveStore.RedoLogManager.
 			CheckpointRedolog(shard.LiveStore.ArchivingCutoffHighWatermark, redoLogFilePersisted, offsetPersisted)
 	}
+	shard.LiveStore.RedoLogManager.Close()
 }
 
 func (shard *TableShard) cleanOldSnapshotAndLogs(redoLogFile int64, offset uint32) {
@@ -197,7 +198,24 @@ func (m *memStoreImpl) replayRedoLogs() {
 		}(table)
 	}
 	wg.Wait()
+	// close ingestions for redolog
+	m.redoLogManagerFactory.ingestorManager.Close()
+
 	utils.GetLogger().Info("Finish replaying redo logs for all table shards")
+}
+
+// startIngestions start ingestion jobs for all shards
+func (m *memStoreImpl) startIngestions() {
+	if m.ingestorManager == nil || !m.ingestorManager.IsValid() {
+		return
+	}
+	utils.GetLogger().Info("Start ingestion jobs")
+	for table := range m.TableSchemas {
+		tableShards := m.TableShards[table]
+		for _, shard := range tableShards {
+			shard.StartIngestion()
+		}
+	}
 }
 
 // InitShards loads/recovers data for shards initially owned by the current instance.
@@ -238,6 +256,8 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 
 	m.replayRedoLogs()
 
+	m.startIngestions()
+
 	if !schedulerOff {
 		// re-enable archiving after redolog replay
 		m.GetScheduler().EnableJobType(memcom.ArchivingJobType, true)
@@ -266,6 +286,7 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 				if err != nil {
 					utils.GetLogger().Panic(err)
 				}
+
 			} else {
 				// Unload the Shard.
 				var shard *TableShard
@@ -293,7 +314,7 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 // LoadShard loads/recovers the specified Shard and attaches it to memStoreImpl for serving. If will load the metadata
 // first and then replay redologs only if replayRedologs is true.
 func (m *memStoreImpl) LoadShard(schema *TableSchema, shard int, replayRedologs bool) error {
-	tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shard)
+	tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shard, m.ingestorManager, m.redoLogManagerFactory)
 	tableShard.LoadMetaData()
 	if replayRedologs {
 		tableShard.ReplayRedoLogs()
@@ -313,6 +334,10 @@ func (m *memStoreImpl) LoadShard(schema *TableSchema, shard int, replayRedologs 
 	shardMap[shard] = tableShard
 	// Add reporter for current table and Shard.
 	utils.AddTableShardReporter(schema.Schema.Name, shard)
+
+	if replayRedologs {
+		return tableShard.StartIngestion()
+	}
 	return nil
 }
 

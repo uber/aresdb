@@ -128,7 +128,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID)
+		}, metaStore, diskStore, hostMemoryManager, shardID, nil, nil)
 
 		shardMap := map[int]*memstore.TableShard{
 			shardID: shard,
@@ -1040,6 +1040,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		timezoneTable := "table2"
 		memStore := new(memMocks.MemStore)
 
+
 		mainTableSchema := metaCom.Table{
 			Name: table,
 			Config: metaCom.TableConfig{
@@ -1110,7 +1111,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Schema:            timezoneTableSchema,
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.SmallEnum},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID)
+		}, metaStore, diskStore, hostMemoryManager, shardID, nil, nil)
 		timezoneTableBatch := memstore.LiveBatch{
 			Batch: memstore.Batch{
 				RWMutex: &sync.RWMutex{},
@@ -1139,7 +1140,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Schema:            mainTableSchema,
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Uint32},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID)
+		}, metaStore, diskStore, hostMemoryManager, shardID, nil, nil)
 		mainTableShard.LiveStore = &memstore.LiveStore{
 			LastReadRecord: memstore.RecordID{BatchID: -90, Index: 0},
 			Batches: map[int32]*memstore.LiveBatch{
@@ -1367,7 +1368,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Schema:            geofenceSchema,
 			HostMemoryManager: mockMemoryManager,
 		}
-		geoFenceLiveStore := memstore.NewLiveStore(10, geoFenceTableShard)
+		geoFenceLiveStore := memstore.NewLiveStore(10, geoFenceTableShard, nil, nil)
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{
 			memstore.BaseBatchID: {
 				Batch: memstore.Batch{
@@ -1635,7 +1636,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Schema:            geofenceSchema,
 			HostMemoryManager: mockMemoryManager,
 		}
-		geoFenceLiveStore := memstore.NewLiveStore(10, geoFenceTableShard)
+		geoFenceLiveStore := memstore.NewLiveStore(10, geoFenceTableShard, nil, nil)
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{
 			memstore.BaseBatchID: {
 				Batch: memstore.Batch{

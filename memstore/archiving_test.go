@@ -64,7 +64,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		},
 		ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 		DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-	}, nil, nil, hostMemoryManager, shardID)
+	}, m.metaStore, nil, hostMemoryManager, shardID, nil, nil)
 
 	shard.ArchiveStore = &ArchiveStore{CurrentVersion: &ArchiveStoreVersion{
 		ArchivingCutoff: 0,

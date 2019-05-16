@@ -140,8 +140,20 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	// Create DiskStore.
 	diskStore := diskstore.NewLocalDiskStore(cfg.RootPath)
 
+	// Create ingestion manager
+	ingestionFactory, err := memstore.NewIngestorFactory(cfg.IngestionConfig)
+	if err != nil {
+		utils.GetLogger().Fatal(err)
+	}
+
+	// Create Redolog manager factory
+	redoLogManagerFactory, err := memstore.NewRedoLogManagerFactory(cfg.RedologStorage, cfg.IngestionConfig)
+	if err != nil {
+		utils.GetLogger().Fatal(err)
+	}
+
 	// Create MemStore.
-	memStore := memstore.NewMemStore(metaStore, diskStore)
+	memStore := memstore.NewMemStore(metaStore, diskStore, ingestionFactory, redoLogManagerFactory)
 
 	// Read schema.
 	utils.GetLogger().Infof("Reading schema from local MetaStore %s", metaStorePath)
@@ -202,7 +214,11 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	}
 	schemaHandler.Register(schemaRouter.Subrouter(), httpWrappers...)
 	enumHandler.Register(router.PathPrefix("/schema").Subrouter(), httpWrappers...)
-	dataHandler.Register(router.PathPrefix("/data").Subrouter(), httpWrappers...)
+
+	if cfg.IngestionConfig.IngestionMode != common.KafkaIngestion {
+		// If it is not ingestion from Kafka, will use default http ingestion
+		dataHandler.Register(router.PathPrefix("/data").Subrouter(), httpWrappers...)
+	}
 	queryHandler.Register(router.PathPrefix("/query").Subrouter(), httpWrappers...)
 
 	swaggerHandler := http.StripPrefix("/swagger/", http.FileServer(http.Dir("./api/ui/swagger/")))

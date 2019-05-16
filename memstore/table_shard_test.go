@@ -22,6 +22,7 @@ import (
 	"github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
 )
 
 var _ = ginkgo.Describe("table Shard", func() {
@@ -58,8 +59,8 @@ var _ = ginkgo.Describe("table Shard", func() {
 			schema.SetDefaultValue(columnID)
 		}
 
-		shard := NewTableShard(schema, nil, diskStore,
-			NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32), 0)
+		shard := NewTableShard(schema, &metaMocks.MetaStore{}, diskStore,
+			NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32), 0, nil, nil)
 
 		// Prepare live store
 		shard.LiveStore.AdvanceNextWriteRecord()
