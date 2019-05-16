@@ -30,6 +30,7 @@ import (
 	"github.com/uber/aresdb/metastore"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/testing"
+	"github.com/uber/aresdb/common"
 )
 
 // CreateMockDiskStore creates a mocked DiskStore for testing.
@@ -58,7 +59,9 @@ func CreateMockHostMemoryManger() *memComMocks.HostMemoryManager {
 func CreateMemStore(schema *memstore.TableSchema, shardID int, metaStore metastore.MetaStore,
 	diskStore diskstore.DiskStore) *memMocks.MemStore {
 	memStore := new(memMocks.MemStore)
-	shard := memstore.NewTableShard(schema, metaStore, diskStore, CreateMockHostMemoryManger(), shardID, nil, nil)
+	redoLogManagerFactory, _ := memstore.NewRedoLogManagerFactory("file", common.IngestionConfig{})
+	shard := memstore.NewTableShard(schema, metaStore, diskStore, CreateMockHostMemoryManger(), shardID,
+		nil, redoLogManagerFactory)
 	memStore.On("GetTableShard", schema.Schema.Name, shardID).Return(shard, nil).
 		Run(func(arguments mock.Arguments) {
 			shard.Users.Add(1)

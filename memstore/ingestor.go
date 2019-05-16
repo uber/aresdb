@@ -4,18 +4,18 @@ package memstore
 // resturcture needed to isolate UpsertBatch and dependancy stuffs from memstore
 
 import (
-	"sync"
 	"github.com/uber/aresdb/common"
+	"sync"
 )
 
 const (
-	IngestionAction   = "ingestion"
+	IngestionAction = "ingestion"
 )
 
 // UpsertBatchWithOffset is struct to contains UpsertBatch with offset from streaming (like kafka)
 type UpsertBatchWithOffset struct {
-	Batch       *UpsertBatch
-	Offset 		int64
+	Batch  *UpsertBatch
+	Offset int64
 }
 
 // IngestorFactory is factory interface to generate partition ingestor
@@ -62,8 +62,8 @@ func NewIngestorFactory(conf common.IngestionConfig) (IngestorFactory, error) {
 // NewIngestorManager create one IngestorManager using specified IngestorFactory
 func NewIngestorManager(namespace string, factory IngestorFactory) *IngestorManager {
 	return &IngestorManager{
-		namespace:		namespace,
-		factory:		factory,
+		namespace: namespace,
+		factory:   factory,
 	}
 }
 
@@ -123,4 +123,3 @@ func (m *IngestorManager) Close() {
 		m.factory = nil
 	}
 }
-

@@ -18,7 +18,6 @@ import (
 	"math"
 	"sync"
 	"time"
-
 	"encoding/json"
 
 	"github.com/uber/aresdb/memstore/common"

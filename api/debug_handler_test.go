@@ -142,6 +142,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		Ω(ok).Should(BeTrue())
 		enumDict.ReverseDict = append(enumDict.ReverseDict, "enum case1")
 		testSchema.EnumDicts["c6"] = enumDict
+		redoLogManagerFactory, _ := memstore.NewRedoLogManagerFactory("file", common.IngestionConfig{})
 		memStore = CreateMemStore(testSchema, testTableShardID, mockMetaStore, mockDiskStore)
 		testShard, _ := memStore.GetTableShard(testTableName, testTableShardID)
 		memstore.NewArchiveStoreVersion(100, testShard)
@@ -158,7 +159,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 			10,
 			testShard,
 			mockMetaStore,
-			nil,
+			redoLogManagerFactory,
 		)
 
 		testArchiveBatch.Shard = testShard
@@ -189,7 +190,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		redoLogTableSchema := &memstore.TableSchema{
 			Schema: *redoLogTable,
 		}
-		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID, nil, nil)
+		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID,
+			nil, redoLogManagerFactory)
 
 		mockShardNotExistErr := convertToAPIError(errors.New("Failed to get shard"))
 		memStore.On("GetTableShard", redoLogTableName, redoLogShardID).Return(redoLogShard, nil).

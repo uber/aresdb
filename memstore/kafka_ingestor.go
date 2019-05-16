@@ -1,9 +1,9 @@
 package memstore
 
 import (
+	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/uber/aresdb/utils"
-	"fmt"
 )
 
 // KafkaIngestorFactory Kafka specified IngestorFactory
@@ -16,13 +16,13 @@ type KafkaIngestorFactory struct {
 
 // KafkaPartitionIngestor Kafka partition level ingestor
 type KafkaPartitionIngestor struct {
-	consumer 			sarama.Consumer
-	namespace   		string
-	tableName   		string
-	shard       		int
-	partitionConsumer 	sarama.PartitionConsumer
-	done        		chan struct{}
-	batches    			chan UpsertBatchWithOffset
+	consumer          sarama.Consumer
+	namespace         string
+	tableName         string
+	shard             int
+	partitionConsumer sarama.PartitionConsumer
+	done              chan struct{}
+	batches           chan UpsertBatchWithOffset
 }
 
 // NewKafkaIngestorFactory create Kafka IngestorFactory
@@ -42,13 +42,13 @@ func NewKafkaIngestorFactory(brokers []string, namespace string) (IngestorFactor
 
 // NewPartitionIngestor create Kafka PartitionIngestor
 func (f *KafkaIngestorFactory) NewPartitionIngestor(tableName string, shard int) PartitionIngestor {
-	return &KafkaPartitionIngestor {
-		consumer:   f.consumer,
-		namespace:	f.namespace,
-		tableName:  tableName,
-		shard:      shard,
-		done:       make(chan struct{}),
-		batches:    make(chan UpsertBatchWithOffset, 1),
+	return &KafkaPartitionIngestor{
+		consumer:  f.consumer,
+		namespace: f.namespace,
+		tableName: tableName,
+		shard:     shard,
+		done:      make(chan struct{}),
+		batches:   make(chan UpsertBatchWithOffset, 1),
 	}
 }
 
