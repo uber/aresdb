@@ -984,7 +984,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.Query = q
 
-		qc = q.Compile(memStore, false)
+		qc = q.Compile(memStore, false, nil)
 		Ω(qc.Error).Should(BeNil())
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
@@ -1183,7 +1183,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.Query = q
 
-		qc = q.Compile(memStore, false)
+		qc = q.Compile(memStore, false, nil)
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.TableScanners).Should(HaveLen(2))
 		qc.ProcessQuery(memStore)
@@ -2082,7 +2082,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.Query = q
 
-		qc = q.Compile(memStore, false)
+		qc = q.Compile(memStore, false, nil)
 		Ω(qc.Error).Should(BeNil())
 		qc.calculateMemoryRequirement(memStore)
 		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
@@ -2170,7 +2170,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 		}
 		qc.Query = q
-		qc = q.Compile(memStore, false)
+		qc = q.Compile(memStore, false, nil)
 		Ω(qc.Error).Should(BeNil())
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())

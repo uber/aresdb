@@ -67,7 +67,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 	aqlRequest := AQLRequest{
 		Device:                sqlRequest.Device,
 		Verbose:               sqlRequest.Verbose,
-		Debug:                 sqlRequest.Debug,
+		Debug:                 sqlRequest.Debug + sqlRequest.Verbose,
 		Profiling:             sqlRequest.Profiling,
 		DeviceChoosingTimeout: sqlRequest.DeviceChoosingTimeout,
 		Accept:                sqlRequest.Accept,

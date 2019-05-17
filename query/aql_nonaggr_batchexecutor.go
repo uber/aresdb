@@ -87,11 +87,11 @@ func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
 
 	// flush current batches results to result buffer
 	e.qc.OOPK.ResultSize = bc.resultSize
-	e.qc.flushResultBuffer()
 	e.qc.numberOfRowsWritten += bc.resultSize
 	if e.getNumberOfRecordsNeeded() <= 0 {
 		e.qc.OOPK.done = true
 	}
+	e.qc.flushResultBuffer()
 
 	bc.size = 0
 	e.qc.reportTimingForCurrentBatch(e.stream, &start, cleanupTiming)
