@@ -191,8 +191,8 @@ var _ = ginkgo.Describe("snapshot", func() {
 		shard.LiveStore.SnapshotManager.LastRedoFile = 0
 		shard.LiveStore.SnapshotManager.ApplyUpsertBatch(redoLogFile+10, offset, 10, currentRecord)
 
-		shard.SetDiskPurgeEnabled(false)
-		defer shard.SetDiskPurgeEnabled(true)
+		shard.PinForPeerDataTransfer()
+		defer shard.DoneWithPeerDataTransfer()
 
 		writer := new(utilsMocks.WriteCloser)
 		writer.On("Write", mock.Anything).Return(0, nil)

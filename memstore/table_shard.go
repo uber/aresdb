@@ -38,8 +38,8 @@ type TableShard struct {
 	metaStore metastore.MetaStore
 	diskStore diskstore.DiskStore
 
-	// flag for determine whether disk purge is disabled
-	diskPurgeDisabled uint32
+	// pinned disk file users record disk file pinned users for peer data transfer
+	pinnedDiskFileUsers int32
 
 	// Live store. Its locks also cover the primary key.
 	LiveStore *LiveStore `json:"liveStore"`
@@ -71,19 +71,27 @@ func NewTableShard(schema *TableSchema, metaStore metastore.MetaStore,
 	return tableShard
 }
 
-// SetDiskPurgeEnabled set whether disk purge is enabled
-func (shard *TableShard) SetDiskPurgeEnabled(enabled bool) {
-	var disabled uint32 = 0
-	if !enabled {
-		disabled = 1
-	}
-	atomic.StoreUint32(&shard.diskPurgeDisabled, disabled)
+// PinForPeerDataTransfer pin disk file from being purged for peer data transfer
+// User should unpin after data transfer is done
+func (shard *TableShard) PinForPeerDataTransfer() {
+	pins := atomic.AddInt32(&shard.pinnedDiskFileUsers, 1)
+	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.PinnedDiskFileUsers).
+		Update(float64(pins))
+}
+
+// DoneWithPeerDataTransfer unpin disk file after data transfer is done
+func (shard *TableShard) DoneWithPeerDataTransfer() {
+	pins := atomic.AddInt32(&shard.pinnedDiskFileUsers, -1)
+	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.PinnedDiskFileUsers).
+		Update(float64(pins))
 }
 
 // IsDiskPurgeEnabled check whether disk purge is enabled
 func (shard *TableShard) IsDiskPurgeEnabled() bool {
-	disabled := atomic.LoadUint32(&shard.diskPurgeDisabled)
-	return disabled != 1
+	pins := atomic.LoadInt32(&shard.pinnedDiskFileUsers)
+	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.PinnedDiskFileUsers).
+		Update(float64(pins))
+	return pins == 0
 }
 
 // Destruct destructs the table shard.

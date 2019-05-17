@@ -45,6 +45,7 @@ const (
 	IngestSkippedRecords
 	IngestedUpsertBatches
 	UpsertBatchSize
+	PinnedDiskFileUsers
 	PrimaryKeyMissing
 	TimeColumnMissing
 	BackfillRecords
@@ -160,6 +161,7 @@ const (
 	scopeNameHTTPHandlerCall                 = "http.call"
 	scopeNameHTTPHandlerLatency              = "http.latency"
 	scopeNamePrimaryKeyMissing               = "primary_key_missing"
+	scopeNamePinnedDiskFileUsers             = "pinned_disk_file_users"
 	scopeNameTimeColumnMissing               = "time_column_missing"
 	scopeNameIngestedRecords                 = "ingested_records"
 	scopeNameAppendedRecords                 = "appended_records"
@@ -392,6 +394,13 @@ var metricsDefs = map[MetricName]metricDefinition{
 		metricType: Gauge,
 		tags: map[string]string{
 			metricsTagOperation: metricsOperationIngestion,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	PinnedDiskFileUsers: {
+		name:       scopeNamePinnedDiskFileUsers,
+		metricType: Gauge,
+		tags: map[string]string{
 			metricsTagComponent: metricsComponentMemStore,
 		},
 	},

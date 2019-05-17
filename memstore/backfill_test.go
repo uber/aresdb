@@ -406,8 +406,8 @@ var _ = ginkgo.Describe("backfill", func() {
 
 	ginkgo.It("disable disk purge in backfill should work", func() {
 		(m.diskStore).(*diskMocks.DiskStore).Calls = []mock.Call{}
-		shard.SetDiskPurgeEnabled(false)
-		defer shard.SetDiskPurgeEnabled(true)
+		shard.PinForPeerDataTransfer()
+		defer shard.DoneWithPeerDataTransfer()
 		backfillPatches, err := createBackfillPatches(upsertBatches[:], jobManager.reportBackfillJobDetail, jobKey)
 		Ω(err).Should(BeNil())
 		err = shard.createNewArchiveStoreVersionForBackfill(backfillPatches, jobManager.reportBackfillJobDetail, jobKey)

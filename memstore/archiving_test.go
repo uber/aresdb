@@ -373,8 +373,8 @@ var _ = ginkgo.Describe("archiving", func() {
 		tableShard := shardMap[shardID]
 
 		// disable disk purge
-		tableShard.SetDiskPurgeEnabled(false)
-		defer tableShard.SetDiskPurgeEnabled(true)
+		tableShard.PinForPeerDataTransfer()
+		defer tableShard.DoneWithPeerDataTransfer()
 
 		// reset calls
 		(m.diskStore).(*diskMocks.DiskStore).Calls = []mock.Call{}
