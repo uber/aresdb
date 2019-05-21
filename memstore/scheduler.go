@@ -218,7 +218,7 @@ func (scheduler *schedulerImpl) Start() {
 			select {
 			case jobBundle := <-scheduler.jobBundleChan:
 				job := jobBundle.Job
-				utils.GetLogger().Infof(fmt.Sprintf("Job: %v\n", job))
+				utils.GetLogger().With("job", job).Info("Recieved job")
 				scheduler.executeJob(&jobBundle)
 			case <-scheduler.executorStopChan:
 				return
@@ -230,12 +230,13 @@ func (scheduler *schedulerImpl) Start() {
 func (scheduler *schedulerImpl) executeJob(jb *jobBundle) {
 	defer func() {
 		if r := recover(); r != nil {
-			utils.GetLogger().Errorf("Job failed a fter panic: %v", r)
+			utils.GetRootReporter().GetCounter(utils.JobFailuresCount).Inc(1)
+			utils.GetLogger().With("error", r).Error("Job failed after panic")
 		}
 	}()
 
 	job := jb.Job
-	utils.GetLogger().Info(fmt.Sprintf("Running job %v", job))
+	utils.GetLogger().With("job", job).Info("Running job")
 	scheduler.reportJob(job.GetIdentifier(), func(jobDetail *JobDetail) {
 		jobDetail.Status = JobRunning
 		jobDetail.LastStartTime = utils.Now().UTC()
@@ -245,14 +246,14 @@ func (scheduler *schedulerImpl) executeJob(jb *jobBundle) {
 	// Set job status according to the result.
 	now := uint32(utils.Now().Unix())
 	if err != nil {
-		utils.GetLogger().Errorf("Failed to run job %v due to error %v", job, err)
+		utils.GetLogger().With("error", err, "job", job).Error("Failed to run job due to error")
 		scheduler.reportJob(job.GetIdentifier(), func(jobDetail *JobDetail) {
 			jobDetail.LastError = err
 			jobDetail.Status = JobFailed
 			jobDetail.LastRun = utils.TimeStampToUTC(int64(now))
 		})
 	} else {
-		utils.GetLogger().Infof("Succeeded to run job %v", job)
+		utils.GetLogger().With("job", job).Info("Succeeded to run job")
 		scheduler.reportJob(job.GetIdentifier(), func(jobDetail *JobDetail) {
 			jobDetail.LastError = nil
 			jobDetail.Status = JobSucceeded
@@ -280,8 +281,7 @@ func (scheduler *schedulerImpl) SubmitJob(job Job) (error, chan error) {
 
 	jb := jobBundle{job, make(chan error, 1)}
 	scheduler.jobBundleChan <- jb
-	status := fmt.Sprintf("Submitted job %v", job)
-	utils.GetLogger().Info(status)
+	utils.GetLogger().With("job", job).Info("Submitted job")
 	return nil, jb.resChan
 }
 
@@ -300,7 +300,7 @@ func (scheduler *schedulerImpl) run() {
 					utils.GetLogger().With("job", job).Panic("Panic due to failure to run job")
 				}
 			} else {
-				utils.GetLogger().With("job", job).Error("Fail to submit job: %v", job)
+				utils.GetLogger().With("job", job).Error("Fail to submit job")
 			}
 		}
 	}
