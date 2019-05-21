@@ -17,7 +17,6 @@ package common
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 var _ = ginkgo.Describe("time series result", func() {
@@ -69,13 +68,3 @@ var _ = ginkgo.Describe("time series result", func() {
 		}))
 	})
 })
-
-func BenchmarkAppend(b *testing.B) {
-	num := 1 << 24
-	res := AQLQueryResult{}
-	val := "1"
-	res[MatrixDataKey] = make([][]interface{}, num)
-	for i := 0; i < num; i++ {
-		res[MatrixDataKey].([][]interface{})[i] = []interface{}{&val}
-	}
-}

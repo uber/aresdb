@@ -154,7 +154,9 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 			w.WriteHeader(statusCode)
 			return
 		}
+		// for logging purpose only
 		qcs = append(qcs, qc)
+
 		qc.FindDeviceForQuery(handler.memStore, aqlRequest.Device, handler.deviceManager, aqlRequest.DeviceChoosingTimeout)
 		if qc.Error != nil {
 			err = qc.Error
@@ -270,10 +272,6 @@ func getReponseWriter(returnHLL bool, nQueries int) QueryResponseWriter {
 		return NewHLLQueryResponseWriter()
 	}
 	return NewJSONQueryResponseWriter(nQueries)
-}
-
-type StreamingResponseWriter interface {
-
 }
 
 // QueryResponseWriter defines the interface to write query result and error to final response.
