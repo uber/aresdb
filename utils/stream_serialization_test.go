@@ -40,9 +40,12 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		Ω(err).Should(BeNil())
 		Ω(v).Should(BeEquivalentTo(-1))
 
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(1))
+
 		v, err = reader.ReadInt8()
 		Ω(err).Should(BeNil())
 		Ω(v).Should(BeEquivalentTo(1))
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(2))
 	})
 
 	ginkgo.It("works for skipBytes", func() {
@@ -57,9 +60,12 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		Ω(err).Should(BeNil())
 		Ω(v).Should(BeEquivalentTo(0))
 
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(1))
+
 		v, err = reader.ReadInt8()
 		Ω(err).Should(BeNil())
 		Ω(v).Should(BeEquivalentTo(0))
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(2))
 	})
 
 	ginkgo.It("works for uint8", func() {
@@ -132,10 +138,12 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		v, err = reader.ReadInt32()
 		Ω(err).Should(BeNil())
 		Ω(v).Should(BeEquivalentTo(-23456789))
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(4))
 
 		v, err = reader.ReadInt32()
 		Ω(err).Should(BeNil())
 		Ω(v).Should(BeEquivalentTo(23456789))
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(8))
 	})
 
 	ginkgo.It("works for uint32", func() {
@@ -155,6 +163,7 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		v, err = reader.ReadUint32()
 		Ω(err).Should(BeNil())
 		Ω(v).Should(BeEquivalentTo(23456791))
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(8))
 	})
 
 	ginkgo.It("works for uint64", func() {
@@ -174,6 +183,7 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		v, err = reader.ReadUint64()
 		Ω(err).Should(BeNil())
 		Ω(v).Should(BeEquivalentTo(20174294967297))
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(16))
 	})
 
 	ginkgo.It("works for float32", func() {
@@ -193,6 +203,7 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		v, err = reader.ReadFloat32()
 		Ω(err).Should(BeNil())
 		Ω(v).Should(BeEquivalentTo(float32(0.1)))
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(8))
 	})
 
 	ginkgo.It("works for eof", func() {
@@ -202,6 +213,7 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		var err error
 		_, err = reader.ReadFloat32()
 		Ω(err).ShouldNot(BeNil())
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(0))
 	})
 
 	ginkgo.It("works for big bytes slice (>1GB)", func() {
@@ -231,6 +243,7 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		Ω(reader.Read(dstBytes)).Should(BeNil())
 		Ω(bytes.Equal(dstBytes, sourceBytes)).Should(BeTrue())
 		Ω(reader.Read(dstBytes)).Should(Equal(io.EOF))
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(2147483648))
 	})
 
 	ginkgo.It("works for insufficient length", func() {
@@ -240,6 +253,7 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		var err error
 		_, err = reader.ReadFloat32()
 		Ω(err).ShouldNot(BeNil())
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(0))
 	})
 
 	ginkgo.It("works for skip bytes", func() {
@@ -256,5 +270,29 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		// EOF.
 		_, err := reader.ReadFloat32()
 		Ω(err).ShouldNot(BeNil())
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(8))
+	})
+
+	ginkgo.It("works for read/write padding", func() {
+		bs := make([]byte, 0, 8*2)
+		buf := bytes.NewBuffer(bs)
+		writer := NewStreamDataWriter(buf)
+		Ω(writer.WriteInt32(4)).Should(BeNil())
+		Ω(writer.WritePadding(4, 8)).Should(BeNil())
+
+		Ω(writer.WriteInt32(-4)).Should(BeNil())
+		Ω(writer.WritePadding(4, 8)).Should(BeNil())
+
+		reader := NewStreamDataReader(bytes.NewReader(buf.Bytes()))
+		val, err := reader.ReadInt32()
+		Ω(err).Should(BeNil())
+		Ω(val).Should(BeEquivalentTo(4))
+		Ω(reader.ReadPadding(4, 8)).Should(BeNil())
+
+		val, err = reader.ReadInt32()
+		Ω(err).Should(BeNil())
+		Ω(val).Should(BeEquivalentTo(-4))
+		Ω(reader.ReadPadding(4, 8)).Should(BeNil())
+		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(16))
 	})
 })

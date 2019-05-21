@@ -166,6 +166,28 @@ var _ = ginkgo.Describe("serialization", func() {
 		Ω(err).ShouldNot(BeNil())
 	})
 
+	ginkgo.It("works for int64", func() {
+		buffer := make([]byte, 15)
+		writer := NewBufferWriter(buffer)
+		val := int64(-(1 << 34))
+		Ω(writer.AppendInt64(val)).Should(BeNil())
+		Ω(writer.AppendInt64(45)).ShouldNot(BeNil())
+
+		reader := NewBufferReader(buffer)
+		result, err := reader.ReadInt64(0)
+		Ω(result).Should(Equal(int64(val)))
+		Ω(err).Should(BeNil())
+
+		val = int64(1 << 34)
+		Ω(writer.WriteInt64(val, 0)).Should(BeNil())
+		result, err = reader.ReadInt64(0)
+		Ω(result).Should(Equal(int64(val)))
+		Ω(err).Should(BeNil())
+
+		result, err = reader.ReadInt64(8)
+		Ω(err).ShouldNot(BeNil())
+	})
+
 	ginkgo.It("works for float32", func() {
 		buffer := make([]byte, 7)
 		writer := NewBufferWriter(buffer)
@@ -259,5 +281,18 @@ var _ = ginkgo.Describe("serialization", func() {
 		writer.SkipBits(13)
 		Ω(writer.GetOffset()).Should(Equal(7))
 		Ω(writer.bitOffset).Should(Equal(4))
+	})
+
+	ginkgo.It("BufferWriter.write should work", func() {
+		buffer := make([]byte, 8)
+		writer := NewBufferWriter(buffer)
+
+		bytesWrite, err := writer.Write([]byte{1, 1, 1, 1, 1, 1, 1, 1})
+		Ω(err).Should(BeNil())
+		Ω(bytesWrite).Should(Equal(8))
+
+		bytesWrite, err = writer.Write([]byte{1})
+		Ω(err).ShouldNot(BeNil())
+		Ω(bytesWrite).Should(Equal(0))
 	})
 })
