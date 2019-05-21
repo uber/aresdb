@@ -1314,24 +1314,6 @@ func (v *ASTBuilder) VisitSubquery(ctx *antlrgen.SubqueryContext) interface{} {
 	panic(fmt.Errorf("subquery at (line:%d, col:%d) not supported yet", location.Line, location.CharPosition))
 }
 
-// VisitRollup visits the node
-func (v *ASTBuilder) VisitRollup(ctx *antlrgen.RollupContext) interface{} {
-	location := v.getLocation(ctx)
-	panic(fmt.Errorf("rollup at (line:%d, col:%d) not supported yet", location.Line, location.CharPosition))
-}
-
-// VisitCube visits the node
-func (v *ASTBuilder) VisitCube(ctx *antlrgen.CubeContext) interface{} {
-	location := v.getLocation(ctx)
-	panic(fmt.Errorf("cube at (line:%d, col:%d) not supported yet", location.Line, location.CharPosition))
-}
-
-// VisitMultipleGroupingSets visits the node
-func (v *ASTBuilder) VisitMultipleGroupingSets(ctx *antlrgen.MultipleGroupingSetsContext) interface{} {
-	location := v.getLocation(ctx)
-	panic(fmt.Errorf("multipleGroupingSets at (line:%d, col:%d) not supported yet", location.Line, location.CharPosition))
-}
-
 // VisitGroupingExpressions visits the node
 func (v *ASTBuilder) VisitGroupingExpressions(ctx *antlrgen.GroupingExpressionsContext) interface{} {
 	return v.VisitChildren(ctx)

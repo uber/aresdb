@@ -20,9 +20,11 @@ import (
 	"github.com/uber/aresdb/common"
 )
 
+
+
 var _ = ginkgo.Describe("SQL Parser", func() {
 
-	logger := common.NewLoggerFactory().GetDefaultLogger()
+	logger := &common.NoopLogger{}
 
 	runTest := func(sqls []string, aql AQLQuery, log common.Logger) {
 		for _, sql := range sqls {
@@ -490,5 +492,37 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			Ω(err.Error()).Should(Equal("subquery/withQuery identifier in expression not supported yet. (line:4, col:16)"))
 			Ω(actual).Should(BeNil())
 		}
+	})
+
+	ginkgo.It("Empty query", func() {
+		sqls := []string{
+			``,
+		}
+		for _, sql := range sqls {
+			actual, err := Parse(sql, logger)
+			Ω(err).ShouldNot(BeNil())
+			Ω(err.Error()).Should(Equal("missing queryNoWith body at (line:1, col:0)"))
+			Ω(actual).Should(BeNil())
+		}
+	})
+
+	ginkgo.It("In operator should work", func() {
+		sqls := []string{
+			`SELECT fare FROM trips 
+			WHERE city_id in (1,2,3) fare > m1.avg_fare;`,
+		}
+		res := AQLQuery{
+			Table: "trips",
+			Dimensions: []Dimension{
+				{
+					Expr: "fare",
+				},
+			},
+			Measures:             []Measure{{Expr: "1"}},
+			Filters: []string{"city_id in (1,2,3)"},
+		}
+
+		runTest(sqls, res, logger)
+
 	})
 })

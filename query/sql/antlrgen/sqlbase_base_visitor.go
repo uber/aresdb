@@ -243,18 +243,6 @@ func (v *BaseSqlBaseVisitor) VisitSingleGroupingSet(ctx *SingleGroupingSetContex
 	return v.VisitChildren(ctx)
 }
 
-func (v *BaseSqlBaseVisitor) VisitRollup(ctx *RollupContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BaseSqlBaseVisitor) VisitCube(ctx *CubeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BaseSqlBaseVisitor) VisitMultipleGroupingSets(ctx *MultipleGroupingSetsContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BaseSqlBaseVisitor) VisitGroupingExpressions(ctx *GroupingExpressionsContext) interface{} {
 	return v.VisitChildren(ctx)
 }

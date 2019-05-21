@@ -160,9 +160,6 @@ groupBy
 
 groupingElement
     : groupingExpressions                                               #singleGroupingSet
-    | ROLLUP '(' (qualifiedName (',' qualifiedName)*)? ')'              #rollup
-    | CUBE '(' (qualifiedName (',' qualifiedName)*)? ')'                #cube
-    | GROUPING SETS '(' groupingSet (',' groupingSet)* ')'              #multipleGroupingSets
     ;
 
 groupingExpressions
@@ -469,7 +466,6 @@ COMMITTED: 'COMMITTED';
 CONSTRAINT: 'CONSTRAINT';
 CREATE: 'CREATE';
 CROSS: 'CROSS';
-CUBE: 'CUBE';
 CURRENT: 'CURRENT';
 CURRENT_DATE: 'CURRENT_DATE';
 CURRENT_TIME: 'CURRENT_TIME';

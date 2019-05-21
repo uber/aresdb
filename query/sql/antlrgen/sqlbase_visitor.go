@@ -184,15 +184,6 @@ type SqlBaseVisitor interface {
 	// Visit a parse tree produced by SqlBaseParser#singleGroupingSet.
 	VisitSingleGroupingSet(ctx *SingleGroupingSetContext) interface{}
 
-	// Visit a parse tree produced by SqlBaseParser#rollup.
-	VisitRollup(ctx *RollupContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#cube.
-	VisitCube(ctx *CubeContext) interface{}
-
-	// Visit a parse tree produced by SqlBaseParser#multipleGroupingSets.
-	VisitMultipleGroupingSets(ctx *MultipleGroupingSetsContext) interface{}
-
 	// Visit a parse tree produced by SqlBaseParser#groupingExpressions.
 	VisitGroupingExpressions(ctx *GroupingExpressionsContext) interface{}
 
