@@ -42,6 +42,7 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"net/http/httptest"
 )
 
 // readDeviceVPSlice reads a vector party from file and also translate it to device vp format:
@@ -2183,5 +2184,22 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(bs).Should(MatchJSON(` {
 			"0": 12
 		  }`))
+	})
+
+	ginkgo.It("initializeNonAggResponse should work", func() {
+		qc := &AQLQueryContext{
+			Query: &AQLQuery{
+				Dimensions: []Dimension{
+					{Expr: "foo"},
+				},
+			},
+		}
+		qc.isNonAggregationQuery = true
+
+		w := httptest.NewRecorder()
+		qc.responseWriter = w
+
+		qc.initializeNonAggResponse()
+		Ω(w.Body.String()).Should(Equal(`{"results":[{"headers":["foo"],"matrixData":[`))
 	})
 })
