@@ -1479,11 +1479,11 @@ func (qc *AQLQueryContext) initializeNonAggResponse() {
 		for i, dim := range qc.Query.Dimensions {
 			headers[i] = dim.Expr
 		}
-		if qc.responseWriter != nil {
+		if qc.ResponseWriter != nil {
 			headersBytes, _ := json.Marshal(headers)
-			qc.responseWriter.Write([]byte(`{"results":[{"headers":`))
-			qc.responseWriter.Write(headersBytes)
-			qc.responseWriter.Write([]byte(`,"matrixData":[`))
+			qc.ResponseWriter.Write([]byte(`{"results":[{"headers":`))
+			qc.ResponseWriter.Write(headersBytes)
+			qc.ResponseWriter.Write([]byte(`,"matrixData":[`))
 		} else {
 			qc.Results = make(queryCom.AQLQueryResult)
 			qc.Results.SetHeaders(headers)

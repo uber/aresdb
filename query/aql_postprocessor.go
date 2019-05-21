@@ -119,11 +119,11 @@ func (qc *AQLQueryContext) flushResultBuffer() {
 		utils.GetRootReporter().GetTimer(utils.QueryDimReadLatency).Record(utils.Now().Sub(dimReadingStart))
 
 		if qc.isNonAggregationQuery {
-			if qc.responseWriter != nil {
+			if qc.ResponseWriter != nil {
 				valuesBytes, _ := json.Marshal(dimValues)
-				qc.responseWriter.Write(valuesBytes)
+				qc.ResponseWriter.Write(valuesBytes)
 				if !(qc.OOPK.done && i == oopkContext.ResultSize - 1) {
-					qc.responseWriter.Write(bytesComma)
+					qc.ResponseWriter.Write(bytesComma)
 				}
 			} else {
 				qc.Results.Append(dimValues)

@@ -985,7 +985,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.Query = q
 
-		qc = q.Compile(memStore, false, nil)
+		qc = q.Compile(memStore, false)
 		Ω(qc.Error).Should(BeNil())
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
@@ -1184,7 +1184,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.Query = q
 
-		qc = q.Compile(memStore, false, nil)
+		qc = q.Compile(memStore, false)
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.TableScanners).Should(HaveLen(2))
 		qc.ProcessQuery(memStore)
@@ -2083,7 +2083,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.Query = q
 
-		qc = q.Compile(memStore, false, nil)
+		qc = q.Compile(memStore, false)
 		Ω(qc.Error).Should(BeNil())
 		qc.calculateMemoryRequirement(memStore)
 		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
@@ -2171,7 +2171,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 		}
 		qc.Query = q
-		qc = q.Compile(memStore, false, nil)
+		qc = q.Compile(memStore, false)
 		Ω(qc.Error).Should(BeNil())
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
@@ -2197,7 +2197,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		qc.isNonAggregationQuery = true
 
 		w := httptest.NewRecorder()
-		qc.responseWriter = w
+		qc.ResponseWriter = w
 
 		qc.initializeNonAggResponse()
 		Ω(w.Body.String()).Should(Equal(`{"results":[{"headers":["foo"],"matrixData":[`))

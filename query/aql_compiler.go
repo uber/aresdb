@@ -30,7 +30,6 @@ import (
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"strconv"
-	"net/http"
 )
 
 // DataTypeToExprType maps data type from the column schema format to
@@ -80,8 +79,8 @@ const (
 
 // Compile returns the compiled AQLQueryContext for data feeding and query
 // execution. Caller should check for AQLQueryContext.Error.
-func (q *AQLQuery) Compile(store memstore.MemStore, returnHLL bool, w http.ResponseWriter) *AQLQueryContext {
-	qc := &AQLQueryContext{Query: q, ReturnHLLData: returnHLL, responseWriter: w}
+func (q *AQLQuery) Compile(store memstore.MemStore, returnHLL bool) *AQLQueryContext {
+	qc := &AQLQueryContext{Query: q, ReturnHLLData: returnHLL}
 
 	// processTimezone might append additional joins
 	qc.processTimezone()

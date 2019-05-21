@@ -147,7 +147,8 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 
 	if !returnHLL && canEagerFlush(aqlRequest.Body.Queries) {
 		aqlQuery := aqlRequest.Body.Queries[0]
-		qc := aqlQuery.Compile(handler.memStore, false,  w)
+		qc := aqlQuery.Compile(handler.memStore, false)
+		qc.ResponseWriter = w
 		if qc.Error != nil {
 			err = qc.Error
 			statusCode = http.StatusBadRequest
@@ -218,7 +219,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 }
 
 func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager, aqlRequest AQLRequest, aqlQuery query.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
-	qc = aqlQuery.Compile(memStore, aqlRequest.Accept == ContentTypeHyperLogLog, nil)
+	qc = aqlQuery.Compile(memStore, aqlRequest.Accept == ContentTypeHyperLogLog)
 
 	for tableName := range qc.TableSchemaByName {
 		utils.GetRootReporter().GetChildCounter(map[string]string{

@@ -400,7 +400,7 @@ type AQLQueryContext struct {
 	maxBatchSizeAfterPrefilter int
 
 	// for eager flush query result
-	responseWriter http.ResponseWriter
+	ResponseWriter http.ResponseWriter
 }
 
 // IsHLL return if the aggregation function is HLL
