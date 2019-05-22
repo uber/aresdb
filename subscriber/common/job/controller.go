@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/m3db/m3/src/cluster/placement"
 	"net/http"
 	"strings"
 	"sync"
@@ -215,15 +216,16 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		return err
 	}
 
-	//pInstance := placement.NewInstance().SetID(params.ServiceConfig.Environment.InstanceID)
+	pInstance := placement.NewInstance().
+		SetID(params.ServiceConfig.Environment.InstanceID)
 
 	ad := services.NewAdvertisement().
-		SetServiceID(sid)
-	//.SetPlacementInstance(pInstance)
+		SetServiceID(sid).
+		SetPlacementInstance(pInstance)
 
 	params.ServiceConfig.Logger.Info("service, placement, and ad info",
 		zap.Any("serviceID", sid),
-		//zap.Any("placement", pInstance),
+		zap.Any("placement", pInstance),
 		zap.Any("ad", ad))
 
 
