@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	controllerCom "github.com/uber/aresdb/controller/common"
+	controllerCom "github.com/uber/aresdb/controller/client"
 	"net/http"
 	"strconv"
 	"sync"

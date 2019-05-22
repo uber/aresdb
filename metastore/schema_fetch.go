@@ -1,7 +1,7 @@
 package metastore
 
 import (
-	controllerCom "github.com/uber/aresdb/controller/common"
+	controllerCom "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"reflect"

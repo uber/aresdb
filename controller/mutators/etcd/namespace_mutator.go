@@ -15,6 +15,7 @@ package etcd
 
 import (
 	"github.com/m3db/m3/src/cluster/kv"
+	"github.com/uber/aresdb/controller/cluster"
 	pb "github.com/uber/aresdb/controller/generated/proto"
 	"github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/utils"
@@ -45,13 +46,13 @@ func (m *namespaceMutatorImpl) CreateNamespace(namespace string) (err error) {
 		return common.ErrNamespaceAlreadyExists
 	}
 
-	return newTransaction().
-		addKeyValue(utils.NamespaceListKey(), nsListVersion, &nsList).
+	return cluster.NewTransaction().
+		AddKeyValue(utils.NamespaceListKey(), nsListVersion, &nsList).
 		// pre create schema, job, job assignments list key
-		addKeyValue(utils.SchemaListKey(namespace), kv.UninitializedVersion, &pb.EntityList{}).
-		addKeyValue(utils.JobListKey(namespace), kv.UninitializedVersion, &pb.EntityList{}).
-		addKeyValue(utils.JobAssignmentsListKey(namespace), kv.UninitializedVersion, &pb.EntityList{}).
-		writeTo(m.txnStore)
+		AddKeyValue(utils.SchemaListKey(namespace), kv.UninitializedVersion, &pb.EntityList{}).
+		AddKeyValue(utils.JobListKey(namespace), kv.UninitializedVersion, &pb.EntityList{}).
+		AddKeyValue(utils.JobAssignmentsListKey(namespace), kv.UninitializedVersion, &pb.EntityList{}).
+		WriteTo(m.txnStore)
 }
 
 func (m *namespaceMutatorImpl) ListNamespaces() ([]string, error) {

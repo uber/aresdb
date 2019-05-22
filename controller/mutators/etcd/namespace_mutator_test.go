@@ -14,11 +14,11 @@
 package etcd
 
 import (
+	"github.com/uber/aresdb/controller/mutators/common"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	pb "github.com/uber/aresdb/controller/generated/proto"
-	"github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/utils"
 )
 

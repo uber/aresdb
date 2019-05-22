@@ -19,7 +19,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	controllerCom "github.com/uber/aresdb/controller/common"
+	controllerCom "github.com/uber/aresdb/controller/client"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"

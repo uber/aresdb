@@ -9,7 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	controllerCom "github.com/uber/aresdb/controller/common"
+	controllerCom "github.com/uber/aresdb/controller/client"
+	"github.com/uber/aresdb/controller/models"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
@@ -56,34 +57,36 @@ var _ = Describe("Kafka producer", func() {
 	}
 
 	jobConfig := rules.JobConfig{
-		AresTableConfig: rules.AresTableConfig{
-			Table: metaCom.Table{
-				Name:        "test",
-				IsFactTable: true,
-				Columns: []metaCom.Column{
-					{
-						Name: "c2",
-						Type: "string",
+		JobConfig: models.JobConfig{
+			AresTableConfig: models.TableConfig{
+				Table: &metaCom.Table{
+					Name:        "test",
+					IsFactTable: true,
+					Columns: []metaCom.Column{
+						{
+							Name: "c2",
+							Type: "string",
+						},
+						{
+							Name: "c1",
+							Type: "Int8",
+						},
+						{
+							Name: "c3",
+							Type: "Bool",
+						},
 					},
-					{
-						Name: "c1",
-						Type: "Int8",
+					Config: metaCom.TableConfig{
+						BatchSize: 10,
 					},
-					{
-						Name: "c3",
-						Type: "Bool",
-					},
+					PrimaryKeyColumns: []int{1},
 				},
-				Config: metaCom.TableConfig{
-					BatchSize: 10,
-				},
-				PrimaryKeyColumns: []int{1},
 			},
 		},
 	}
 
 	tableBytes, _ := json.Marshal(jobConfig.AresTableConfig.Table)
-	tables := []metaCom.Table{
+	tables := []*metaCom.Table{
 		jobConfig.AresTableConfig.Table,
 	}
 

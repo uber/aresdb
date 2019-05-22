@@ -15,12 +15,13 @@ package etcd
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/controller/cluster"
 	pb "github.com/uber/aresdb/controller/generated/proto"
+	"github.com/uber/aresdb/controller/models"
+	"github.com/uber/aresdb/controller/mutators/common"
 	"strconv"
 
 	"github.com/m3db/m3/src/cluster/kv"
-	"github.com/uber/aresdb/controller/models"
-	"github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -89,10 +90,10 @@ func (j *ingestionAssignmentMutatorImpl) DeleteIngestionAssignment(namespace, na
 	}
 
 	entityConfig.Tomstoned = true
-	return newTransaction().
-		addKeyValue(utils.JobAssignmentsListKey(namespace), entityListVersion, &entityList).
-		addKeyValue(utils.JobAssignmentsKey(namespace, name), configVersion, &entityConfig).
-		writeTo(j.etcdStore)
+	return cluster.NewTransaction().
+		AddKeyValue(utils.JobAssignmentsListKey(namespace), entityListVersion, &entityList).
+		AddKeyValue(utils.JobAssignmentsKey(namespace, name), configVersion, &entityConfig).
+		WriteTo(j.etcdStore)
 }
 
 // UpdateIngestionAssignment updates IngestionAssignment config
@@ -118,10 +119,10 @@ func (j *ingestionAssignmentMutatorImpl) UpdateIngestionAssignment(namespace str
 		return err
 	}
 
-	return newTransaction().
-		addKeyValue(utils.JobAssignmentsListKey(namespace), entityListVersion, &entityList).
-		addKeyValue(utils.JobAssignmentsKey(namespace, ingestionAssignment.Subscriber), configVersion, &entityConfig).
-		writeTo(j.etcdStore)
+	return cluster.NewTransaction().
+		AddKeyValue(utils.JobAssignmentsListKey(namespace), entityListVersion, &entityList).
+		AddKeyValue(utils.JobAssignmentsKey(namespace, ingestionAssignment.Subscriber), configVersion, &entityConfig).
+		WriteTo(j.etcdStore)
 }
 
 // AddIngestionAssignment adds a new IngestionAssignment
@@ -153,10 +154,10 @@ func (j *ingestionAssignmentMutatorImpl) AddIngestionAssignment(namespace string
 		return err
 	}
 
-	return newTransaction().
-		addKeyValue(utils.JobAssignmentsListKey(namespace), entityListVersion, &entityList).
-		addKeyValue(utils.JobAssignmentsKey(namespace, ingestionAssignment.Subscriber), configVersion, &entityConfig).
-		writeTo(j.etcdStore)
+	return cluster.NewTransaction().
+		AddKeyValue(utils.JobAssignmentsListKey(namespace), entityListVersion, &entityList).
+		AddKeyValue(utils.JobAssignmentsKey(namespace, ingestionAssignment.Subscriber), configVersion, &entityConfig).
+		WriteTo(j.etcdStore)
 }
 
 // GetHash returns hash that will be different if ingestionAssignment for subscriber changed

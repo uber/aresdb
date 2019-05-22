@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	controllerCom "github.com/uber/aresdb/controller/common"
+	controllerCom "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"

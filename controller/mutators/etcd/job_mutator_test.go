@@ -14,12 +14,12 @@
 package etcd
 
 import (
+	"github.com/uber/aresdb/controller/models"
+	"github.com/uber/aresdb/controller/mutators/common"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	pb "github.com/uber/aresdb/controller/generated/proto"
-	"github.com/uber/aresdb/controller/models"
-	"github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
 )
@@ -28,10 +28,10 @@ func TestJobMutator(t *testing.T) {
 	testConfig1 := models.JobConfig{
 		Name:    "demand",
 		Version: 0,
-		Table: models.TableConfig{
+		AresTableConfig: models.TableConfig{
 			Name: "rta_table1",
 		},
-		Kafka: models.KafkaConfig{
+		StreamingConfig: models.KafkaConfig{
 			Topic:   "demand_topic1",
 			Cluster: "demand_cluster",
 		},
@@ -40,10 +40,10 @@ func TestJobMutator(t *testing.T) {
 	testConfig2 := models.JobConfig{
 		Name:    "demand",
 		Version: 1,
-		Table: models.TableConfig{
+		AresTableConfig: models.TableConfig{
 			Name: "rta_table2",
 		},
-		Kafka: models.KafkaConfig{
+		StreamingConfig: models.KafkaConfig{
 			Topic:   "demand_topic2",
 			Cluster: "demand_cluster",
 		},
@@ -52,30 +52,30 @@ func TestJobMutator(t *testing.T) {
 	aresSubscriberPayload := models.JobConfig{
 		Name:    "demand",
 		Version: 0,
-		Table: models.TableConfig{
+		AresTableConfig: models.TableConfig{
 			Name: "rta_table1",
 		},
-		Kafka: models.KafkaConfig{
+		StreamingConfig: models.KafkaConfig{
 			Topic:           "demand_topic1",
 			Cluster:         "demand_cluster",
 			File:            "/etc/uber/kafka8/clusters.yaml",
-			Type:            "heatpipe",
-			Offset:          true,
+			TopicType:            "heatpipe",
+			LatestOffset:          true,
 			ErrorThreshold:  10,
-			SCInterval:      60,
+			StatusCheckInterval:      60,
 			ARThreshold:     8,
 			ProcessorCount:  1,
 			BatchSize:       32768,
-			BatchDelayMS:    10000,
-			BytePerSec:      600,
-			Restart:         true,
+			MaxBatchDelayMS:    10000,
+			MegaBytePerSec:      600,
+			RestartOnFailure:         true,
 			RestartInterval: 300,
 			FailureHandler: models.FailureHandler{
 				Type: "retry",
 				Config: models.FailureHandlerConfig{
-					Interval:   60,
-					Multiplier: 1,
-					MaxRetry:   525600,
+					InitRetryIntervalInSeconds: 60,
+					Multiplier:                 1,
+					MaxRetryMinutes:            525600,
 				},
 			},
 		},

@@ -30,3 +30,9 @@ import:
   version: ^2.0.0
 - package: github.com/Shopify/sarama
   version: ^1.22.1
+testImport:
+- package: github.com/coreos/etcd
+  subpackages: 
+    - embed
+  version: 3.2.10
+

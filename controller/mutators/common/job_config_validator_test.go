@@ -14,10 +14,10 @@
 package common
 
 import (
+	"github.com/uber/aresdb/controller/models"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uber/aresdb/controller/models"
 )
 
 func TestJobConfigValidator(t *testing.T) {

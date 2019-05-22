@@ -14,7 +14,7 @@
 package models
 
 import (
-	"github.com/uber/aresdb/metastore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 )
 
 // meaningful defaults of Kafka configurations.
@@ -39,9 +39,10 @@ const (
 
 // TableConfig is the table part of job config
 type TableConfig struct {
-	Name    string        `json:"name"`
-	Cluster string        `json:"cluster"`
-	Schema  *common.Table `json:"schema,omitempty"`
+	Name    string         `json:"name"`
+	Cluster string         `json:"cluster"`
+	Table  *metaCom.Table `json:"schema,omitempty"`
+	UpdateMode map[string]string `json:"updateMode,omitempty"`
 }
 
 // KafkaConfig is the kafka part of job config
@@ -50,26 +51,32 @@ type KafkaConfig struct {
 	Cluster         string         `json:"kafkaClusterName"`
 	KafkaVersion    string         `json:"kafkaVersion"`
 	File            string         `json:"kafkaClusterFile,omitempty"`
-	Type            string         `json:"topicType,omitempty"`
-	Offset          bool           `json:"latestOffset,omitempty"`
+	TopicType            string         `json:"topicType,omitempty"`
+	LatestOffset          bool           `json:"latestOffset,omitempty"`
 	ErrorThreshold  int            `json:"errorThreshold,omitempty"`
-	SCInterval      int            `json:"statusCheckInterval,omitempty"`
+	StatusCheckInterval      int            `json:"statusCheckInterval,omitempty"`
 	ARThreshold     int            `json:"autoRecoveryThreshold,omitempty"`
 	ProcessorCount  int            `json:"processorCount,omitempty"`
 	BatchSize       int            `json:"batchSize,omitempty"`
-	BatchDelayMS    int            `json:"maxBatchDelayMS,omitempty"`
-	BytePerSec      int            `json:"megaBytePerSec,omitempty"`
-	Restart         bool           `json:"restartOnFailure,omitempty"`
+	MaxBatchDelayMS    int            `json:"maxBatchDelayMS,omitempty"`
+	MegaBytePerSec      int            `json:"megaBytePerSec,omitempty"`
+	RestartOnFailure         bool           `json:"restartOnFailure,omitempty"`
 	RestartInterval int            `json:"restartInterval,omitempty"`
 	FailureHandler  FailureHandler `json:"failureHandler,omitempty"`
+
+	// confluent kafka
+	KafkaBroker           string               `json:"kafkaBroker" yaml:"kafkaBroker"`
+	MaxPollIntervalMs     int                  `json:"maxPollIntervalMs" yaml:"maxPollIntervalMs" default:"300000"`
+	SessionTimeoutNs      int                  `json:"sessionTimeoutNs" yaml:"sessionTimeoutNs" default:"10000"`
+	ChannelBufferSize     uint                 `json:"channelBufferSize" yaml:"channelBufferSize" default:"256"`
 }
 
 // JobConfig is job's config
 type JobConfig struct {
 	Name    string      `json:"job"`
 	Version int         `json:"version"`
-	Table   TableConfig `json:"aresTableConfig"`
-	Kafka   KafkaConfig `json:"streamConfig"`
+	AresTableConfig   TableConfig `json:"aresTableConfig"`
+	StreamingConfig   KafkaConfig `json:"streamConfig"`
 }
 
 // FailureHandler is kafka's failure handler
@@ -80,7 +87,7 @@ type FailureHandler struct {
 
 // FailureHandlerConfig is Kafka's failure handler config
 type FailureHandlerConfig struct {
-	Interval   int `json:"initRetryIntervalInSeconds,omitempty"`
-	Multiplier int `json:"multiplier,omitempty"`
-	MaxRetry   int `json:"maxRetryMinutes,omitempty"`
+	InitRetryIntervalInSeconds int `json:"initRetryIntervalInSeconds,omitempty"`
+	Multiplier                 float32 `json:"multiplier,omitempty"`
+	MaxRetryMinutes            int `json:"maxRetryMinutes,omitempty"`
 }

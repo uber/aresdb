@@ -15,20 +15,20 @@ package etcd
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/controller/models"
 	"sort"
 	"testing"
 	"time"
 
-	business "code.uber.internal/data/ares-controller/business/etcd"
-	"code.uber.internal/data/ares-controller/models"
-	modelspb "code.uber.internal/data/ares-controller/models/proto"
-	"code.uber.internal/data/ares-controller/utils"
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	xwatch "github.com/m3db/m3x/watch"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
+	pb "github.com/uber/aresdb/controller/generated/proto"
+	mutators "github.com/uber/aresdb/controller/mutators/etcd"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
 )
 
@@ -57,9 +57,9 @@ func TestIngestionAssignmentTask(t *testing.T) {
 			FailureHandler: models.FailureHandler{
 				Type: models.FailureHandlerType,
 				Config: models.FailureHandlerConfig{
-					Interval:   models.FailureHandlerInitRetryIntervalInSeconds,
-					Multiplier: models.FailureHandlerMultiplier,
-					MaxRetry:   models.FailureHandlerMaxRetryMinutes,
+					InitRetryIntervalInSeconds: models.FailureHandlerInitRetryIntervalInSeconds,
+					Multiplier:                 models.FailureHandlerMultiplier,
+					MaxRetryMinutes:            models.FailureHandlerMaxRetryMinutes,
 				},
 			},
 		},
@@ -109,8 +109,8 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		err = clusterServices0.Advertise(services.NewAdvertisement().SetPlacementInstance(subInstance3).SetServiceID(subscriberServiceID))
 		assert.NoError(t, err)
 
-		_, err = txnStore.Set(utils.NamespaceListKey(), &modelspb.EntityList{
-			Entities: []*modelspb.EntityName{
+		_, err = txnStore.Set(utils.NamespaceListKey(), &pb.EntityList{
+			Entities: []*pb.EntityName{
 				{
 					Name: "ns1",
 				},
@@ -118,11 +118,11 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		_, err = txnStore.Set(utils.InstanceListKey("ns1"), &modelspb.EntityList{})
+		_, err = txnStore.Set(utils.InstanceListKey("ns1"), &pb.EntityList{})
 		assert.NoError(t, err)
 
-		_, err = txnStore.Set(utils.JobListKey("ns1"), &modelspb.EntityList{
-			Entities: []*modelspb.EntityName{
+		_, err = txnStore.Set(utils.JobListKey("ns1"), &pb.EntityList{
+			Entities: []*pb.EntityName{
 				{
 					Name: "job1",
 				},
@@ -130,14 +130,14 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		_, err = txnStore.Set(utils.JobKey("ns1", "job1"), &modelspb.EntityConfig{
+		_, err = txnStore.Set(utils.JobKey("ns1", "job1"), &pb.EntityConfig{
 			Name:   "job1",
 			Config: job1Bytes,
 		})
 		assert.NoError(t, err)
 
-		_, err = txnStore.Set(utils.SchemaListKey("ns1"), &modelspb.EntityList{
-			Entities: []*modelspb.EntityName{
+		_, err = txnStore.Set(utils.SchemaListKey("ns1"), &pb.EntityList{
+			Entities: []*pb.EntityName{
 				{
 					Name: "table1",
 				},
@@ -145,22 +145,22 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		_, err = txnStore.Set(utils.SchemaKey("ns1", "table1"), &modelspb.EntityConfig{
+		_, err = txnStore.Set(utils.SchemaKey("ns1", "table1"), &pb.EntityConfig{
 			Name:   "table1",
 			Config: table1Bytes,
 		})
 		assert.NoError(t, err)
 
-		_, err = txnStore.Set(utils.JobAssignmentsListKey("ns1"), &modelspb.EntityList{})
+		_, err = txnStore.Set(utils.JobAssignmentsListKey("ns1"), &pb.EntityList{})
 		assert.NoError(t, err)
 
 		logger, _ := zap.NewDevelopment()
 		sugaredLogger := logger.Sugar()
 
-		schemaMutator := business.NewTableSchemaMutator(txnStore, sugaredLogger)
-		namespaceMutator := business.NewNamespaceMutator(txnStore)
-		jobMutator := business.NewJobMutator(txnStore, sugaredLogger)
-		assignmentMutator := business.NewIngestionAssignmentMutator(txnStore)
+		schemaMutator := mutators.NewTableSchemaMutator(txnStore, sugaredLogger)
+		namespaceMutator := mutators.NewNamespaceMutator(txnStore)
+		jobMutator := mutators.NewJobMutator(txnStore, sugaredLogger)
+		assignmentMutator := mutators.NewIngestionAssignmentMutator(txnStore)
 		err = assignmentMutator.AddIngestionAssignment("ns1", asx)
 		assert.NoError(t, err)
 		err = assignmentMutator.AddIngestionAssignment("ns1", as1)

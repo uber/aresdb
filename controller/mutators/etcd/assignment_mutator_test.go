@@ -14,12 +14,12 @@
 package etcd
 
 import (
+	"github.com/uber/aresdb/controller/models"
+	"github.com/uber/aresdb/controller/mutators/common"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	pb "github.com/uber/aresdb/controller/generated/proto"
-	"github.com/uber/aresdb/controller/models"
-	"github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -28,10 +28,10 @@ func TestIngestionAssignmentMutator(t *testing.T) {
 	testConfig1 := models.JobConfig{
 		Name:    "demand",
 		Version: 0,
-		Table: models.TableConfig{
+		AresTableConfig: models.TableConfig{
 			Name: "rta_table1",
 		},
-		Kafka: models.KafkaConfig{
+		StreamingConfig: models.KafkaConfig{
 			Topic:   "demand_topic1",
 			Cluster: "demand_cluster",
 		},
@@ -40,10 +40,10 @@ func TestIngestionAssignmentMutator(t *testing.T) {
 	testConfig2 := models.JobConfig{
 		Name:    "demand",
 		Version: 1,
-		Table: models.TableConfig{
+		AresTableConfig: models.TableConfig{
 			Name: "rta_table2",
 		},
-		Kafka: models.KafkaConfig{
+		StreamingConfig: models.KafkaConfig{
 			Topic:   "demand_topic2",
 			Cluster: "demand_cluster",
 		},

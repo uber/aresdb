@@ -15,11 +15,11 @@
 package job
 
 import (
+	"github.com/uber/aresdb/controller/models"
 	"time"
 
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/sink"
 	"github.com/uber/aresdb/subscriber/config"
 )
@@ -43,7 +43,7 @@ type RetryFailureHandler struct {
 
 // NewRetryFailureHandler creates a new RetryFailureHandler
 func NewRetryFailureHandler(
-	config rules.RetryFailureHandlerConfig,
+	config models.FailureHandlerConfig,
 	serviceConfig config.ServiceConfig,
 	db sink.Sink,
 	jobName string) *RetryFailureHandler {

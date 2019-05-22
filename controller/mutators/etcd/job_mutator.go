@@ -15,8 +15,8 @@ package etcd
 
 import (
 	"encoding/json"
-
 	"github.com/m3db/m3/src/cluster/kv"
+	"github.com/uber/aresdb/controller/cluster"
 	pb "github.com/uber/aresdb/controller/generated/proto"
 	"github.com/uber/aresdb/controller/models"
 	"github.com/uber/aresdb/controller/mutators/common"
@@ -49,25 +49,25 @@ func (j *jobMutatorImpl) GetJob(namespace, name string) (job models.JobConfig, e
 		return job, common.ErrJobConfigDoesNotExist
 	}
 
-	job.Kafka = models.KafkaConfig{
+	job.StreamingConfig = models.KafkaConfig{
 		File:            models.KafkaClusterFile,
-		Type:            models.KafkaTopicType,
-		Offset:          models.KafkaLatestOffset,
+		TopicType:            models.KafkaTopicType,
+		LatestOffset:          models.KafkaLatestOffset,
 		ErrorThreshold:  models.KafkaErrorThreshold,
-		SCInterval:      models.KafkaStatusCheckInterval,
+		StatusCheckInterval:      models.KafkaStatusCheckInterval,
 		ARThreshold:     models.KafkaAutoRecoveryThreshold,
 		ProcessorCount:  models.KafkaProcessorCount,
 		BatchSize:       models.KafkaBatchSize,
-		BatchDelayMS:    models.KafkaMaxBatchDelayMS,
-		BytePerSec:      models.KafkaMegaBytePerSec,
-		Restart:         models.KafkaRestartOnFailure,
+		MaxBatchDelayMS:    models.KafkaMaxBatchDelayMS,
+		MegaBytePerSec:      models.KafkaMegaBytePerSec,
+		RestartOnFailure:         models.KafkaRestartOnFailure,
 		RestartInterval: models.KafkaRestartInterval,
 		FailureHandler: models.FailureHandler{
 			Type: models.FailureHandlerType,
 			Config: models.FailureHandlerConfig{
-				Interval:   models.FailureHandlerInitRetryIntervalInSeconds,
-				Multiplier: models.FailureHandlerMultiplier,
-				MaxRetry:   models.FailureHandlerMaxRetryMinutes,
+				InitRetryIntervalInSeconds: models.FailureHandlerInitRetryIntervalInSeconds,
+				Multiplier:                 models.FailureHandlerMultiplier,
+				MaxRetryMinutes:            models.FailureHandlerMaxRetryMinutes,
 			},
 		},
 	}
@@ -122,10 +122,10 @@ func (j *jobMutatorImpl) DeleteJob(namespace, name string) error {
 	}
 	jobConfig.Tomstoned = true
 
-	return newTransaction().
-		addKeyValue(utils.JobListKey(namespace), jobListVersion, &jobList).
-		addKeyValue(utils.JobKey(namespace, name), jobConfigVersion, &jobConfig).
-		writeTo(j.etcdStore)
+	return cluster.NewTransaction().
+		AddKeyValue(utils.JobListKey(namespace), jobListVersion, &jobList).
+		AddKeyValue(utils.JobKey(namespace, name), jobConfigVersion, &jobConfig).
+		WriteTo(j.etcdStore)
 }
 
 // UpdateJob updates job config
@@ -156,10 +156,10 @@ func (j *jobMutatorImpl) UpdateJob(namespace string, job models.JobConfig) (err 
 		return
 	}
 
-	return newTransaction().
-		addKeyValue(utils.JobListKey(namespace), jobListVersion, &jobListProto).
-		addKeyValue(utils.JobKey(namespace, job.Name), jobVersion, &jobProto).
-		writeTo(j.etcdStore)
+	return cluster.NewTransaction().
+		AddKeyValue(utils.JobListKey(namespace), jobListVersion, &jobListProto).
+		AddKeyValue(utils.JobKey(namespace, job.Name), jobVersion, &jobProto).
+		WriteTo(j.etcdStore)
 }
 
 // AddJob adds a new job
@@ -197,10 +197,10 @@ func (j *jobMutatorImpl) AddJob(namespace string, job models.JobConfig) error {
 		jobProto.Tomstoned = false
 	}
 
-	return newTransaction().
-		addKeyValue(utils.JobListKey(namespace), jobListVersion, &jobListProto).
-		addKeyValue(utils.JobKey(namespace, job.Name), jobVersion, &jobProto).
-		writeTo(j.etcdStore)
+	return cluster.NewTransaction().
+		AddKeyValue(utils.JobListKey(namespace), jobListVersion, &jobListProto).
+		AddKeyValue(utils.JobKey(namespace, job.Name), jobVersion, &jobProto).
+		WriteTo(j.etcdStore)
 }
 
 // GetHash returns hash that will be different if any job changed

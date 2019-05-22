@@ -11,21 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package common
+package client
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/controller/models"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/subscriber/common/rules"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -39,9 +39,9 @@ type ControllerClient interface {
 	client.SchemaFetcher
 
 	GetSchemaHash(namespace string) (string, error)
-	GetAllSchema(namespace string) ([]common.Table, error)
+	GetAllSchema(namespace string) ([]metaCom.Table, error)
 	GetAssignmentHash(jobNamespace, instance string) (string, error)
-	GetAssignment(jobNamespace, instance string) (*rules.Assignment, error)
+	GetAssignment(jobNamespace, instance string) (*models.IngestionAssignment, error)
 }
 
 // ControllerHTTPClient implements ControllerClient over http
@@ -129,7 +129,7 @@ func (c *ControllerHTTPClient) GetSchemaHash(namespace string) (hash string, err
 	return
 }
 
-func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []common.Table, err error) {
+func (c *ControllerHTTPClient) GetAllSchema(namespace string) (tables []metaCom.Table, err error) {
 	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("/schema/%s/tables", namespace), nil)
 	if err != nil {
 		return
@@ -161,7 +161,7 @@ func (c *ControllerHTTPClient) GetAssignmentHash(jobNamespace, instance string) 
 }
 
 // GetAssignment gets the job assignment of the ares-subscriber
-func (c *ControllerHTTPClient) GetAssignment(jobNamespace, instance string) (assignment *rules.Assignment, err error) {
+func (c *ControllerHTTPClient) GetAssignment(jobNamespace, instance string) (assignment *models.IngestionAssignment, err error) {
 	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("assignment/%s/assignments/%s", jobNamespace, instance), nil)
 	if err != nil {
 		err = utils.StackError(err, "Failed to buildRequest")
@@ -169,20 +169,9 @@ func (c *ControllerHTTPClient) GetAssignment(jobNamespace, instance string) (ass
 	}
 
 	request.Header.Add("content-type", "application/json")
-	assignment = &rules.Assignment{}
+	assignment = &models.IngestionAssignment{}
 	err = c.getJSONResponse(request, assignment)
-	if err != nil {
-		err = utils.StackError(err, "Failed to GetAssignment")
-		return
-	}
-
-	for _, jobConfig := range assignment.Jobs {
-		if jobConfig.PopulateAresTableConfig() != nil {
-			err = utils.StackError(err, "Failed to PopulateAresTableConfig")
-			return
-		}
-	}
-	return
+	return assignment, err
 }
 
 // SetNamespace sets the namespace which the ControllerHTTPClient connects to
@@ -191,26 +180,26 @@ func (c *ControllerHTTPClient) SetNamespace(namespace string) {
 }
 
 // FetchAllSchemas fetches all schemas
-func (c *ControllerHTTPClient) FetchAllSchemas() (tables []*common.Table, err error) {
-	var schemas []common.Table
+func (c *ControllerHTTPClient) FetchAllSchemas() (tables []*metaCom.Table, err error) {
+	var schemas []metaCom.Table
 	schemas, err = c.GetAllSchema(c.namespace)
 	if err != nil {
 		return
 	}
-	tables = make([]*common.Table, 0, len(schemas))
-	for i, _ := range schemas {
+	tables = make([]*metaCom.Table, 0, len(schemas))
+	for i := range schemas {
 		tables = append(tables, &schemas[i])
 	}
 	return
 }
 
 // FetchSchema fetch one schema for given table
-func (c *ControllerHTTPClient) FetchSchema(tableName string) (table *common.Table, err error) {
+func (c *ControllerHTTPClient) FetchSchema(tableName string) (table *metaCom.Table, err error) {
 	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("schema/%s/tables/%s", c.namespace, tableName), nil)
 	if err != nil {
 		return
 	}
-	table = &common.Table{}
+	table = &metaCom.Table{}
 	err = c.getJSONResponse(request, table)
 	if err != nil {
 		err = utils.StackError(err, "controller client error fetching schema for table: %s", tableName)

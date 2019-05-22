@@ -15,8 +15,8 @@ package common
 
 import (
 	"github.com/uber-go/tally"
-	"github.com/uber/aresdb/controller/cluster/etcd"
-	mutators "github.com/uber/aresdb/controller/mutators/common"
+	"github.com/uber/aresdb/controller/cluster"
+	"github.com/uber/aresdb/controller/mutators/common"
 	"go.uber.org/config"
 	"go.uber.org/zap"
 )
@@ -27,12 +27,12 @@ type IngestionAssignmentTaskParams struct {
 	Logger         *zap.SugaredLogger
 	Scope          tally.Scope
 
-	EtcdClient         *etcd.EtcdClient
-	NamespaceMutator   mutators.NamespaceMutator
-	JobMutator         mutators.JobMutator
-	SchemaMutator      mutators.TableSchemaMutator
-	AssignmentsMutator mutators.IngestionAssignmentMutator
-	SubscriberMutator  mutators.SubscriberMutator
+	EtcdClient         *cluster.EtcdClient
+	NamespaceMutator   common.NamespaceMutator
+	JobMutator         common.JobMutator
+	SchemaMutator      common.TableSchemaMutator
+	AssignmentsMutator common.IngestionAssignmentMutator
+	SubscriberMutator  common.SubscriberMutator
 }
 
 // Task is the interface for a long running task

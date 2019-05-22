@@ -15,8 +15,8 @@ package etcd
 
 import (
 	"encoding/json"
-
 	"github.com/m3db/m3/src/cluster/kv"
+	"github.com/uber/aresdb/controller/cluster"
 	pb "github.com/uber/aresdb/controller/generated/proto"
 	"github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/metastore"
@@ -126,13 +126,13 @@ func (m *tableSchemaMutator) CreateTable(namespace string, table *metaCom.Table,
 		return
 	}
 
-	txn := newTransaction().
-		addKeyValue(utils.SchemaListKey(namespace), tableListVersion, &tableListProto).
-		addKeyValue(utils.SchemaKey(namespace, table.Name), schemaVersion, &schemaProto)
+	txn := cluster.NewTransaction().
+		AddKeyValue(utils.SchemaListKey(namespace), tableListVersion, &tableListProto).
+		AddKeyValue(utils.SchemaKey(namespace, table.Name), schemaVersion, &schemaProto)
 
 	preCreateEnumNodes(txn, namespace, table, 0, len(table.Columns))
 
-	err = txn.writeTo(m.txnStore)
+	err = txn.WriteTo(m.txnStore)
 	return
 }
 
@@ -164,10 +164,10 @@ func (m *tableSchemaMutator) DeleteTable(namespace, name string) error {
 		return err
 	}
 
-	err = newTransaction().
-		addKeyValue(utils.SchemaListKey(namespace), tableListVersion, &tableListProto).
-		addKeyValue(utils.SchemaKey(namespace, name), schemaVersion, &schemaProto).
-		writeTo(m.txnStore)
+	err = cluster.NewTransaction().
+		AddKeyValue(utils.SchemaListKey(namespace), tableListVersion, &tableListProto).
+		AddKeyValue(utils.SchemaKey(namespace, name), schemaVersion, &schemaProto).
+		WriteTo(m.txnStore)
 	if err != nil {
 		return err
 	}
@@ -268,22 +268,22 @@ func (m *tableSchemaMutator) UpdateTable(namespace string, table metaCom.Table, 
 		return
 	}
 
-	txn := newTransaction().
-		addKeyValue(utils.SchemaListKey(namespace), tableListVersion, &tableListProto).
-		addKeyValue(utils.SchemaKey(namespace, table.Name), schemaVersion, &schemaProto)
+	txn := cluster.NewTransaction().
+		AddKeyValue(utils.SchemaListKey(namespace), tableListVersion, &tableListProto).
+		AddKeyValue(utils.SchemaKey(namespace, table.Name), schemaVersion, &schemaProto)
 
 	// for new columns, pre-create enum nodes
 	preCreateEnumNodes(txn, namespace, &table, len(oldTable.Columns), len(table.Columns))
-	return txn.writeTo(m.txnStore)
+	return txn.WriteTo(m.txnStore)
 }
 
-func preCreateEnumNodes(txn *transaction, namespace string, table *metaCom.Table, startColumnID int, endColumnID int) {
+func preCreateEnumNodes(txn *cluster.Transaction, namespace string, table *metaCom.Table, startColumnID int, endColumnID int) {
 	for columnID := startColumnID; columnID < endColumnID; columnID++ {
 		if table.Columns[columnID].IsEnumColumn() {
 			// enum node list
-			txn.addKeyValue(utils.EnumNodeListKey(namespace, table.Name, table.Incarnation, columnID), kv.UninitializedVersion, &pb.EnumNodeList{NumEnumNodes: 1}).
+			txn.AddKeyValue(utils.EnumNodeListKey(namespace, table.Name, table.Incarnation, columnID), kv.UninitializedVersion, &pb.EnumNodeList{NumEnumNodes: 1}).
 				// first node for enum column
-				addKeyValue(utils.EnumNodeKey(namespace, table.Name, table.Incarnation, columnID, 0), kv.UninitializedVersion, &pb.EnumCases{Cases: []string{}})
+				AddKeyValue(utils.EnumNodeKey(namespace, table.Name, table.Incarnation, columnID, 0), kv.UninitializedVersion, &pb.EnumCases{Cases: []string{}})
 		}
 	}
 }

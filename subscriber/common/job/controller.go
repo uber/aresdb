@@ -22,7 +22,7 @@ import (
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3x/instrument"
-	controllerCom "github.com/uber/aresdb/controller/common"
+	controllerCom "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"go.uber.org/fx"
@@ -294,7 +294,7 @@ func (c *Controller) SyncUpJobConfigs() {
 	}
 
 	// Get assignment from aresDB controller since hash is changed
-	assignment, err := c.aresControllerClient.GetAssignment(c.jobNS, c.serviceConfig.Environment.InstanceID)
+	assigned, err := c.aresControllerClient.GetAssignment(c.jobNS, c.serviceConfig.Environment.InstanceID)
 	if err != nil {
 		c.serviceConfig.Logger.Error("Failed to get assignment from aresDB controller",
 			zap.String("jobNamespace", c.jobNS),
@@ -303,6 +303,17 @@ func (c *Controller) SyncUpJobConfigs() {
 		c.serviceConfig.Scope.Counter("syncUp.failed").Inc(1)
 		return
 	}
+
+	assignment, err := rules.NewAssignmentFromController(assigned)
+	if err != nil {
+		c.serviceConfig.Logger.Error("Failed to populate assignment from controller assignment",
+			zap.String("jobNamespace", c.jobNS),
+			zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address),
+			zap.Error(err))
+		c.serviceConfig.Scope.Counter("syncUp.failed").Inc(1)
+		return
+	}
+
 	c.serviceConfig.Logger.Info("Got assignment from aresDB controller",
 		zap.String("jobNamespace", c.jobNS),
 		zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address),

@@ -15,51 +15,14 @@ package etcd
 
 import (
 	"fmt"
+	"github.com/uber/aresdb/controller/mutators/common"
 	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/m3db/m3/src/cluster/kv"
 	pb "github.com/uber/aresdb/controller/generated/proto"
-	"github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/utils"
 )
-
-// transaction defines a transaction
-type transaction struct {
-	keys     []string
-	versions []int
-	values   []proto.Message
-}
-
-func newTransaction() *transaction {
-	return &transaction{}
-}
-
-func (t *transaction) addKeyValue(key string, version int, value proto.Message) *transaction {
-	t.keys = append(t.keys, key)
-	t.versions = append(t.versions, version)
-	t.values = append(t.values, value)
-	return t
-}
-
-func (t *transaction) writeTo(store kv.TxnStore) error {
-	if len(t.keys) != len(t.versions) || len(t.versions) != len(t.values) {
-		return fmt.Errorf("length of keys (%d), versions (%d), values (%d) in transaction do not match",
-			len(t.keys), len(t.versions), len(t.values))
-	}
-	conditions := make([]kv.Condition, len(t.keys))
-	ops := make([]kv.Op, len(t.keys))
-	for i, key := range t.keys {
-		conditions[i] = kv.NewCondition().
-			SetTargetType(kv.TargetVersion).
-			SetCompareType(kv.CompareEqual).
-			SetKey(key).
-			SetValue(t.versions[i])
-		ops[i] = kv.NewSetOp(key, t.values[i])
-	}
-	_, err := store.Commit(conditions, ops)
-	return err
-}
 
 func addEntity(entityList pb.EntityList, name string) (res pb.EntityList, incarnation int, exist bool) {
 	nowTs := utils.Now().UnixNano() / int64(time.Millisecond)

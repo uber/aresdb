@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/mock"
-	controllerMocks "github.com/uber/aresdb/controller/common/mocks"
+	controllerMocks "github.com/uber/aresdb/controller/client/mocks"
 	"github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 )

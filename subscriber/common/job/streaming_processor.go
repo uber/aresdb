@@ -16,7 +16,7 @@ package job
 
 import (
 	"fmt"
-	controllerCom "github.com/uber/aresdb/controller/common"
+	controllerCom "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/subscriber/common/sink"
 	"strconv"
 	"sync"

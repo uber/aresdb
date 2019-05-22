@@ -14,13 +14,14 @@
 package etcd
 
 import (
+	"github.com/uber/aresdb/controller/cluster"
 	"github.com/uber/aresdb/controller/generated/proto"
+	"github.com/uber/aresdb/controller/mutators/common"
 	"path"
 	"strconv"
 	"sync"
 
 	"github.com/m3db/m3/src/cluster/kv"
-	"github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 )
@@ -169,7 +170,7 @@ func (e *enumMutator) extendEnumCase(namespace, tableName string, incarnation, c
 		// track the last enum node
 		lastEnumNode = &proto.EnumCases{Cases: enumCases}
 		// transaction
-		txn = newTransaction().addKeyValue(nodeKey, nodeVersion, lastEnumNode)
+		txn = cluster.NewTransaction().AddKeyValue(nodeKey, nodeVersion, lastEnumNode)
 		// only when there are new enum cases not in cache, we need to write to etcd for update
 		updated = false
 	)
@@ -188,7 +189,7 @@ func (e *enumMutator) extendEnumCase(namespace, tableName string, incarnation, c
 				// advance lastEnumNodeID
 				lastEnumNodeID++
 				// create last node transaction
-				txn.addKeyValue(utils.EnumNodeKey(namespace, tableName, incarnation, columnID, lastEnumNodeID), kv.UninitializedVersion, lastEnumNode)
+				txn.AddKeyValue(utils.EnumNodeKey(namespace, tableName, incarnation, columnID, lastEnumNodeID), kv.UninitializedVersion, lastEnumNode)
 				enumNodeList.NumEnumNodes++
 			}
 			enumID := getEnumID(lastEnumNodeID, len(lastEnumNode.Cases))
@@ -200,7 +201,7 @@ func (e *enumMutator) extendEnumCase(namespace, tableName string, incarnation, c
 
 	if updated {
 		// append nodeList to the transaction
-		err = txn.addKeyValue(nodeListKey, nodeListVersion, &enumNodeList).writeTo(e.txnStore)
+		err = txn.AddKeyValue(nodeListKey, nodeListVersion, &enumNodeList).WriteTo(e.txnStore)
 		if err != nil {
 			return nil, err
 		}

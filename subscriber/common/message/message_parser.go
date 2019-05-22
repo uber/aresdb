@@ -140,7 +140,7 @@ func (mp *Parser) CheckPrimaryKeys(destination sink.Destination, row client.Row)
 }
 
 // CheckTimeColumnExistence checks if time column is missing for fact table
-func (mp *Parser) CheckTimeColumnExistence(schema metaCom.Table, columnDict map[string]int,
+func (mp *Parser) CheckTimeColumnExistence(schema *metaCom.Table, columnDict map[string]int,
 	destination sink.Destination, row client.Row) error {
 	if !schema.IsFactTable || schema.Config.AllowMissingEventTime {
 		return nil

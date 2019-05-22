@@ -17,4 +17,5 @@ package models
 type IngestionAssignment struct {
 	Subscriber string      `json:"subscriber"`
 	Jobs       []JobConfig `json:"jobs"`
+	Instances map[string]Instance `json:"instances"`
 }

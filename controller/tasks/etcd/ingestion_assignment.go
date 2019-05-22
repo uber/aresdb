@@ -14,6 +14,9 @@
 package etcd
 
 import (
+	"github.com/uber/aresdb/controller/models"
+	mutators "github.com/uber/aresdb/controller/mutators/common"
+	"github.com/uber/aresdb/controller/tasks/common"
 	"math/rand"
 	"os"
 	"reflect"
@@ -22,9 +25,6 @@ import (
 	"github.com/m3db/m3/src/cluster/services"
 	xwatch "github.com/m3db/m3x/watch"
 	"github.com/uber-go/tally"
-	"github.com/uber/aresdb/controller/models"
-	mutators "github.com/uber/aresdb/controller/mutators/common"
-	"github.com/uber/aresdb/controller/tasks/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"github.com/uber/aresdb/utils/consistenthasing"
@@ -126,10 +126,7 @@ func NewIngestionAssignmentTask(p common.IngestionAssignmentTaskParams) common.T
 
 		configHashes: make(map[string]configHash),
 	}
-
 	p.Logger.Info("Starting ingestionAssignmentTask")
-
-	go task.Run()
 	return task
 }
 
@@ -151,7 +148,7 @@ func (ia *ingestionAssignmentTask) Run() {
 		ia.scope.Tagged(
 			map[string]string{
 				"task": taskTagValue,
-			}).Counter(utils.TaskFailMetricName).Inc(1)
+			}).Counter("task_failed").Inc(1)
 		return
 	}
 
@@ -252,11 +249,11 @@ func (ia *ingestionAssignmentTask) readCurrentState(namespace string) (jobSubscr
 
 	for _, job := range state.jobs {
 		var table *metaCom.Table
-		table, err = ia.schemaMutator.GetTable(namespace, job.Table.Name)
+		table, err = ia.schemaMutator.GetTable(namespace, job.AresTableConfig.Name)
 		if err != nil {
 			return state, err
 		}
-		job.Table.Schema = table
+		job.AresTableConfig.Table = table
 	}
 
 	if len(state.subscribers) == 0 {
@@ -330,7 +327,7 @@ func (ia *ingestionAssignmentTask) processIngestionAssignment(state jobSubscribe
 
 	// TODO: take subscriber instance capacity into consideration when assigning jobs
 	for _, job := range state.jobs {
-		processorsNeeded := job.Kafka.ProcessorCount
+		processorsNeeded := job.StreamingConfig.ProcessorCount
 		if processorsNeeded <= 0 {
 			continue
 		}
@@ -340,14 +337,14 @@ func (ia *ingestionAssignmentTask) processIngestionAssignment(state jobSubscribe
 		}
 
 		// calcualte starting node of task assignment base on kafka topic name
-		startingIndex, _ := ring.Get(job.Kafka.Topic)
+		startingIndex, _ := ring.Get(job.StreamingConfig.Topic)
 		for i := 0; processorsNeeded > 0; i++ {
 			processorsToAssign := processorsPerSubscriber
 			if processorsNeeded < processorsToAssign {
 				processorsToAssign = processorsNeeded
 			}
 			j := job
-			j.Kafka.ProcessorCount = processorsToAssign
+			j.StreamingConfig.ProcessorCount = processorsToAssign
 			index := (startingIndex + i) % len(state.subscribers)
 			subscriberName := ring.Nodes[index].ID
 			jobAssignments[subscriberName] = append(jobAssignments[subscriberName], j)
