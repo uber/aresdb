@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path"
 	"sort"
 	"time"
 	"unsafe"
@@ -45,6 +46,18 @@ var _ = ginkgo.Describe("DiskStore", func() {
 
 	ginkgo.AfterEach(func() {
 		os.RemoveAll(prefix)
+	})
+
+	ginkgo.It("Test DeleteTableShard for LocalDiskstore", func() {
+		l := NewLocalDiskStore(prefix)
+		// Setup directory for table shard.
+		tableShardDir := getPathForTableShard(prefix, table, shard)
+		Ω(os.MkdirAll(tableShardDir, os.ModeDir|os.ModePerm)).Should(BeNil())
+		_, err := os.Stat(tableShardDir)
+		Ω(err).Should(BeNil())
+		Ω(l.DeleteTableShard(table, shard)).Should(BeNil())
+		_, err = os.Stat(tableShardDir)
+		Ω(os.IsNotExist(err)).Should(BeTrue())
 	})
 
 	ginkgo.It("Test Read/Write/Delete Redolog Files for LocalDiskstore", func() {
@@ -187,6 +200,22 @@ var _ = ginkgo.Describe("DiskStore", func() {
 		Ω(files).Should(BeNil())
 	})
 
+	ginkgo.It("ListLogFiles should ignore the error if the redolog file name is not correct", func() {
+		l := NewLocalDiskStore(prefix)
+		filePath := getPathForRedologFile(prefix, table, shard, "test")
+		ioutil.WriteFile(filePath, nil, os.ModePerm)
+		files, err := l.ListLogFiles(table, shard)
+		Ω(err).Should(BeNil())
+		Ω(files).Should(HaveLen(0))
+	})
+
+	ginkgo.It("OpenLogFileForReplay should raise error if the redolog file does not exist", func() {
+		l := NewLocalDiskStore(prefix)
+		f, err := l.OpenLogFileForReplay(table, shard, 0)
+		Ω(err).ShouldNot(BeNil())
+		Ω(f).Should(BeNil())
+	})
+
 	ginkgo.It("Test List Snapshot Dir for LocalDiskstore", func() {
 		// Setup directory
 		snapshotDirPath := GetPathForTableSnapshotDir(prefix, table, shard)
@@ -214,6 +243,13 @@ var _ = ginkgo.Describe("DiskStore", func() {
 		batches, err = l.ListSnapshotBatches(table, shard, redoLogFile, offset+1)
 		Ω(err).Should(BeNil())
 		Ω(batches).Should(BeEmpty())
+
+		// ListSnapshotBatches should ignore invalid batch dir
+		batchDir := path.Join(snapshotDirPath, "test")
+		Ω(os.MkdirAll(batchDir, 0755)).Should(BeNil())
+		batches, err = l.ListSnapshotBatches(table, shard, redoLogFile, offset)
+		Ω(err).Should(BeNil())
+		Ω(batches).Should(Equal(randomBatches))
 	})
 
 	ginkgo.It("Test List Snapshot VP Files", func() {
@@ -401,6 +437,34 @@ var _ = ginkgo.Describe("DiskStore", func() {
 		Ω(snapshotFiles).Should(Equal(keptFiles))
 	})
 
+	ginkgo.It("DeleteSnapshot should work for invalid file names in the directory", func() {
+		l := NewLocalDiskStore(prefix)
+		// if the snapshot directory is not created yet, it should return nil error
+		Ω(l.DeleteSnapshot(table, shard, 0, 0)).Should(BeNil())
+
+		// Setup directory
+		snapshotDirPath := GetPathForTableSnapshotDir(prefix, table, shard)
+		os.MkdirAll(snapshotDirPath, 0755)
+
+		// A snapshot file name consists with two components in the format of {redolog_file}_{offset}
+		// the first component should be a int64 which is a timestamp, second component is a uint32 offset within
+		// the redolog file
+
+		// First component out of range of int64
+		invalidFileName := "9999999999999999999999999_0"
+		p := path.Join(snapshotDirPath, invalidFileName)
+		_, err := os.Create(p)
+		Ω(err).Should(BeNil())
+
+		// Second component out of range of uint32
+		invalidFileName = "0_99999999999999999"
+		_, err = os.Create(p)
+		Ω(err).Should(BeNil())
+
+		// Both error should be ignored
+		Ω(l.DeleteSnapshot(table, shard, 0, 0)).Should(BeNil())
+	})
+
 	ginkgo.It("Test Read/Write Archiving Column and DeleteBatchVersions for LocalDiskstore", func() {
 		l := NewLocalDiskStore(prefix)
 		// Setup directory
@@ -511,6 +575,10 @@ var _ = ginkgo.Describe("DiskStore", func() {
 		Ω(err).Should(BeNil())
 		Ω(len(batchDirs)).Should(Equal(2))
 
+		// DeleteBatch should not raise error for shard not exist
+		numBatches, err := l.DeleteBatches(table, shard+1, 0, 0)
+		Ω(err).Should(BeNil())
+		Ω(numBatches).Should(BeZero())
 	})
 
 	ginkgo.It("Test DeleteColumn for LocalDiskstore", func() {
@@ -563,3 +631,9 @@ var _ = ginkgo.Describe("DiskStore", func() {
 		}
 	})
 })
+
+func getPathForRedologFile(prefix, table string, shardID int, filename string) string {
+	redologDirPath := GetPathForTableRedologs(prefix, table, shardID)
+	redologName := fmt.Sprintf("%s.redolog", filename)
+	return filepath.Join(redologDirPath, redologName)
+}
