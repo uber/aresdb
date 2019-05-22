@@ -228,13 +228,6 @@ func (scheduler *schedulerImpl) Start() {
 }
 
 func (scheduler *schedulerImpl) executeJob(jb *jobBundle) {
-	defer func() {
-		if r := recover(); r != nil {
-			utils.GetRootReporter().GetCounter(utils.JobFailuresCount).Inc(1)
-			utils.GetLogger().With("error", r, "job", jb.Job).Error("Job failed after panic")
-		}
-	}()
-
 	job := jb.Job
 	utils.GetLogger().With("job", job).Info("Running job")
 	scheduler.reportJob(job.GetIdentifier(), func(jobDetail *JobDetail) {

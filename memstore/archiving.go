@@ -249,7 +249,8 @@ func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporte
 
 	shard, err := m.GetTableShard(table, shardID)
 	if err != nil {
-		return err
+		// table already deleted. stop here
+		return nil
 	}
 	defer shard.Users.Done()
 
