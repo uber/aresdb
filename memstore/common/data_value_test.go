@@ -27,71 +27,71 @@ var _ = ginkgo.Describe("data value", func() {
 	ginkgo.It("value comparison int8", func() {
 		var v1 int8 = -20
 		var v2 int8 = -20
-		Ω(CompareInt8(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
+		Ω(GetCompareFunc(Int8)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
 		v2 = -30
-		Ω(CompareInt8(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
+		Ω(GetCompareFunc(Int8)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
 		v2 = 1
-		Ω(CompareInt8(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
+		Ω(GetCompareFunc(Int8)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
 	})
 
 	ginkgo.It("value comparison uint8", func() {
 		var v1 uint8 = 20
 		var v2 uint8 = 20
-		Ω(CompareUint8(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
+		Ω(GetCompareFunc(Uint8)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
 		v2 = 0
-		Ω(CompareUint8(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
+		Ω(GetCompareFunc(Uint8)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
 		v2 = 30
-		Ω(CompareUint8(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
+		Ω(GetCompareFunc(Uint8)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
 	})
 
 	ginkgo.It("value comparison int16", func() {
 		var v1 int16 = -20
 		var v2 int16 = -20
-		Ω(CompareInt16(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
+		Ω(GetCompareFunc(Int16)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
 		v2 = -30
-		Ω(CompareInt16(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
+		Ω(GetCompareFunc(Int16)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
 		v2 = 1
-		Ω(CompareInt16(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
+		Ω(GetCompareFunc(Int16)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
 	})
 
 	ginkgo.It("value comparison uint16", func() {
 		var v1 uint16 = 20
 		var v2 uint16 = 20
-		Ω(CompareUint16(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
+		Ω(GetCompareFunc(Uint16)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
 		v2 = 0
-		Ω(CompareUint16(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
+		Ω(GetCompareFunc(Uint16)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
 		v2 = 30
-		Ω(CompareUint16(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
+		Ω(GetCompareFunc(Uint16)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
 	})
 
 	ginkgo.It("value comparison int32", func() {
 		var v1 int32 = -20
 		var v2 int32 = -20
-		Ω(CompareInt32(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
+		Ω(GetCompareFunc(Int32)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
 		v2 = -30
-		Ω(CompareInt32(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
+		Ω(GetCompareFunc(Int32)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
 		v2 = 1
-		Ω(CompareInt32(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
+		Ω(GetCompareFunc(Int32)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
 	})
 
 	ginkgo.It("value comparison uint32", func() {
 		var v1 uint32 = 20
 		var v2 uint32 = 20
-		Ω(CompareUint32(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
+		Ω(GetCompareFunc(Uint32)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
 		v2 = 0
-		Ω(CompareUint32(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
+		Ω(GetCompareFunc(Uint32)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
 		v2 = 30
-		Ω(CompareUint32(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
+		Ω(GetCompareFunc(Uint32)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
 	})
 
 	ginkgo.It("value comparison float32", func() {
 		var v1 float32 = -0.35
 		var v2 float32 = -0.35
-		Ω(CompareFloat32(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
+		Ω(GetCompareFunc(Float32)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) == 0).Should(BeTrue())
 		v2 = -1.3
-		Ω(CompareFloat32(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
+		Ω(GetCompareFunc(Float32)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) > 0).Should(BeTrue())
 		v2 = 0.1
-		Ω(CompareFloat32(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
+		Ω(GetCompareFunc(Float32)(unsafe.Pointer(&v1), unsafe.Pointer(&v2)) < 0).Should(BeTrue())
 	})
 
 	ginkgo.It("value comparison bool", func() {
@@ -169,6 +169,11 @@ var _ = ginkgo.Describe("data value", func() {
 		Ω(val.Valid).Should(BeTrue())
 		Ω(*(*uint32)(val.OtherVal)).Should(BeEquivalentTo(4294967295))
 
+		// int64
+		val, err = ValueFromString("4294967296", Int64)
+		Ω(val.Valid).Should(BeTrue())
+		Ω(*(*int64)(val.OtherVal)).Should(BeEquivalentTo(4294967296))
+
 		// float32
 		val, err = ValueFromString("0.10.1", Float32)
 		Ω(err).ShouldNot(BeNil())
@@ -188,6 +193,16 @@ var _ = ginkgo.Describe("data value", func() {
 		val, err = ValueFromString("01000000-00000000-01000000-00000000", UUID)
 		Ω(err).Should(BeNil())
 		Ω(*(*[2]uint64)(val.OtherVal)).Should(Equal([2]uint64{1, 1}))
+
+		// geo point
+		val, err = ValueFromString("Point", GeoPoint)
+		Ω(err).ShouldNot(BeNil())
+		Ω(val.Valid).ShouldNot(BeTrue())
+
+		val, err = ValueFromString("Point(1.0 1.0)", GeoPoint)
+		Ω(err).Should(BeNil())
+		Ω(val.Valid).Should(BeTrue())
+		Ω(*(*GeoPointGo)(val.OtherVal)).Should(Equal(GeoPointGo{1.0, 1.0}))
 	})
 
 	ginkgo.It("GetBytes of GeoShapeGo should work", func() {
@@ -212,6 +227,7 @@ var _ = ginkgo.Describe("data value", func() {
 			},
 		}
 		Ω(shape1.GetBytes()).Should(Equal(24))
+		Ω(shape1.GetSerBytes()).Should(Equal(36))
 	})
 
 	ginkgo.It("Read and Write GeoShapeGo should work", func() {
@@ -248,8 +264,46 @@ var _ = ginkgo.Describe("data value", func() {
 		Ω(shape2).Should(Equal(shape1))
 	})
 
-	ginkgo.It("ConvertToHumanReadable GeoShape should work", func() {
-		shape := &GeoShapeGo{
+	ginkgo.It("ConvertToHumanReadable should work", func() {
+		dv := DataValue{DataType: Bool, Valid: true, IsBool: true, BoolVal: true}
+		Ω(dv.ConvertToHumanReadable(Bool)).Should(Equal(true))
+
+		dv = DataValue{DataType: Bool, Valid: true, IsBool: true, BoolVal: false}
+		Ω(dv.ConvertToHumanReadable(Bool)).Should(Equal(false))
+
+		uint8v := uint8(1)
+		dv = DataValue{DataType: Uint8, Valid: true, OtherVal: unsafe.Pointer(&uint8v)}
+		Ω(dv.ConvertToHumanReadable(Uint8)).Should(Equal(uint8(1)))
+
+		uint16v := uint16(1)
+		dv = DataValue{DataType: Uint16, Valid: true, OtherVal: unsafe.Pointer(&uint16v)}
+		Ω(dv.ConvertToHumanReadable(Uint16)).Should(Equal(uint16(1)))
+
+		uint32v := uint32(1)
+		dv = DataValue{DataType: Uint32, Valid: true, OtherVal: unsafe.Pointer(&uint32v)}
+		Ω(dv.ConvertToHumanReadable(Uint32)).Should(Equal(uint32(1)))
+
+		int32v := int32(1)
+		dv = DataValue{DataType: Int32, Valid: true, OtherVal: unsafe.Pointer(&int32v)}
+		Ω(dv.ConvertToHumanReadable(Int32)).Should(Equal(int32(1)))
+
+		int16v := int16(1)
+		dv = DataValue{DataType: Int16, Valid: true, OtherVal: unsafe.Pointer(&int16v)}
+		Ω(dv.ConvertToHumanReadable(Int16)).Should(Equal(int16(1)))
+
+		int64v := int64(1)
+		dv = DataValue{DataType: Int64, Valid: true, OtherVal: unsafe.Pointer(&int64v)}
+		Ω(dv.ConvertToHumanReadable(Int64)).Should(Equal(int64(1)))
+
+		float32v := float32(1)
+		dv = DataValue{DataType: Float32, Valid: true, OtherVal: unsafe.Pointer(&float32v)}
+		Ω(dv.ConvertToHumanReadable(Float32)).Should(Equal(float32(1)))
+
+		geoPointV := GeoPointGo{float32(1), float32(1)}
+		dv = DataValue{DataType: GeoPoint, Valid: true, OtherVal: unsafe.Pointer(&geoPointV)}
+		Ω(dv.ConvertToHumanReadable(GeoPoint)).Should(Equal("Point(1.0000,1.0000)"))
+
+		shapeV := GeoShapeGo{
 			Polygons: [][]GeoPointGo{
 				{
 					{
@@ -269,10 +323,7 @@ var _ = ginkgo.Describe("data value", func() {
 				},
 			},
 		}
-		dv := DataValue{
-			Valid: true,
-			GoVal: shape,
-		}
+		dv = DataValue{Valid: true, GoVal: &shapeV}
 		Ω(dv.ConvertToHumanReadable(GeoShape)).Should(Equal("Polygon((180.0000+90.0000),(180.0000+90.0000,180.0000+90.0000))"))
 	})
 })
