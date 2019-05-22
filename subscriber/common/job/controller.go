@@ -143,6 +143,8 @@ func NewController(params Params) *Controller {
 		params.ServiceConfig.Logger.Info("aresDB Controller is enabled")
 
 		if params.ServiceConfig.HeartbeatConfig.Enabled {
+			params.ServiceConfig.Logger.Info("heartbeat config",
+				zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))
 			controller.etcdServices, err = connectEtcdServices(params)
 			if err != nil {
 				panic(utils.StackError(err, "Failed to createEtcdServices"))
@@ -202,6 +204,9 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		SetName(params.ServiceConfig.EtcdConfig.Service)
 
 	pInstance := placement.NewInstance().SetID(params.ServiceConfig.Environment.InstanceID)
+	params.ServiceConfig.Logger.Info("service and placement info",
+		zap.Any("serviceID", sid),
+		zap.Any("placement", pInstance))
 
 	ad := services.NewAdvertisement().
 		SetServiceID(sid).
