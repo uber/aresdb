@@ -31,7 +31,7 @@ func Validate(newJobConfig, oldJobConfig *models.JobConfig) (err error) {
 
 // check job config should contains all fields
 func validateJobConfig(job *models.JobConfig) (err error) {
-	if job.Name == "" || job.Kafka.Cluster == "" || job.Kafka.Topic == "" || job.Table.Name == "" {
+	if job.Name == "" || job.StreamingConfig.Cluster == "" || job.StreamingConfig.Topic == "" || job.AresTableConfig.Name == "" {
 		err = ErrInvalidJobConfig
 	}
 	return

@@ -39,44 +39,44 @@ const (
 
 // TableConfig is the table part of job config
 type TableConfig struct {
-	Name    string         `json:"name"`
-	Cluster string         `json:"cluster"`
-	Table  *metaCom.Table `json:"schema,omitempty"`
+	Name       string            `json:"name"`
+	Cluster    string            `json:"cluster"`
+	Table      *metaCom.Table    `json:"schema,omitempty"`
 	UpdateMode map[string]string `json:"updateMode,omitempty"`
 }
 
 // KafkaConfig is the kafka part of job config
 type KafkaConfig struct {
-	Topic           string         `json:"topic"`
-	Cluster         string         `json:"kafkaClusterName"`
-	KafkaVersion    string         `json:"kafkaVersion"`
-	File            string         `json:"kafkaClusterFile,omitempty"`
-	TopicType            string         `json:"topicType,omitempty"`
-	LatestOffset          bool           `json:"latestOffset,omitempty"`
-	ErrorThreshold  int            `json:"errorThreshold,omitempty"`
-	StatusCheckInterval      int            `json:"statusCheckInterval,omitempty"`
-	ARThreshold     int            `json:"autoRecoveryThreshold,omitempty"`
-	ProcessorCount  int            `json:"processorCount,omitempty"`
-	BatchSize       int            `json:"batchSize,omitempty"`
-	MaxBatchDelayMS    int            `json:"maxBatchDelayMS,omitempty"`
+	Topic               string         `json:"topic"`
+	Cluster             string         `json:"kafkaClusterName"`
+	KafkaVersion        string         `json:"kafkaVersion"`
+	File                string         `json:"kafkaClusterFile,omitempty"`
+	TopicType           string         `json:"topicType,omitempty"`
+	LatestOffset        bool           `json:"latestOffset,omitempty"`
+	ErrorThreshold      int            `json:"errorThreshold,omitempty"`
+	StatusCheckInterval int            `json:"statusCheckInterval,omitempty"`
+	ARThreshold         int            `json:"autoRecoveryThreshold,omitempty"`
+	ProcessorCount      int            `json:"processorCount,omitempty"`
+	BatchSize           int            `json:"batchSize,omitempty"`
+	MaxBatchDelayMS     int            `json:"maxBatchDelayMS,omitempty"`
 	MegaBytePerSec      int            `json:"megaBytePerSec,omitempty"`
-	RestartOnFailure         bool           `json:"restartOnFailure,omitempty"`
-	RestartInterval int            `json:"restartInterval,omitempty"`
-	FailureHandler  FailureHandler `json:"failureHandler,omitempty"`
+	RestartOnFailure    bool           `json:"restartOnFailure,omitempty"`
+	RestartInterval     int            `json:"restartInterval,omitempty"`
+	FailureHandler      FailureHandler `json:"failureHandler,omitempty"`
 
 	// confluent kafka
-	KafkaBroker           string               `json:"kafkaBroker" yaml:"kafkaBroker"`
-	MaxPollIntervalMs     int                  `json:"maxPollIntervalMs" yaml:"maxPollIntervalMs" default:"300000"`
-	SessionTimeoutNs      int                  `json:"sessionTimeoutNs" yaml:"sessionTimeoutNs" default:"10000"`
-	ChannelBufferSize     uint                 `json:"channelBufferSize" yaml:"channelBufferSize" default:"256"`
+	KafkaBroker       string `json:"kafkaBroker" yaml:"kafkaBroker"`
+	MaxPollIntervalMs int    `json:"maxPollIntervalMs" yaml:"maxPollIntervalMs" default:"300000"`
+	SessionTimeoutNs  int    `json:"sessionTimeoutNs" yaml:"sessionTimeoutNs" default:"10000"`
+	ChannelBufferSize uint   `json:"channelBufferSize" yaml:"channelBufferSize" default:"256"`
 }
 
 // JobConfig is job's config
 type JobConfig struct {
-	Name    string      `json:"job"`
-	Version int         `json:"version"`
-	AresTableConfig   TableConfig `json:"aresTableConfig"`
-	StreamingConfig   KafkaConfig `json:"streamConfig"`
+	Name            string      `json:"job"`
+	Version         int         `json:"version"`
+	AresTableConfig TableConfig `json:"aresTableConfig"`
+	StreamingConfig KafkaConfig `json:"streamConfig"`
 }
 
 // FailureHandler is kafka's failure handler
@@ -87,7 +87,7 @@ type FailureHandler struct {
 
 // FailureHandlerConfig is Kafka's failure handler config
 type FailureHandlerConfig struct {
-	InitRetryIntervalInSeconds int `json:"initRetryIntervalInSeconds,omitempty"`
+	InitRetryIntervalInSeconds int     `json:"initRetryIntervalInSeconds,omitempty"`
 	Multiplier                 float32 `json:"multiplier,omitempty"`
-	MaxRetryMinutes            int `json:"maxRetryMinutes,omitempty"`
+	MaxRetryMinutes            int     `json:"maxRetryMinutes,omitempty"`
 }

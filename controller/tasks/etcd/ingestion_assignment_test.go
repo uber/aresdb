@@ -40,19 +40,19 @@ func TestIngestionAssignmentTask(t *testing.T) {
 
 	job1 := models.JobConfig{
 		Name:  "job1",
-		Table: models.TableConfig{Name: "table1"},
-		Kafka: models.KafkaConfig{
+		AresTableConfig: models.TableConfig{Name: "table1"},
+		StreamingConfig: models.KafkaConfig{
 			File:            models.KafkaClusterFile,
-			Type:            models.KafkaTopicType,
-			Offset:          models.KafkaLatestOffset,
+			TopicType:            models.KafkaTopicType,
+			LatestOffset:          models.KafkaLatestOffset,
 			ErrorThreshold:  models.KafkaErrorThreshold,
-			SCInterval:      models.KafkaStatusCheckInterval,
+			StatusCheckInterval:      models.KafkaStatusCheckInterval,
 			ARThreshold:     models.KafkaAutoRecoveryThreshold,
 			ProcessorCount:  2,
 			BatchSize:       models.KafkaBatchSize,
-			BatchDelayMS:    models.KafkaMaxBatchDelayMS,
-			BytePerSec:      models.KafkaMegaBytePerSec,
-			Restart:         models.KafkaRestartOnFailure,
+			MaxBatchDelayMS:    models.KafkaMaxBatchDelayMS,
+			MegaBytePerSec:      models.KafkaMegaBytePerSec,
+			RestartOnFailure:         models.KafkaRestartOnFailure,
 			RestartInterval: models.KafkaRestartInterval,
 			FailureHandler: models.FailureHandler{
 				Type: models.FailureHandlerType,
@@ -265,7 +265,7 @@ func TestIngestionAssignmentTask(t *testing.T) {
 
 		as2, _ := assignmentMutator.GetIngestionAssignment("ns1", assignments[0].Subscriber)
 		job1Assigned := job1
-		job1Assigned.Kafka.ProcessorCount = 1
+		job1Assigned.StreamingConfig.ProcessorCount = 1
 		assert.Equal(t, []models.JobConfig{job1Assigned}, as2.Jobs)
 		assert.Len(t, assignments[1].Jobs, 1)
 		assert.Len(t, assignments[2].Jobs, 0)

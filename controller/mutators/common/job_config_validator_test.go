@@ -24,10 +24,10 @@ func TestJobConfigValidator(t *testing.T) {
 	oldJob := models.JobConfig{
 		Name:    "demand",
 		Version: 0,
-		Table: models.TableConfig{
+		AresTableConfig: models.TableConfig{
 			Name: "rta_table1",
 		},
-		Kafka: models.KafkaConfig{
+		StreamingConfig: models.KafkaConfig{
 			Topic:   "demand_topic1",
 			Cluster: "demand_cluster",
 		},
@@ -36,10 +36,10 @@ func TestJobConfigValidator(t *testing.T) {
 	job := models.JobConfig{
 		Name:    "demand",
 		Version: 1,
-		Table: models.TableConfig{
+		AresTableConfig: models.TableConfig{
 			Name: "rta_table1",
 		},
-		Kafka: models.KafkaConfig{
+		StreamingConfig: models.KafkaConfig{
 			Topic:   "demand_topic1",
 			Cluster: "demand_cluster",
 		},
@@ -59,6 +59,6 @@ func TestJobConfigValidator(t *testing.T) {
 			Version: 0,
 		}
 		err := Validate(&invalid, nil)
-		assert.Equal(t, "Job config is invalid", err.Error())
+		assert.EqualError(t,  err, "Job config is invalid")
 	})
 }

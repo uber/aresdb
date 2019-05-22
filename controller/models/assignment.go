@@ -15,7 +15,7 @@ package models
 
 // IngestionAssignment models job assignments for a subscriber
 type IngestionAssignment struct {
-	Subscriber string      `json:"subscriber"`
-	Jobs       []JobConfig `json:"jobs"`
-	Instances map[string]Instance `json:"instances"`
+	Subscriber string              `json:"subscriber"`
+	Jobs       []JobConfig         `json:"jobs"`
+	Instances  map[string]Instance `json:"instances"`
 }
