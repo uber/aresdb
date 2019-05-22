@@ -26,12 +26,13 @@ var _ = ginkgo.Describe("live store", func() {
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
 	ginkgo.It("provides batches for reads and writes", func() {
 		shard := &TableShard{
-			Schema: &TableSchema{
+			Schema: &common.TableSchema{
 				ValueTypeByColumn: []common.DataType{common.Uint32, common.Uint16, common.Uint8},
 				DefaultValues:     []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue},
 			},
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
+			redoLogManagerFactory: m.redologManagerFactory,
 		}
 		vs := NewLiveStore(0, shard)
 
@@ -55,13 +56,15 @@ var _ = ginkgo.Describe("live store", func() {
 
 	ginkgo.It("provides live batches for reads and appends", func() {
 		shard := &TableShard{
-			Schema: &TableSchema{
+			Schema: &common.TableSchema{
 				ValueTypeByColumn: []common.DataType{common.Uint32, common.Uint16, common.Uint8},
 				DefaultValues:     []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue},
 			},
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
+			redoLogManagerFactory: m.redologManagerFactory,
 		}
+		m.redologManagerFactory.Stop()
 		vs := NewLiveStore(16, shard)
 
 		vs.appendBatch(BaseBatchID)
@@ -99,14 +102,16 @@ var _ = ginkgo.Describe("live store", func() {
 
 	ginkgo.It("provides live vectorparty for reads and writes", func() {
 		shard := &TableShard{
-			Schema: &TableSchema{
+			Schema: &common.TableSchema{
 				ValueTypeByColumn: []common.DataType{common.Uint32, common.Uint16, common.Uint8, common.Uint8, common.Uint8, common.Bool},
 				DefaultValues: []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue,
 					&common.NullDataValue, &common.NullDataValue},
 			},
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
+			redoLogManagerFactory: m.redologManagerFactory,
 		}
+		m.redologManagerFactory.Stop()
 		vs := NewLiveStore(0, shard)
 
 		vs.appendBatch(BaseBatchID)
@@ -142,13 +147,15 @@ var _ = ginkgo.Describe("live store", func() {
 
 	ginkgo.It("get batch ids skips batches that are beyond last read batch", func() {
 		shard := &TableShard{
-			Schema: &TableSchema{
+			Schema: &common.TableSchema{
 				ValueTypeByColumn: []common.DataType{common.Uint32, common.Uint16, common.Uint8, common.Uint8, common.Uint8, common.Bool},
 				DefaultValues:     []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue},
 			},
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
+			redoLogManagerFactory: m.redologManagerFactory,
 		}
+		m.redologManagerFactory.Stop()
 		vs := NewLiveStore(16, shard)
 
 		vs.appendBatch(BaseBatchID)
@@ -175,20 +182,22 @@ var _ = ginkgo.Describe("live store", func() {
 	ginkgo.It("Looks up key in primary key", func() {
 		primaryKeyDataTypes := []common.DataType{common.UUID, common.Uint32, common.Bool}
 		keyBytes := 21
-		pk := NewPrimaryKey(keyBytes, true, 10, hostMemoryManager)
+		pk := common.NewPrimaryKey(keyBytes, true, 10, hostMemoryManager)
 		shard := &TableShard{
-			Schema: &TableSchema{
+			Schema: &common.TableSchema{
 				PrimaryKeyBytes:       keyBytes,
 				PrimaryKeyColumnTypes: primaryKeyDataTypes,
 			},
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
+			redoLogManagerFactory: m.redologManagerFactory,
 		}
+		m.redologManagerFactory.Stop()
 		vs := NewLiveStore(0, shard)
 		vs.PrimaryKey = pk
 
 		key := []byte{1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1}
-		recordID := RecordID{1, 1}
+		recordID := common.RecordID{1, 1}
 
 		pk.FindOrInsert(key, recordID, 1)
 		r, found := vs.LookupKey([]string{"01000000000000000100000000000000", "1", "true"})
@@ -199,14 +208,16 @@ var _ = ginkgo.Describe("live store", func() {
 
 	ginkgo.It("get or create batch for snapshot", func() {
 		shard := &TableShard{
-			Schema: &TableSchema{
+			Schema: &common.TableSchema{
 				ValueTypeByColumn: []common.DataType{common.Uint32, common.Uint16, common.Uint8, common.Uint8, common.Uint8, common.Bool},
 				DefaultValues: []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue,
 					&common.NullDataValue, &common.NullDataValue},
 			},
 			diskStore:         mockDiskStore,
 			HostMemoryManager: hostMemoryManager,
+			redoLogManagerFactory: m.redologManagerFactory,
 		}
+		m.redologManagerFactory.Stop()
 		vs := NewLiveStore(0, shard)
 		liveBatch1 := vs.getOrCreateBatch(-1)
 		Ω(liveBatch1).ShouldNot(BeNil())

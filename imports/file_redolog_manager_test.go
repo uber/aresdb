@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package imports
 
 import (
 	"time"
@@ -28,6 +28,12 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
+func CreateMockDiskStore() *mocks.DiskStore {
+	diskStore := &mocks.DiskStore{}
+	diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
+	return diskStore
+}
+
 var _ = ginkgo.Describe("redo_log_manager", func() {
 
 	ginkgo.It("create new redo log file if there's no redo file", func() {
@@ -35,13 +41,13 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 			return time.Unix(int64(5), 0)
 		})
 
-		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0).(*fileRedologManager)
+		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0)
 		Ω(redoManager.currentLogFile).Should(BeNil())
 
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.AppendToRedoLog(upsertBatch, 0)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(5)))
 		Ω(len(redoManager.MaxEventTimePerFile)).Should(Equal(1))
@@ -53,11 +59,11 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		utils.SetClockImplementation(func() time.Time {
 			return time.Unix(int64(5), 0)
 		})
-		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0).(*fileRedologManager)
+		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0)
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.AppendToRedoLog(upsertBatch, 0)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(5)))
 
@@ -65,7 +71,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 			return time.Unix(int64(7), 0)
 		})
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.AppendToRedoLog(upsertBatch, 0)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(5)))
 
@@ -76,11 +82,11 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		utils.SetClockImplementation(func() time.Time {
 			return time.Unix(int64(5), 0)
 		})
-		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0).(*fileRedologManager)
+		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0)
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.AppendToRedoLog(upsertBatch, 0)
 		redoManager.MaxEventTimePerFile[redoManager.CurrentFileCreationTime] = uint32(234)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(5)))
@@ -89,7 +95,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 			return time.Unix(int64(15), 0)
 		})
 
-		redoManager.WriteUpsertBatch(upsertBatch)
+		redoManager.AppendToRedoLog(upsertBatch, 0)
 		Ω(redoManager.currentLogFile).ShouldNot(BeNil())
 		Ω(redoManager.CurrentFileCreationTime).Should(Equal(int64(15)))
 		Ω(redoManager.MaxEventTimePerFile).ShouldNot(BeEmpty())
@@ -393,7 +399,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 	})
 
 	ginkgo.It("getRedoLogFilesToPurge should work", func() {
-		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0).(*fileRedologManager)
+		redoManager := NewFileRedoLogManager(10, 1<<30, CreateMockDiskStore(), "abc", 0)
 		redoManager.MaxEventTimePerFile[1] = 100
 		redoManager.MaxEventTimePerFile[2] = 200
 		redoManager.MaxEventTimePerFile[3] = 300
@@ -421,7 +427,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 	ginkgo.It("CheckpointRedolog should work", func() {
 		diskStore := CreateMockDiskStore()
 		diskStore.On("DeleteLogFile", "abc", 0, mock.Anything).Return(nil)
-		redoManager := NewFileRedoLogManager(10, 1<<30, diskStore, "abc", 0).(*fileRedologManager)
+		redoManager := NewFileRedoLogManager(10, 1<<30, diskStore, "abc", 0)
 		redoManager.MaxEventTimePerFile[1] = 100
 		redoManager.MaxEventTimePerFile[2] = 200
 		redoManager.MaxEventTimePerFile[3] = 300

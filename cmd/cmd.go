@@ -35,6 +35,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/uber/aresdb/gateway"
 	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/imports"
 )
 
 // Options represents options for executing command
@@ -140,8 +141,13 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	// Create DiskStore.
 	diskStore := diskstore.NewLocalDiskStore(cfg.RootPath)
 
+	redoLogManagerFactory, err := imports.NewRedologManagerFactory(&cfg.Imports, diskStore, metaStore)
+	if err != nil {
+		utils.GetLogger().Fatal(err)
+	}
+
 	// Create MemStore.
-	memStore := memstore.NewMemStore(metaStore, diskStore)
+	memStore := memstore.NewMemStore(metaStore, diskStore, redoLogManagerFactory)
 
 	// Read schema.
 	utils.GetLogger().Infof("Reading schema from local MetaStore %s", metaStorePath)

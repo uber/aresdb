@@ -18,7 +18,8 @@ import (
 	"os"
 
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
-	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
@@ -35,13 +36,14 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
+	"github.com/uber/aresdb/imports"
 )
 
 var _ = ginkgo.Describe("HostMemoryManager", func() {
 	var today int
 	testBasePath := "/tmp/testHostMemoryManager"
 
-	var c1 common.VectorParty
+	var c1 memCom.VectorParty
 	var err error
 	var writer io.WriteCloser
 	var buf *bytes.Buffer
@@ -49,6 +51,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	var testMetaStore *metaMocks.MetaStore
 	var testMemStore *memStoreImpl
 	var testHostMemoryManager *hostMemoryManager
+	var redologManagerFactory *imports.RedologManagerFactory
 
 	ginkgo.BeforeEach(func() {
 		utils.SetClockImplementation(func() time.Time {
@@ -68,7 +71,8 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 
 		testDiskStore = CreateMockDiskStore()
 		testMetaStore = CreateMockMetaStore()
-		testMemStore = NewMemStore(testMetaStore, testDiskStore).(*memStoreImpl)
+		redologManagerFactory, _ = imports.NewRedologManagerFactory(&common.ImportsConfig{}, testDiskStore, testMetaStore)
+		testMemStore = NewMemStore(testMetaStore, testDiskStore, redologManagerFactory).(*memStoreImpl)
 		testHostMemoryManager = NewHostMemoryManager(testMemStore, int64(1000)).(*hostMemoryManager)
 		testMemStore.HostMemManager = testHostMemoryManager
 
@@ -92,6 +96,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 
 	ginkgo.AfterEach(func() {
 		utils.ResetClockImplementation()
+		redologManagerFactory.Stop()
 	})
 
 	ginkgo.AfterSuite(func() {
@@ -421,20 +426,20 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		testTable.Config.BatchSize = 10
 		testMetaStore, err := metastore.NewDiskMetaStore(testBasePath)
 		Ω(err).Should(BeNil())
-		testMemStore = NewMemStore(testMetaStore, testDiskStore).(*memStoreImpl)
+		testMemStore = NewMemStore(testMetaStore, testDiskStore, redologManagerFactory).(*memStoreImpl)
 		// Init HostMemoryManager
 		testHostMemoryManager = NewHostMemoryManager(testMemStore, int64(20000)).(*hostMemoryManager)
 		testMemStore.HostMemManager = testHostMemoryManager
 		testHostMemoryManager.unManagedMemorySize = 0
 		// Check totalMemorySize
 		Ω(testHostMemoryManager.totalMemorySize).Should(Equal(int64(20000)))
-		testSchema := NewTableSchema(testTable)
+		testSchema := memCom.NewTableSchema(testTable)
 		for columnID := range testSchema.Schema.Columns {
 			testSchema.SetDefaultValue(columnID)
 		}
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
 		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0)
+			testDiskStore, testHostMemoryManager, 0, redologManagerFactory)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
 		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
@@ -590,12 +595,12 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		}()
 
 		testMetaStore.CreateTable(testTable)
-		testSchema := NewTableSchema(testTable)
+		testSchema := memCom.NewTableSchema(testTable)
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
 		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0)
+			testDiskStore, testHostMemoryManager, 0, redologManagerFactory)
 		testMemStore.TableShards[testTableName][1] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 1)
+			testDiskStore, testHostMemoryManager, 1, redologManagerFactory)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
 		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
@@ -737,10 +742,10 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		}()
 
 		testMetaStore.CreateTable(testTable)
-		testSchema := NewTableSchema(testTable)
+		testSchema := memCom.NewTableSchema(testTable)
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
 		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0)
+			testDiskStore, testHostMemoryManager, 0, redologManagerFactory)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
 		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
@@ -842,12 +847,12 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		}()
 
 		testMetaStore.CreateTable(testTable)
-		testSchema := NewTableSchema(testTable)
+		testSchema := memCom.NewTableSchema(testTable)
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
 		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0)
+			testDiskStore, testHostMemoryManager, 0, redologManagerFactory)
 		testMemStore.TableShards[testTableName][1] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 1)
+			testDiskStore, testHostMemoryManager, 1, redologManagerFactory)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
 		testBatchID1 := int32(15739)
@@ -915,16 +920,16 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			},
 		}
 
-		testSchema := NewTableSchema(testTable)
+		testSchema := memCom.NewTableSchema(testTable)
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
 		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0)
+			testDiskStore, testHostMemoryManager, 0, redologManagerFactory)
 
 		for i := 0; i < 10; i++ {
 			liveBatch := &LiveBatch{
 				Batch: Batch{
 					RWMutex: &sync.RWMutex{},
-					Columns: []common.VectorParty{
+					Columns: []memCom.VectorParty{
 						// create dummy to make vp not nil
 						&cLiveVectorParty{
 							cVectorParty: cVectorParty{
@@ -940,7 +945,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			testMemStore.TableShards[testTableName][0].LiveStore.Batches[int32(-2147483648+i)] = liveBatch
 		}
 		testMemStore.TableSchemas[testTableName] = testSchema
-		testMemStore.TableShards[testTableName][0].LiveStore.LastReadRecord = RecordID{BatchID: -2147483648 + 9, Index: 10}
+		testMemStore.TableShards[testTableName][0].LiveStore.LastReadRecord = memCom.RecordID{BatchID: -2147483648 + 9, Index: 10}
 
 		utils.SetClockImplementation(func() time.Time {
 			return time.Date(2018, 02, 15, 0, 0, 0, 0, time.UTC)
@@ -974,8 +979,8 @@ func CreateMockMetaStore() *metaMocks.MetaStore {
 	return metaStore
 }
 
-func CreateTestArchiveBatchColumns() []common.VectorParty {
-	return []common.VectorParty{
+func CreateTestArchiveBatchColumns() []memCom.VectorParty {
+	return []memCom.VectorParty{
 		&archiveVectorParty{
 			pins: 0,
 		},

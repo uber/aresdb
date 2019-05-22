@@ -20,6 +20,7 @@ import (
 	"github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
+	"github.com/uber/aresdb/imports"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,7 +45,7 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		file := &testing.TestReadWriteCloser{}
 		writer := utils.NewStreamDataWriter(file)
-		writer.WriteUint32(UpsertHeader)
+		writer.WriteUint32(imports.UpsertHeader)
 		writer.WriteUint32(uint32(len(buffer)))
 		writer.Write(buffer)
 
@@ -65,6 +66,7 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		memstore := createMemStore("abc", 0, []common.DataType{common.Uint32}, []int{0}, 10, true, false, metaStore, diskStore)
 		memstore.TableShards["abc"] = nil
+		memstore.redologManagerFactory.Stop()
 		memstore.InitShards(false)
 		shard := memstore.TableShards["abc"][0]
 		Ω(len(shard.LiveStore.Batches)).Should(Equal(1))
@@ -72,13 +74,14 @@ var _ = ginkgo.Describe("recovery", func() {
 		Ω(*(*uint32)(value)).Should(Equal(uint32(123)))
 		Ω(validity).Should(BeTrue())
 		//  Validate redo log max event time.
-		Ω(len(shard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile)).Should(Equal(1))
-		Ω(shard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile).Should(Equal(map[int64]uint32{1: 123}))
+		redologManager := shard.LiveStore.RedoLogManager.(*imports.CompositeRedologManager)
+		Ω(len(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile)).Should(Equal(1))
+		Ω(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile).Should(Equal(map[int64]uint32{1: 123}))
 
 		// New shard abc-1 being assigned.
 		file2 := &testing.TestReadWriteCloser{}
 		writer2 := utils.NewStreamDataWriter(file2)
-		writer2.WriteUint32(UpsertHeader)
+		writer2.WriteUint32(imports.UpsertHeader)
 		writer2.WriteUint32(uint32(len(buffer)))
 		writer2.Write(buffer)
 
@@ -95,8 +98,8 @@ var _ = ginkgo.Describe("recovery", func() {
 		Ω(*(*uint32)(value)).Should(Equal(uint32(123)))
 		Ω(validity).Should(BeTrue())
 		//  Validate redo log max event time.
-		Ω(len(shard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile)).Should(Equal(1))
-		Ω(shard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile).Should(Equal(map[int64]uint32{1: 123}))
+		Ω(len(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile)).Should(Equal(1))
+		Ω(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile).Should(Equal(map[int64]uint32{1: 123}))
 
 		Ω(shard.LiveStore.BackfillManager.CurrentRedoFile).Should(BeEquivalentTo(1))
 		Ω(shard.LiveStore.BackfillManager.CurrentBatchOffset).Should(BeEquivalentTo(0))

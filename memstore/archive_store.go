@@ -295,7 +295,7 @@ func (b *ArchiveBatch) MarshalJSON() ([]byte, error) {
 
 // BuildIndex builds an index over the primary key columns of this archive batch and inserts the records id into the
 // given primary key.
-func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk PrimaryKey) error {
+func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk common.PrimaryKey) error {
 	if b == nil {
 		return nil
 	}
@@ -336,11 +336,11 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 		}
 
 		// Get primary key for each record.
-		if key, err = GetPrimaryKeyBytes(primaryKeyValues, b.Shard.Schema.PrimaryKeyBytes); err != nil {
+		if key, err = common.GetPrimaryKeyBytes(primaryKeyValues, b.Shard.Schema.PrimaryKeyBytes); err != nil {
 			return err
 		}
 
-		existing, _, err := pk.FindOrInsert(key, RecordID{BatchID: b.BatchID, Index: uint32(row)}, 0)
+		existing, _, err := pk.FindOrInsert(key, common.RecordID{BatchID: b.BatchID, Index: uint32(row)}, 0)
 
 		if err != nil {
 			return err

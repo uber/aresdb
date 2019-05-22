@@ -18,6 +18,9 @@ import (
 	"io"
 
 	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/imports"
+
 	"github.com/uber/aresdb/utils"
 )
 
@@ -34,7 +37,7 @@ type redoLogBrowser struct {
 	tableName string
 	shardID   int
 	diskStore diskstore.DiskStore
-	schema    *TableSchema
+	schema    *common.TableSchema
 }
 
 // ListLogFiles lists all log files of a given table Shard.
@@ -62,7 +65,7 @@ func (rb *redoLogBrowser) ListUpsertBatch(creationTime int64) ([]int64, error) {
 		return nil, err
 	}
 
-	if header != UpsertHeader {
+	if header != imports.UpsertHeader {
 		return nil, utils.StackError(nil,
 			"Invalid header %#x", header)
 	}
@@ -120,7 +123,7 @@ func (rb *redoLogBrowser) ReadData(creationTime int64, upsertBatchOffset int64, 
 		return
 	}
 
-	var upsertBatch *UpsertBatch
+	var upsertBatch *common.UpsertBatch
 	if upsertBatch, err = rb.readUpsertBatch(f); err != nil {
 		return
 	}
@@ -139,7 +142,7 @@ func (rb *redoLogBrowser) ReadData(creationTime int64, upsertBatchOffset int64, 
 }
 
 // readUpsertBatch reads an upsert batch from current offset of a stream.
-func (rb *redoLogBrowser) readUpsertBatch(f utils.ReaderSeekerCloser) (*UpsertBatch, error) {
+func (rb *redoLogBrowser) readUpsertBatch(f utils.ReaderSeekerCloser) (*common.UpsertBatch, error) {
 	streamReader := utils.NewStreamDataReader(f)
 	size, err := streamReader.ReadUint32()
 	if err != nil {
@@ -150,7 +153,7 @@ func (rb *redoLogBrowser) readUpsertBatch(f utils.ReaderSeekerCloser) (*UpsertBa
 		return nil, err
 	}
 
-	return NewUpsertBatch(buffer)
+	return common.NewUpsertBatch(buffer)
 }
 
 // NewRedoLogBrowser creates a RedoLogBrowser using field from Shard.

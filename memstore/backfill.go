@@ -259,15 +259,15 @@ func (shard *TableShard) createNewArchiveStoreVersionForBackfill(
 // The records are identified by upsert batch idx and row number within
 // the upsert batch
 type backfillPatch struct {
-	recordIDs []RecordID
+	recordIDs []memCom.RecordID
 	// For convenience.
-	backfillBatches []*UpsertBatch
+	backfillBatches []*memCom.UpsertBatch
 }
 
 // createBackfillPatches groups records in upsert batches by day and put them into backfillPatches.
 // Records in each backfillPatch are identified by RecordID where BatchID is the upsert batch index
 // index is the row within the upsert batch.
-func createBackfillPatches(backfillBatches []*UpsertBatch, reporter BackfillJobDetailReporter, jobKey string) (map[int32]*backfillPatch, error) {
+func createBackfillPatches(backfillBatches []*memCom.UpsertBatch, reporter BackfillJobDetailReporter, jobKey string) (map[int32]*backfillPatch, error) {
 	numBatches := len(backfillBatches)
 	var numRecordsBackfilled int
 	reporter(jobKey, func(status *BackfillJobDetail) {
@@ -304,7 +304,7 @@ func createBackfillPatches(backfillBatches []*UpsertBatch, reporter BackfillJobD
 				patch = backfillPatches[day]
 			}
 			patch.recordIDs = append(patch.recordIDs,
-				RecordID{int32(upsertBatchIdx), uint32(row)})
+				memCom.RecordID{int32(upsertBatchIdx), uint32(row)})
 			numRecordsBackfilled++
 		}
 
@@ -358,24 +358,24 @@ type backfillContext struct {
 	okForEarlyUnpin bool
 }
 
-func newBackfillStore(tableSchema *TableSchema, hostMemoryManager common.HostMemoryManager, initBuckets int) *LiveStore {
+func newBackfillStore(tableSchema *memCom.TableSchema, hostMemoryManager common.HostMemoryManager, initBuckets int) *LiveStore {
 	ls := &LiveStore{
 		BatchSize:       tableSchema.Schema.Config.BackfillStoreBatchSize,
 		Batches:         make(map[int32]*LiveBatch),
 		tableSchema:     tableSchema,
-		LastReadRecord:  RecordID{BatchID: BaseBatchID, Index: 0},
-		NextWriteRecord: RecordID{BatchID: BaseBatchID, Index: 0},
-		PrimaryKey: NewPrimaryKey(tableSchema.PrimaryKeyBytes,
+		LastReadRecord:  memCom.RecordID{BatchID: BaseBatchID, Index: 0},
+		NextWriteRecord: memCom.RecordID{BatchID: BaseBatchID, Index: 0},
+		PrimaryKey: memCom.NewPrimaryKey(tableSchema.PrimaryKeyBytes,
 			false, initBuckets, hostMemoryManager),
 		HostMemoryManager: hostMemoryManager,
 	}
 	return ls
 }
 
-func newBackfillContext(baseBatch *ArchiveBatch, patch *backfillPatch, tableSchema *TableSchema, columnDeletions []bool,
+func newBackfillContext(baseBatch *ArchiveBatch, patch *backfillPatch, tableSchema *memCom.TableSchema, columnDeletions []bool,
 	sortColumns []int, primaryKeyColumns []int, dataTypes []common.DataType, defaultValues []*common.DataValue,
 	hostMemoryManager common.HostMemoryManager) backfillContext {
-	initBuckets := (baseBatch.Size + len(patch.recordIDs)) / bucketSize
+	initBuckets := (baseBatch.Size + len(patch.recordIDs)) / memCom.ShareBucketSize
 	// allocate more space for insertion.
 	initBuckets += initBuckets / 8
 	// column delection will be blocked during backfill, so we are safe to get column deletions from schema without
@@ -417,7 +417,7 @@ func (ss liveStoreSnapshot) createArchivingPatch(sortColumns []int) *archivingPa
 
 		for recordIdx := 0; recordIdx < numRecords; recordIdx++ {
 			ap.recordIDs = append(ap.recordIDs,
-				RecordID{int32(batchIdx), uint32(recordIdx)})
+				memCom.RecordID{int32(batchIdx), uint32(recordIdx)})
 		}
 	}
 	return ap
@@ -557,7 +557,7 @@ func (ctx *backfillContext) merge(reporter BackfillJobDetailReporter, jobKey str
 
 // getChangedPatchRow get the upsert batch row as a slice of pointer of data value format to be consistent with changed
 // base row. Note an upsert batch row may not have values for all columns so some of the data value may be nil.
-func (ctx *backfillContext) getChangedPatchRow(patchRecordID RecordID, upsertBatch *UpsertBatch) ([]*common.DataValue, error) {
+func (ctx *backfillContext) getChangedPatchRow(patchRecordID memCom.RecordID, upsertBatch *memCom.UpsertBatch) ([]*common.DataValue, error) {
 	changedRow := make([]*common.DataValue, len(ctx.new.Columns))
 	for col := 0; col < upsertBatch.NumColumns; col++ {
 		columnID, err := upsertBatch.GetColumnID(col)
@@ -584,7 +584,7 @@ func (ctx *backfillContext) getChangedPatchRow(patchRecordID RecordID, upsertBat
 
 // getChangedBaseRow get changed row from base batch if there are any changes to sort columns. It will fetch the whole
 // row in base batch and apply patch value to it.
-func (ctx *backfillContext) getChangedBaseRow(baseRecordID RecordID, changedPatchRow []*common.DataValue) []*common.DataValue {
+func (ctx *backfillContext) getChangedBaseRow(baseRecordID memCom.RecordID, changedPatchRow []*common.DataValue) []*common.DataValue {
 	var changedBaseRow []*common.DataValue
 	for columnID, patchValue := range changedPatchRow {
 		// loop through sorted columns
@@ -618,7 +618,7 @@ func (ctx *backfillContext) getChangedBaseRow(baseRecordID RecordID, changedPatc
 
 // writePatchValueForUnsortColumn writes the patch value to forked columns if value changes.
 // this function return false if no column update happens
-func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID RecordID, changedPatchRow []*common.DataValue) (updated bool) {
+func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID memCom.RecordID, changedPatchRow []*common.DataValue) (updated bool) {
 	for columnID, patchValue := range changedPatchRow {
 		if patchValue != nil {
 			baseDataValue := ctx.new.Columns[columnID].GetDataValueByRow(int(baseRecordID.Index))
@@ -647,7 +647,7 @@ func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID Record
 }
 
 // applyChangedRowToLiveStore applies changes in changedRow to temp live store.
-func (ctx backfillContext) applyChangedRowToLiveStore(recordID RecordID, changedRow []*common.DataValue) {
+func (ctx backfillContext) applyChangedRowToLiveStore(recordID memCom.RecordID, changedRow []*common.DataValue) {
 	backfillBatch := ctx.backfillStore.GetBatchForWrite(recordID.BatchID)
 	defer backfillBatch.Unlock()
 	for columnID, changedDataValue := range changedRow {

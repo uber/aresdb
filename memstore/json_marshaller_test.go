@@ -21,6 +21,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/imports"
+
 	"sync"
 	"time"
 )
@@ -35,16 +37,23 @@ var _ = ginkgo.Describe("json marshaller", func() {
 		Columns: make([]common.VectorParty, 10),
 	}}
 
+	tableConfig := &metaCom.TableConfig{
+		ArchivingDelayMinutes:    500,
+		ArchivingIntervalMinutes: 300,
+		RedoLogRotationInterval:  10800,
+		MaxRedoLogFileSize:       1<<30,
+	}
+
 	liveStore := LiveStore{
 		Batches: map[int32]*LiveBatch{
 			int32(1): &liveBatch,
 		},
-		RedoLogManager: NewFileRedoLogManager(1, 1<<30, nil, "test", 1),
+		RedoLogManager: imports.NewCompositeRedologManager("test", 1, m.redologManagerFactory, tableConfig, nil),
 		BackfillManager: NewBackfillManager("ares_trips", 0, metaCom.TableConfig{
 			BackfillMaxBufferSize:    1 << 32,
 			BackfillThresholdInBytes: 1 << 21,
 		}),
-		PrimaryKey: NewPrimaryKey(4, true, 10, hostMemoryManager),
+		PrimaryKey: common.NewPrimaryKey(4, true, 10, hostMemoryManager),
 		BatchSize:  10,
 		lastModifiedTimePerColumn: []uint32{
 			1,
@@ -77,12 +86,12 @@ var _ = ginkgo.Describe("json marshaller", func() {
 			Batches: map[int32]*LiveBatch{
 				int32(1): &liveBatch,
 			},
-			RedoLogManager: NewFileRedoLogManager(1, 1<<30, nil, "test", 1),
+			RedoLogManager: imports.NewCompositeRedologManager("test", 1, m.redologManagerFactory, tableConfig, nil),
 			BackfillManager: NewBackfillManager("ares_trips", 0, metaCom.TableConfig{
 				BackfillMaxBufferSize:    1 << 32,
 				BackfillThresholdInBytes: 1 << 21,
 			}),
-			PrimaryKey: NewPrimaryKey(4, true, 10, hostMemoryManager),
+			PrimaryKey: common.NewPrimaryKey(4, true, 10, hostMemoryManager),
 			lastModifiedTimePerColumn: []uint32{
 				1,
 			},
@@ -158,14 +167,8 @@ var _ = ginkgo.Describe("json marshaller", func() {
 			  "allocatedBytes": 1360
 			},
 			"redoLogManager": {
-			  "rotationInterval": 1,
-			  "maxRedoLogSize": 1073741824,
-			  "currentRedoLogSize": 0,
-			  "maxEventTimePerFile": {},
-			  "sizePerFile": {},
-			  "totalRedologSize": 0,
-			  "batchCountPerFile": {},
-			  "currentFileCreationTime": 0
+			  "table": "test",
+              "shard": 1
 			},
 			"backfillManager": {
               "currentBufferSize": 0,
@@ -224,10 +227,11 @@ var _ = ginkgo.Describe("json marshaller", func() {
 	})
 
 	ginkgo.It("fileRedologManager should work", func() {
-		jsonStr, err := json.Marshal(&liveStore.RedoLogManager)
+		redoLogManager := liveStore.RedoLogManager.(*imports.CompositeRedologManager).GetLocalFileRedologManager()
+		jsonStr, err := json.Marshal(redoLogManager)
 		Ω(err).Should(BeNil())
 		Ω(jsonStr).Should(MatchJSON(`{
-			"rotationInterval": 1,
+			"rotationInterval": 10800,
 			"maxRedoLogSize": 1073741824,
 			"totalRedologSize": 0,
 			"sizePerFile": {},
@@ -239,7 +243,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 	})
 
 	ginkgo.It("TableSchema should work", func() {
-		jsonStr, err := json.Marshal(&TableSchema{})
+		jsonStr, err := json.Marshal(&common.TableSchema{})
 		Ω(err).Should(BeNil())
 		Ω(jsonStr).Should(MatchJSON(`{
 			"schema": {
@@ -288,14 +292,8 @@ var _ = ginkgo.Describe("json marshaller", func() {
             "allocatedBytes": 1360
           },
           "redoLogManager": {
-            "rotationInterval": 1,
-			"maxRedoLogSize": 1073741824,
-			"totalRedologSize": 0,
-			"currentRedoLogSize": 0,
-			"maxEventTimePerFile": {},
-			"sizePerFile": {},
-            "batchCountPerFile": {},
-            "currentFileCreationTime": 0
+            "table": "test",
+            "shard": 1
           },
           "backfillManager": {
             "currentBufferSize": 0,

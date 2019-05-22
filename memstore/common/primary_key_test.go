@@ -12,35 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package common
 
 import (
 	"unsafe"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/memstore/common"
 )
 
 var _ = ginkgo.Describe("primary key", func() {
 	ginkgo.It("GetPrimaryKeyBytes should work", func() {
 		var v1 uint16 = 0xA0B0
 		var v2 uint32 = 0xC0D0E0F0
-		dataValues := []common.DataValue{
+		dataValues := []DataValue{
 			{
 				Valid:    true,
 				IsBool:   true,
-				DataType: common.Bool,
+				DataType: Bool,
 				BoolVal:  true,
 			},
 			{
 				Valid:    true,
-				DataType: common.Uint16,
+				DataType: Uint16,
 				OtherVal: unsafe.Pointer(&v1),
 			},
 			{
 				Valid:    true,
-				DataType: common.Uint32,
+				DataType: Uint32,
 				OtherVal: unsafe.Pointer(&v2),
 			},
 		}

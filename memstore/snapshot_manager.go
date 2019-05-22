@@ -19,6 +19,7 @@ import (
 
 	"encoding/json"
 	"github.com/uber/aresdb/utils"
+	"github.com/uber/aresdb/memstore/common"
 	"time"
 )
 
@@ -43,7 +44,7 @@ type SnapshotManager struct {
 	LastBatchOffset uint32 `json:"lastBatchOffset"`
 
 	// keep track of the record position of the last batch snapshotted
-	LastRecord RecordID
+	LastRecord common.RecordID
 
 	// keep track of the redo log file of the last batch queued
 	CurrentRedoFile int64 `json:"currentRedoFile"`
@@ -52,7 +53,7 @@ type SnapshotManager struct {
 	CurrentBatchOffset uint32 `json:"currentBatchOffset"`
 
 	// keep track of the record position when last batch queued
-	CurrentRecord RecordID
+	CurrentRecord common.RecordID
 
 	// Configs
 	SnapshotInterval time.Duration `json:"snapshotInterval"`
@@ -74,7 +75,7 @@ func NewSnapshotManager(shard *TableShard) *SnapshotManager {
 }
 
 // StartSnapshot returns current redo log file ,offset
-func (s *SnapshotManager) StartSnapshot() (int64, uint32, int, RecordID) {
+func (s *SnapshotManager) StartSnapshot() (int64, uint32, int, common.RecordID) {
 	s.RLock()
 	defer s.RUnlock()
 	return s.CurrentRedoFile, s.CurrentBatchOffset, s.NumMutations, s.CurrentRecord
@@ -82,7 +83,7 @@ func (s *SnapshotManager) StartSnapshot() (int64, uint32, int, RecordID) {
 
 // ApplyUpsertBatch advances CurrentRedoLogFile and CurrentBatchOffset and increments NumMutations after applying
 // an upsert batch to live store.
-func (s *SnapshotManager) ApplyUpsertBatch(redoFile int64, offset uint32, numMutations int, currentRecord RecordID) {
+func (s *SnapshotManager) ApplyUpsertBatch(redoFile int64, offset uint32, numMutations int, currentRecord common.RecordID) {
 	s.Lock()
 	defer s.Unlock()
 	s.CurrentRedoFile = redoFile
@@ -101,7 +102,7 @@ func (s *SnapshotManager) QualifyForSnapshot() bool {
 
 // updateSnapshotProgress updates snapshot progress in memory. It also subtracts NumMutations by lastNumMutations to reflect correct
 // number of mutations since last snapshot.
-func (s *SnapshotManager) updateSnapshotProgress(redoFile int64, offset uint32, lastNumMutations int, record RecordID) {
+func (s *SnapshotManager) updateSnapshotProgress(redoFile int64, offset uint32, lastNumMutations int, record common.RecordID) {
 	s.LastRedoFile = redoFile
 	s.LastBatchOffset = offset
 	s.NumMutations -= lastNumMutations
@@ -110,7 +111,7 @@ func (s *SnapshotManager) updateSnapshotProgress(redoFile int64, offset uint32, 
 
 // Done updates the snapshot progress both in memory and in metastore and updates number of mutations
 // accordingly.
-func (s *SnapshotManager) Done(currentRedoFile int64, currentBatchOffset uint32, lastNumMutations int, currentRecord RecordID) error {
+func (s *SnapshotManager) Done(currentRedoFile int64, currentBatchOffset uint32, lastNumMutations int, currentRecord common.RecordID) error {
 	s.Lock()
 	defer s.Unlock()
 	// we should always record last snapshot time
@@ -127,14 +128,14 @@ func (s *SnapshotManager) Done(currentRedoFile int64, currentBatchOffset uint32,
 }
 
 // GetLastSnapshotInfo get last snapshot redolog file, offset and timestamp, lastRecord
-func (s *SnapshotManager) GetLastSnapshotInfo() (int64, uint32, time.Time, RecordID) {
+func (s *SnapshotManager) GetLastSnapshotInfo() (int64, uint32, time.Time, common.RecordID) {
 	s.Lock()
 	defer s.Unlock()
 	return s.LastRedoFile, s.LastBatchOffset, s.LastSnapshotTime, s.LastRecord
 }
 
 // SetLastSnapshotInfo update last snapshot redolog file, offset and timestamp, lastRecord
-func (s *SnapshotManager) SetLastSnapshotInfo(redoLogFile int64, offset uint32, record RecordID) {
+func (s *SnapshotManager) SetLastSnapshotInfo(redoLogFile int64, offset uint32, record common.RecordID) {
 	s.Lock()
 	defer s.Unlock()
 	s.LastRedoFile = redoLogFile

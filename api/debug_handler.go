@@ -277,7 +277,7 @@ func (handler *DebugHandler) LookupPrimaryKey(w http.ResponseWriter, r *http.Req
 
 	keyStrs := strings.Split(request.Key, ",")
 	var found bool
-	var recordID memstore.RecordID
+	var recordID memCom.RecordID
 	recordID, found = shard.LiveStore.LookupKey(keyStrs)
 	if !found {
 		RespondWithError(w, utils.APIError{

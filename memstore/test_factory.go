@@ -22,8 +22,10 @@ import (
 	"github.com/uber/aresdb/utils"
 
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
-	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	"github.com/uber/aresdb/imports"
 	"gopkg.in/yaml.v2"
 	"strings"
 	"sync"
@@ -48,7 +50,10 @@ type TestFactoryT struct {
 
 // NewMockMemStore returns a new memstore with mocked diskstore and metastore.
 func (t TestFactoryT) NewMockMemStore() *memStoreImpl {
-	return NewMemStore(new(metaMocks.MetaStore), new(diskMocks.DiskStore)).(*memStoreImpl)
+	metaStore := new(metaMocks.MetaStore)
+	diskStore := new(diskMocks.DiskStore)
+	redoLogManagerFactory, _ := imports.NewRedologManagerFactory(&common.ImportsConfig{}, diskStore, metaStore)
+	return NewMemStore(metaStore, diskStore, redoLogManagerFactory).(*memStoreImpl)
 }
 
 // ReadArchiveBatch read batch and do pruning for every columns.
@@ -125,7 +130,7 @@ func (t TestFactoryT) readBatchFromFile(path string) (*Batch, error) {
 
 func (rb *rawBatch) toBatch(t TestFactoryT) (*Batch, error) {
 	batch := &Batch{
-		Columns: make([]common.VectorParty, len(rb.Columns)),
+		Columns: make([]memCom.VectorParty, len(rb.Columns)),
 	}
 	for i, name := range rb.Columns {
 		if len(name) == 0 {
@@ -190,8 +195,8 @@ func (t TestFactoryT) readVectorPartyFromFile(path string) (*cVectorParty, error
 }
 
 func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
-	dataType := common.DataTypeFromString(rvp.DataType)
-	if dataType == common.Unknown {
+	dataType := memCom.DataTypeFromString(rvp.DataType)
+	if dataType == memCom.Unknown {
 		return nil, utils.StackError(nil,
 			"Unknown DataType when reading vector from file",
 		)
@@ -206,13 +211,13 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 	}
 
 	var countsVec *Vector
-	columnMode := common.HasNullVector
+	columnMode := memCom.HasNullVector
 	if rvp.HasCounts {
 		countsVec = NewVector(
-			common.Uint32,
+			memCom.Uint32,
 			rvp.Length+1,
 		)
-		columnMode = common.HasCountVector
+		columnMode = memCom.HasCountVector
 	}
 
 	vp := &cVectorParty{
@@ -241,7 +246,7 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 			)
 		}
 
-		val, err := common.ValueFromString(values[0], dataType)
+		val, err := memCom.ValueFromString(values[0], dataType)
 		if err != nil {
 			return nil, utils.StackError(err,
 				"Unable to parse value from string %s for data type %d",
@@ -255,7 +260,7 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 						"has_count is specified to be true",
 				)
 			}
-			currentCountVal, err := common.ValueFromString(values[1], common.Uint32)
+			currentCountVal, err := memCom.ValueFromString(values[1], memCom.Uint32)
 
 			if currentCountVal.Valid == false {
 				return nil, utils.StackError(err,
@@ -264,7 +269,7 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 			if err != nil {
 				return nil, utils.StackError(err,
 					"Unable to parse value from string %s for data type %d",
-					values[1], common.Uint32)
+					values[1], memCom.Uint32)
 			}
 			setDataValue(countsVec, i+1, currentCountVal)
 			currentCount := *(*uint32)(currentCountVal.OtherVal)
@@ -291,9 +296,9 @@ type rawVector struct {
 	Values   []string `yaml:"values"`
 }
 
-func setDataValue(v *Vector, idx int, val common.DataValue) {
+func setDataValue(v *Vector, idx int, val memCom.DataValue) {
 	if val.Valid {
-		if v.DataType == common.Bool {
+		if v.DataType == memCom.Bool {
 			v.SetBool(idx, val.BoolVal)
 		} else {
 			v.SetValue(idx, val.OtherVal)
@@ -302,8 +307,8 @@ func setDataValue(v *Vector, idx int, val common.DataValue) {
 }
 
 func (rv *rawVector) toVector() (*Vector, error) {
-	dataType := common.DataTypeFromString(rv.DataType)
-	if dataType == common.Unknown {
+	dataType := memCom.DataTypeFromString(rv.DataType)
+	if dataType == memCom.Unknown {
 		return nil, utils.StackError(nil,
 			"Unknown DataType when reading vector from file",
 		)
@@ -320,7 +325,7 @@ func (rv *rawVector) toVector() (*Vector, error) {
 	v := NewVector(dataType, rv.Length)
 
 	for i, row := range rv.Values {
-		val, err := common.ValueFromString(row, dataType)
+		val, err := memCom.ValueFromString(row, dataType)
 		if err != nil {
 			return nil, utils.StackError(err,
 				"Unable to parse value from string %s for data type %s",
@@ -346,7 +351,7 @@ func (t TestFactoryT) readVectorFromFile(path string) (*Vector, error) {
 }
 
 // ReadUpsertBatch returns a pointer to UpsertBatch given the upsert batch name.
-func (t TestFactoryT) ReadUpsertBatch(name string) (*UpsertBatch, error) {
+func (t TestFactoryT) ReadUpsertBatch(name string) (*memCom.UpsertBatch, error) {
 	path := filepath.Join(t.RootPath, "upsert-batches", name)
 	return t.readUpsertBatchFromFile(path)
 }
@@ -362,12 +367,12 @@ type rawUpsertBatch struct {
 	Rows []string `yaml:"rows"`
 }
 
-func (ru *rawUpsertBatch) toUpsertBatch() (*UpsertBatch, error) {
-	builder := common.NewUpsertBatchBuilder()
-	var dataTypes []common.DataType
+func (ru *rawUpsertBatch) toUpsertBatch() (*memCom.UpsertBatch, error) {
+	builder := memCom.NewUpsertBatchBuilder()
+	var dataTypes []memCom.DataType
 	for _, column := range ru.Columns {
-		dataType := common.DataTypeFromString(column.DataType)
-		if dataType == common.Unknown {
+		dataType := memCom.DataTypeFromString(column.DataType)
+		if dataType == memCom.Unknown {
 			return nil, utils.StackError(nil,
 				"Unknown DataType when reading vector from file",
 			)
@@ -387,7 +392,7 @@ func (ru *rawUpsertBatch) toUpsertBatch() (*UpsertBatch, error) {
 		}
 
 		for col, rawValue := range rawValues {
-			value, err := common.ValueFromString(rawValue, dataTypes[col])
+			value, err := memCom.ValueFromString(rawValue, dataTypes[col])
 			if err != nil {
 				return nil, err
 			}
@@ -399,10 +404,10 @@ func (ru *rawUpsertBatch) toUpsertBatch() (*UpsertBatch, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewUpsertBatch(bytes)
+	return memCom.NewUpsertBatch(bytes)
 }
 
-func (t TestFactoryT) readUpsertBatchFromFile(path string) (*UpsertBatch, error) {
+func (t TestFactoryT) readUpsertBatchFromFile(path string) (*memCom.UpsertBatch, error) {
 	fileContent, err := t.ReadFile(path)
 	if err != nil {
 		return nil, err

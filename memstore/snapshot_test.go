@@ -81,7 +81,7 @@ var _ = ginkgo.Describe("snapshot", func() {
 	lastBatchID := int32(math.MinInt32 + 1)
 	lastIndex := uint32(5)
 
-	currentRecord := RecordID{
+	currentRecord := memCom.RecordID{
 		BatchID: lastBatchID,
 		Index:   lastIndex,
 	}
@@ -101,7 +101,7 @@ var _ = ginkgo.Describe("snapshot", func() {
 			builder.SetValue(i, 2, "A424DBC38B0543F9A3A42CF0FC310A39")
 		}
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		return memStore.HandleIngestion(tableName, 0, upsertBatch)
 	}
 
@@ -199,7 +199,7 @@ var _ = ginkgo.Describe("snapshot", func() {
 			[]int{0}, batchSize, false, false, metaStore, diskStore)
 		shard, _ = memStore.GetTableShard(tableName, 0)
 
-		shard.LiveStore.SnapshotManager.ApplyUpsertBatch(0, 0, 0, RecordID{})
+		shard.LiveStore.SnapshotManager.ApplyUpsertBatch(0, 0, 0, memCom.RecordID{})
 		shard.LiveStore.SnapshotManager.SetLastSnapshotInfo(redoLogFile, offset, currentRecord)
 
 		batchIDs := []int{int(lastBatchID - 1), int(lastBatchID)}
@@ -241,7 +241,7 @@ var _ = ginkgo.Describe("snapshot", func() {
 
 		for row := 0; row <= rows; row++ {
 			primaryKeyValues[0], _ = memCom.ValueFromString(fmt.Sprintf("%d", row+1), memCom.Uint16)
-			key, err = GetPrimaryKeyBytes(primaryKeyValues, primaryKeyBytes)
+			key, err = memCom.GetPrimaryKeyBytes(primaryKeyValues, primaryKeyBytes)
 
 			Ω(err).Should(BeNil())
 			record, found := shard.LiveStore.PrimaryKey.Find(key)

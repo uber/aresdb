@@ -1,4 +1,18 @@
-package memstore
+//  Copyright (c) 2017-2018 Uber Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package imports
 
 import (
 	"fmt"
@@ -12,11 +26,11 @@ import (
 type GinkgoTestReporter struct{}
 
 func (g GinkgoTestReporter) Errorf(format string, args ...interface{}) {
-	ginkgo.Fail(fmt.Sprintf(format, args))
+	ginkgo.Fail(fmt.Sprintf(format, args...))
 }
 
 func (g GinkgoTestReporter) Fatalf(format string, args ...interface{}) {
-	ginkgo.Fail(fmt.Sprintf(format, args))
+	ginkgo.Fail(fmt.Sprintf(format, args...))
 }
 
 var _ = ginkgo.Describe("kafka redolog manager", func() {
@@ -31,9 +45,12 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 			commitedOffset = append(commitedOffset, offset)
 			return nil
 		}
+		checkPointFunc := func(offset int64) error {
+			return nil
+		}
 
 		upsertBatchBytes := []byte{1, 0, 237, 254, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 0, 123, 0, 1, 0, 0, 0, 0, 0, 135, 0, 0, 0, 0, 0, 0, 0}
-		redoManager := NewKafkaRedologManager("test", "test", 0, consumer, commitFunc)
+		redoManager := NewKafkaPartitionReader("test", "test", 0, consumer, commitFunc, checkPointFunc)
 
 		// create 2 * maxBatchesPerFile number of messages
 		for i := 0; i < 2*maxBatchesPerFile; i++ {
@@ -50,12 +67,12 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 		fileIDs := map[int64]struct{}{}
 		nextUpsertBatch := redoManager.NextUpsertBatch()
 		for i := 1; i <= 2*maxBatchesPerFile; i++ {
-			upsertBatch, fileID, offset := nextUpsertBatch()
+			upsertBatch, kafkaOffset := nextUpsertBatch()
+			fileID, offset := redoManager.AppendToRedoLog(upsertBatch, kafkaOffset)
 			fileIDs[fileID] = struct{}{}
-			Ω(upsertBatch.buffer).Should(Equal(upsertBatchBytes))
+			Ω(upsertBatch.GetBuffer()).Should(Equal(upsertBatchBytes))
 			Ω(fileID).Should(Equal(int64(i / maxBatchesPerFile)))
 			Ω(offset).Should(Equal(uint32(i % maxBatchesPerFile)))
-			redoManager.UpdateMaxEventTime(0, fileID)
 		}
 
 		Ω(fileIDs).Should(HaveLen(3))
@@ -65,10 +82,12 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 
 		err = redoManager.CheckpointRedolog(1, 1, 0)
 		Ω(err).Should(BeNil())
-		Ω(commitedOffset).Should(ConsistOf(int64(maxBatchesPerFile)))
+		Ω(commitedOffset).Should(ContainElement(int64(maxBatchesPerFile)))
 		redoManager.Close()
 
-		upsertBatch, fileID, offset := nextUpsertBatch()
+		upsertBatch, kafkaOffset := nextUpsertBatch()
+		fileID, offset := redoManager.getFileOffset(kafkaOffset)
+
 		Ω(upsertBatch).Should(BeNil())
 		Ω(fileID).Should(BeEquivalentTo(0))
 		Ω(offset).Should(BeEquivalentTo(0))

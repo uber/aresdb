@@ -1,22 +1,38 @@
-package memstore
+//  Copyright (c) 2017-2018 Uber Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package imports
 
 import (
 	"encoding/json"
 	"github.com/Shopify/sarama"
+	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"math"
 	"sync"
 )
 
 const maxBatchesPerFile = 5000
+const commitInterval = 1000
 
 type upsertBatchBundle struct {
-	batch       *UpsertBatch
+	batch       *common.UpsertBatch
 	kafkaOffset int64
 }
 
-// kafkaRedologManager is the implementation of RedologFileRotator
-type kafkaRedologManager struct {
+// kafkaPartitionReader is kafka partition level consumer, also implementation of RedoLogManager
+type kafkaPartitionReader struct {
 	sync.RWMutex
 
 	Topic     string `json:"topic"`
@@ -33,20 +49,25 @@ type kafkaRedologManager struct {
 	consumer          sarama.Consumer
 	partitionConsumer sarama.PartitionConsumer
 
-	commitFunc func(offset int64) error
-	done       chan struct{}
-	batches    chan upsertBatchBundle
+	done    chan struct{}
+	batches chan upsertBatchBundle
+
+	commitFunc     func(offset int64) error
+	checkPointFunc func(offset int64) error
+
+	count int
 }
 
 // NewKafkaRedologManager creates kafka redolog manager
-func NewKafkaRedologManager(namespace, table string, shard int, consumer sarama.Consumer, commitFunc func(offset int64) error) KafkaRedologManager {
+func NewKafkaPartitionReader(namespace, table string, shard int, consumer sarama.Consumer, commitFunc func(offset int64) error, checkPointFunc func(offset int64) error) *kafkaPartitionReader {
 	topic := utils.GetTopicFromTable(namespace, table)
-	return &kafkaRedologManager{
+	return &kafkaPartitionReader{
 		TableName:               table,
 		Shard:                   shard,
 		Topic:                   topic,
 		consumer:                consumer,
 		commitFunc:              commitFunc,
+		checkPointFunc:          checkPointFunc,
 		MaxEventTimePerFile:     make(map[int64]uint32),
 		FirstKafkaOffsetPerFile: make(map[int64]int64),
 		SizePerFile:             make(map[int64]int),
@@ -55,23 +76,17 @@ func NewKafkaRedologManager(namespace, table string, shard int, consumer sarama.
 	}
 }
 
-// WriteUpsertBatch to kafka redolog manager is disabled
-func (k *kafkaRedologManager) WriteUpsertBatch(upsertBatch *UpsertBatch) (int64, uint32) {
-	panic("WriteUpsertBatch to kafka redolog manager is disabled")
-}
+// AppendToRedoLog to record upsertbatch info as redolog
+func (k *kafkaPartitionReader) AppendToRedoLog(upsertBatch *common.UpsertBatch, kafkaOffset int64) (int64, uint32) {
+	fileID, fileOffset := k.getFileOffset(kafkaOffset)
+	size := len(upsertBatch.GetBuffer())
 
-func (k *kafkaRedologManager) UpdateMaxEventTime(eventTime uint32, fileID int64) {
 	k.Lock()
 	defer k.Unlock()
-	if _, ok := k.MaxEventTimePerFile[fileID]; ok && eventTime <= k.MaxEventTimePerFile[fileID] {
-		return
+	k.count++
+	if k.count%commitInterval == 0 {
+		k.commitFunc(kafkaOffset)
 	}
-	k.MaxEventTimePerFile[fileID] = eventTime
-}
-
-func (k *kafkaRedologManager) addMessage(fileID int64, kafkaOffset int64, size int) {
-	k.Lock()
-	defer k.Unlock()
 	if currentFirstOffset, ok := k.FirstKafkaOffsetPerFile[fileID]; !ok || currentFirstOffset > kafkaOffset {
 		k.FirstKafkaOffsetPerFile[fileID] = kafkaOffset
 	}
@@ -82,26 +97,23 @@ func (k *kafkaRedologManager) addMessage(fileID int64, kafkaOffset int64, size i
 		k.SizePerFile[fileID] += size
 	}
 	k.TotalRedologSize += size
+	return fileID, fileOffset
 }
 
-func (k *kafkaRedologManager) NextUpsertBatch() func() (*UpsertBatch, int64, uint32) {
-	return func() (*UpsertBatch, int64, uint32) {
-		for {
-			select {
-			case batchBundle := <-k.batches:
-				fileID := batchBundle.kafkaOffset / maxBatchesPerFile
-				fileOffset := batchBundle.kafkaOffset % maxBatchesPerFile
-				k.addMessage(fileID, batchBundle.kafkaOffset, len(batchBundle.batch.buffer))
-				return batchBundle.batch, fileID, uint32(fileOffset)
-			case <-k.done:
-				// redolog manager closed
-				return nil, 0, 0
-			}
-		}
+func (k *kafkaPartitionReader) UpdateMaxEventTime(eventTime uint32, fileID int64) {
+	k.Lock()
+	defer k.Unlock()
+	if _, ok := k.MaxEventTimePerFile[fileID]; ok && eventTime <= k.MaxEventTimePerFile[fileID] {
+		return
 	}
+	k.MaxEventTimePerFile[fileID] = eventTime
 }
 
-func (k *kafkaRedologManager) CheckpointRedolog(eventTimeCutoff uint32, fileIDCheckpointed int64, batchOffset uint32) error {
+func (k *kafkaPartitionReader) getFileOffset(kafkaOffset int64) (int64, uint32) {
+	return kafkaOffset / maxBatchesPerFile, uint32(kafkaOffset % maxBatchesPerFile)
+}
+
+func (k *kafkaPartitionReader) CheckpointRedolog(eventTimeCutoff uint32, fileIDCheckpointed int64, batchOffset uint32) error {
 	k.RLock()
 	var firstUnpurgeableFileID int64 = math.MaxInt64
 	var firstKafkaOffset int64 = math.MaxInt64
@@ -120,7 +132,7 @@ func (k *kafkaRedologManager) CheckpointRedolog(eventTimeCutoff uint32, fileIDCh
 	k.RUnlock()
 
 	if firstUnpurgeableFileID < math.MaxInt64 {
-		err := k.commitFunc(firstKafkaOffset)
+		err := k.checkPointFunc(firstKafkaOffset)
 		if err != nil {
 			return err
 		}
@@ -139,7 +151,7 @@ func (k *kafkaRedologManager) CheckpointRedolog(eventTimeCutoff uint32, fileIDCh
 	return nil
 }
 
-func (k *kafkaRedologManager) ConsumeFrom(offset int64) error {
+func (k *kafkaPartitionReader) ConsumeFrom(offset int64) error {
 	if k.partitionConsumer != nil {
 		// close previous created partition consumer
 		k.partitionConsumer.Close()
@@ -163,7 +175,7 @@ func (k *kafkaRedologManager) ConsumeFrom(offset int64) error {
 					return
 				}
 				if msg != nil {
-					upsertBatch, err := NewUpsertBatch(msg.Value)
+					upsertBatch, err := common.NewUpsertBatch(msg.Value)
 					if err != nil {
 						utils.GetLogger().With(
 							"table", k.TableName,
@@ -191,29 +203,43 @@ func (k *kafkaRedologManager) ConsumeFrom(offset int64) error {
 	return nil
 }
 
-func (k *kafkaRedologManager) GetTotalSize() int {
+func (k *kafkaPartitionReader) NextUpsertBatch() func() (*common.UpsertBatch, int64) {
+	return func() (*common.UpsertBatch, int64) {
+		for {
+			select {
+			case batchBundle := <-k.batches:
+				return batchBundle.batch, batchBundle.kafkaOffset
+			case <-k.done:
+				// redolog manager closed
+				return nil, 0
+			}
+		}
+	}
+}
+
+func (k *kafkaPartitionReader) GetTotalSize() int {
 	k.RLock()
 	defer k.RUnlock()
 	return int(k.TotalRedologSize)
 }
 
-func (k *kafkaRedologManager) GetNumFiles() int {
+func (k *kafkaPartitionReader) GetNumFiles() int {
 	k.RLock()
 	defer k.RUnlock()
 	return len(k.SizePerFile)
 }
 
-func (k *kafkaRedologManager) Close() {
+func (k *kafkaPartitionReader) Close() {
 	if k.partitionConsumer != nil {
 		k.partitionConsumer.Close()
 	}
 	close(k.done)
 }
 
-// MarshalJSON marshals a fileRedologManager into json.
-func (k *kafkaRedologManager) MarshalJSON() ([]byte, error) {
+// MarshalJSON marshals a kafkaPartitionReader into json.
+func (k *kafkaPartitionReader) MarshalJSON() ([]byte, error) {
 	// Avoid json.Marshal loop calls.
-	type alias kafkaRedologManager
+	type alias kafkaPartitionReader
 	k.RLock()
 	defer k.RUnlock()
 	return json.Marshal((*alias)(k))

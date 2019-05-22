@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/memstore/common"
 )
 
 var _ = ginkgo.Describe("redo_log_browser", func() {
@@ -33,9 +34,9 @@ var _ = ginkgo.Describe("redo_log_browser", func() {
 	shardID := 0
 	t, _ := metaStore.GetTable(table)
 	m := getFactory().NewMockMemStore()
-	schema := NewTableSchema(t)
+	schema := common.NewTableSchema(t)
 
-	shard := NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(m, 1<<32), shardID)
+	shard := NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(m, 1<<32), shardID, m.redologManagerFactory)
 
 	var rb *redoLogBrowser
 

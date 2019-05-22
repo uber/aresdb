@@ -28,7 +28,7 @@ var _ = ginkgo.Describe("batch stats should work", func() {
 		builder.SetValue(0, 1, uint32(23456))
 		builder.SetValue(0, 0, uint8(123))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		shard, err := memStore.GetTableShard("abc", 0)
 
 		err = memStore.HandleIngestion("abc", 0, upsertBatch)

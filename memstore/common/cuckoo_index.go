@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package common
 
 import (
 	"math"
 	"math/rand"
 	"unsafe"
 
-	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 	"sync"
@@ -51,6 +50,8 @@ const (
 	offsetToEventTime           = offsetToSignature + bucketSize*1
 	offsetToKeyWithEventTime    = offsetToEventTime + bucketSize*4
 	offsetToKeyWithoutEventTime = offsetToEventTime
+
+	ShareBucketSize = bucketSize
 )
 
 type stashEntry struct {
@@ -108,7 +109,7 @@ type CuckooIndex struct {
 	rand *rand.Rand
 
 	// report change of unmanaged memory.
-	hostMemoryManager common.HostMemoryManager
+	hostMemoryManager HostMemoryManager
 
 	// mutex protects internal buffer for GPU transfer
 	transferLock sync.RWMutex
@@ -572,7 +573,7 @@ func (c *CuckooIndex) allocate() {
 
 // newCuckooIndex create a cuckoo hashing index
 func newCuckooIndex(keyBytes int, hasEventTime bool, initNumBuckets int,
-	hostMemoryManager common.HostMemoryManager) *CuckooIndex {
+	hostMemoryManager HostMemoryManager) *CuckooIndex {
 	if initNumBuckets <= 0 {
 		initNumBuckets = getDefaultInitNumBuckets()
 	}

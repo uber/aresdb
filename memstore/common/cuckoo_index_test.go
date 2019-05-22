@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package common
 
 import (
 	"github.com/onsi/ginkgo"
@@ -398,9 +398,27 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 	})
 })
 
+// test purpose, need to move HostMemoryManager to some other place for mock purpose in future
+type TestHostMemoryManager struct {
+}
+func ( *TestHostMemoryManager) ReportUnmanagedSpaceUsageChange(bytes int64) {
+}
+func ( *TestHostMemoryManager) ReportManagedObject(table string, shard, batchID, columnID int, bytes int64){
+}
+func ( *TestHostMemoryManager) GetArchiveMemoryUsageByTableShard() (map[string]map[string]*ColumnMemoryUsage, error){
+	return nil, nil
+}
+func ( *TestHostMemoryManager) TriggerEviction(){
+}
+func ( *TestHostMemoryManager) TriggerPreload(tableName string, columnID int, oldPreloadingDays int, newPreloadingDays int){
+}
+func ( *TestHostMemoryManager) Start(){
+}
+func ( *TestHostMemoryManager) Stop(){
+}
+
 var (
-	m              = getFactory().NewMockMemStore()
-	manager        = NewHostMemoryManager(m, 1<<32)
+	manager        = &TestHostMemoryManager{}
 	benchIndex     = newCuckooIndex(4, true, 0, manager)
 	benchTestValue = RecordID{
 		BatchID: 0,
@@ -416,3 +434,4 @@ func BenchmarkCuckooIndex_Insert(b *testing.B) {
 		benchIndex.FindOrInsert(benchTestKey, benchTestValue, 1)
 	}
 }
+

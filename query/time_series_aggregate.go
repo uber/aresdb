@@ -427,7 +427,7 @@ func (bc *oopkBatchContext) makeWriteToDimensionVectorAction(valueOffset, nullOf
 	}
 }
 
-func makeCuckooHashIndex(primaryKeyData memstore.PrimaryKeyData, deviceData unsafe.Pointer) C.CuckooHashIndex {
+func makeCuckooHashIndex(primaryKeyData memCom.PrimaryKeyData, deviceData unsafe.Pointer) C.CuckooHashIndex {
 	var cuckooHashIndex C.CuckooHashIndex
 	cuckooHashIndex.buckets = (*C.uint8_t)(deviceData)
 	for index, seed := range primaryKeyData.Seeds {

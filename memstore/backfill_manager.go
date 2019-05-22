@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/uber/aresdb/metastore"
+	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 )
@@ -35,7 +36,7 @@ type BackfillManager struct {
 	Shard int `json:"-"`
 
 	// queue to hold UpsertBatches to backfill
-	UpsertBatches []*UpsertBatch `json:"-"`
+	UpsertBatches []*memCom.UpsertBatch `json:"-"`
 
 	// keep track of the number of records in backfill queue
 	NumRecords int `json:"numRecords"`
@@ -94,7 +95,7 @@ func (r *BackfillManager) WaitForBackfillBufferAvailability() {
 
 // Append appends an upsert batch into the backfill queue.
 // Returns true if buffer limit has been reached and caller may need to wait
-func (r *BackfillManager) Append(upsertBatch *UpsertBatch, redoFile int64, batchOffset uint32) bool {
+func (r *BackfillManager) Append(upsertBatch *memCom.UpsertBatch, redoFile int64, batchOffset uint32) bool {
 	r.Lock()
 	defer r.Unlock()
 	r.CurrentRedoFile = redoFile
@@ -105,12 +106,12 @@ func (r *BackfillManager) Append(upsertBatch *UpsertBatch, redoFile int64, batch
 		return false
 	}
 
-	utils.GetLogger().Debugf("Table %s: Backfill batch of size %v, redoLog=%d offset=%d", r.TableName, len(upsertBatch.buffer)+upsertBatch.alternativeBytes,
+	utils.GetLogger().Debugf("Table %s: Backfill batch of size %v, redoLog=%d offset=%d", r.TableName, len(upsertBatch.GetBuffer())+upsertBatch.GetAlternativeBytes(),
 		redoFile, batchOffset)
 
 	r.UpsertBatches = append(r.UpsertBatches, upsertBatch)
 	r.NumRecords += upsertBatch.NumRows
-	r.CurrentBufferSize += (int64)(len(upsertBatch.buffer) + upsertBatch.alternativeBytes)
+	r.CurrentBufferSize += (int64)(len(upsertBatch.GetBuffer()) + upsertBatch.GetAlternativeBytes())
 	utils.GetReporter(r.TableName, r.Shard).GetGauge(utils.BackfillBufferFillRatio).Update(float64(r.CurrentBufferSize+r.BackfillingBufferSize) / float64(r.MaxBufferSize))
 	utils.GetReporter(r.TableName, r.Shard).GetGauge(utils.BackfillBufferSize).Update(float64(r.CurrentBufferSize + r.BackfillingBufferSize))
 	utils.GetReporter(r.TableName, r.Shard).GetGauge(utils.BackfillBufferNumRecords).Update(float64(r.NumRecords))
@@ -125,7 +126,7 @@ func (r *BackfillManager) Append(upsertBatch *UpsertBatch, redoFile int64, batch
 }
 
 // ReadUpsertBatch reads upsert batch in backfill queue, user should not lock schema
-func (r *BackfillManager) ReadUpsertBatch(index, start, length int, schema *TableSchema) (data [][]interface{}, columnNames []string, err error) {
+func (r *BackfillManager) ReadUpsertBatch(index, start, length int, schema *memCom.TableSchema) (data [][]interface{}, columnNames []string, err error) {
 	r.RLock()
 	defer r.RUnlock()
 
@@ -146,7 +147,7 @@ func (r *BackfillManager) ReadUpsertBatch(index, start, length int, schema *Tabl
 
 // StartBackfill gets a slice of UpsertBatches from backfill queue and returns the
 // CurrentRedoFile and CurrentBatchOffset.
-func (r *BackfillManager) StartBackfill() ([]*UpsertBatch, int64, uint32) {
+func (r *BackfillManager) StartBackfill() ([]*memCom.UpsertBatch, int64, uint32) {
 	r.Lock()
 	defer r.Unlock()
 

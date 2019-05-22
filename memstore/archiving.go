@@ -60,7 +60,7 @@ func (s *LiveStore) snapshot() (ss liveStoreSnapshot) {
 // The records will be sorted according to the sortColumns.
 type archivingPatch struct {
 	// RecordID.BatchID here refers to the RandomBatchIndex in the snapshot.
-	recordIDs   []RecordID
+	recordIDs   []common.RecordID
 	sortColumns []int
 	// Readonly. We won't change it during sorting archiving patch and merging
 	// with archive batch.
@@ -111,7 +111,7 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 								patchByDay[day] = patch
 							}
 							patch.recordIDs = append(patch.recordIDs,
-								RecordID{int32(batchIdx), uint32(recordIdx)})
+								common.RecordID{int32(batchIdx), uint32(recordIdx)})
 							numRecordsArchived++
 						} else {
 							numRecordsIgnored++

@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
@@ -31,11 +32,12 @@ type TableShard struct {
 	ShardID int `json:"-"`
 
 	// For convenience, reference to the table schema struct.
-	Schema *TableSchema `json:"schema"`
+	Schema *common.TableSchema `json:"schema"`
 
 	// For convenience.
-	metaStore metastore.MetaStore
-	diskStore diskstore.DiskStore
+	metaStore             metastore.MetaStore
+	diskStore             diskstore.DiskStore
+	redoLogManagerFactory *imports.RedologManagerFactory
 
 	// Live store. Its locks also cover the primary key.
 	LiveStore *LiveStore `json:"liveStore"`
@@ -52,14 +54,15 @@ type TableShard struct {
 }
 
 // NewTableShard creates and initiates a table shard based on the schema.
-func NewTableShard(schema *TableSchema, metaStore metastore.MetaStore,
-	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int) *TableShard {
+func NewTableShard(schema *common.TableSchema, metaStore metastore.MetaStore,
+	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int, redoLogManagerFactory *imports.RedologManagerFactory) *TableShard {
 	tableShard := &TableShard{
-		ShardID:           shard,
-		Schema:            schema,
-		diskStore:         diskStore,
-		metaStore:         metaStore,
-		HostMemoryManager: hostMemoryManager,
+		ShardID:               shard,
+		Schema:                schema,
+		diskStore:             diskStore,
+		metaStore:             metaStore,
+		HostMemoryManager:     hostMemoryManager,
+		redoLogManagerFactory: redoLogManagerFactory,
 	}
 	archiveStore := NewArchiveStore(tableShard)
 	tableShard.ArchiveStore = archiveStore

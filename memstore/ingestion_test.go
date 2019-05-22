@@ -18,15 +18,17 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/utils"
 	"time"
+	"fmt"
 )
 
 var _ = ginkgo.Describe("ingestion", func() {
 	ginkgo.It("works for empty upsert batch", func() {
 		memstore := createMemStore("abc", 0, []common.DataType{}, []int{}, 10, false, false, nil, CreateMockDiskStore())
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 		shard, _ := memstore.GetTableShard("abc", 0)
@@ -36,7 +38,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	ginkgo.It("returns error for unrecognized table", func() {
 		memstore := createMemStore("abc", 0, []common.DataType{}, []int{}, 10, false, false, nil, CreateMockDiskStore())
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("def", 0, upsertBatch)
 		Ω(err).ShouldNot(BeNil())
 	})
@@ -44,7 +46,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 	ginkgo.It("returns error for missing primary key", func() {
 		memstore := createMemStore("abc", 0, []common.DataType{common.Uint8}, []int{0}, 10, false, false, nil, CreateMockDiskStore())
 		buffer, _ := common.NewUpsertBatchBuilder().ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).ShouldNot(BeNil())
 		shard, _ := memstore.GetTableShard("abc", 0)
@@ -56,7 +58,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 		shard, err := memstore.GetTableShard("abc", 0)
@@ -71,7 +73,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.AddColumn(0, common.Uint8)
 		builder.AddRow()
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).ShouldNot(BeNil())
 		shard, _ := memstore.GetTableShard("abc", 0)
@@ -85,7 +87,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.AddRow()
 		builder.SetValue(0, 0, uint8(123))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -111,7 +113,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.AddRow()
 		builder.SetValue(0, 0, uint8(123))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -138,7 +140,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.AddRow()
 		builder.SetValue(1, 0, uint8(99))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -171,7 +173,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(2, 0, uint8(125))
 
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -185,7 +187,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		Ω(valid).Should(BeTrue())
 		Ω(*(*uint8)(value)).Should(Equal(uint8(125)))
 
-		boolValue, valid := ReadShardBool(shard, 1, []byte{1})
+    	boolValue, valid := ReadShardBool(shard, 1, []byte{1})
 		Ω(valid).Should(BeTrue())
 		Ω(boolValue).Should(BeTrue())
 
@@ -213,7 +215,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(1, 2, float32(4.56))
 
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -259,7 +261,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(4, 0, uint8(104))
 
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -296,7 +298,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(1, 0, uint8(101))
 
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -325,7 +327,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(2, 0, uint8(101))
 
 		buffer, _ = builder.ToByteArray()
-		upsertBatch, _ = NewUpsertBatch(buffer)
+		upsertBatch, _ = common.NewUpsertBatch(buffer)
 
 		// Update batch size to 2.
 		shard.LiveStore.BatchSize = 2
@@ -360,7 +362,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.AddRow()
 		builder.SetValue(0, 0, uint32(3))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		shard, err := memstore.GetTableShard("abc", 0)
 		shard.LiveStore.PrimaryKey.UpdateEventTimeCutoff(2)
 		shard.LiveStore.ArchivingCutoffHighWatermark = 2
@@ -380,7 +382,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.AddRow()
 		builder.SetValue(1, 0, uint32(1))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		shard, err := memstore.GetTableShard("abc", 0)
 		shard.LiveStore.PrimaryKey.UpdateEventTimeCutoff(2)
 		shard.LiveStore.ArchivingCutoffHighWatermark = 2
@@ -413,7 +415,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).ShouldNot(BeNil())
 	})
@@ -426,7 +428,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.AddRow()
 		builder.SetValue(0, 1, uint8(123))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).ShouldNot(BeNil())
 	})
@@ -441,7 +443,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 1, uint32(23456))
 		builder.SetValue(0, 0, uint8(123))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		shard, err := memstore.GetTableShard("abc", 0)
 
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
@@ -459,12 +461,13 @@ var _ = ginkgo.Describe("ingestion", func() {
 		Ω(*(*uint8)(value)).Should(Equal(uint8(123)))
 
 		Ω(shard.LiveStore.LastReadRecord.Index).Should(Equal(uint32(1)))
-		redoFile := shard.LiveStore.RedoLogManager.(*fileRedologManager).CurrentFileCreationTime
+		redologManager := shard.LiveStore.RedoLogManager.(*imports.CompositeRedologManager)
+		redoFile := redologManager.GetLocalFileRedologManager().CurrentFileCreationTime
 
 		// advance batch offset by 1.
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
-		Ω(shard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile[redoFile]).Should(Equal(uint32(23456)))
+		Ω(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile[redoFile]).Should(Equal(uint32(23456)))
 		Ω(shard.LiveStore.BackfillManager.CurrentRedoFile).Should(BeEquivalentTo(redoFile))
 		Ω(shard.LiveStore.BackfillManager.CurrentBatchOffset).Should(BeEquivalentTo(1))
 	})
@@ -479,7 +482,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 1, uint32(23456))
 		builder.SetValue(0, 0, uint8(123))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		shard, err := memstore.GetTableShard("abc", 0)
 
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
@@ -496,13 +499,14 @@ var _ = ginkgo.Describe("ingestion", func() {
 		Ω(valid).Should(BeTrue())
 		Ω(*(*uint8)(value)).Should(Equal(uint8(123)))
 
+		redologManager := shard.LiveStore.RedoLogManager.(*imports.CompositeRedologManager)
 		Ω(shard.LiveStore.LastReadRecord.Index).Should(Equal(uint32(1)))
-		redoFile := shard.LiveStore.RedoLogManager.(*fileRedologManager).CurrentFileCreationTime
+		redoFile := redologManager.GetLocalFileRedologManager().CurrentFileCreationTime
 
 		// advance batch offset by 1.
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
-		Ω(shard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile[redoFile]).Should(Equal(uint32(0)))
+		Ω(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile[redoFile]).Should(Equal(uint32(0)))
 		Ω(shard.LiveStore.SnapshotManager.CurrentRedoFile).Should(BeEquivalentTo(redoFile))
 		Ω(shard.LiveStore.SnapshotManager.CurrentBatchOffset).Should(BeEquivalentTo(1))
 	})
@@ -512,7 +516,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint8)
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 
 		err := memstore.HandleIngestion("def", 0, upsertBatch)
 		Ω(err).ShouldNot(BeNil())
@@ -524,7 +528,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.AddColumn(0, common.Uint8)
 		builder.AddColumn(1, common.Uint8)
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).ShouldNot(BeNil())
@@ -535,7 +539,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder := common.NewUpsertBatchBuilder()
 		builder.AddColumn(0, common.Uint16)
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).ShouldNot(BeNil())
@@ -550,7 +554,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 0, uint8(123))
 		builder.SetValue(0, 1, uint8(1))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -570,7 +574,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 0, uint8(123))
 		builder.SetValue(0, 1, uint8(2))
 		buffer, _ = builder.ToByteArray()
-		upsertBatch, _ = NewUpsertBatch(buffer)
+		upsertBatch, _ = common.NewUpsertBatch(buffer)
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -589,7 +593,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 0, uint8(123))
 		builder.SetValue(0, 1, nil)
 		buffer, _ = builder.ToByteArray()
-		upsertBatch, _ = NewUpsertBatch(buffer)
+		upsertBatch, _ = common.NewUpsertBatch(buffer)
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -608,7 +612,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 0, uint8(123))
 		builder.SetValue(0, 1, nil)
 		buffer, _ = builder.ToByteArray()
-		upsertBatch, _ = NewUpsertBatch(buffer)
+		upsertBatch, _ = common.NewUpsertBatch(buffer)
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -627,7 +631,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 0, uint8(123))
 		builder.SetValue(0, 1, 3)
 		buffer, _ = builder.ToByteArray()
-		upsertBatch, _ = NewUpsertBatch(buffer)
+		upsertBatch, _ = common.NewUpsertBatch(buffer)
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -649,10 +653,13 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 0, uint8(123))
 		builder.SetValue(0, 1, uint8(1))
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
+		fmt.Println("HandleIngestion")
+
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
+		fmt.Println("test here")
 		shard, err := memstore.GetTableShard("abc", 0)
 		Ω(shard.LiveStore.LastReadRecord.BatchID).Should(Equal(BaseBatchID))
 		Ω(shard.LiveStore.lastModifiedTimePerColumn).Should(BeNil())
@@ -669,7 +676,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 0, uint8(123))
 		builder.SetValue(0, 1, uint8(2))
 		buffer, _ = builder.ToByteArray()
-		upsertBatch, _ = NewUpsertBatch(buffer)
+		upsertBatch, _ = common.NewUpsertBatch(buffer)
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
@@ -695,7 +702,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(1, 1, uint8(2))
 
 		buffer, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(buffer)
+		upsertBatch, _ := common.NewUpsertBatch(buffer)
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
