@@ -218,7 +218,7 @@ func (scheduler *schedulerImpl) Start() {
 			select {
 			case jobBundle := <-scheduler.jobBundleChan:
 				job := jobBundle.Job
-				utils.GetLogger().With("job", job).Info("Recieved job")
+				utils.GetLogger().With("job", job).Info("Received job")
 				scheduler.executeJob(&jobBundle)
 			case <-scheduler.executorStopChan:
 				return
