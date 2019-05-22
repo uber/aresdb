@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/gateway"
+	controllerCom "github.com/uber/aresdb/controller/common"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
@@ -25,7 +25,7 @@ var _ = Describe("Kafka producer", func() {
 	var testServer *httptest.Server
 	var seedBroker *sarama.MockBroker
 	var leader *sarama.MockBroker
-	var aresControllerClient gateway.ControllerClient
+	var aresControllerClient controllerCom.ControllerClient
 
 	rows := []client.Row{
 		{"1", "v12", "true"},
@@ -123,13 +123,13 @@ var _ = Describe("Kafka producer", func() {
 		})
 		testServer.Start()
 		serviceConfig.ControllerConfig.Address = testServer.Listener.Addr().String()
-		aresControllerClient = gateway.NewControllerHTTPClient(serviceConfig.ControllerConfig.Address,
+		aresControllerClient = controllerCom.NewControllerHTTPClient(serviceConfig.ControllerConfig.Address,
 			time.Duration(serviceConfig.ControllerConfig.Timeout)*time.Second,
 			http.Header{
 				"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
 				"RPC-Service": []string{serviceConfig.ControllerConfig.ServiceName},
 			})
-		aresControllerClient.(*gateway.ControllerHTTPClient).SetNamespace(cluster)
+		aresControllerClient.(*controllerCom.ControllerHTTPClient).SetNamespace(cluster)
 
 		// kafka broker mock setup
 		seedBroker = sarama.NewMockBroker(serviceConfig.Logger.Sugar(), 1)

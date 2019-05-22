@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/mock"
-	gatewayMocks "github.com/uber/aresdb/gateway/mocks"
+	controllerMocks "github.com/uber/aresdb/controller/common/mocks"
 	"github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 )
@@ -13,7 +13,7 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 	var job *SchemaFetchJob
 	var mockSchemaMutator metaMocks.TableSchemaMutator
 	var mockSchemaValidator metaMocks.TableSchemaValidator
-	var mockControllerCli gatewayMocks.ControllerClient
+	var mockControllerCli controllerMocks.ControllerClient
 
 	testTable1 := common.Table{
 		Name: "testTable1",
@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 	ginkgo.BeforeEach(func() {
 		mockSchemaMutator = metaMocks.TableSchemaMutator{}
 		mockSchemaValidator = metaMocks.TableSchemaValidator{}
-		mockControllerCli = gatewayMocks.ControllerClient{}
+		mockControllerCli = controllerMocks.ControllerClient{}
 
 		job = NewSchemaFetchJob(1, &mockSchemaMutator, &mockSchemaValidator, &mockControllerCli, "cluster1", "123")
 	})

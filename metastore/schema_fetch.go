@@ -1,7 +1,7 @@
 package metastore
 
 import (
-	"github.com/uber/aresdb/gateway"
+	controllerCom "github.com/uber/aresdb/controller/common"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"reflect"
@@ -15,12 +15,12 @@ type SchemaFetchJob struct {
 	intervalInSeconds int
 	schemaMutator     TableSchemaMutator
 	schemaValidator   TableSchemaValidator
-	controllerClient  gateway.ControllerClient
+	controllerClient  controllerCom.ControllerClient
 	stopChan          chan struct{}
 }
 
 // NewSchemaFetchJob creates a new SchemaFetchJob
-func NewSchemaFetchJob(intervalInSeconds int, schemaMutator TableSchemaMutator, schemaValidator TableSchemaValidator, controllerClient gateway.ControllerClient, clusterName, initialHash string) *SchemaFetchJob {
+func NewSchemaFetchJob(intervalInSeconds int, schemaMutator TableSchemaMutator, schemaValidator TableSchemaValidator, controllerClient controllerCom.ControllerClient, clusterName, initialHash string) *SchemaFetchJob {
 	return &SchemaFetchJob{
 		clusterName:       clusterName,
 		hash:              initialHash,

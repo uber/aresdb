@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/aresdb/gateway"
+	controllerCom "github.com/uber/aresdb/controller/common"
 	"net/http"
 	"strconv"
 	"sync"
@@ -65,7 +65,7 @@ type Driver struct {
 	processors           []Processor
 	processorMsgCount    map[int]int64
 	processorMsgSizes    chan int64
-	aresControllerClient gateway.ControllerClient
+	aresControllerClient controllerCom.ControllerClient
 	sinkInitFunc         NewSink
 	consumerInitFunc     NewConsumer
 	decoderInitFunc      NewDecoder
@@ -73,11 +73,11 @@ type Driver struct {
 
 // NewProcessor is the type of function each processor that implements Processor should provide for initialization
 // This function implementation should always return a new instance of the processor
-type NewProcessor func(id int, jobConfig *rules.JobConfig, aresControllerClient gateway.ControllerClient, sinkInitFunc NewSink, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
+type NewProcessor func(id int, jobConfig *rules.JobConfig, aresControllerClient controllerCom.ControllerClient, sinkInitFunc NewSink, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
 	errors chan ProcessorError, msgSizes chan int64, serviceConfig config.ServiceConfig) (Processor, error)
 
 // NewDrivers return Drivers
-func NewDrivers(params Params, aresControllerClient gateway.ControllerClient) (Drivers, error) {
+func NewDrivers(params Params, aresControllerClient controllerCom.ControllerClient) (Drivers, error) {
 	drivers := make(Drivers)
 
 	// iterate local job configs
@@ -107,7 +107,7 @@ func NewDrivers(params Params, aresControllerClient gateway.ControllerClient) (D
 
 // NewDriver will return a new Driver instance to start a ingest job
 func NewDriver(
-	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, aresControllerClient gateway.ControllerClient, processorInitFunc NewProcessor, sinkInitFunc NewSink,
+	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, aresControllerClient controllerCom.ControllerClient, processorInitFunc NewProcessor, sinkInitFunc NewSink,
 	consumerInitFunc NewConsumer, decoderInitFunc NewDecoder) (*Driver, error) {
 	return &Driver{
 		Topic:                jobConfig.StreamingConfig.Topic,

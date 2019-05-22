@@ -1,0 +1,20 @@
+syntax = "proto3";
+package models;
+
+message EntityConfig {
+    string name = 1;
+    bool tomstoned = 2;
+    bytes config = 3;
+}
+
+message EntityName {
+    string name = 1;
+    bool tomstoned = 2;
+    int32 incarnation = 3;
+    int64 last_updated_at = 4;
+}
+
+message EntityList {
+    int64 last_updated_at = 1;
+    repeated EntityName entities = 2;
+}

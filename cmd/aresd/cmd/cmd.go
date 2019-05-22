@@ -33,7 +33,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
-	"github.com/uber/aresdb/gateway"
+	controllerCom "github.com/uber/aresdb/controller/common"
 	"github.com/uber/aresdb/memutils"
 )
 
@@ -127,10 +127,10 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 			logger.Fatal("Missing controller client config", err)
 		}
 		if cfg.Cluster.InstanceName != "" {
-			controllerClientCfg.Headers.Add(gateway.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
+			controllerClientCfg.Headers.Add(controllerCom.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
 		}
 
-		controllerClient := gateway.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
+		controllerClient := controllerCom.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
 		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.ClusterName, "")
 		// immediate initial fetch
 		schemaFetchJob.FetchSchema()

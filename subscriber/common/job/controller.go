@@ -22,7 +22,7 @@ import (
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3x/instrument"
-	"github.com/uber/aresdb/gateway"
+	controllerCom "github.com/uber/aresdb/controller/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"go.uber.org/fx"
@@ -72,7 +72,7 @@ type Controller struct {
 
 	serviceConfig config.ServiceConfig
 	// aresControllerClient is aresDB controller client
-	aresControllerClient gateway.ControllerClient
+	aresControllerClient controllerCom.ControllerClient
 	// Drivers are all running jobs
 	Drivers Drivers
 	// jobNS is current active job namespace
@@ -105,7 +105,7 @@ type ZKNodeSubscriber struct {
 func NewController(params Params) *Controller {
 	params.ServiceConfig.Logger.Info("Creating Controller")
 
-	aresControllerClient := gateway.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
+	aresControllerClient := controllerCom.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
 		time.Duration(params.ServiceConfig.ControllerConfig.Timeout)*time.Second,
 		http.Header{
 			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
