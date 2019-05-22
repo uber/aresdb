@@ -35,7 +35,7 @@ make aresd -j
 function run_skipped_package(){
 for pkg in "$@"
 do
-    pushd
+    pushd .
     echo "testing ${pkg}"
     cd ${pkg}
     ginkgo -r
