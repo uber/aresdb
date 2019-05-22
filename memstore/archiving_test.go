@@ -129,7 +129,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardMap[shardID].ArchiveStore.CurrentVersion.shard = shardMap[shardID]
 		shardMap[shardID].ArchiveStore.CurrentVersion.Batches[0] = archiveBatch0
 		// Map from max event time to file creation time.
-		shardMap[shardID].LiveStore.RedoLogManager, err = redoLogManagerFactory.NewCompositeRedologManager(table, shardID, &shard.Schema.Schema.Config, nil)
+		shardMap[shardID].LiveStore.RedoLogManager, err = redoLogManagerFactory.NewRedologManager(table, shardID, &shard.Schema.Schema.Config, nil)
 		shardMap[shardID].LiveStore.RedoLogManager.UpdateMaxEventTime(1, 1)
 
 		// make purge to pass

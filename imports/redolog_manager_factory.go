@@ -83,9 +83,9 @@ func (c *RedologManagerFactory) newKafkaConsumer(brokers []string) (sarama.Consu
 	return nil, nil
 }
 
-// NewCompositeRedologManager create CompositeRedologManager on specified table/shard
+// NewRedologManager create CompositeRedologManager on specified table/shard
 // each table/shard should only have one CompositeRedologManager
-func (f *RedologManagerFactory) NewCompositeRedologManager(table string, shard int, tableConfig *metaCom.TableConfig, storeFunc BatchStoreFunc) (RedologManager, error) {
+func (f *RedologManagerFactory) NewRedologManager(table string, shard int, tableConfig *metaCom.TableConfig, storeFunc BatchStoreFunc) (RedologManager, error) {
 	utils.GetLogger().With("action", "ingestion", "table", table, "shard", shard).Info("Create Redolog Manager")
 	f.Lock()
 	defer f.Unlock()
@@ -99,7 +99,7 @@ func (f *RedologManagerFactory) NewCompositeRedologManager(table string, shard i
 	manager, ok := tableManager[shard]
 	if ok && manager != nil {
 		fmt.Printf("error: %v\n", utils.StackError(nil, "error"))
-		return nil, fmt.Errorf("NewCompositeRedologManager for table: %s, shard: %d is already running", table, shard)
+		return nil, fmt.Errorf("NewRedologManager for table: %s, shard: %d is already running", table, shard)
 	}
 
 	manager = NewCompositeRedologManager(table, shard, f, tableConfig, storeFunc)
