@@ -43,7 +43,7 @@ do
 done
 }
 
-run_skipped_package query/expr cmd
+run_skipped_package query/expr
 ginkgo -r -cover -skipPackage query/expr,cmd
 
 # update cached_commit
