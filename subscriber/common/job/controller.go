@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/curator-go/curator"
-	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3x/instrument"
 	"github.com/uber/aresdb/gateway"
@@ -216,15 +215,15 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		return err
 	}
 
-	pInstance := placement.NewInstance().SetID(params.ServiceConfig.Environment.InstanceID)
+	//pInstance := placement.NewInstance().SetID(params.ServiceConfig.Environment.InstanceID)
 
 	ad := services.NewAdvertisement().
-		SetServiceID(sid).
-		SetPlacementInstance(pInstance)
+		SetServiceID(sid)
+	//.SetPlacementInstance(pInstance)
 
 	params.ServiceConfig.Logger.Info("service, placement, and ad info",
 		zap.Any("serviceID", sid),
-		zap.Any("placement", pInstance),
+		//zap.Any("placement", pInstance),
 		zap.Any("ad", ad))
 
 
