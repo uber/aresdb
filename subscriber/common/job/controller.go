@@ -152,20 +152,20 @@ func NewController(params Params) *Controller {
 			if registerHeartBeatService(params, controller.etcdServices) != nil {
 				panic(utils.StackError(err, "Failed to registerHeartBeatService"))
 			}
-		}
+		} else {
+			controller.zkClient = createZKClient(params)
+			err = controller.zkClient.Start()
+			if err != nil {
+				panic(utils.StackError(err, "Failed to start zkClient"))
+			}
+			params.ServiceConfig.Logger.Info("zkClient was started")
 
-		controller.zkClient = createZKClient(params)
-		err = controller.zkClient.Start()
-		if err != nil {
-			panic(utils.StackError(err, "Failed to start zkClient"))
+			err = controller.RegisterOnZK()
+			if err != nil {
+				panic(utils.StackError(err, "Failed to register subscriber"))
+			}
+			params.ServiceConfig.Logger.Info("Registered subscriber in zk")
 		}
-		params.ServiceConfig.Logger.Info("zkClient was started")
-
-		err = controller.RegisterOnZK()
-		if err != nil {
-			panic(utils.StackError(err, "Failed to register subscriber"))
-		}
-		params.ServiceConfig.Logger.Info("Registered subscriber in zk")
 
 		go controller.SyncUpJobConfigs()
 	}
@@ -183,19 +183,20 @@ func connectEtcdServices(params Params) (services.Services, error) {
 	// etcd key format: prefix/${env}/namespace/service/instanceId
 	params.ServiceConfig.EtcdConfig.Env = fmt.Sprintf("%s/%s", config.ActiveAresNameSpace,
 		params.ServiceConfig.EtcdConfig.Service)
-	params.ServiceConfig.EtcdConfig.Service = fmt.Sprintf("%s/%s",
-		config.ActiveJobNameSpace, params.ServiceConfig.Environment.InstanceID)
+	params.ServiceConfig.EtcdConfig.Service = config.ActiveJobNameSpace
 
 	// create a config service client to access to the etcd cluster services.
 	csClient, err := params.ServiceConfig.EtcdConfig.NewClient(iopts)
 	if err != nil {
-		utils.StackError(err, "Failed to NewClient for etcd")
+		params.ServiceConfig.Logger.Error("Failed to NewClient for etcd",
+			zap.Error(err))
 		return nil, err
 	}
 
 	servicesClient, err := csClient.Services(nil)
 	if err != nil {
-		utils.StackError(err, "Failed to create services for etcd")
+		params.ServiceConfig.Logger.Error("Failed to create services for etcd",
+			zap.Error(err))
 		return nil, err
 	}
 
@@ -212,7 +213,8 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
 		SetLivenessInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Timeout)*time.Second))
 	if err != nil {
-		utils.StackError(err, "Failed to config heartbeart")
+		params.ServiceConfig.Logger.Error("Failed to config heartbeart",
+			zap.Error(err))
 		return err
 	}
 
@@ -227,7 +229,6 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		zap.Any("serviceID", sid),
 		zap.Any("placement", pInstance),
 		zap.Any("ad", ad))
-
 
 	err = servicesClient.Advertise(ad)
 	if err != nil {
