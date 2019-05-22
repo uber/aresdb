@@ -211,10 +211,14 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
 		SetLivenessInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Timeout)*time.Second))
 	if err != nil {
+		utils.StackError(err, "failed to config heartbeart")
 		return err
 	}
 
 	err = servicesClient.Advertise(ad)
+	if err != nil {
+		utils.StackError(err, "failed to advertise heartbeat service")
+	}
 	return err
 }
 
