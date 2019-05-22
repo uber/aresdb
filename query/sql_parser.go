@@ -203,17 +203,6 @@ func (v *ASTBuilder) visitList(ctxs []antlr.ParserRuleContext) interface{} {
 
 // ********************** Visit SQL grammar starts ********************
 
-// VisitSingleStatement visits the node
-func (v *ASTBuilder) VisitSingleStatement(ctx *antlrgen.SingleStatementContext) interface{} {
-	return v.Visit(ctx.Statement()).(tree.INode)
-}
-
-// VisitSingleExpression visits the node
-func (v *ASTBuilder) VisitSingleExpression(ctx *antlrgen.SingleExpressionContext) interface{} {
-	result, _ := v.Visit(ctx.Expression()).(tree.INode)
-	return result
-}
-
 // ********************** query expressions ********************
 
 // VisitQuery visits the node
@@ -1065,221 +1054,6 @@ func (v *ASTBuilder) VisitStatementDefault(ctx *antlrgen.StatementDefaultContext
 	return v.VisitChildren(ctx)
 }
 
-// VisitUse visits the node
-func (v *ASTBuilder) VisitUse(ctx *antlrgen.UseContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitCreateSchema visits the node
-func (v *ASTBuilder) VisitCreateSchema(ctx *antlrgen.CreateSchemaContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitDropSchema visits the node
-func (v *ASTBuilder) VisitDropSchema(ctx *antlrgen.DropSchemaContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitRenameSchema visits the node
-func (v *ASTBuilder) VisitRenameSchema(ctx *antlrgen.RenameSchemaContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitCreateTableAsSelect visits the node
-func (v *ASTBuilder) VisitCreateTableAsSelect(ctx *antlrgen.CreateTableAsSelectContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitCreateTable visits the node
-func (v *ASTBuilder) VisitCreateTable(ctx *antlrgen.CreateTableContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitDropTable visits the node
-func (v *ASTBuilder) VisitDropTable(ctx *antlrgen.DropTableContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitInsertInto visits the node
-func (v *ASTBuilder) VisitInsertInto(ctx *antlrgen.InsertIntoContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitDelete visits the node
-func (v *ASTBuilder) VisitDelete(ctx *antlrgen.DeleteContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitRenameTable visits the node
-func (v *ASTBuilder) VisitRenameTable(ctx *antlrgen.RenameTableContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitRenameColumn visits the node
-func (v *ASTBuilder) VisitRenameColumn(ctx *antlrgen.RenameColumnContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitDropColumn visits the node
-func (v *ASTBuilder) VisitDropColumn(ctx *antlrgen.DropColumnContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitAddColumn visits the node
-func (v *ASTBuilder) VisitAddColumn(ctx *antlrgen.AddColumnContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitCreateView visits the node
-func (v *ASTBuilder) VisitCreateView(ctx *antlrgen.CreateViewContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitDropView visits the node
-func (v *ASTBuilder) VisitDropView(ctx *antlrgen.DropViewContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitCall visits the node
-func (v *ASTBuilder) VisitCall(ctx *antlrgen.CallContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitGrant visits the node
-func (v *ASTBuilder) VisitGrant(ctx *antlrgen.GrantContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitRevoke visits the node
-func (v *ASTBuilder) VisitRevoke(ctx *antlrgen.RevokeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowGrants visits the node
-func (v *ASTBuilder) VisitShowGrants(ctx *antlrgen.ShowGrantsContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitExplain visits the node
-func (v *ASTBuilder) VisitExplain(ctx *antlrgen.ExplainContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowCreateTable visits the node
-func (v *ASTBuilder) VisitShowCreateTable(ctx *antlrgen.ShowCreateTableContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowCreateView visits the node
-func (v *ASTBuilder) VisitShowCreateView(ctx *antlrgen.ShowCreateViewContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowTables visits the node
-func (v *ASTBuilder) VisitShowTables(ctx *antlrgen.ShowTablesContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowSchemas visits the node
-func (v *ASTBuilder) VisitShowSchemas(ctx *antlrgen.ShowSchemasContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowCatalogs visits the node
-func (v *ASTBuilder) VisitShowCatalogs(ctx *antlrgen.ShowCatalogsContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowColumns visits the node
-func (v *ASTBuilder) VisitShowColumns(ctx *antlrgen.ShowColumnsContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowStats visits the node
-func (v *ASTBuilder) VisitShowStats(ctx *antlrgen.ShowStatsContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowStatsForQuery visits the node
-func (v *ASTBuilder) VisitShowStatsForQuery(ctx *antlrgen.ShowStatsForQueryContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowFunctions visits the node
-func (v *ASTBuilder) VisitShowFunctions(ctx *antlrgen.ShowFunctionsContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowSession visits the node
-func (v *ASTBuilder) VisitShowSession(ctx *antlrgen.ShowSessionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitSetSession visits the node
-func (v *ASTBuilder) VisitSetSession(ctx *antlrgen.SetSessionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitResetSession visits the node
-func (v *ASTBuilder) VisitResetSession(ctx *antlrgen.ResetSessionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitShowPartitions visits the node
-func (v *ASTBuilder) VisitShowPartitions(ctx *antlrgen.ShowPartitionsContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitPrepare visits the node
-func (v *ASTBuilder) VisitPrepare(ctx *antlrgen.PrepareContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitDeallocate visits the node
-func (v *ASTBuilder) VisitDeallocate(ctx *antlrgen.DeallocateContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitExecute visits the node
-func (v *ASTBuilder) VisitExecute(ctx *antlrgen.ExecuteContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitDescribeInput visits the node
-func (v *ASTBuilder) VisitDescribeInput(ctx *antlrgen.DescribeInputContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitDescribeOutput visits the node
-func (v *ASTBuilder) VisitDescribeOutput(ctx *antlrgen.DescribeOutputContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitTableElement visits the node
-func (v *ASTBuilder) VisitTableElement(ctx *antlrgen.TableElementContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitColumnDefinition visits the node
-func (v *ASTBuilder) VisitColumnDefinition(ctx *antlrgen.ColumnDefinitionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitLikeClause visits the node
-func (v *ASTBuilder) VisitLikeClause(ctx *antlrgen.LikeClauseContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitProperties visits the node
-func (v *ASTBuilder) VisitProperties(ctx *antlrgen.PropertiesContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitProperty visits the node
-func (v *ASTBuilder) VisitProperty(ctx *antlrgen.PropertyContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 // VisitQueryTermDefault visits the node
 func (v *ASTBuilder) VisitQueryTermDefault(ctx *antlrgen.QueryTermDefaultContext) interface{} {
 	return v.VisitChildren(ctx)
@@ -1319,11 +1093,6 @@ func (v *ASTBuilder) VisitGroupingExpressions(ctx *antlrgen.GroupingExpressionsC
 	return v.VisitChildren(ctx)
 }
 
-// VisitGroupingSet visits the node
-func (v *ASTBuilder) VisitGroupingSet(ctx *antlrgen.GroupingSetContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 // VisitSetQuantifier visits the node
 func (v *ASTBuilder) VisitSetQuantifier(ctx *antlrgen.SetQuantifierContext) interface{} {
 	return v.VisitChildren(ctx)
@@ -1354,18 +1123,6 @@ func (v *ASTBuilder) VisitColumnAliases(ctx *antlrgen.ColumnAliasesContext) inte
 	return v.VisitChildren(ctx)
 }
 
-// VisitUnnest visits the node
-func (v *ASTBuilder) VisitUnnest(ctx *antlrgen.UnnestContext) interface{} {
-	location := v.getLocation(ctx)
-	panic(fmt.Errorf("un-nest at (line:%d, col:%d) not supported yet", location.Line, location.CharPosition))
-}
-
-// VisitLateral visits the node
-func (v *ASTBuilder) VisitLateral(ctx *antlrgen.LateralContext) interface{} {
-	location := v.getLocation(ctx)
-	panic(fmt.Errorf("lateral at (line:%d, col:%d) not supported yet", location.Line, location.CharPosition))
-}
-
 // VisitParenthesizedRelation visits the node
 func (v *ASTBuilder) VisitParenthesizedRelation(ctx *antlrgen.ParenthesizedRelationContext) interface{} {
 	location := v.getLocation(ctx)
@@ -1392,21 +1149,6 @@ func (v *ASTBuilder) VisitInList(ctx *antlrgen.InListContext) interface{} {
 func (v *ASTBuilder) VisitInSubquery(ctx *antlrgen.InSubqueryContext) interface{} {
 	location := v.getLocation(ctx)
 	panic(fmt.Errorf("inSubquery at (line:%d, col:%d) not supported yet", location.Line, location.CharPosition))
-}
-
-// VisitLike visits the node
-func (v *ASTBuilder) VisitLike(ctx *antlrgen.LikeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitNullPredicate visits the node
-func (v *ASTBuilder) VisitNullPredicate(ctx *antlrgen.NullPredicateContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitDistinctFrom visits the node
-func (v *ASTBuilder) VisitDistinctFrom(ctx *antlrgen.DistinctFromContext) interface{} {
-	return v.VisitChildren(ctx)
 }
 
 // VisitValueExpressionDefault visits the node
@@ -1444,22 +1186,6 @@ func (v *ASTBuilder) VisitSpecialDateTimeFunction(ctx *antlrgen.SpecialDateTimeF
 	return v.VisitChildren(ctx)
 }
 
-// VisitSubstring visits the node
-func (v *ASTBuilder) VisitSubstring(ctx *antlrgen.SubstringContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitCast visits the node
-func (v *ASTBuilder) VisitCast(ctx *antlrgen.CastContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitLambda visits the node
-func (v *ASTBuilder) VisitLambda(ctx *antlrgen.LambdaContext) interface{} {
-	location := v.getLocation(ctx)
-	panic(fmt.Errorf("lambda at (line:%d, col:%d) not supported yet", location.Line, location.CharPosition))
-}
-
 // VisitPredicated visits the node
 func (v *ASTBuilder) VisitPredicated(ctx *antlrgen.PredicatedContext) interface{} {
 	return v.VisitChildren(ctx)
@@ -1475,16 +1201,6 @@ func (v *ASTBuilder) VisitParenthesizedExpression(ctx *antlrgen.ParenthesizedExp
 	return v.VisitChildren(ctx)
 }
 
-// VisitParameter visits the node
-func (v *ASTBuilder) VisitParameter(ctx *antlrgen.ParameterContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitNormalize visits the node
-func (v *ASTBuilder) VisitNormalize(ctx *antlrgen.NormalizeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 // VisitIntervalLiteral visits the node
 func (v *ASTBuilder) VisitIntervalLiteral(ctx *antlrgen.IntervalLiteralContext) interface{} {
 	return v.VisitChildren(ctx)
@@ -1497,11 +1213,6 @@ func (v *ASTBuilder) VisitNumericLiteral(ctx *antlrgen.NumericLiteralContext) in
 
 // VisitBooleanLiteral visits the node
 func (v *ASTBuilder) VisitBooleanLiteral(ctx *antlrgen.BooleanLiteralContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitSimpleCase visits the node
-func (v *ASTBuilder) VisitSimpleCase(ctx *antlrgen.SimpleCaseContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -1542,11 +1253,6 @@ func (v *ASTBuilder) VisitCurrentUser(ctx *antlrgen.CurrentUserContext) interfac
 	return v.VisitChildren(ctx)
 }
 
-// VisitExtract visits the node
-func (v *ASTBuilder) VisitExtract(ctx *antlrgen.ExtractContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 // VisitStringLiteral visits the node
 func (v *ASTBuilder) VisitStringLiteral(ctx *antlrgen.StringLiteralContext) interface{} {
 	return v.VisitChildren(ctx)
@@ -1554,22 +1260,6 @@ func (v *ASTBuilder) VisitStringLiteral(ctx *antlrgen.StringLiteralContext) inte
 
 // VisitArrayConstructor visits the node
 func (v *ASTBuilder) VisitArrayConstructor(ctx *antlrgen.ArrayConstructorContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitExists visits the node
-func (v *ASTBuilder) VisitExists(ctx *antlrgen.ExistsContext) interface{} {
-	location := v.getLocation(ctx)
-	panic(fmt.Errorf("exists at (line:%d, col:%d) not supported yet", location.Line, location.CharPosition))
-}
-
-// VisitPosition visits the node
-func (v *ASTBuilder) VisitPosition(ctx *antlrgen.PositionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitSearchedCase visits the node
-func (v *ASTBuilder) VisitSearchedCase(ctx *antlrgen.SearchedCaseContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -1651,31 +1341,6 @@ func (v *ASTBuilder) VisitWhenClause(ctx *antlrgen.WhenClauseContext) interface{
 
 // VisitFilter visits the node
 func (v *ASTBuilder) VisitFilter(ctx *antlrgen.FilterContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitExplainFormat visits the node
-func (v *ASTBuilder) VisitExplainFormat(ctx *antlrgen.ExplainFormatContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitExplainType visits the node
-func (v *ASTBuilder) VisitExplainType(ctx *antlrgen.ExplainTypeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitPositionalArgument visits the node
-func (v *ASTBuilder) VisitPositionalArgument(ctx *antlrgen.PositionalArgumentContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitNamedArgument visits the node
-func (v *ASTBuilder) VisitNamedArgument(ctx *antlrgen.NamedArgumentContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-// VisitPrivilege visits the node
-func (v *ASTBuilder) VisitPrivilege(ctx *antlrgen.PrivilegeContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 

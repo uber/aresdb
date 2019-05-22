@@ -58,7 +58,7 @@ var _ = ginkgo.Describe("Device Allocator", func() {
 		dp := deviceAllocate(12, 0)
 		da := getDeviceAllocator()
 		Ω(da.getAllocatedMemory(0)).Should(BeNumerically(">", 0))
-		Ω(func() { reportAllocatedMemory(0, da) }).ShouldNot(Panic())
+		Ω(func() { reportAllocatedMemory(1, da) }).ShouldNot(Panic())
 		da.deviceFree(dp)
 	})
 })
