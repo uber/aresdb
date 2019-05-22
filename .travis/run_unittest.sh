@@ -32,7 +32,7 @@ make test-cuda -j
 make aresd -j
 
 # run test
-func run_skipped_package(){
+function run_skipped_package(){
 for pkg in "$@"
 do
     pushd
