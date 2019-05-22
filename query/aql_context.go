@@ -23,6 +23,7 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
+	"net/http"
 	"strings"
 	"time"
 	"unsafe"
@@ -396,6 +397,9 @@ type AQLQueryContext struct {
 	isNonAggregationQuery      bool
 	numberOfRowsWritten        int
 	maxBatchSizeAfterPrefilter int
+
+	// for eager flush query result
+	ResponseWriter http.ResponseWriter
 }
 
 // IsHLL return if the aggregation function is HLL

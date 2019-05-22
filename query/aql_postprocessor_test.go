@@ -21,6 +21,7 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"net/http/httptest"
 	"time"
 	"unsafe"
 )
@@ -419,5 +420,45 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		measureVal = readMeasure(unsafe.Pointer(&measureVectorFloat[0]), measureAST, 4)
 		Ω(measureVal).ShouldNot(BeNil())
 		Ω(*measureVal).Should(BeEquivalentTo(1.0))
+	})
+
+	ginkgo.It("works for eager flushing non agg queries", func() {
+		w := httptest.NewRecorder()
+		ctx := &AQLQueryContext{
+			Query: &AQLQuery{
+				Dimensions: []Dimension{
+					{Expr: "someField"},
+				},
+			},
+			isNonAggregationQuery: true,
+			ResponseWriter:        w,
+		}
+		oopkContext := OOPKContext{
+			Dimensions: []expr.Expr{
+				&expr.VarRef{
+					ExprType: expr.Float,
+					DataType: memCom.Float32,
+				},
+			},
+			DimRowBytes:        5,
+			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0},
+			DimensionVectorIndex: []int{
+				0,
+			},
+			ResultSize:       1,
+			dimensionVectorH: unsafe.Pointer(&[]uint8{0, 0, 0, 0, 0}[0]),
+		}
+
+		ctx.OOPK = oopkContext
+		*(*float32)(oopkContext.dimensionVectorH) = 3.2
+		*(*uint8)(utils.MemAccess(oopkContext.dimensionVectorH, 4)) = 1
+
+		ctx.initResultFlushContext()
+		ctx.flushResultBuffer()
+		Ω(w.Body.String()).Should(Equal(`["3.2"],`))
+
+		ctx.OOPK.done = true
+		ctx.flushResultBuffer()
+		Ω(w.Body.String()).Should(Equal(`["3.2"],["3.2"]`))
 	})
 })

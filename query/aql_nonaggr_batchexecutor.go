@@ -70,7 +70,7 @@ func (e *NonAggrBatchExecutorImpl) expandDimensions(numDims queryCom.DimCountsPe
 	} else {
 		bc.resultSize = bc.size
 	}
-	if bc.resultSize > lenWanted {
+	if lenWanted >= 0 && bc.resultSize > lenWanted {
 		bc.resultSize = lenWanted
 	}
 }
@@ -89,7 +89,7 @@ func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
 	e.qc.OOPK.ResultSize = bc.resultSize
 	e.qc.flushResultBuffer()
 	e.qc.numberOfRowsWritten += bc.resultSize
-	if e.getNumberOfRecordsNeeded() <= 0 {
+	if e.getNumberOfRecordsNeeded() == 0 {
 		e.qc.OOPK.done = true
 	}
 
@@ -106,6 +106,14 @@ func (e *NonAggrBatchExecutorImpl) reduce() {
 }
 
 // getNumberOfRecordsNeeded is a helper function
-func (e *NonAggrBatchExecutorImpl) getNumberOfRecordsNeeded() int {
-	return e.qc.Query.Limit - e.qc.numberOfRowsWritten
+func (e *NonAggrBatchExecutorImpl) getNumberOfRecordsNeeded() (needed int) {
+	if e.qc.Query.Limit < 0 {
+		needed = -1
+		return
+	}
+	needed = e.qc.Query.Limit - e.qc.numberOfRowsWritten
+	if needed < 0 {
+		needed = 0
+	}
+	return
 }

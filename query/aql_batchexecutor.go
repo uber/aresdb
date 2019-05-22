@@ -77,7 +77,7 @@ type BatchExecutorImpl struct {
 }
 
 // NewBatchExecutor is to create a BatchExecutor.
-func NewBatchExecutor(qc *AQLQueryContext, batchID int32, customFilterFunc customFilterExecutor, stream unsafe.Pointer) BatchExecutor {
+func NewBatchExecutor(qc *AQLQueryContext, batchID int32, customFilterFunc customFilterExecutor, stream unsafe.Pointer, start time.Time) BatchExecutor {
 	if qc.isNonAggregationQuery {
 		return &NonAggrBatchExecutorImpl{
 			BatchExecutorImpl: &BatchExecutorImpl{
@@ -85,6 +85,7 @@ func NewBatchExecutor(qc *AQLQueryContext, batchID int32, customFilterFunc custo
 				batchID:          batchID,
 				customFilterFunc: customFilterFunc,
 				stream:           stream,
+				start:            start,
 			},
 		}
 	}
@@ -94,6 +95,7 @@ func NewBatchExecutor(qc *AQLQueryContext, batchID int32, customFilterFunc custo
 		batchID:          batchID,
 		customFilterFunc: customFilterFunc,
 		stream:           stream,
+		start:            start,
 	}
 }
 
