@@ -231,7 +231,7 @@ func (scheduler *schedulerImpl) executeJob(jb *jobBundle) {
 	defer func() {
 		if r := recover(); r != nil {
 			utils.GetRootReporter().GetCounter(utils.JobFailuresCount).Inc(1)
-			utils.GetLogger().With("error", r).Error("Job failed after panic")
+			utils.GetLogger().With("error", r, "job", jb.Job).Error("Job failed after panic")
 		}
 	}()
 
