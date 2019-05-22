@@ -18,34 +18,6 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-// ColumnHeaderSizeV0
-// TODO: deprecated, remove after functional test updated
-func ColumnHeaderSizeV0(numCols int) int {
-	// offset (4 bytes), data_type (4 bytes), column_id (2 bytes), column mode (1 byte)
-	return (numCols+1)*4 + numCols*4 + numCols*2 + numCols
-}
-
-// NewUpsertBatchHeaderV0
-// TODO: deprecated, remove after functional test updated
-func NewUpsertBatchHeaderV0(buffer []byte, numCols int) UpsertBatchHeader {
-	offset := 0
-	// Offset vector is of size numCols + 1.
-	offsetVector := buffer[0 : (numCols+1)*4]
-	offset += len(offsetVector)
-	typeVector := buffer[offset : offset+numCols*4]
-	offset += len(typeVector)
-	idVector := buffer[offset : offset+numCols*2]
-	offset += len(idVector)
-	modeVector := buffer[offset : offset+numCols]
-
-	return UpsertBatchHeader{
-		offsetVector: offsetVector,
-		typeVector:   typeVector,
-		idVector:     idVector,
-		modeVector:   modeVector,
-	}
-}
-
 // ColumnHeaderSize returns the total size of the column headers.
 func ColumnHeaderSize(numCols int) int {
 	return (numCols+1)*4 + // offset (4 bytes)
