@@ -229,9 +229,12 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 
 	err = servicesClient.Advertise(ad)
 	if err != nil {
-		utils.StackError(err, "Failed to advertise heartbeat service")
+		params.ServiceConfig.Logger.Error("Failed to advertise heartbeat service",
+			zap.Error(err))
+	} else {
+		params.ServiceConfig.Logger.Info("advertised heartbeat")
 	}
-	params.ServiceConfig.Logger.Info("advertised heartbeat")
+
 	return err
 }
 
