@@ -1103,7 +1103,7 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 
 		if usage&matchedColumnUsages != 0 || usage&columnUsedByPrefilter != 0 {
 			startRow, endRow, hostSlice = qc.prefilterSlice(sourceVP, prefilterIndex, startRow, endRow)
-			if endRow - startRow < maxSizeAfterPreFilter {
+			if endRow-startRow < maxSizeAfterPreFilter {
 				maxSizeAfterPreFilter = endRow - startRow
 			}
 			prefilterIndex++
