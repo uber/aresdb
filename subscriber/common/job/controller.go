@@ -181,16 +181,21 @@ func connectEtcdServices(params Params) (services.Services, error) {
 		SetMetricsScope(params.ServiceConfig.Scope)
 
 	// etcd key format: prefix/${env}/namespace/service/instanceId
+	params.ServiceConfig.EtcdConfig.Env = fmt.Sprintf("%s/%s", config.ActiveAresNameSpace,
+		params.ServiceConfig.EtcdConfig.Service)
 	params.ServiceConfig.EtcdConfig.Service = fmt.Sprintf("%s/%s",
-		config.ActiveAresNameSpace, params.ServiceConfig.EtcdConfig.Service)
+		config.ActiveJobNameSpace, params.ServiceConfig.Environment.InstanceID)
+
 	// create a config service client to access to the etcd cluster services.
 	csClient, err := params.ServiceConfig.EtcdConfig.NewClient(iopts)
 	if err != nil {
+		utils.StackError(err, "Failed to NewClient for etcd")
 		return nil, err
 	}
 
 	servicesClient, err := csClient.Services(nil)
 	if err != nil {
+		utils.StackError(err, "Failed to create services for etcd")
 		return nil, err
 	}
 
@@ -203,27 +208,31 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		SetZone(params.ServiceConfig.EtcdConfig.Zone).
 		SetName(params.ServiceConfig.EtcdConfig.Service)
 
+	err := servicesClient.SetMetadata(sid, services.NewMetadata().
+		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
+		SetLivenessInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Timeout)*time.Second))
+	if err != nil {
+		utils.StackError(err, "Failed to config heartbeart")
+		return err
+	}
+
 	pInstance := placement.NewInstance().SetID(params.ServiceConfig.Environment.InstanceID)
-	params.ServiceConfig.Logger.Info("service and placement info",
-		zap.Any("serviceID", sid),
-		zap.Any("placement", pInstance))
 
 	ad := services.NewAdvertisement().
 		SetServiceID(sid).
 		SetPlacementInstance(pInstance)
 
-	err := servicesClient.SetMetadata(sid, services.NewMetadata().
-		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
-		SetLivenessInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Timeout)*time.Second))
-	if err != nil {
-		utils.StackError(err, "failed to config heartbeart")
-		return err
-	}
+	params.ServiceConfig.Logger.Info("service, placement, and ad info",
+		zap.Any("serviceID", sid),
+		zap.Any("placement", pInstance),
+		zap.Any("ad", ad))
+
 
 	err = servicesClient.Advertise(ad)
 	if err != nil {
-		utils.StackError(err, "failed to advertise heartbeat service")
+		utils.StackError(err, "Failed to advertise heartbeat service")
 	}
+	params.ServiceConfig.Logger.Info("advertised heartbeat")
 	return err
 }
 
