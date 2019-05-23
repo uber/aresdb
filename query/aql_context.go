@@ -171,7 +171,7 @@ type oopkBatchContext struct {
 	// Remaining number of inputs in indexVectorD after filtering.
 	// Notice that this size is not necessarily number of database rows
 	// when columns[0] is compressed.
-	size int
+	size               int
 	sizeAfterPreFilter int
 
 	// Scratch vectors for evaluating the current AST expr in device memory.
@@ -308,8 +308,8 @@ type timezoneTableContext struct {
 type resultFlushContext struct {
 	// caches time formatted time dimension values
 	dimensionValueCache []map[queryCom.TimeDimensionMeta]map[int64]string
-	dimensionDataTypes []memCom.DataType
-	reverseDicts map[int][]string
+	dimensionDataTypes  []memCom.DataType
+	reverseDicts        map[int][]string
 }
 
 // GeoIntersection is the struct to storing geo intersection related fields.
@@ -375,9 +375,8 @@ type AQLQueryContext struct {
 	// [0] stores the current stream, and [1] stores the other stream.
 	cudaStreams [2]unsafe.Pointer
 
-	Results queryCom.AQLQueryResult `json:"-"`
+	Results            queryCom.AQLQueryResult `json:"-"`
 	resultFlushContext resultFlushContext
-
 
 	// whether to serialize the query result as HLLData. If ReturnHLLData is true, we will not release dimension
 	// vector and measure vector until serialization is done.
@@ -395,8 +394,8 @@ type AQLQueryContext struct {
 
 	// fields for non aggregate query
 	// Flag to indicate if this query is not aggregation query
-	isNonAggregationQuery bool
-	numberOfRowsWritten   int
+	isNonAggregationQuery      bool
+	numberOfRowsWritten        int
 	maxBatchSizeAfterPrefilter int
 
 	// for eager flush query result

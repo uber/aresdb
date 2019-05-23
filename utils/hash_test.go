@@ -57,6 +57,23 @@ var _ = ginkgo.Describe("Hash should work", func() {
 			Ω(actHash).Should(Equal(expHash))
 		}
 	})
+
+	ginkgo.It("MurmurHash64 should work", func() {
+		tests := [][]interface{}{
+			{[]byte{1}, 1, uint64(8849112093580131862)},
+			{[]byte{1, 2, 3, 4}, 4, uint64(720734999560851427)},
+			{[]byte{1, 2, 3, 4, 5, 6, 7}, 7, uint64(17578618098293890537)},
+			{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9}, 9, uint64(13807401213100465550)},
+		}
+
+		for _, test := range tests {
+			key := test[0].([]byte)
+			numBytes := test[1].(int)
+			expHash := test[2].(uint64)
+			actHash := Murmur3Sum64(unsafe.Pointer(&key[0]), numBytes, 0)
+			Ω(actHash).Should(Equal(expHash))
+		}
+	})
 })
 
 func BenchmarkMurmur3Sum32(b *testing.B) {

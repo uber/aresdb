@@ -218,7 +218,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 
 		qc := AQLQueryContext{
 			Query: &AQLQuery{
-					Limit: 1000000,
+				Limit: 1000000,
 			},
 			TableScanners: []*TableScanner{
 				{

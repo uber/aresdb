@@ -14,9 +14,7 @@
 
 package main
 
-import (
-	"github.com/uber/aresdb/cmd"
-)
+import "github.com/uber/aresdb/cmd/aresd/cmd"
 
 func main() {
 	cmd.Execute()

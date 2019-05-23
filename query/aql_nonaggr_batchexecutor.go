@@ -17,8 +17,8 @@ package query
 import (
 	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
-	"unsafe"
 	"time"
+	"unsafe"
 )
 
 // NonAggrBatchExecutorImpl is batch executor implementation for non-aggregation query
@@ -100,7 +100,6 @@ func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
 	// Only profile one batch.
 	e.qc.Profiling = ""
 }
-
 
 func (e *NonAggrBatchExecutorImpl) reduce() {
 	// nothing need to do for non-aggregation query
