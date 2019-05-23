@@ -143,7 +143,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil, &TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "", IsTimezoneTable: false, TimeZone: sfLoc}, nil)).Should(Equal("1970-01-01 00:00"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
 			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
-			&TimeDimensionMeta{TimeBucketizer: "minute", TimeUnit: "second", IsTimezoneTable: false, TimeZone: sfLoc, FromOffset: offsetInSeconds, ToOffset: offsetInSeconds}, nil)).Should(Equal("-3599"))
+			&TimeDimensionMeta{TimeBucketizer: "m", TimeUnit: "second", IsTimezoneTable: false, TimeZone: sfLoc, FromOffset: offsetInSeconds, ToOffset: offsetInSeconds}, nil)).Should(Equal("-3599"))
 	})
 
 	ginkgo.It("Time unit should work", func() {
@@ -167,7 +167,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			nil, nil)).Should(Equal("65535"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
 			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
-			&TimeDimensionMeta{TimeBucketizer: "day", TimeUnit: "second", IsTimezoneTable: false}, nil)).Should(Equal("65535"))
+			&TimeDimensionMeta{TimeBucketizer: "1 day", TimeUnit: "second", IsTimezoneTable: false}, nil)).Should(Equal("65535"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
 			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
 			&TimeDimensionMeta{TimeBucketizer: "day", TimeUnit: "millisecond", IsTimezoneTable: false}, nil)).Should(Equal("65535000"))
@@ -179,7 +179,7 @@ var _ = ginkgo.Describe("dimval", func() {
 			&TimeDimensionMeta{TimeBucketizer: "day", TimeUnit: "hour", IsTimezoneTable: false}, nil)).Should(Equal("18"))
 		Ω(*ReadDimension(memAccess(dimValueVector, 0),
 			memAccess(dimNullVector, 0), 1, memCom.Uint32, nil,
-			&TimeDimensionMeta{TimeBucketizer: "day", TimeUnit: "minute", IsTimezoneTable: false}, nil)).Should(Equal("1092"))
+			&TimeDimensionMeta{TimeBucketizer: "quarter-hour", TimeUnit: "minute", IsTimezoneTable: false}, nil)).Should(Equal("1092"))
 	})
 
 	ginkgo.It("ReadDimension from cache should work", func() {

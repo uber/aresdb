@@ -18,80 +18,8 @@ tokens {
     DELIMITER
 }
 
-singleStatement
-    : statement EOF
-    ;
-
-singleExpression
-    : expression EOF
-    ;
-
 statement
     : query                                                            #statementDefault
-    | USE schema=identifier                                            #use
-    | USE catalog=identifier '.' schema=identifier                     #use
-    | CREATE SCHEMA (IF NOT EXISTS)? qualifiedName
-        (WITH properties)?                                             #createSchema
-    | DROP SCHEMA (IF EXISTS)? qualifiedName (CASCADE | RESTRICT)?     #dropSchema
-    | ALTER SCHEMA qualifiedName RENAME TO identifier                  #renameSchema
-    | CREATE TABLE (IF NOT EXISTS)? qualifiedName columnAliases?
-        (COMMENT sql_string)?
-        (WITH properties)? AS (query | '('query')')
-        (WITH (NO)? DATA)?                                             #createTableAsSelect
-    | CREATE TABLE (IF NOT EXISTS)? qualifiedName
-        '(' tableElement (',' tableElement)* ')'
-         (COMMENT sql_string)?
-         (WITH properties)?                                            #createTable
-    | DROP TABLE (IF EXISTS)? qualifiedName                            #dropTable
-    | INSERT INTO qualifiedName columnAliases? query                   #insertInto
-    | DELETE FROM qualifiedName (WHERE booleanExpression)?             #delete
-    | ALTER TABLE from=qualifiedName RENAME TO to=qualifiedName        #renameTable
-    | ALTER TABLE tableName=qualifiedName
-        RENAME COLUMN from=identifier TO to=identifier                 #renameColumn
-    | ALTER TABLE tableName=qualifiedName
-        DROP COLUMN column=qualifiedName                               #dropColumn
-    | ALTER TABLE tableName=qualifiedName
-        ADD COLUMN column=columnDefinition                             #addColumn
-    | CREATE (OR REPLACE)? VIEW qualifiedName AS query                 #createView
-    | DROP VIEW (IF EXISTS)? qualifiedName                             #dropView
-    | CALL qualifiedName '(' (callArgument (',' callArgument)*)? ')'   #call
-    | GRANT
-        (privilege (',' privilege)* | ALL PRIVILEGES)
-        ON TABLE? qualifiedName TO grantee=identifier
-        (WITH GRANT OPTION)?                                           #grant
-    | REVOKE
-        (GRANT OPTION FOR)?
-        (privilege (',' privilege)* | ALL PRIVILEGES)
-        ON TABLE? qualifiedName FROM grantee=identifier                #revoke
-    | SHOW GRANTS
-        (ON TABLE? qualifiedName)?                                     #showGrants
-    | EXPLAIN ANALYZE? VERBOSE?
-        ('(' explainOption (',' explainOption)* ')')? statement        #explain
-    | SHOW CREATE TABLE qualifiedName                                  #showCreateTable
-    | SHOW CREATE VIEW qualifiedName                                   #showCreateView
-    | SHOW TABLES ((FROM | IN) qualifiedName)?
-        (LIKE pattern=sql_string (ESCAPE escape=sql_string)?)?                 #showTables
-    | SHOW SCHEMAS ((FROM | IN) identifier)?
-        (LIKE pattern=sql_string (ESCAPE escape=sql_string)?)?                 #showSchemas
-    | SHOW CATALOGS (LIKE pattern=sql_string)?                             #showCatalogs
-    | SHOW COLUMNS (FROM | IN) qualifiedName                           #showColumns
-    | SHOW STATS (FOR | ON) qualifiedName                              #showStats
-    | SHOW STATS FOR '(' querySpecification ')'                        #showStatsForQuery
-    | DESCRIBE qualifiedName                                           #showColumns
-    | DESC qualifiedName                                               #showColumns
-    | SHOW FUNCTIONS                                                   #showFunctions
-    | SHOW SESSION                                                     #showSession
-    | SET SESSION qualifiedName EQ expression                          #setSession
-    | RESET SESSION qualifiedName                                      #resetSession
-    | SHOW PARTITIONS (FROM | IN) qualifiedName
-        (WHERE booleanExpression)?
-        (ORDER BY sortItem (',' sortItem)*)?
-        (LIMIT limit=(INTEGER_VALUE | ALL))?                           #showPartitions
-    | PREPARE identifier FROM statement                                #prepare
-    | DEALLOCATE PREPARE identifier                                    #deallocate
-    | EXECUTE identifier (USING expression (',' expression)*)?         #execute
-    | DESCRIBE INPUT identifier                                        #describeInput
-    | DESCRIBE OUTPUT identifier                                       #describeOutput
     ;
 
 query
@@ -100,27 +28,6 @@ query
 
 with
     : WITH RECURSIVE? namedQuery (',' namedQuery)*
-    ;
-
-tableElement
-    : columnDefinition
-    | likeClause
-    ;
-
-columnDefinition
-    : identifier sqltype (COMMENT sql_string)?
-    ;
-
-likeClause
-    : LIKE qualifiedName (optionType=(INCLUDING | EXCLUDING) PROPERTIES)?
-    ;
-
-properties
-    : '(' property (',' property)* ')'
-    ;
-
-property
-    : identifier EQ expression
     ;
 
 queryNoWith:
@@ -160,19 +67,11 @@ groupBy
 
 groupingElement
     : groupingExpressions                                               #singleGroupingSet
-    | ROLLUP '(' (qualifiedName (',' qualifiedName)*)? ')'              #rollup
-    | CUBE '(' (qualifiedName (',' qualifiedName)*)? ')'                #cube
-    | GROUPING SETS '(' groupingSet (',' groupingSet)* ')'              #multipleGroupingSets
     ;
 
 groupingExpressions
     : '(' (expression (',' expression)*)? ')'
     | expression
-    ;
-
-groupingSet
-    : '(' (qualifiedName (',' qualifiedName)*)? ')'
-    | qualifiedName
     ;
 
 namedQuery
@@ -233,8 +132,6 @@ columnAliases
 relationPrimary
     : qualifiedName                                                   #tableName
     | '(' query ')'                                                   #subqueryRelation
-    | UNNEST '(' expression (',' expression)* ')' (WITH ORDINALITY)?  #unnest
-    | LATERAL '(' query ')'                                           #lateral
     | '(' relation ')'                                                #parenthesizedRelation
     ;
 
@@ -263,9 +160,6 @@ predicate[antlr.ParserRuleContext value]
     | NOT? BETWEEN lower=valueExpression AND upper=valueExpression        #between
     | NOT? IN '(' expression (',' expression)* ')'                        #inList
     | NOT? IN '(' query ')'                                               #inSubquery
-    | NOT? LIKE pattern=valueExpression (ESCAPE escape=valueExpression)?  #like
-    | IS NOT? NULL                                                        #nullPredicate
-    | IS NOT? DISTINCT FROM right=valueExpression                         #distinctFrom
     ;
 
 valueExpression
@@ -286,22 +180,13 @@ primaryExpression
     | booleanValue                                                                        #booleanLiteral
     | sql_string                                                                              #stringLiteral
     | BINARY_LITERAL                                                                      #binaryLiteral
-    | '?'                                                                                 #parameter
-    | POSITION '(' valueExpression IN valueExpression ')'                                 #position
     | '(' expression (',' expression)+ ')'                                                #rowConstructor
     | ROW '(' expression (',' expression)* ')'                                            #rowConstructor
     | qualifiedName '(' ASTERISK ')' filter?                                              #functionCall
     | qualifiedName '(' (setQuantifier? expression (',' expression)*)?
         (ORDER BY sortItem (',' sortItem)*)? ')' filter?                                  #functionCall
-    | identifier '->' expression                                                          #lambda
-    | '(' (identifier (',' identifier)*)? ')' '->' expression                             #lambda
     | '(' query ')'                                                                       #subqueryExpression
     // This is an extension to ANSI SQL, which considers EXISTS to be a <boolean expression>
-    | EXISTS '(' query ')'                                                                #exists
-    | CASE valueExpression whenClause+ (ELSE elseExpression=expression)? END              #simpleCase
-    | CASE whenClause+ (ELSE elseExpression=expression)? END                              #searchedCase
-    | CAST '(' expression AS sqltype ')'                                                     #cast
-    | TRY_CAST '(' expression AS sqltype ')'                                                 #cast
     | ARRAY '[' (expression (',' expression)*)? ']'                                       #arrayConstructor
     | value=primaryExpression '[' index=valueExpression ']'                               #subscript
     | identifier                                                                          #columnReference
@@ -312,9 +197,6 @@ primaryExpression
     | name=LOCALTIME ('(' precision=INTEGER_VALUE ')')?                                   #specialDateTimeFunction
     | name=LOCALTIMESTAMP ('(' precision=INTEGER_VALUE ')')?                              #specialDateTimeFunction
     | name=CURRENT_USER                                                                   #currentUser
-    | SUBSTRING '(' valueExpression FROM valueExpression (FOR valueExpression)? ')'       #substring
-    | NORMALIZE '(' valueExpression (',' normalForm)? ')'                                 #normalize
-    | EXTRACT '(' identifier FROM valueExpression ')'                                     #extract
     | '(' expression ')'                                                                  #parenthesizedExpression
     | GROUPING '(' (qualifiedName (',' qualifiedName)*)? ')'                              #groupingOperation
     ;
@@ -382,22 +264,6 @@ filter
     : FILTER '(' WHERE booleanExpression ')'
     ;
 
-
-explainOption
-    : FORMAT value=(TEXT | GRAPHVIZ)                   #explainFormat
-    | TYPE value=(LOGICAL | DISTRIBUTED | VALIDATE)    #explainType
-    ;
-
-
-callArgument
-    : expression                    #positionalArgument
-    | identifier '=>' expression    #namedArgument
-    ;
-
-privilege
-    : SELECT | DELETE | INSERT | identifier
-    ;
-
 qualifiedName
     : identifier ('.' identifier)*
     ;
@@ -420,13 +286,12 @@ nonReserved
     // IMPORTANT: this rule must only contain tokens. Nested rules are not supported. See SqlParser.exitNonReserved
     : ADD | ALL | ANALYZE | ANY | ARRAY | ASC | AT
     | BERNOULLI
-    | CALL | CASCADE | CATALOGS | COALESCE | COLUMN | COLUMNS | COMMENT | COMMIT | COMMITTED | CURRENT
+    | CALL | CASCADE | CATALOGS | COALESCE | COLUMN | COLUMNS | COMMENT | COMMITTED | CURRENT
     | DATA | DATE | DAY | DESC | DISTRIBUTED
     | EXCLUDING | EXPLAIN
     | FILTER | FIRST | FOLLOWING | FORMAT | FUNCTIONS
-    | GRANT | GRANTS | GRAPHVIZ
     | HOUR
-    | IF | INCLUDING | INPUT | INTEGER | INTERVAL | ISOLATION
+    | IF | INCLUDING | INPUT | INTEGER | INTERVAL
     | LAST | LATERAL | LEVEL | LIMIT | LOGICAL
     | MAP | MINUTE | MONTH
     | NFC | NFD | NFKC | NFKD | NO | NULLIF | NULLS
@@ -435,7 +300,7 @@ nonReserved
     | RANGE | READ | RENAME | REPEATABLE | REPLACE | RESET | RESTRICT | REVOKE | ROLLBACK | ROW | ROWS
     | SCHEMA | SCHEMAS | SECOND | SERIALIZABLE | SESSION | SET | SETS
     | SHOW | SMALLINT | SOME | START | STATS | SUBSTRING | SYSTEM
-    | TABLES | TABLESAMPLE | TEXT | TIME | TIMESTAMP | TINYINT | TO | TRANSACTION | TRY_CAST | TYPE
+    | TABLES | TABLESAMPLE | TEXT | TIME | TIMESTAMP | TINYINT | TO | TRY_CAST | TYPE
     | UNBOUNDED | UNCOMMITTED | USE
     | VALIDATE | VERBOSE | VIEW
     | WORK | WRITE
@@ -469,7 +334,6 @@ COMMITTED: 'COMMITTED';
 CONSTRAINT: 'CONSTRAINT';
 CREATE: 'CREATE';
 CROSS: 'CROSS';
-CUBE: 'CUBE';
 CURRENT: 'CURRENT';
 CURRENT_DATE: 'CURRENT_DATE';
 CURRENT_TIME: 'CURRENT_TIME';
