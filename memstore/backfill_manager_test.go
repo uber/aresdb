@@ -68,6 +68,7 @@ var _ = ginkgo.Describe("backfill manager", func(){
 		// client should be onblocked and done waiting after backfill advance
 		clientDone := <-done
 		Ω(clientDone).Should(BeTrue())
+		bm.Destruct()
 	})
 
 	ginkgo.It("ReadUpsertBatch should work ", func() {
@@ -77,6 +78,7 @@ var _ = ginkgo.Describe("backfill manager", func(){
 		Ω(err).Should(BeNil())
 		Ω(fmt.Sprintf("%v", data)).Should(Equal("[[0 0 0 0] [1 0 1 11] [11 11 0 11]]"))
 		Ω(columnNames).Should(Equal([]string{"c1", "c2", "c3", "c6"}))
+		bm.Destruct()
 	})
 
 })
