@@ -325,6 +325,13 @@ var _ = Describe("controller", func() {
 			},
 		}
 
+		params.ServiceConfig.HeartbeatConfig = &config.HeartBeatConfig{
+			true,
+			5,
+			10,
+			10,
+		}
+
 		etcdServices, err := connectEtcdServices(params)
 		Ω(etcdServices).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
