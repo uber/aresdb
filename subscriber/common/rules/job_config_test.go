@@ -15,7 +15,11 @@
 package rules
 
 import (
+	"encoding/json"
+	"github.com/uber/aresdb/controller/models"
+	"io/ioutil"
 	"os"
+	"path"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -67,6 +71,7 @@ var _ = Describe("job_config", func() {
 		Ω(transformation).ShouldNot(BeNil())
 		Ω(primaryKey).ShouldNot(BeNil())
 	})
+
 	It("parseUpdateMode", func() {
 		mode := parseUpdateMode("overwrite_notnull")
 		Ω(mode).Should(Equal(memCom.UpdateOverwriteNotNull))
@@ -82,5 +87,27 @@ var _ = Describe("job_config", func() {
 
 		mode = parseUpdateMode("")
 		Ω(mode).Should(Equal(memCom.UpdateOverwriteNotNull))
+	})
+
+	It("NewAssignmentFromController", func() {
+		rootPath := tools.GetModulePath("")
+		bts, err := ioutil.ReadFile(path.Join(rootPath, "config", "test", "jobs", "job1-local.json"))
+		Ω(err).Should(BeNil())
+		jc := models.JobConfig{}
+		err = json.Unmarshal(bts, &jc)
+		Ω(err).Should(BeNil())
+
+		assigned := models.IngestionAssignment{
+			Subscriber: "0",
+			Jobs:       []models.JobConfig{jc},
+			Instances:  map[string]models.Instance{
+				"instance0": {
+					Address: "instance0:9374",
+				},
+			},
+		}
+		assignment, err := NewAssignmentFromController(&assigned)
+		Ω(err).Should(BeNil())
+		Ω(assignment.Jobs).Should(HaveLen(1))
 	})
 })

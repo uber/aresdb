@@ -15,7 +15,7 @@ package models
 
 // Subscriber models a subscriber instance
 type Subscriber struct {
-	// Name is zk session id of the subscriber process
+	// Name is subscriber instance id
 	Name string `json:"name"`
 	// Host is host name of subscriber process
 	Host string `json:"host"`

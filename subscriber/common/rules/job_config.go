@@ -120,6 +120,7 @@ func NewJobConfigs(params Params) (Result, error) {
 func NewAssignmentFromController(from *models.IngestionAssignment) (*Assignment, error) {
 	assignment := &Assignment{
 		Subscriber: from.Subscriber,
+		AresClusters: make(map[string]config.SinkConfig),
 	}
 	for _, job := range from.Jobs {
 		jobConfig := &JobConfig{
