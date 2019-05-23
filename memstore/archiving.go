@@ -250,6 +250,7 @@ func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporte
 	shard, err := m.GetTableShard(table, shardID)
 	if err != nil {
 		// table already deleted. stop here
+		utils.GetLogger().With("table", table, "shard", shardID, "error", err).Warn("Failed to find shard, is it deleted?")
 		return nil
 	}
 	defer shard.Users.Done()
