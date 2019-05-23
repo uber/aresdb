@@ -36,7 +36,8 @@ func (m *memStoreImpl) Purge(tableName string, shardID, batchIDStart, batchIDEnd
 
 	shard, err := m.GetTableShard(tableName, shardID)
 	if err != nil {
-		return err
+		utils.GetLogger().With("table", tableName, "shard", shardID, "error", err).Warn("Failed to find shard, is it deleted?")
+		return nil
 	}
 	defer shard.Users.Done()
 
