@@ -22,8 +22,8 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"sync"
 	"github.com/uber/aresdb/utils"
+	"sync"
 )
 
 // Factory class to create shard level redolog manager

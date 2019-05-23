@@ -18,8 +18,8 @@ import (
 	"io"
 
 	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/imports"
+	"github.com/uber/aresdb/memstore/common"
 
 	"github.com/uber/aresdb/utils"
 )

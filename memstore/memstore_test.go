@@ -18,15 +18,15 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/diskstore/mocks"
+	"github.com/uber/aresdb/imports"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber/aresdb/imports"
-	"github.com/uber/aresdb/common"
 )
 
 func CreateMockDiskStore() *mocks.DiskStore {

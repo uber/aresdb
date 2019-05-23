@@ -15,12 +15,11 @@
 package memstore
 
 import (
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 )
-
 
 // FetchSchema fetches schema from metaStore and updates in-memory copy of table schema,
 // and set up watch channels for metaStore schema changes, used for bootstrapping mem store.

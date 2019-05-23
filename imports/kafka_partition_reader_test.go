@@ -15,15 +15,13 @@
 package imports
 
 import (
-	"github.com/uber/aresdb/testing"
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
 )
-
-
 
 var _ = ginkgo.Describe("kafka redolog manager", func() {
 	var t testing.GinkgoTestReporter

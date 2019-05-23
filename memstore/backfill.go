@@ -304,7 +304,7 @@ func createBackfillPatches(backfillBatches []*memCom.UpsertBatch, reporter Backf
 				patch = backfillPatches[day]
 			}
 			patch.recordIDs = append(patch.recordIDs,
-				memCom.RecordID{int32(upsertBatchIdx), uint32(row)})
+				memCom.RecordID{BatchID: int32(upsertBatchIdx), Index: uint32(row)})
 			numRecordsBackfilled++
 		}
 
@@ -417,7 +417,7 @@ func (ss liveStoreSnapshot) createArchivingPatch(sortColumns []int) *archivingPa
 
 		for recordIdx := 0; recordIdx < numRecords; recordIdx++ {
 			ap.recordIDs = append(ap.recordIDs,
-				memCom.RecordID{int32(batchIdx), uint32(recordIdx)})
+				memCom.RecordID{BatchID: int32(batchIdx), Index: uint32(recordIdx)})
 		}
 	}
 	return ap

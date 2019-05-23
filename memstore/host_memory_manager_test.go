@@ -17,8 +17,8 @@ package memstore
 import (
 	"os"
 
-	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/common"
+	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
@@ -35,8 +35,8 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	"go.uber.org/zap"
 	"github.com/uber/aresdb/imports"
+	"go.uber.org/zap"
 )
 
 var _ = ginkgo.Describe("HostMemoryManager", func() {

@@ -101,7 +101,7 @@ func (k *kafkaPartitionReader) AppendToRedoLog(upsertBatch *common.UpsertBatch, 
 }
 
 // Commit offset only, redolog will be in file system
-func (k* kafkaPartitionReader) Commit(kafkaOffset int64) {
+func (k *kafkaPartitionReader) Commit(kafkaOffset int64) {
 	k.Lock()
 	defer k.Unlock()
 	k.count++

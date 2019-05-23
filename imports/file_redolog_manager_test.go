@@ -23,8 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/diskstore/mocks"
-	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
 )
@@ -40,7 +40,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 	shard := 0
 	tableConfig := &metaCom.TableConfig{
 		RedoLogRotationInterval: 10,
-		MaxRedoLogFileSize: 1<<30,
+		MaxRedoLogFileSize:      1 << 30,
 	}
 
 	ginkgo.It("create new redo log file if there's no redo file", func() {
@@ -49,7 +49,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		})
 		f, _ := NewRedologManagerFactory(nil, CreateMockDiskStore(), nil)
 		m, _ := f.NewRedologManager(table, shard, tableConfig, nil)
-        redoManager := m.(*CompositeRedologManager).GetLocalFileRedologManager()
+		redoManager := m.(*CompositeRedologManager).GetLocalFileRedologManager()
 
 		Ω(redoManager.currentLogFile).Should(BeNil())
 

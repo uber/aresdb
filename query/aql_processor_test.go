@@ -31,6 +31,7 @@ import (
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
@@ -42,7 +43,6 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber/aresdb/imports"
 	"net/http/httptest"
 )
 

@@ -22,8 +22,10 @@ import (
 
 	"fmt"
 	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
@@ -31,8 +33,6 @@ import (
 	"github.com/uber/aresdb/metastore"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/testing"
-	"github.com/uber/aresdb/imports"
-	"github.com/uber/aresdb/common"
 )
 
 // CreateMockDiskStore creates a mocked DiskStore for testing.

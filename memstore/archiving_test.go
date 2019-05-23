@@ -24,11 +24,11 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/imports"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber/aresdb/common"
 )
 
 var _ = ginkgo.Describe("archiving", func() {
@@ -56,7 +56,7 @@ var _ = ginkgo.Describe("archiving", func() {
 				ArchivingDelayMinutes:    500,
 				ArchivingIntervalMinutes: 300,
 				RedoLogRotationInterval:  10800,
-				MaxRedoLogFileSize:       1<<30,
+				MaxRedoLogFileSize:       1 << 30,
 			},
 			IsFactTable:          true,
 			ArchivingSortColumns: []int{1, 2},
@@ -97,7 +97,7 @@ var _ = ginkgo.Describe("archiving", func() {
 			Batch:   *tmpBatch,
 		}
 		vs = LiveStore{
-			LastReadRecord: memCom.RecordID{-101, 3},
+			LastReadRecord: memCom.RecordID{BatchID: -101, Index: 3},
 			Batches: map[int32]*LiveBatch{
 				-110: {
 					Batch:     *batch110,
@@ -172,13 +172,13 @@ var _ = ginkgo.Describe("archiving", func() {
 		))
 		Ω(patchByDay[0].recordIDs).Should(Equal(
 			[]memCom.RecordID{
-				{0, 1},
-				{0, 2},
-				{0, 3},
-				{0, 4},
-				{1, 0},
-				{1, 1},
-				{1, 2},
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 0, Index: 3},
+				{BatchID: 0, Index: 4},
+				{BatchID: 1, Index: 0},
+				{BatchID: 1, Index: 1},
+				{BatchID: 1, Index: 2},
 			},
 		))
 		scheduler.RLock()
@@ -199,13 +199,13 @@ var _ = ginkgo.Describe("archiving", func() {
 		sort.Sort(patchByDay[0])
 		Ω(patchByDay[0].recordIDs).Should(Equal(
 			[]memCom.RecordID{
-				{0, 3}, // null, 1.2
-				{1, 0}, // false, null
-				{0, 1}, // false, 1.0
-				{1, 2}, // false, 1.2
-				{0, 4}, // false, 1.3
-				{0, 2}, // true, null
-				{1, 1}, // true, 1.1
+				{BatchID: 0, Index: 3}, // null, 1.2
+				{BatchID: 1, Index: 0}, // false, null
+				{BatchID: 0, Index: 1}, // false, 1.0
+				{BatchID: 1, Index: 2}, // false, 1.2
+				{BatchID: 0, Index: 4}, // false, 1.3
+				{BatchID: 0, Index: 2}, // true, null
+				{BatchID: 1, Index: 1}, // true, 1.1
 			},
 		))
 		Ω(patchByDay[0].sortColumns).Should(Equal(
@@ -325,20 +325,20 @@ var _ = ginkgo.Describe("archiving", func() {
 
 		Ω(patchByDay[0].recordIDs).Should(Or(Equal(
 			[]memCom.RecordID{
-				{0, 1},
-				{0, 2},
-				{1, 1},
-				{1, 2},
-				{1, 3},
-				{1, 4},
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 1, Index: 1},
+				{BatchID: 1, Index: 2},
+				{BatchID: 1, Index: 3},
+				{BatchID: 1, Index: 4},
 			}), Equal(
 			[]memCom.RecordID{
-				{0, 1},
-				{0, 2},
-				{0, 3},
-				{0, 4},
-				{1, 1},
-				{1, 2},
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 0, Index: 3},
+				{BatchID: 0, Index: 4},
+				{BatchID: 1, Index: 1},
+				{BatchID: 1, Index: 2},
 			}),
 		))
 	})

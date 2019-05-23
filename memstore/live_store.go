@@ -15,13 +15,13 @@
 package memstore
 
 import (
+	"encoding/json"
 	"math"
 	"sync"
 	"time"
-	"encoding/json"
 
-	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/imports"
+	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -109,13 +109,13 @@ func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
 		utils.GetLogger().Fatal(err)
 	}
 	ls := &LiveStore{
-		BatchSize:       batchSize,
-		Batches:         make(map[int32]*LiveBatch),
-		tableSchema:     schema,
-		LastReadRecord:  common.RecordID{BatchID: BaseBatchID, Index: 0},
-		NextWriteRecord: common.RecordID{BatchID: BaseBatchID, Index: 0},
-		PrimaryKey:      common.NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable, schema.Schema.Config.InitialPrimaryKeyNumBuckets, shard.HostMemoryManager),
-		RedoLogManager:  redoLogManager,
+		BatchSize:         batchSize,
+		Batches:           make(map[int32]*LiveBatch),
+		tableSchema:       schema,
+		LastReadRecord:    common.RecordID{BatchID: BaseBatchID, Index: 0},
+		NextWriteRecord:   common.RecordID{BatchID: BaseBatchID, Index: 0},
+		PrimaryKey:        common.NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable, schema.Schema.Config.InitialPrimaryKeyNumBuckets, shard.HostMemoryManager),
+		RedoLogManager:    redoLogManager,
 		HostMemoryManager: shard.HostMemoryManager,
 	}
 

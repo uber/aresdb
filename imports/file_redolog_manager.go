@@ -16,11 +16,11 @@ package imports
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"io"
 	"sync"
-	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/utils"
 )
 
 // UpsertHeader is the magic header written into the beginning of each redo log file.

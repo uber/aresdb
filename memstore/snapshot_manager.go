@@ -18,8 +18,8 @@ import (
 	"sync"
 
 	"encoding/json"
-	"github.com/uber/aresdb/utils"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"time"
 )
 

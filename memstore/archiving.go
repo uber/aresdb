@@ -111,7 +111,7 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 								patchByDay[day] = patch
 							}
 							patch.recordIDs = append(patch.recordIDs,
-								common.RecordID{int32(batchIdx), uint32(recordIdx)})
+								common.RecordID{BatchID: int32(batchIdx), Index: uint32(recordIdx)})
 							numRecordsArchived++
 						} else {
 							numRecordsIgnored++

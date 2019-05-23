@@ -251,7 +251,6 @@ func (dm *diskMetaStore) GetBackfillProgressInfo(table string, shard int) (int64
 	return dm.readRedoLogFileAndOffset(file)
 }
 
-
 // Update ingestion commit offset, used for kafka like streaming ingestion
 func (dm *diskMetaStore) UpdateIngestionCommitOffset(table string, shard int, offset int64) error {
 	dm.Lock()

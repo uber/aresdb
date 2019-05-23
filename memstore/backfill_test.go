@@ -79,13 +79,13 @@ var _ = ginkgo.Describe("backfill", func() {
 
 		patch = &backfillPatch{
 			recordIDs: []memCom.RecordID{
-				{0, 0},
-				{0, 1},
-				{0, 2},
-				{1, 0},
-				{1, 1},
-				{1, 2},
-				{2, 0},
+				{BatchID: 0, Index: 0},
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 1, Index: 0},
+				{BatchID: 1, Index: 1},
+				{BatchID: 1, Index: 2},
+				{BatchID: 2, Index: 0},
 			},
 			backfillBatches: upsertBatches[:],
 		}
@@ -188,10 +188,10 @@ var _ = ginkgo.Describe("backfill", func() {
 		Ω(err).Should(BeNil())
 		// day 0, 1 ,2
 		Ω(backfillPatches).Should(HaveLen(3))
-		Ω(backfillPatches[0].recordIDs).Should(BeEquivalentTo([]memCom.RecordID{{0, 0}}))
+		Ω(backfillPatches[0].recordIDs).Should(BeEquivalentTo([]memCom.RecordID{{BatchID: 0, Index: 0}}))
 		Ω(backfillPatches[0].backfillBatches).Should(Equal(upsertBatches[:]))
-		Ω(backfillPatches[1].recordIDs).Should(BeEquivalentTo([]memCom.RecordID{{0, 1}, {1, 0}}))
-		Ω(backfillPatches[2].recordIDs).Should(BeEquivalentTo([]memCom.RecordID{{2, 0}}))
+		Ω(backfillPatches[1].recordIDs).Should(BeEquivalentTo([]memCom.RecordID{{BatchID: 0, Index: 1}, {BatchID: 1, Index: 0}}))
+		Ω(backfillPatches[2].recordIDs).Should(BeEquivalentTo([]memCom.RecordID{{BatchID: 2, Index: 0}}))
 
 		scheduler.RLock()
 		Ω(*(jobManager.getJobDetail(jobKey))).Should(Equal(BackfillJobDetail{
@@ -272,14 +272,14 @@ var _ = ginkgo.Describe("backfill", func() {
 	})
 
 	ginkgo.It("getChangedBaseRow should work", func() {
-		changedPatchRow, err := backfillCtx.getChangedPatchRow(memCom.RecordID{0, 0}, upsertBatches[0])
+		changedPatchRow, err := backfillCtx.getChangedPatchRow(memCom.RecordID{BatchID: 0, Index: 0}, upsertBatches[0])
 		Ω(err).Should(BeNil())
-		changedBaseRow := backfillCtx.getChangedBaseRow(memCom.RecordID{0, 0}, changedPatchRow)
+		changedBaseRow := backfillCtx.getChangedBaseRow(memCom.RecordID{BatchID: 0, Index: 0}, changedPatchRow)
 		Ω(changedBaseRow).Should(BeNil())
 
-		changedPatchRow, err = backfillCtx.getChangedPatchRow(memCom.RecordID{0, 1}, upsertBatches[0])
+		changedPatchRow, err = backfillCtx.getChangedPatchRow(memCom.RecordID{BatchID: 0, Index: 1}, upsertBatches[0])
 		Ω(err).Should(BeNil())
-		changedBaseRow = backfillCtx.getChangedBaseRow(memCom.RecordID{0, 1}, changedPatchRow)
+		changedBaseRow = backfillCtx.getChangedBaseRow(memCom.RecordID{BatchID: 0, Index: 1}, changedPatchRow)
 		Ω(len(changedBaseRow)).Should(Equal(6))
 
 		Ω(changedBaseRow[0].Valid).Should(BeTrue())
@@ -301,7 +301,7 @@ var _ = ginkgo.Describe("backfill", func() {
 	})
 
 	ginkgo.It("getChangedPatchRow should work", func() {
-		changedPatchRow, err := backfillCtx.getChangedPatchRow(memCom.RecordID{0, 1}, upsertBatches[0])
+		changedPatchRow, err := backfillCtx.getChangedPatchRow(memCom.RecordID{BatchID: 0, Index: 1}, upsertBatches[0])
 		Ω(err).Should(BeNil())
 		Ω(len(changedPatchRow)).Should(Equal(6))
 
@@ -323,12 +323,12 @@ var _ = ginkgo.Describe("backfill", func() {
 	})
 
 	ginkgo.It("writePatchValueForUnsortColumn should work", func() {
-		changedPatchRow, err := backfillCtx.getChangedPatchRow(memCom.RecordID{1, 1}, upsertBatches[1])
+		changedPatchRow, err := backfillCtx.getChangedPatchRow(memCom.RecordID{BatchID: 1, Index: 1}, upsertBatches[1])
 		Ω(err).Should(BeNil())
 
 		Ω(backfillCtx.columnsForked[4]).Should(BeFalse())
 		oldColumn := backfillCtx.new.Columns[4]
-		backfillCtx.writePatchValueForUnsortedColumn(memCom.RecordID{0, 2}, changedPatchRow)
+		backfillCtx.writePatchValueForUnsortedColumn(memCom.RecordID{BatchID: 0, Index: 2}, changedPatchRow)
 		Ω(err).Should(BeNil())
 		Ω(backfillCtx.columnsForked[4]).Should(BeTrue())
 
@@ -337,10 +337,10 @@ var _ = ginkgo.Describe("backfill", func() {
 
 		forkedColumn := backfillCtx.new.Columns[4]
 		Ω(forkedColumn).ShouldNot(Equal(oldColumn))
-		changedPatchRow, err = backfillCtx.getChangedPatchRow(memCom.RecordID{1, 2}, upsertBatches[1])
+		changedPatchRow, err = backfillCtx.getChangedPatchRow(memCom.RecordID{BatchID: 1, Index: 2}, upsertBatches[1])
 		Ω(err).Should(BeNil())
 
-		backfillCtx.writePatchValueForUnsortedColumn(memCom.RecordID{0, 3}, changedPatchRow)
+		backfillCtx.writePatchValueForUnsortedColumn(memCom.RecordID{BatchID: 0, Index: 3}, changedPatchRow)
 		Ω(err).Should(BeNil())
 
 		newValue = backfillCtx.new.GetDataValue(3, 4)
@@ -354,7 +354,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		err := backfillCtx.backfill(jobManager.reportBackfillJobDetail, jobKey)
 		Ω(err).Should(BeNil())
 		Ω(len(backfillCtx.backfillStore.Batches)).Should(Equal(1))
-		Ω(backfillCtx.backfillStore.NextWriteRecord).Should(Equal(memCom.RecordID{BaseBatchID, 3}))
+		Ω(backfillCtx.backfillStore.NextWriteRecord).Should(Equal(memCom.RecordID{BatchID: BaseBatchID, Index: 3}))
 		Ω(backfillCtx.columnsForked).Should(BeEquivalentTo([]bool{false, false, false, false, true, false}))
 		Ω(backfillCtx.baseRowDeleted).Should(HaveLen(2))
 		Ω(backfillCtx.baseRowDeleted).Should(ConsistOf(1, 4))
@@ -408,6 +408,6 @@ var _ = ginkgo.Describe("backfill", func() {
 		err := backfillCtx.backfill(jobManager.reportBackfillJobDetail, jobKey)
 		Ω(err).Should(BeNil())
 		Ω(len(backfillCtx.backfillStore.Batches)).Should(Equal(3))
-		Ω(backfillCtx.backfillStore.NextWriteRecord).Should(Equal(memCom.RecordID{BaseBatchID + 3, 0}))
+		Ω(backfillCtx.backfillStore.NextWriteRecord).Should(Equal(memCom.RecordID{BatchID: BaseBatchID + 3, Index: 0}))
 	})
 })

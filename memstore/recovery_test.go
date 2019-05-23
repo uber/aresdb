@@ -15,13 +15,13 @@
 package memstore
 
 import (
+	"github.com/Shopify/sarama"
+	"github.com/Shopify/sarama/mocks"
 	"github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/imports"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
-	"github.com/uber/aresdb/imports"
-	"github.com/Shopify/sarama"
-	"github.com/Shopify/sarama/mocks"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -202,14 +202,14 @@ var _ = ginkgo.Describe("recovery", func() {
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
 		m.redologManagerFactory, _ = imports.NewKafkaRedologManagerFactory(c, diskStore, metaStore, consumer)
 		schema, _ := m.GetSchema(tableName)
-		shard := NewTableShard(schema,  metaStore, diskStore, m.HostMemManager, 1, m.redologManagerFactory)
+		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, m.redologManagerFactory)
 
 		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		for i := 0; i < 10; i++ {
 			consumer.(*mocks.Consumer).ExpectConsumePartition(utils.GetTopicFromTable("ns1", tableName), int32(1), mocks.AnyOffset).
 				YieldMessage(&sarama.ConsumerMessage{
-				Value: upsertBatch.GetBuffer(),
-			})
+					Value: upsertBatch.GetBuffer(),
+				})
 		}
 
 		shard.StartDataPipe()

@@ -21,11 +21,11 @@ import (
 
 	"github.com/uber/aresdb/utils"
 
-	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/common"
+	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	"github.com/uber/aresdb/imports"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
-	"github.com/uber/aresdb/imports"
 	"gopkg.in/yaml.v2"
 	"strings"
 	"sync"

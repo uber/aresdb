@@ -17,8 +17,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memstore"
+	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 
 	"github.com/gorilla/mux"

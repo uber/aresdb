@@ -23,9 +23,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	memCom "github.com/uber/aresdb/memstore/common"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	memCom "github.com/uber/aresdb/memstore/common"
 
 	"github.com/uber/aresdb/metastore/mocks"
 

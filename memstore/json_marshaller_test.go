@@ -19,9 +19,9 @@ import (
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/imports"
 
 	"sync"
 	"time"
@@ -41,7 +41,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 		ArchivingDelayMinutes:    500,
 		ArchivingIntervalMinutes: 300,
 		RedoLogRotationInterval:  10800,
-		MaxRedoLogFileSize:       1<<30,
+		MaxRedoLogFileSize:       1 << 30,
 	}
 
 	liveStore := LiveStore{

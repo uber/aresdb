@@ -34,8 +34,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"github.com/uber/aresdb/gateway"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/imports"
+	"github.com/uber/aresdb/memutils"
 )
 
 // Options represents options for executing command

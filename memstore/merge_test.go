@@ -70,7 +70,7 @@ var _ = ginkgo.Describe("merge", func() {
 		batch1, err = getFactory().ReadArchiveBatch("patchBatch1")
 		Ω(err).Should(BeNil())
 		vs := &LiveStore{
-			LastReadRecord: common.RecordID{-101, 4},
+			LastReadRecord: common.RecordID{BatchID: -101, Index: 4},
 			Batches: map[int32]*LiveBatch{
 				-110: {
 					Batch:     *batch0,
@@ -89,14 +89,14 @@ var _ = ginkgo.Describe("merge", func() {
 
 		patch = &archivingPatch{
 			recordIDs: []common.RecordID{
-				{0, 0},
-				{0, 1},
-				{0, 2},
-				{0, 3},
-				{1, 0},
-				{1, 1},
-				{1, 2},
-				{1, 3},
+				{BatchID: 0, Index: 0},
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 0, Index: 3},
+				{BatchID: 1, Index: 0},
+				{BatchID: 1, Index: 1},
+				{BatchID: 1, Index: 2},
+				{BatchID: 1, Index: 3},
 			},
 			sortColumns: []int{1, 2, 3, 4},
 			data:        ss,
@@ -287,7 +287,7 @@ var _ = ginkgo.Describe("merge", func() {
 		Ω(err).Should(BeNil())
 
 		vs2 := &LiveStore{
-			LastReadRecord: common.RecordID{-101, 4},
+			LastReadRecord: common.RecordID{BatchID: -101, Index: 4},
 			Batches: map[int32]*LiveBatch{
 				-101: {
 					Batch:     *noSortColumnBatch,
@@ -301,10 +301,10 @@ var _ = ginkgo.Describe("merge", func() {
 
 		noSortColumnPatch = &archivingPatch{
 			recordIDs: []common.RecordID{
-				{0, 0},
-				{0, 1},
-				{0, 2},
-				{0, 3},
+				{BatchID: 0, Index: 0},
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 0, Index: 3},
 			},
 			data: ss2,
 		}
@@ -331,14 +331,14 @@ var _ = ginkgo.Describe("merge", func() {
 		// Test deleted columns.
 		patchWithDeletedColumns = &archivingPatch{
 			recordIDs: []common.RecordID{
-				{0, 0},
-				{0, 1},
-				{0, 2},
-				{0, 3},
-				{1, 0},
-				{1, 1},
-				{1, 2},
-				{1, 3},
+				{BatchID: 0, Index: 0},
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 0, Index: 3},
+				{BatchID: 1, Index: 0},
+				{BatchID: 1, Index: 1},
+				{BatchID: 1, Index: 2},
+				{BatchID: 1, Index: 3},
 			},
 			sortColumns: []int{1, 2, 3, 4},
 			data:        ss,
@@ -591,7 +591,7 @@ var _ = ginkgo.Describe("merge", func() {
 		Ω(err).Should(BeNil())
 
 		vs := &LiveStore{
-			LastReadRecord: common.RecordID{-101, 4},
+			LastReadRecord: common.RecordID{BatchID: -101, Index: 4},
 			Batches: map[int32]*LiveBatch{
 				-101: {
 					Batch:     *patchData,
@@ -605,10 +605,10 @@ var _ = ginkgo.Describe("merge", func() {
 
 		archivingPatch := &archivingPatch{
 			recordIDs: []common.RecordID{
-				{0, 0},
-				{0, 1},
-				{0, 2},
-				{0, 3},
+				{BatchID: 0, Index: 0},
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 0, Index: 3},
 			},
 			sortColumns: []int{1},
 			data:        ss,

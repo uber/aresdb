@@ -16,12 +16,12 @@ package imports
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/Shopify/sarama"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"sync"
-	"errors"
 )
 
 // CompositeRedologManager is the class to take data ingestion from all data source (kafka, http, etc.), write to local redolog when necessary,
@@ -35,7 +35,7 @@ type CompositeRedologManager struct {
 	// pointer back to the factory
 	factory *RedologManagerFactory
 	// Local file redolog manager
-	fileRedoLogManager *FileRedologManager `json:"fileRedoLogManager"`
+	fileRedoLogManager *FileRedologManager
 	// Kafka consumer if kafka import is supported
 	kafkaReader *kafkaPartitionReader
 	// ready channel is used to indicate if recovery is finished
@@ -51,8 +51,8 @@ type CompositeRedologManager struct {
 	done bool
 	// message counts
 	msgRecovered int64
-	msgReceived int64
-	msgError int64
+	msgReceived  int64
+	msgError     int64
 }
 
 // NewCompositeRedologManager create CompositeRedologManager oibject
@@ -232,12 +232,11 @@ func (s *CompositeRedologManager) applyUpsertBatchWithLogging(batch *common.Upse
 
 // WaitForRecoveryDone block call to wait for recovery finish
 func (s *CompositeRedologManager) WaitForRecoveryDone() {
-	for {
-		select {
-		case <-s.readyChan:
-			return
-		}
+	select {
+	case <-s.readyChan:
+		break
 	}
+
 	// report redolog size after replay
 	utils.GetReporter(s.Table, s.Shard).GetGauge(utils.NumberOfRedologs).Update(float64(s.GetNumFiles()))
 	utils.GetReporter(s.Table, s.Shard).GetGauge(utils.SizeOfRedologs).Update(float64(s.GetTotalSize()))

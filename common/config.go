@@ -75,13 +75,13 @@ type ClusterConfig struct {
 // local redolog config
 type RedoLogConfig struct {
 	// disable local redolog, default will be enabled
-	Disabled bool `yaml:disabled`
+	Disabled bool `yaml:"disabled"`
 }
 
 // Kafka source config
 type KafkaConfig struct {
 	// kafka brokers
-	Brokers []string `yaml:brokers`
+	Brokers []string `yaml:"brokers"`
 }
 
 // Configs related to data import and redolog option
@@ -95,7 +95,7 @@ type ImportsConfig struct {
 	// Redolog config
 	RedoLog RedoLogConfig `yaml:"redolog"`
 	// Kafka consumer config
-	KafkaConfig KafkaConfig `yaml:"kafka""`
+	KafkaConfig KafkaConfig `yaml:"kafka"`
 }
 
 // AresServerConfig is config specific for ares server.
@@ -127,5 +127,5 @@ type AresServerConfig struct {
 	Cluster   ClusterConfig   `yaml:"cluster"`
 	Gateway   GatewayConfig   `yaml:"gateway"`
 
-	Imports   ImportsConfig   `yaml:"imports"`
+	Imports ImportsConfig `yaml:"imports"`
 }

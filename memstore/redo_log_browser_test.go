@@ -20,8 +20,8 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/metastore"
 )
 
 var _ = ginkgo.Describe("redo_log_browser", func() {

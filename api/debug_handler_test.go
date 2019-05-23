@@ -43,10 +43,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/query"
 	"sync"
 	"unsafe"
-	"github.com/uber/aresdb/imports"
 )
 
 // convertToAPIError wraps up an error into APIError

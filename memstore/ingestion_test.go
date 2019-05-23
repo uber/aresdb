@@ -15,13 +15,13 @@
 package memstore
 
 import (
+	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/imports"
+	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"time"
-	"fmt"
 )
 
 var _ = ginkgo.Describe("ingestion", func() {
@@ -187,7 +187,7 @@ var _ = ginkgo.Describe("ingestion", func() {
 		Ω(valid).Should(BeTrue())
 		Ω(*(*uint8)(value)).Should(Equal(uint8(125)))
 
-    	boolValue, valid := ReadShardBool(shard, 1, []byte{1})
+		boolValue, valid := ReadShardBool(shard, 1, []byte{1})
 		Ω(valid).Should(BeTrue())
 		Ω(boolValue).Should(BeTrue())
 
