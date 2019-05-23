@@ -1705,7 +1705,8 @@ func (qc *AQLQueryContext) processMeasure() {
 
 	if _, ok := qc.Query.Measures[0].expr.(*expr.NumberLiteral); ok {
 		qc.isNonAggregationQuery = true
-		if qc.Query.Limit <= 0 {
+		// in case user forgot to provide limit
+		if qc.Query.Limit == 0 {
 			qc.Query.Limit = nonAggregationQueryLimit
 		}
 		return

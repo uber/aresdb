@@ -119,6 +119,48 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 				]
 			  }`))
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
+
+		query = `
+			{
+			  "queries": [
+				{
+				  "measures": [
+					{
+					  "sqlExpression": "1"
+					}
+				  ],
+				  "rowFilters": [
+					"trips.status!='ACTIVE'"
+				  ],
+				  "table": "trips",
+				  "timeFilter": {
+					"column": "trips.request_at",
+					"from": "-6d"
+				  },
+				  "dimensions": [
+					{
+					  "sqlExpression": "trips.request_at"
+					}
+				  ]
+				}
+			  ]
+			}
+		`
+		resp, err = http.Post(fmt.Sprintf("http://%s/aql", hostPort), "application/json", bytes.NewBuffer([]byte(query)))
+		Ω(err).Should(BeNil())
+		bs, err = ioutil.ReadAll(resp.Body)
+		Ω(err).Should(BeNil())
+		Ω(string(bs)).Should(MatchJSON(`{
+				"results": [
+				  {
+					"headers": [
+						"trips.request_at"
+					],
+					"matrixData": []
+				  }
+				]
+			  }`))
+		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 	})
 
 	ginkgo.It("HandleAQL should fail on request that cannot be unmarshaled", func() {
@@ -290,6 +332,39 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 		Ω(err).Should(BeNil())
 		Ω(string(bs)).Should(ContainSubstring("FLOOR"))
 		Ω(string(bs)).Should(ContainSubstring("Unsigned"))
+		Ω(string(bs)).Should(ContainSubstring("allBatches"))
+
+		query = `
+			{
+			  "queries": [
+				{
+				  "measures": [
+					{
+					  "sqlExpression": "1"
+					}
+				  ],
+				  "rowFilters": [
+					"trips.status!='ACTIVE'"
+				  ],
+				  "table": "trips",
+				  "timeFilter": {
+					"column": "trips.request_at",
+					"from": "-6d"
+				  },
+				  "dimensions": [
+					{
+					  "sqlExpression": "trips.request_at"
+					}
+				  ]
+				}
+			  ]
+			}
+		`
+		resp, err = http.Post(fmt.Sprintf("http://%s/aql?verbose=1", hostPort), "application/json", bytes.NewBuffer([]byte(query)))
+		Ω(err).Should(BeNil())
+		bs, err = ioutil.ReadAll(resp.Body)
+		Ω(err).Should(BeNil())
+		Ω(string(bs)).Should(ContainSubstring("mainTableCommonFilters"))
 		Ω(string(bs)).Should(ContainSubstring("allBatches"))
 	})
 })
