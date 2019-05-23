@@ -24,7 +24,7 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-// ReplayRedoLogs loads data for the table Shard from disk store and recovers the Shard for serving.
+// StartDataPipe loads data for the table Shard from disk store and recovers the Shard for serving.
 func (shard *TableShard) StartDataPipe() {
 	timer := utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetTimer(utils.RecoveryLatency).Start()
 	defer timer.Stop()
@@ -49,10 +49,6 @@ func (shard *TableShard) StartDataPipe() {
 	}
 
 	shard.LiveStore.RedoLogManager.WaitForRecoveryDone()
-
-	// report redolog size after replay
-	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.NumberOfRedologs).Update(float64(shard.LiveStore.RedoLogManager.GetNumFiles()))
-	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.SizeOfRedologs).Update(float64(shard.LiveStore.RedoLogManager.GetTotalSize()))
 
 	// proactively purge redo files
 	if shard.LiveStore.BackfillManager != nil {
@@ -151,7 +147,7 @@ func (m *memStoreImpl) loadSnapshots() {
 	utils.GetLogger().Info("Finish loading snapshots for all table shards")
 }
 
-// replayRedoLogs replay redo logs for all tables in parallel.
+// startDataPipe replay redo logs for all tables in parallel, and then start the data ingestion
 func (m *memStoreImpl) startDataPipe() {
 	utils.GetLogger().Info("Start replaying redo logs for all table shards")
 	var wg sync.WaitGroup

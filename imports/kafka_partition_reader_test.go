@@ -15,7 +15,7 @@
 package imports
 
 import (
-	"fmt"
+	"github.com/uber/aresdb/testing"
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
 	"github.com/onsi/ginkgo"
@@ -23,18 +23,10 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-type GinkgoTestReporter struct{}
 
-func (g GinkgoTestReporter) Errorf(format string, args ...interface{}) {
-	ginkgo.Fail(fmt.Sprintf(format, args...))
-}
-
-func (g GinkgoTestReporter) Fatalf(format string, args ...interface{}) {
-	ginkgo.Fail(fmt.Sprintf(format, args...))
-}
 
 var _ = ginkgo.Describe("kafka redolog manager", func() {
-	var t GinkgoTestReporter
+	var t testing.GinkgoTestReporter
 
 	ginkgo.It("NextUpsertBatch should work", func() {
 		config := sarama.NewConfig()

@@ -16,12 +16,12 @@ package imports
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"sync"
+	"errors"
 )
 
 // CompositeRedologManager is the class to take data ingestion from all data source (kafka, http, etc.), write to local redolog when necessary,
@@ -38,8 +38,6 @@ type CompositeRedologManager struct {
 	fileRedoLogManager *FileRedologManager `json:"fileRedoLogManager"`
 	// Kafka consumer if kafka import is supported
 	kafkaReader *kafkaPartitionReader
-	// channel used to stop all go routines initiated by this class instance
-	done chan struct{}
 	// ready channel is used to indicate if recovery is finished
 	readyChan chan bool
 	// function to store received upsertbatch
@@ -49,6 +47,12 @@ type CompositeRedologManager struct {
 	recoveryDone       bool
 	redoFilePersisited int64
 	offsetPersisted    uint32
+	// flag to indicate the ingestion from kafka is dead
+	done bool
+	// message counts
+	msgRecovered int64
+	msgReceived int64
+	msgError int64
 }
 
 // NewCompositeRedologManager create CompositeRedologManager oibject
@@ -74,7 +78,6 @@ func NewCompositeRedologManager(table string, shard int, factory *RedologManager
 		factory:            factory,
 		fileRedoLogManager: fileRedoLogManager,
 		kafkaReader:        kafkaReader,
-		done:               make(chan struct{}, 1),
 		readyChan:          make(chan bool, 1),
 		storeFunc:          storeFunc,
 	}
@@ -100,7 +103,8 @@ func (s *CompositeRedologManager) Start(redoLogFilePersisted int64, offsetPersis
 	go func() {
 		// first read from local redolog file for recovery if it is enabled
 		if s.fileRedoLogManager != nil {
-			utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard).Info("Start recovery from local redolog")
+			utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard).
+				Info("Start recovery from local redolog")
 			fn := s.fileRedoLogManager.NextUpsertBatch()
 			for {
 				batch, redoLogFile, batchOffset := fn()
@@ -113,7 +117,8 @@ func (s *CompositeRedologManager) Start(redoLogFilePersisted int64, offsetPersis
 				}
 			}
 			s.setRecoveryDone()
-			utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard).Info("Finished recovery from local redolog")
+			utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard,
+				"batchRecovered", s.msgRecovered).Info("Finished recovery from local redolog")
 		}
 		// next read from kafka if kafka input is enabled
 		if s.kafkaReader != nil {
@@ -134,12 +139,14 @@ func (s *CompositeRedologManager) Start(redoLogFilePersisted int64, offsetPersis
 				utils.GetLogger().Fatal(err)
 			}
 			if offsetFrom == 0 {
-				// no offset saved before, start from begining
 				offsetFrom = sarama.OffsetNewest
+			}
+			if offsetTo < offsetFrom {
 				offsetTo = offsetFrom
 			}
 
-			utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard, "offset", offsetFrom).Info("Start read from kafka")
+			utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard,
+				"offset", offsetFrom).Info("Start read from kafka")
 
 			err = s.kafkaReader.ConsumeFrom(offsetFrom)
 			if err != nil {
@@ -155,7 +162,8 @@ func (s *CompositeRedologManager) Start(redoLogFilePersisted int64, offsetPersis
 
 				if !s.recoveryDone && kafkaOffset >= offsetTo {
 					s.setRecoveryDone()
-					utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard, "offset", offsetFrom).Info("Recovery from kafka done, start normal ingestion")
+					utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard,
+						"offset", offsetTo, "batchRecovered", s.msgRecovered).Info("Recovery from kafka done, start normal ingestion")
 				}
 				if s.recoveryDone {
 					err = s.applyUpsertBatchWithLogging(batch, kafkaOffset)
@@ -165,11 +173,15 @@ func (s *CompositeRedologManager) Start(redoLogFilePersisted int64, offsetPersis
 				}
 
 				if err != nil {
-					utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard, "offset", kafkaOffset).Error("Error save upsertbatch to store")
-					// TODO add error counter or stop?
+					s.msgError++
+					utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard,
+						"offset", kafkaOffset).Error("Error save upsertbatch to store")
+					utils.GetReporter(s.Table, s.Shard).GetCounter(utils.IngestedErrorBatches).Inc(1)
 				}
 			}
+			utils.GetLogger().With("action", "ingestion", "table", s.Table, "shard", s.Shard).Warn("Kafka ingestion stopped")
 		}
+		s.done = true
 	}()
 
 	return nil
@@ -183,30 +195,39 @@ func (s *CompositeRedologManager) setRecoveryDone() {
 
 // applyUpsertBatchOnly is used for replay redolog, so no redolog write necessary
 func (s *CompositeRedologManager) applyUpsertBatchOnly(batch *common.UpsertBatch, redoLogFile int64, batchOffset uint32) error {
+
+	utils.GetReporter(s.Table, s.Shard).GetCounter(utils.IngestedUpsertBatches).Inc(1)
+	utils.GetReporter(s.Table, s.Shard).GetGauge(utils.UpsertBatchSize).Update(float64(len(batch.GetBuffer())))
+
 	s.Lock()
 	defer s.Unlock()
 
+	s.msgRecovered++
 	skipBackfillRows := redoLogFile < s.redoFilePersisited ||
 		(redoLogFile == s.redoFilePersisited && batchOffset <= s.offsetPersisted)
 
 	s.UpdateMaxEventTime(0, redoLogFile)
-	if s.storeFunc == nil {
-		return nil
+	if s.storeFunc != nil {
+		return s.storeFunc(batch, redoLogFile, batchOffset, skipBackfillRows)
 	}
-	return s.storeFunc(batch, redoLogFile, batchOffset, skipBackfillRows)
+	return nil
 }
 
 // applyUpsertBatchWithLogging is used for normal ingestion (kafka or http)
 func (s *CompositeRedologManager) applyUpsertBatchWithLogging(batch *common.UpsertBatch, offsetInSource int64) error {
+
+	utils.GetReporter(s.Table, s.Shard).GetCounter(utils.IngestedUpsertBatches).Inc(1)
+	utils.GetReporter(s.Table, s.Shard).GetGauge(utils.UpsertBatchSize).Update(float64(len(batch.GetBuffer())))
+
 	s.Lock()
 	defer s.Unlock()
 
+	s.msgReceived++
 	redoLogFile, batchOffset := s.AppendToRedoLog(batch, offsetInSource)
-
-	if s.storeFunc == nil {
-		return nil
+	if s.storeFunc != nil {
+		return s.storeFunc(batch, redoLogFile, batchOffset, false)
 	}
-	return s.storeFunc(batch, redoLogFile, batchOffset, false)
+	return nil
 }
 
 // WaitForRecoveryDone block call to wait for recovery finish
@@ -217,20 +238,27 @@ func (s *CompositeRedologManager) WaitForRecoveryDone() {
 			return
 		}
 	}
+	// report redolog size after replay
+	utils.GetReporter(s.Table, s.Shard).GetGauge(utils.NumberOfRedologs).Update(float64(s.GetNumFiles()))
+	utils.GetReporter(s.Table, s.Shard).GetGauge(utils.SizeOfRedologs).Update(float64(s.GetTotalSize()))
 }
 
 // WriteUpsertBatch append upsertbatch to redolog and save to storage
 func (s *CompositeRedologManager) WriteUpsertBatch(batch *common.UpsertBatch) error {
 	if s.fileRedoLogManager != nil {
-		return s.applyUpsertBatchWithLogging(batch, 0)
+		return s.applyUpsertBatchWithLogging(batch, -1)
 	} else {
-		return fmt.Errorf("Local file redolog not configured")
+		return errors.New("Local file redolog not configured")
 	}
 }
 
 // AppendToRedoLog append upsert batch into redolog file or commit offset
 func (s *CompositeRedologManager) AppendToRedoLog(upsertBatch *common.UpsertBatch, offsetInSource int64) (int64, uint32) {
 	if s.fileRedoLogManager != nil {
+		if s.kafkaReader != nil && offsetInSource >= 0 {
+			// when save redolog in file and ingestion is from kafka, need to remember kafka offset separately
+			s.kafkaReader.Commit(offsetInSource)
+		}
 		return s.fileRedoLogManager.AppendToRedoLog(upsertBatch, offsetInSource)
 	} else {
 		return s.kafkaReader.AppendToRedoLog(upsertBatch, offsetInSource)
@@ -263,6 +291,10 @@ func (s *CompositeRedologManager) GetTotalSize() int {
 	}
 }
 
+func (s *CompositeRedologManager) IsDone() bool {
+	return s.done
+}
+
 func (s *CompositeRedologManager) GetNumFiles() int {
 	if s.fileRedoLogManager != nil {
 		return s.fileRedoLogManager.GetNumFiles()
@@ -272,14 +304,19 @@ func (s *CompositeRedologManager) GetNumFiles() int {
 }
 
 func (s *CompositeRedologManager) Close() {
-	if s.fileRedoLogManager != nil {
-		s.fileRedoLogManager.Close()
-		s.fileRedoLogManager = nil
-	}
+	s.Lock()
+	defer s.Unlock()
+
 	if s.kafkaReader != nil {
 		s.kafkaReader.Close()
 		s.kafkaReader = nil
 	}
+
+	if s.fileRedoLogManager != nil {
+		s.fileRedoLogManager.Close()
+		s.fileRedoLogManager = nil
+	}
+
 	// remove from factory
 	s.factory.Close(s.Table, s.Shard)
 }

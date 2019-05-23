@@ -24,7 +24,7 @@ import (
 )
 
 const maxBatchesPerFile = 5000
-const commitInterval = 1000
+const commitInterval = 100
 
 type upsertBatchBundle struct {
 	batch       *common.UpsertBatch
@@ -98,6 +98,16 @@ func (k *kafkaPartitionReader) AppendToRedoLog(upsertBatch *common.UpsertBatch, 
 	}
 	k.TotalRedologSize += size
 	return fileID, fileOffset
+}
+
+// Commit offset only, redolog will be in file system
+func (k* kafkaPartitionReader) Commit(kafkaOffset int64) {
+	k.Lock()
+	defer k.Unlock()
+	k.count++
+	if k.count%commitInterval == 0 {
+		k.commitFunc(kafkaOffset)
+	}
 }
 
 func (k *kafkaPartitionReader) UpdateMaxEventTime(eventTime uint32, fileID int64) {
@@ -190,6 +200,7 @@ func (k *kafkaPartitionReader) ConsumeFrom(offset int64) error {
 					utils.GetLogger().With(
 						"table", k.TableName,
 						"shard", k.Shard).Error("partition consumer error channel closed")
+					return
 				} else {
 					utils.GetLogger().With("table", k.TableName, "shard", k.Shard, "error", err.Error()).
 						Error("received consumer error")
@@ -230,8 +241,11 @@ func (k *kafkaPartitionReader) GetNumFiles() int {
 }
 
 func (k *kafkaPartitionReader) Close() {
+	k.Lock()
+	defer k.Unlock()
 	if k.partitionConsumer != nil {
 		k.partitionConsumer.Close()
+		k.partitionConsumer = nil
 	}
 	close(k.done)
 }

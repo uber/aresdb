@@ -230,4 +230,5 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
 	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	batchStatsReporter.Stop()
+	redoLogManagerFactory.Stop()
 }

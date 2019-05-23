@@ -24,17 +24,13 @@ type RedologManager interface {
 	WaitForRecoveryDone()
 	// Support ingestion from HTTP
 	WriteUpsertBatch(upsertBatch *common.UpsertBatch) error
-	// Save the upsertbatch into redolog
-	AppendToRedoLog(upsertBatch *common.UpsertBatch, offsetInSource int64) (int64, uint32)
 	// UpdateMaxEventTime update max eventime of given redolog file
 	UpdateMaxEventTime(eventTime uint32, redoFile int64)
 	// CheckpointRedolog checkpoint event time cutoff (from archiving) and redologFileID and batchOffset (from backfill)
 	// to redolog manager
 	CheckpointRedolog(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) error
-	// GetTotalSize returns the total size of all redologs tracked in redolog manager
-	GetTotalSize() int
-	// Get the number of files tracked in redolog manager
-	GetNumFiles() int
 	// Close free resources held by redolog manager
 	Close()
+	// IsDone to check if the redolog manager quit
+	IsDone() bool
 }

@@ -117,7 +117,6 @@ func (r *FileRedologManager) openFileForWrite(upsertBatchSize uint32) {
 			"shard", r.shard,
 			"error", err.Error()).Panic("Failed to open new redo log file")
 	}
-
 	writer := utils.NewStreamDataWriter(r.currentLogFile)
 	if err = writer.WriteUint32(UpsertHeader); err != nil {
 		utils.GetLogger().Panic("Failed to write magic header to the new redo log")

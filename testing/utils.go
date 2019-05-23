@@ -14,7 +14,13 @@
 
 package testing
 
-import "bytes"
+import (
+	"bytes"
+	"github.com/onsi/ginkgo"
+	"github.com/Shopify/sarama"
+	"github.com/Shopify/sarama/mocks"
+	"fmt"
+)
 
 // TestReadWriteCloser implements a in-memory io.ReadWriteCloser and utils.ReaderSeekerCloser for testing files.
 type TestReadWriteCloser struct {
@@ -29,4 +35,21 @@ func (TestReadWriteCloser) Close() error {
 // Seek implements utils.ReaderSeekerCloser.Seek.
 func (t TestReadWriteCloser) Seek(offset int64, whence int) (int64, error) {
 	return 0, nil
+}
+
+type GinkgoTestReporter struct{}
+
+func (g GinkgoTestReporter) Errorf(format string, args ...interface{}) {
+	ginkgo.Fail(fmt.Sprintf(format, args...))
+}
+
+func (g GinkgoTestReporter) Fatalf(format string, args ...interface{}) {
+	ginkgo.Fail(fmt.Sprintf(format, args...))
+}
+
+func MockKafkaConsumerFunc(brokers []string) (sarama.Consumer, error) {
+	var t GinkgoTestReporter
+	config := sarama.NewConfig()
+	config.ChannelBufferSize = 2 * 5000
+	return mocks.NewConsumer(t, config), nil
 }

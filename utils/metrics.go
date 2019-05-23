@@ -44,6 +44,7 @@ const (
 	UpdatedRecords
 	IngestSkippedRecords
 	IngestedUpsertBatches
+	IngestedErrorBatches
 	UpsertBatchSize
 	PrimaryKeyMissing
 	TimeColumnMissing
@@ -166,6 +167,7 @@ const (
 	scopeNameUpdatedRecords                  = "updated_records"
 	scopeNameIngestSkippedRecords            = "skipped_records"
 	scopeNameIngestedUpsertBatches           = "ingested_upsert_batches"
+	scopeNameIngestedErrorBatches            = "ingested_error_batches"
 	scopeNameUpsertBatchSize                 = "upsert_batch_size"
 	scopeNameLoad                            = "load"
 	scopeNameTotal                           = "total"
@@ -381,6 +383,14 @@ var metricsDefs = map[MetricName]metricDefinition{
 	},
 	IngestedUpsertBatches: {
 		name:       scopeNameIngestedUpsertBatches,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationIngestion,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	IngestedErrorBatches: {
+		name:       scopeNameIngestedErrorBatches,
 		metricType: Counter,
 		tags: map[string]string{
 			metricsTagOperation: metricsOperationIngestion,

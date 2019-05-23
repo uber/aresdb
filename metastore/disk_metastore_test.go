@@ -173,7 +173,11 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("ReadFile", "base/b/shards/0/redolog-offset").Return([]byte("1,0"), nil)
 	mockFileSystem.On("ReadFile", "base/b/shards/0/snapshot").Return([]byte("1,0,-1,1"), nil)
 	mockFileSystem.On("ReadFile", "base/c/shards/0/version").Return([]byte("1"), nil)
+	mockFileSystem.On("ReadFile", "base/b/shards/0/commit-offset").Return([]byte("1"), nil)
+	mockFileSystem.On("ReadFile", "base/b/shards/0/checkpoint-offset").Return([]byte("1"), nil)
 
+	mockFileSystem.On("OpenFileForWrite", "base/b/shards/0/checkpoint-offset", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
+	mockFileSystem.On("OpenFileForWrite", "base/b/shards/0/commit-offset", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/a/schema", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/c/schema", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/a/shards/0/version", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
@@ -259,6 +263,34 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		err := diskMetastore.UpdateSnapshotProgress("b", 0, 1, 0, 1, 1)
 		Ω(err).Should(BeNil())
 		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1,0,1,1")))
+	})
+
+	ginkgo.It("GetIngestionCommitOffset", func() {
+		diskMetastore := createDiskMetastore("base")
+		offset, err := diskMetastore.GetIngestionCommitOffset("b", 0)
+		Ω(err).Should(BeNil())
+		Ω(offset).Should(Equal(int64(1)))
+	})
+
+	ginkgo.It("UpdateIngestionCommitOffset", func() {
+		diskMetastore := createDiskMetastore("base")
+		err := diskMetastore.UpdateIngestionCheckpointOffset("b", 0, 1)
+		Ω(err).Should(BeNil())
+		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
+	})
+
+	ginkgo.It("GetIngestionCheckpointOffset", func() {
+		diskMetastore := createDiskMetastore("base")
+		offset, err := diskMetastore.GetIngestionCheckpointOffset("b", 0)
+		Ω(err).Should(BeNil())
+		Ω(offset).Should(Equal(int64(1)))
+	})
+
+	ginkgo.It("UpdateIngestionCheckpointOffset", func() {
+		diskMetastore := createDiskMetastore("base")
+		err := diskMetastore.UpdateIngestionCheckpointOffset("b", 0, 1)
+		Ω(err).Should(BeNil())
+		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
 	})
 
 	ginkgo.It("WatchTableListEvents", func() {

@@ -44,9 +44,15 @@ type RedologManagerFactory struct {
 
 // Function definitio to store upsertbatch
 type BatchStoreFunc func(batch *memCom.UpsertBatch, redoFile int64, offset uint32, skipBackFillRows bool) error
+type newKafkaConsumerFunc func([]string) (sarama.Consumer, error)
 
 // NewRedologManagerFactory create ImportsFactory instance
 func NewRedologManagerFactory(c *common.ImportsConfig, diskStore diskstore.DiskStore, metaStore metastore.MetaStore) (*RedologManagerFactory, error) {
+	return NewKafkaRedologManagerFactory(c, diskStore, metaStore, nil)
+}
+
+func NewKafkaRedologManagerFactory(c *common.ImportsConfig, diskStore diskstore.DiskStore, metaStore metastore.MetaStore, consumer sarama.Consumer) (*RedologManagerFactory, error) {
+
 	if c != nil && c.Source == common.KafkaSoureOnly && len(c.KafkaConfig.Brokers) == 0 {
 		return nil, fmt.Errorf("No kafka broker info configured")
 	}
@@ -57,26 +63,35 @@ func NewRedologManagerFactory(c *common.ImportsConfig, diskStore diskstore.DiskS
 		enableLocalRedoLog = !c.RedoLog.Disabled
 	}
 
+	namespace := ""
+	if c != nil {
+		namespace = c.Namespace
+	}
 	factory := &RedologManagerFactory{
-		namespace:          c.Namespace,
+		namespace:          namespace,
 		enableLocalRedoLog: enableLocalRedoLog,
 		diskStore:          diskStore,
 		managers:           make(map[string]map[int]RedologManager),
 		metaStore:          metaStore,
 	}
 
-	consumer, err := factory.newKafkaConsumer(c.KafkaConfig.Brokers)
-	if err != nil {
-		return nil, err
-	}
+	if c != nil {
+		if consumer == nil {
+			var err error
+			consumer, err = newKafkaConsumer(c.KafkaConfig.Brokers)
+			if err != nil {
+				return nil, err
+			}
+		}
 
-	factory.consumer = consumer
+		factory.consumer = consumer
+	}
 
 	return factory, nil
 }
 
 // NewKafkaConsumer create kafka consumer
-func (c *RedologManagerFactory) newKafkaConsumer(brokers []string) (sarama.Consumer, error) {
+func newKafkaConsumer(brokers []string) (sarama.Consumer, error) {
 	if len(brokers) > 0 {
 		return sarama.NewConsumer(brokers, sarama.NewConfig())
 	}
