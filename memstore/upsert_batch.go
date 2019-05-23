@@ -15,12 +15,10 @@
 package memstore
 
 import (
-	"strings"
 	"unsafe"
 
 	"bytes"
 	memCom "github.com/uber/aresdb/memstore/common"
-	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"math"
 )
@@ -39,9 +37,6 @@ type columnReader struct {
 	valueVector []byte
 	// The null vector. can be empty depending on column mode.
 	nullVector []byte
-	// The enum dictionary vector
-	// first byte indicates whether the vector is valid (1 vs. 0)
-	enumDictVector []byte
 	// The offset vector. Only used for variable length values. Not used yet.
 	offsetVector []byte
 	// Compare function if any.
@@ -72,41 +67,6 @@ func (c *columnReader) ReadValue(row int) (unsafe.Pointer, bool) {
 		return nil, false
 	}
 	return unsafe.Pointer(&c.valueVector[row*memCom.DataTypeBits(c.dataType)/8]), true
-}
-
-// GetEnumReverseDict returns the reverse local enum dict in upsert batch
-func (c *columnReader) GetEnumReverseDict() []string {
-	if len(c.enumDictVector) < 1 || c.enumDictVector[0] == 0 {
-		return nil
-	}
-	return strings.Split(string(c.enumDictVector[1:]), metaCom.EnumDelimiter)
-}
-
-func (c *columnReader) InvalidateEnumDict() {
-	if len(c.enumDictVector) >= 1 {
-		c.enumDictVector[0] = 0
-	}
-}
-
-// RewriteEnumValues rewrite values vector based on enum value mapping
-func (c *columnReader) RewriteEnumValues(numRows int, mapping []int) {
-	if len(mapping) == 0 || len(c.valueVector) == 0 {
-		return
-	}
-
-	for r := 0; r < numRows; r++ {
-		if c.dataType == memCom.SmallEnum {
-			oldVal := *(*uint8)(unsafe.Pointer(&c.valueVector[r*memCom.DataTypeBits(c.dataType)/8]))
-			if int(oldVal) < len(mapping) {
-				*(*uint8)(unsafe.Pointer(&c.valueVector[r*memCom.DataTypeBits(c.dataType)/8])) = uint8(mapping[oldVal])
-			}
-		} else if c.dataType == memCom.BigEnum {
-			oldVal := *(*uint16)(unsafe.Pointer(&c.valueVector[r*memCom.DataTypeBits(c.dataType)/8]))
-			if int(oldVal) < len(mapping) {
-				*(*uint16)(unsafe.Pointer(&c.valueVector[r*memCom.DataTypeBits(c.dataType)/8])) = uint16(mapping[oldVal])
-			}
-		}
-	}
 }
 
 // ReadValue returns the row data (boolean type) for a column, and its validity.
@@ -159,14 +119,13 @@ func writeBool(buffer []byte, index int, value bool) {
 //	<reserve 14 bytes>
 //	[uint32] arrival_time
 //	[uint32] column_offset_0 ... [uint32] column_offset_x+1
-//	[uint32] enum_dict_length_0 ... [uint32] enum_dict_length_x
+//	[uint32] column_reserved_field1_0 ... [uint32] column_reserved_field1_x
 //	[uint32] column_reserved_field2_0 ... [uint32] column_reserved_field2_x
 //	[uint32] column_data_type_0 ... [uint32] column_data_type_x
 //	[uint16] column_id_0 ... [uint16] column_id_x
 //	[uint8] column_mode_0 ... [uint8] column_mode_x
 //
 //	(optional) [uint8] null_vector_0
-//  (optional) [uint8] enum_dict_vector_0
 //	(optional) [padding to 4 byte alignment uint32] offset_vector_0
 //	[padding for 8 byte alignment] value_vector_0
 //	...
@@ -528,14 +487,6 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 			return nil, utils.StackError(err, "Failed to read end offset for column %d", i)
 		}
 
-		enumDictLength := 0
-		if isEnumType := memCom.IsEnumType(columnType); isEnumType {
-			enumDictLength, err = header.ReadEnumDictLength(i)
-			if err != nil {
-				return nil, utils.StackError(err, "Failed to read enum dict length for column %d", i)
-			}
-		}
-
 		isGoType := memCom.IsGoType(columnType)
 		currentOffset := columnStartOffset
 		switch columnMode {
@@ -549,9 +500,6 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 			}
 			fallthrough
 		case memCom.AllValuesPresent:
-			// read enum dict vector
-			columns[i].enumDictVector = buffer[currentOffset : currentOffset+enumDictLength]
-			currentOffset += enumDictLength
 			if isGoType {
 				currentOffset = utils.AlignOffset(currentOffset, 4)
 				offsetVectorLength := (batch.NumRows + 1) * 4
@@ -580,7 +528,6 @@ func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 	}
 
 	if memCom.UpsertBatchVersion(version) == memCom.V1 {
-		// skip version number bytes for new version
 		return readUpsertBatch(buffer)
 	}
 	return nil, utils.StackError(nil, "Unsupported upsert batch version %x", version)
