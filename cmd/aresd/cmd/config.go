@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-// AddFlags addsx flags to command
+// AddFlags adds flags to command
 func AddFlags(cmd *cobra.Command) {
 	cmd.Flags().String("config", "config/ares.yaml", "Ares config file")
 	cmd.Flags().IntP("port", "p", 0, "Ares service port")
