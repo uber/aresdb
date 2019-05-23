@@ -31,6 +31,47 @@ var _ = ginkgo.Describe("live vector party", func() {
 		hostMemoryManager = NewHostMemoryManager(mockMemStore, 1<<32)
 	})
 
+	ginkgo.It("SetGoDataValue should work", func() {
+		vp1 := NewLiveVectorParty(10, common.GeoShape, common.NullDataValue, hostMemoryManager)
+		vp1.Allocate(false)
+
+		shape1 := &common.GeoShapeGo{
+			Polygons: [][]common.GeoPointGo{
+				{
+					{
+						90.0,
+						180.0,
+					},
+				},
+			},
+		}
+		vp1.SetGoValue(0, shape1, true)
+		Ω(vp1.GetBytes()).Should(Equal(int64(8)))
+		Ω(vp1.GetLength()).Should(Equal(10))
+		dv := vp1.GetDataValue(0)
+		Ω(dv.Valid).Should(BeTrue())
+
+		vp1.SetGoValue(0, nil, false)
+		dv = vp1.GetDataValue(0)
+		Ω(dv.Valid).Should(BeFalse())
+		Ω(dv.DataType).Should(Equal(common.GeoShape))
+
+		Ω(vp1.GetBytes()).Should(Equal(int64(0)))
+		Ω(vp1.GetLength()).Should(Equal(10))
+
+		Ω(func() {
+			vp1.SetBool(0, true, true)
+		}).Should(Panic())
+
+		Ω(func() {
+			vp1.SetValue(0, nil, true)
+		}).Should(Panic())
+
+		Ω(func() {
+			vp1.GetValue(0)
+		}).Should(Panic())
+	})
+
 	ginkgo.It("SetDataValue should work", func() {
 		vp1 := NewLiveVectorParty(10, common.GeoShape, common.NullDataValue, hostMemoryManager)
 		vp1.Allocate(false)

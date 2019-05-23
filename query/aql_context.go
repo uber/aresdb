@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 	"unsafe"
+	"net/http"
 )
 
 type boundaryType int
@@ -396,6 +397,9 @@ type AQLQueryContext struct {
 	isNonAggregationQuery      bool
 	numberOfRowsWritten        int
 	maxBatchSizeAfterPrefilter int
+
+	// for eager flush query result
+	ResponseWriter http.ResponseWriter
 }
 
 // IsHLL return if the aggregation function is HLL

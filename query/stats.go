@@ -47,6 +47,7 @@ const (
 	expandEvalTiming                        = "expandEval"
 	cleanupTiming                           = "cleanUpEval"
 	resultTransferTiming                    = "resultTransfer"
+	resultFlushTiming                       = "resultFlush"
 	finalCleanupTiming                      = "finalCleanUp"
 )
 
@@ -166,7 +167,7 @@ func (qc *AQLQueryContext) reportTimingForCurrentBatch(stream unsafe.Pointer, st
 	}
 }
 
-// reportTimingForCurrentBatch is similar to reportTimingForCurrentBatch except that it modifies the query stats for the
+// reportTiming is similar to reportTimingForCurrentBatch except that it modifies the query stats for the
 // whole query. It's usually should be called once for each stage
 func (qc *AQLQueryContext) reportTiming(stream unsafe.Pointer, start *time.Time, name stageName) {
 	if qc.Debug {
