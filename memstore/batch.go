@@ -45,27 +45,6 @@ type Batch struct {
 	Columns []common.VectorParty
 }
 
-// ReplaceVectorParty replaces the VectorParty for the specified column in the
-// archive batch. Existing copies will be destructed.
-// vp can be specified as nil to purge the existing copy.
-// It requires the batch to be locked for writing.
-func (b *Batch) ReplaceVectorParty(columnID int, vp common.VectorParty) {
-	if vp != nil {
-		// Ensure that columnID is not out of bound.
-		for columnID >= len(b.Columns) {
-			b.Columns = append(b.Columns, nil)
-		}
-	}
-
-	if columnID < len(b.Columns) {
-		existing := b.Columns[columnID]
-		if existing != nil {
-			existing.SafeDestruct()
-		}
-		b.Columns[columnID] = vp
-	}
-}
-
 // GetVectorParty returns the VectorParty for the specified column from
 // the batch. It requires the batch to be locked for reading.
 func (b *Batch) GetVectorParty(columnID int) common.VectorParty {

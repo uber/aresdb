@@ -56,4 +56,41 @@ var _ = ginkgo.Describe("upsert batch header tests", func() {
 		Ω(newMode).Should(Equal(columnMode))
 		Ω(newUpdateMode).Should(Equal(columnUpdateMode))
 	})
+
+	ginkgo.It("upsert batch column id", func() {
+		header := UpsertBatchHeader{
+			idVector: []byte{0, 0},
+		}
+		err := header.WriteColumnID(10, 0)
+		Ω(err).Should(BeNil())
+
+		id, err := header.ReadColumnID(0)
+		Ω(err).Should(BeNil())
+		Ω(id).Should(Equal(10))
+	})
+
+	ginkgo.It("upsert batch column type", func() {
+		header := UpsertBatchHeader{
+			typeVector: []byte{0, 0, 0, 0},
+		}
+		for _, t := range([]DataType{Uint8, Uint16, Uint32, Int8, Int16, Int32, Int64, UUID, GeoPoint, GeoShape}) {
+			err := header.WriteColumnType(t, 0)
+			Ω(err).Should(BeNil())
+			dataType, err := header.ReadColumnType(0)
+			Ω(err).Should(BeNil())
+			Ω(dataType).Should(Equal(t))
+		}
+	})
+
+	ginkgo.It("upsert batch column offset", func() {
+		header := UpsertBatchHeader{
+			offsetVector: []byte{0, 0, 0, 0},
+		}
+		err := header.WriteColumnOffset(10, 0)
+		Ω(err).Should(BeNil())
+
+		offset, err := header.ReadColumnOffset(0)
+		Ω(err).Should(BeNil())
+		Ω(offset).Should(Equal(10))
+	})
 })

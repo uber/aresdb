@@ -16,14 +16,11 @@ package memstore
 
 import (
 	"encoding/hex"
-	"github.com/uber/aresdb/metastore"
 	"strings"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	memCom "github.com/uber/aresdb/memstore/common"
-	metaCom "github.com/uber/aresdb/metastore/common"
-	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/utils"
 	"time"
 )
@@ -611,152 +608,5 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(err).Should(BeNil())
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeFalse())
-	})
-
-	ginkgo.It("resolve enum dictionary", func() {
-		builder := memCom.NewUpsertBatchBuilder()
-		builder.AddColumn(0, memCom.Uint32)
-		builder.AddColumn(1, memCom.SmallEnum)
-		builder.AddColumn(2, memCom.BigEnum)
-
-		builder.AddRow()
-		builder.SetValue(0, 0, 2)
-		builder.SetValue(0, 1, "s1")
-		builder.SetValue(0, 2, "b1")
-
-		builder.AddRow()
-		builder.SetValue(1, 0, nil)
-		builder.SetValue(1, 1, "s2")
-		builder.SetValue(1, 2, "b2")
-
-		upsertBatchBytes, _ := builder.ToByteArray()
-		upsertBatch, _ := NewUpsertBatch(upsertBatchBytes)
-
-		tableName := "test"
-		tableSchema := &TableSchema{
-			Schema: metaCom.Table{
-				Name: tableName,
-				Columns: []metaCom.Column{
-					{
-						Name: "col1",
-						Type: metaCom.Uint32,
-					},
-					{
-						Name: "col2",
-						Type: metaCom.SmallEnum,
-					},
-					{
-						Name: "col3",
-						Type: metaCom.BigEnum,
-					},
-				},
-			},
-			EnumDicts: map[string]EnumDict{
-				"col2": {
-					Dict: map[string]int{
-						"s1": 4,
-						"s2": 5,
-					},
-				},
-				"col3": {
-					Dict: map[string]int{
-						"b1": 6,
-					},
-				},
-			},
-		}
-
-		metaStore := &metaMocks.MetaStore{}
-		metaStore.On("ExtendEnumDict", tableName, "col3", []string{"b2"}).Return([]int{7}, nil).Once()
-		err := upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
-		Ω(err).Should(BeNil())
-
-		// col1
-		value, err := upsertBatch.GetDataValue(0, 0)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint32)(value.OtherVal)).Should(Equal(uint32(2)))
-
-		value, err = upsertBatch.GetDataValue(1, 0)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeFalse())
-
-		// col2
-		value, err = upsertBatch.GetDataValue(0, 1)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(4)))
-
-		value, err = upsertBatch.GetDataValue(1, 1)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(5)))
-
-		// col3
-		value, err = upsertBatch.GetDataValue(0, 2)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(6)))
-
-		value, err = upsertBatch.GetDataValue(1, 2)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(7)))
-
-		// second call should do nothing
-		err = upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
-		Ω(err).Should(BeNil())
-
-		// col1
-		value, err = upsertBatch.GetDataValue(0, 0)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint32)(value.OtherVal)).Should(Equal(uint32(2)))
-
-		value, err = upsertBatch.GetDataValue(1, 0)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeFalse())
-
-		// col2
-		value, err = upsertBatch.GetDataValue(0, 1)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(4)))
-
-		value, err = upsertBatch.GetDataValue(1, 1)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint8)(value.OtherVal)).Should(Equal(uint8(5)))
-
-		// col3
-		value, err = upsertBatch.GetDataValue(0, 2)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(6)))
-
-		value, err = upsertBatch.GetDataValue(1, 2)
-		Ω(err).Should(BeNil())
-		Ω(value).ShouldNot(BeNil())
-		Ω(value.Valid).Should(BeTrue())
-		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(7)))
-
-		// recreate buffer and call third time with failure
-		upsertBatchBytes, _ = builder.ToByteArray()
-		upsertBatch, _ = NewUpsertBatch(upsertBatchBytes)
-		metaStore.On("ExtendEnumDict", tableName, "col3", []string{"b2"}).
-			Return(nil, metastore.ErrTableDoesNotExist).Once()
-		err = upsertBatch.ResolveEnumDict(tableName, tableSchema, metaStore)
-		Ω(err).ShouldNot(BeNil())
 	})
 })
