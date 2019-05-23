@@ -159,25 +159,34 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("Stat", "base/a/schema").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/b/schema").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/c/schema").Return(&mocks.FileInfo{}, nil)
-	mockFileSystem.On("Stat", "base/c/shards/0").Return(&mocks.FileInfo{}, nil)
+	mockFileSystem.On("Stat", "base/unknown_shard/schema").Return(&mocks.FileInfo{}, nil)
+	mockFileSystem.On("Stat", "base/read_fail/schema").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/unknown/schema").Return(nil, os.ErrNotExist)
+
+	mockFileSystem.On("Stat", "base/c/shards/0").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/a/shards/0").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/b/shards/0").Return(&mocks.FileInfo{}, nil)
+	mockFileSystem.On("Stat", "base/read_fail/shards/0").Return(&mocks.FileInfo{}, nil)
+	mockFileSystem.On("Stat", "base/unknown_shard/shards/0").Return(nil, os.ErrNotExist)
 
 	mockFileSystem.On("ReadFile", "base/a/schema").Return(testTableABytes, nil)
 	mockFileSystem.On("ReadFile", "base/b/schema").Return(testTableBBytes, nil)
 	mockFileSystem.On("ReadFile", "base/c/schema").Return(testTableCBytes, nil)
+	mockFileSystem.On("ReadFile", "base/read_fail/schema").Return(nil, os.ErrNotExist)
+
 	mockFileSystem.On("ReadFile", "base/a/enums/column1").Return([]byte(fmt.Sprintf("foo%sbar", common.EnumDelimiter)), nil)
 	mockFileSystem.On("ReadFile", "base/a/enums/column4").Return([]byte(fmt.Sprintf("foo%sbar", common.EnumDelimiter)), nil)
+	mockFileSystem.On("ReadFile", "base/a/enums/bad_col").Return(nil, os.ErrNotExist)
+
 	mockFileSystem.On("ReadFile", "base/a/shards/0/version").Return([]byte("1"), nil)
-	mockFileSystem.On("ReadFile", "base/b/shards/0/redolog-offset").Return([]byte("1,0"), nil)
+	mockFileSystem.On("ReadFile", "base/a/shards/0/redolog-offset").Return([]byte("1,0"), nil)
 	mockFileSystem.On("ReadFile", "base/b/shards/0/snapshot").Return([]byte("1,0,-1,1"), nil)
 	mockFileSystem.On("ReadFile", "base/c/shards/0/version").Return([]byte("1"), nil)
 
 	mockFileSystem.On("OpenFileForWrite", "base/a/schema", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/c/schema", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/a/shards/0/version", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
-	mockFileSystem.On("OpenFileForWrite", "base/b/shards/0/redolog-offset", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
+	mockFileSystem.On("OpenFileForWrite", "base/a/shards/0/redolog-offset", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/b/shards/0/snapshot", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/a/enums/column1", os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/c/shards/0/batches/1", os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
@@ -223,11 +232,21 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(Equal(ErrTableDoesNotExist))
 	})
 
+	ginkgo.It("GetOwnedShards", func() {
+		diskMetaStore := createDiskMetastore("base")
+		res, err := diskMetaStore.GetOwnedShards("a")
+		Ω(err).Should(BeNil())
+		Ω(res[0]).Should(Equal(0))
+	})
+
 	ginkgo.It("GetEnumDict", func() {
 		diskMetaStore := createDiskMetastore("base")
 		enumCases, err := diskMetaStore.GetEnumDict("a", "column1")
 		Ω(err).Should(BeNil())
 		Ω(enumCases).Should(Equal([]string{"foo", "bar"}))
+
+		enumCases, err = diskMetaStore.GetEnumDict("unknown", "column1")
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("GetArchivingCutoff", func() {
@@ -235,6 +254,9 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		archivingCutoff, err := diskMetaStore.GetArchivingCutoff("a", 0)
 		Ω(err).Should(BeNil())
 		Ω(archivingCutoff).Should(Equal(uint32(1)))
+
+		archivingCutoff, err = diskMetaStore.GetArchivingCutoff("unknown", 0)
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("GetSnapshotProgress", func() {
@@ -245,6 +267,9 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(offset).Should(Equal(uint32(0)))
 		Ω(batchID).Should(Equal(int32(-1)))
 		Ω(record).Should(Equal(uint32(1)))
+
+		redoLogFile, offset, batchID, record, err = diskMetaStore.GetSnapshotProgress("unknown", 0)
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("UpdateArchivingCutoff", func() {
@@ -252,6 +277,15 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		err := diskMetastore.UpdateArchivingCutoff("a", 0, 1)
 		Ω(err).Should(BeNil())
 		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
+
+		err = diskMetastore.UpdateArchivingCutoff("unknown", 0, 1)
+		Ω(err).ShouldNot(BeNil())
+		err = diskMetastore.UpdateArchivingCutoff("unknown_shard", 0, 1)
+		Ω(err).ShouldNot(BeNil())
+		err = diskMetastore.UpdateArchivingCutoff("read_fail", 0, 1)
+		Ω(err).ShouldNot(BeNil())
+		err = diskMetastore.UpdateArchivingCutoff("b", 0, 1)
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("UpdateSnapshotProgress", func() {
@@ -259,6 +293,40 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		err := diskMetastore.UpdateSnapshotProgress("b", 0, 1, 0, 1, 1)
 		Ω(err).Should(BeNil())
 		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1,0,1,1")))
+
+		err = diskMetastore.UpdateArchivingCutoff("unknown", 0, 1)
+		Ω(err).ShouldNot(BeNil())
+		err = diskMetastore.UpdateSnapshotProgress("unknown_shard", 0, 1, 0, 1, 1)
+		Ω(err).ShouldNot(BeNil())
+		err = diskMetastore.UpdateSnapshotProgress("read_fail", 0, 1, 0, 1, 1)
+		Ω(err).ShouldNot(BeNil())
+		err = diskMetastore.UpdateSnapshotProgress("a", 0, 1, 0, 1, 1)
+		Ω(err).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("UpdateBackfillProgress", func() {
+		diskMetastore := createDiskMetastore("base")
+		err := diskMetastore.UpdateBackfillProgress("unknown_shard", 0, 1, 0)
+		Ω(err).ShouldNot(BeNil())
+		err = diskMetastore.UpdateBackfillProgress("read_fail", 0, 1, 0)
+		Ω(err).ShouldNot(BeNil())
+		err = diskMetastore.UpdateArchivingCutoff("b", 0, 1)
+		Ω(err).ShouldNot(BeNil())
+
+		err = diskMetastore.UpdateArchivingCutoff("a", 0, 1)
+		Ω(err).Should(BeNil())
+		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
+	})
+
+	ginkgo.It("GetBackfillProgressInfo", func() {
+		diskMetastore := createDiskMetastore("base")
+		redoLogFile, offset, err := diskMetastore.GetBackfillProgressInfo("a", 0)
+		Ω(err).Should(BeNil())
+		Ω(redoLogFile).Should(Equal(int64(1)))
+		Ω(offset).Should(Equal(uint32(0)))
+
+		_, _, err = diskMetastore.GetBackfillProgressInfo("unknown_shard", 0)
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("WatchTableListEvents", func() {
@@ -267,6 +335,10 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(BeNil())
 		Ω(events).ShouldNot(BeNil())
 		Ω(done).ShouldNot(BeNil())
+
+		// rewatch will fail
+		_, _, err = diskMetastore.WatchTableListEvents()
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("WatchTableSchemaEvents", func() {
@@ -275,6 +347,10 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(BeNil())
 		Ω(events).ShouldNot(BeNil())
 		Ω(done).ShouldNot(BeNil())
+
+		//rewatch will fail
+		_, _, err = diskMetastore.WatchTableSchemaEvents()
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("WatchEnumDictEvents", func() {
@@ -290,6 +366,25 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		enumCase = <-events
 		enumCases = append(enumCases, enumCase)
 		Ω(enumCases).Should(Equal([]string{"foo", "bar"}))
+
+		events, done, err = diskMetastore.WatchEnumDictEvents("unknown", "column1", 0)
+		Ω(err).ShouldNot(BeNil())
+		events, done, err = diskMetastore.WatchEnumDictEvents("a", "column1", 0)
+		Ω(err).ShouldNot(BeNil())
+		events, done, err = diskMetastore.WatchEnumDictEvents("a", "bad_col", 0)
+		Ω(err).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("WatchShardOwnershipEvents", func() {
+		diskMetaStore := createDiskMetastore("base")
+		events, done, err := diskMetaStore.WatchShardOwnershipEvents()
+		Ω(err).Should(BeNil())
+		Ω(events).ShouldNot(BeNil())
+		Ω(done).ShouldNot(BeNil())
+
+		//rewatch will fail
+		_, _, err = diskMetaStore.WatchShardOwnershipEvents()
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("CreateTable", func() {
