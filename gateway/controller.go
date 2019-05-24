@@ -208,7 +208,7 @@ func (c *ControllerHTTPClient) FetchSchema(tableName string) (table *common.Tabl
 
 // FetchAllEnums fetches all enums for given table and column
 func (c *ControllerHTTPClient) FetchAllEnums(tableName string, columnName string) (enumDictReponse []string, err error) {
-	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("enum/%s/%s/columns/%s/enum-cases", c.namespace, tableName, columnName), nil)
+	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("/schema/%s/tables/%s/columns/%s/enum-cases", c.namespace, tableName, columnName), nil)
 	if err != nil {
 		return
 	}
