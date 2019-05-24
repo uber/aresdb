@@ -308,6 +308,7 @@ func (c *Controller) SyncUpJobConfigs() {
 	c.serviceConfig.Logger.Info("Got assignment from aresDB controller",
 		zap.String("jobNamespace", c.jobNS),
 		zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address),
+		zap.String("activeAresNameSpace", config.ActiveAresNameSpace),
 		zap.Any("aresClusterNSConfig", c.serviceConfig.AresNSConfig),
 		zap.Any("activeAresClusters", c.serviceConfig.ActiveAresClusters),
 		zap.Any("assignement", assignment))
@@ -355,7 +356,7 @@ func (c *Controller) SyncUpJobConfigs() {
 		} else {
 			// case2: a new jobConfig
 			aresClusterDrivers := make(map[string]*Driver)
-			if len(assignment.AresClusters) == 0 {
+			if len(assignment.AresClusters) != 0 {
 				for aresCluster, aresClusterObj := range assignment.AresClusters {
 					// case2.1: add a new driver for each aresCluster
 					c.serviceConfig.ActiveAresClusters[aresCluster] = aresClusterObj
