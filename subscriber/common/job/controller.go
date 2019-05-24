@@ -308,6 +308,7 @@ func (c *Controller) SyncUpJobConfigs() {
 	c.serviceConfig.Logger.Info("Got assignment from aresDB controller",
 		zap.String("jobNamespace", c.jobNS),
 		zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address),
+		zap.Any("aresClusterNSConfig", c.serviceConfig.AresNSConfig),
 		zap.Any("activeAresClusters", c.serviceConfig.ActiveAresClusters),
 		zap.Any("assignement", assignment))
 
