@@ -307,7 +307,9 @@ func (c *Controller) SyncUpJobConfigs() {
 	}
 	c.serviceConfig.Logger.Info("Got assignment from aresDB controller",
 		zap.String("jobNamespace", c.jobNS),
-		zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address))
+		zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address),
+		zap.Any("activeAresClusters", c.serviceConfig.ActiveAresClusters),
+		zap.Any("assignement", assignment))
 
 	newJobs := make(map[string]*rules.JobConfig)
 	// Add or Update jobs
@@ -321,6 +323,9 @@ func (c *Controller) SyncUpJobConfigs() {
 					activeAresCluster, exist := c.serviceConfig.ActiveAresClusters[aresCluster]
 					if exist && activeAresCluster.GetSinkMode() != config.Sink_Kafka {
 						c.deleteDriver(driver, aresCluster, aresClusterDrivers)
+						c.serviceConfig.Logger.Info("deleted driver due to the removed aresCluster",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
 					}
 					continue
 				}
@@ -328,6 +333,9 @@ func (c *Controller) SyncUpJobConfigs() {
 					// case1.2: restart the driver because jobConfig version is changed,
 					if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, true) {
 						updateHash = false
+						c.serviceConfig.Logger.Info("restarted driver due to version changes",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
 					}
 				}
 			}
@@ -337,6 +345,9 @@ func (c *Controller) SyncUpJobConfigs() {
 					c.serviceConfig.ActiveAresClusters[aresCluster] = aresClusterObj
 					if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
 						updateHash = false
+						c.serviceConfig.Logger.Info("added driver due to the new aresCluster",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
 					}
 				}
 			}
@@ -349,6 +360,9 @@ func (c *Controller) SyncUpJobConfigs() {
 					c.serviceConfig.ActiveAresClusters[aresCluster] = aresClusterObj
 					if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
 						updateHash = false
+						c.serviceConfig.Logger.Info("added driver (aresDB sink) due to the new job",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
 					}
 				}
 			} else {
@@ -356,6 +370,9 @@ func (c *Controller) SyncUpJobConfigs() {
 					if aresClusterObj.GetSinkMode() == config.Sink_Kafka {
 						if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
 							updateHash = false
+							c.serviceConfig.Logger.Info("added driver (kafka sink) due to the new job",
+								zap.String("job", jobConfig.Name),
+								zap.String("aresCluster", aresCluster))
 						}
 					}
 				}
