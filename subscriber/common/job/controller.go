@@ -113,7 +113,7 @@ func NewController(params Params) *Controller {
 			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
 			"RPC-Service": []string{params.ServiceConfig.ControllerConfig.ServiceName},
 		})
-	aresControllerClient.SetNamespace(config.ActiveAresNameSpace)
+	aresControllerClient.SetNamespace(config.ActiveJobNameSpace)
 
 	drivers, err := NewDrivers(params, aresControllerClient)
 	if err != nil {
