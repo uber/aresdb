@@ -191,6 +191,12 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("ReadFile", "base/bad1/shards/0/redolog-offset").Return([]byte("10"), nil)
 	mockFileSystem.On("ReadFile", "base/bad2/shards/0/redolog-offset").Return([]byte("a,0"), nil)
 	mockFileSystem.On("ReadFile", "base/bad3/shards/0/redolog-offset").Return([]byte("1,a"), nil)
+	mockFileSystem.On("ReadFile", "base/bad11/shards/0/redolog-offset").Return([]byte("1,1"), nil)
+	mockFileSystem.On("ReadFile", "base/bad12/shards/0/redolog-offset").Return([]byte("a,1,1,1"), nil)
+	mockFileSystem.On("ReadFile", "base/bad13/shards/0/redolog-offset").Return([]byte("1,a,1,1"), nil)
+	mockFileSystem.On("ReadFile", "base/bad14/shards/0/redolog-offset").Return([]byte("1,1,a,1"), nil)
+	mockFileSystem.On("ReadFile", "base/bad15/shards/0/redolog-offset").Return([]byte("1,1,1,a"), nil)
+	mockFileSystem.On("ReadFile", "base/bad16/shards/0/redolog-offset").Return([]byte("1,2,3,4"), nil)
 
 	mockFileSystem.On("OpenFileForWrite", "base/a/schema", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/c/schema", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
@@ -310,7 +316,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(BeNil())
 		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1,0,1,1")))
 
-		err = diskMetastore.UpdateArchivingCutoff("unknown", 0, 1)
+		err = diskMetastore.UpdateSnapshotProgress("unknown", 0, 1, 0, 1, 1)
 		Ω(err).ShouldNot(BeNil())
 		err = diskMetastore.UpdateSnapshotProgress("unknown_shard", 0, 1, 0, 1, 1)
 		Ω(err).ShouldNot(BeNil())
@@ -326,12 +332,12 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).ShouldNot(BeNil())
 		err = diskMetastore.UpdateBackfillProgress("read_fail", 0, 1, 0)
 		Ω(err).ShouldNot(BeNil())
-		err = diskMetastore.UpdateArchivingCutoff("b", 0, 1)
+		err = diskMetastore.UpdateBackfillProgress("b", 0, 1, 0)
 		Ω(err).ShouldNot(BeNil())
 
-		err = diskMetastore.UpdateArchivingCutoff("a", 0, 1)
+		err = diskMetastore.UpdateBackfillProgress("a", 0, 1, 0)
 		Ω(err).Should(BeNil())
-		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
+		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1,0")))
 	})
 
 	ginkgo.It("GetBackfillProgressInfo", func() {
@@ -706,6 +712,48 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(BeNil())
 	})
 
+	ginkgo.It("readSnapshotRedoLogFileAndOffset", func() {
+		diskMetaStore := createDiskMetastore("base")
+		redoLogFile, offset, batch, index, err := diskMetaStore.readSnapshotRedoLogFileAndOffset("base/notexist/shards/0/redolog-offset")
+		Ω(err).Should(BeNil())
+		Ω(redoLogFile).Should(Equal(int64(0)))
+		Ω(offset).Should(Equal(uint32(0)))
+		Ω(batch).Should(Equal(int32(0)))
+		Ω(index).Should(Equal(uint32(0)))
+
+		redoLogFile, offset, batch, index, err = diskMetaStore.readSnapshotRedoLogFileAndOffset("base/nopermission/shards/0/redolog-offset")
+		Ω(err).ShouldNot(BeNil())
+		redoLogFile, offset, batch, index, err = diskMetaStore.readSnapshotRedoLogFileAndOffset("base/bad11/shards/0/redolog-offset")
+		Ω(err).ShouldNot(BeNil())
+		redoLogFile, offset, batch, index, err = diskMetaStore.readSnapshotRedoLogFileAndOffset("base/bad12/shards/0/redolog-offset")
+		Ω(err).ShouldNot(BeNil())
+		redoLogFile, offset, batch, index, err = diskMetaStore.readSnapshotRedoLogFileAndOffset("base/bad13/shards/0/redolog-offset")
+		Ω(err).ShouldNot(BeNil())
+		redoLogFile, offset, batch, index, err = diskMetaStore.readSnapshotRedoLogFileAndOffset("base/bad14/shards/0/redolog-offset")
+		Ω(err).ShouldNot(BeNil())
+		redoLogFile, offset, batch, index, err = diskMetaStore.readSnapshotRedoLogFileAndOffset("base/bad15/shards/0/redolog-offset")
+		Ω(err).ShouldNot(BeNil())
+		redoLogFile, offset, batch, index, err = diskMetaStore.readSnapshotRedoLogFileAndOffset("base/bad16/shards/0/redolog-offset")
+		Ω(err).Should(BeNil())
+		Ω(redoLogFile).Should(Equal(int64(1)))
+		Ω(offset).Should(Equal(uint32(2)))
+		Ω(batch).Should(Equal(int32(3)))
+		Ω(index).Should(Equal(uint32(4)))
+	})
+
+	ginkgo.It("writeArchivingCutoff", func() {
+		diskMetaStore := createDiskMetastore("base")
+		err := diskMetaStore.writeArchivingCutoff("base/d/shards/0/version", uint32(1))
+		Ω(err).ShouldNot(BeNil())
+
+		err = diskMetaStore.writeArchivingCutoff("base/b/shards/0/redolog-offset", uint32(1))
+		Ω(err).ShouldNot(BeNil())
+
+		err = diskMetaStore.writeArchivingCutoff("base/a/shards/0/redolog-offset", uint32(1))
+		Ω(err).Should(BeNil())
+		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
+	})
+
 	ginkgo.It("writeRedoLogVersionAndOffset", func() {
 		diskMetaStore := createDiskMetastore("base")
 		err := diskMetaStore.writeRedoLogVersionAndOffset("base/a/shards/0/redolog-offset", 1, 1)
@@ -772,5 +820,8 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 		fs := utils.OSFileSystem{}
 		fs.RemoveAll("/tmp/ares_testdir")
+
+		diskMetaStore, err = NewDiskMetaStore("/etc/testdir")
+		Ω(err).ShouldNot(BeNil())
 	})
 })
