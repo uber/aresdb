@@ -185,13 +185,6 @@ func NewServiceConfig(p Params) (Result, error) {
 	serviceConfig.Config = p.Config
 	serviceConfig.ActiveAresClusters = make(map[string]SinkConfig)
 
-	// Skip local job and aresCluster config if controller is enabled
-	if serviceConfig.ControllerConfig.Enable {
-		return Result{
-			ServiceConfig: serviceConfig,
-		}, nil
-	}
-
 	// set serviceConfig.ActiveAresClusters
 	if serviceConfig.AresNSConfig.AresClusters == nil || serviceConfig.AresNSConfig.AresNameSpaces == nil {
 		return Result{
@@ -213,6 +206,13 @@ func NewServiceConfig(p Params) (Result, error) {
 		return Result{
 			ServiceConfig: serviceConfig,
 		}, fmt.Errorf("No ares clusters are defined for namespace %s", ActiveAresNameSpace)
+	}
+
+	// Skip local job config if controller is enabled
+	if serviceConfig.ControllerConfig.Enable {
+		return Result{
+			ServiceConfig: serviceConfig,
+		}, nil
 	}
 
 	// set serviceConfig.ActiveJobs
