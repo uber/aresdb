@@ -318,7 +318,10 @@ func (c *Controller) SyncUpJobConfigs() {
 			for aresCluster, driver := range aresClusterDrivers {
 				if _, ok := assignment.AresClusters[aresCluster]; !ok {
 					// case1.1: delete the driver because aresCluster is deleted
-					c.deleteDriver(driver, aresCluster, aresClusterDrivers)
+					activeAresCluster, exist := c.serviceConfig.ActiveAresClusters[aresCluster]
+					if exist && activeAresCluster.GetSinkMode() != config.Sink_Kafka {
+						c.deleteDriver(driver, aresCluster, aresClusterDrivers)
+					}
 					continue
 				}
 				if driver.jobConfig.Version != jobConfig.Version {
@@ -340,17 +343,27 @@ func (c *Controller) SyncUpJobConfigs() {
 		} else {
 			// case2: a new jobConfig
 			aresClusterDrivers := make(map[string]*Driver)
-			for aresCluster, aresClusterObj := range assignment.AresClusters {
-				// case2.1: add a new driver for each aresCluster
-				c.serviceConfig.ActiveAresClusters[aresCluster] = aresClusterObj
-				if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
-					updateHash = false
+			if len(assignment.AresClusters) == 0 {
+				for aresCluster, aresClusterObj := range assignment.AresClusters {
+					// case2.1: add a new driver for each aresCluster
+					c.serviceConfig.ActiveAresClusters[aresCluster] = aresClusterObj
+					if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
+						updateHash = false
+					}
+				}
+			} else {
+				for aresCluster, aresClusterObj := range c.serviceConfig.ActiveAresClusters {
+					if aresClusterObj.GetSinkMode() == config.Sink_Kafka {
+						if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
+							updateHash = false
+						}
+					}
 				}
 			}
 			c.Drivers[jobConfig.Name] = aresClusterDrivers
-			for aresCluster := range c.serviceConfig.ActiveAresClusters {
+			for aresCluster, aresClusterObj := range c.serviceConfig.ActiveAresClusters {
 				// case2.2: delete the aresCluster from ActiveAresClusters because it is deleted from assignment
-				if _, ok := assignment.AresClusters[aresCluster]; !ok {
+				if _, ok := assignment.AresClusters[aresCluster]; !ok && aresClusterObj.GetSinkMode() != config.Sink_Kafka {
 					delete(c.serviceConfig.ActiveAresClusters, aresCluster)
 				}
 			}
