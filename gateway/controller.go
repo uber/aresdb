@@ -227,7 +227,7 @@ func (c *ControllerHTTPClient) ExtendEnumCases(tableName, columnName string, enu
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to marshal enum cases")
 	}
-	
+
 	request, err := c.buildRequest(http.MethodPost, fmt.Sprintf("schema/%s/tables/%s/columns/%s/enum-cases", c.namespace, tableName, columnName), bytes.NewReader(enumCasesBytes))
 	if err != nil {
 		return

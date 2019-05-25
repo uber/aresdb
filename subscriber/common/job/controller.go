@@ -18,13 +18,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/m3db/m3/src/cluster/placement"
-	"net/http"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/curator-go/curator"
+	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3x/instrument"
 	"github.com/uber/aresdb/gateway"
@@ -33,7 +28,11 @@ import (
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"net/http"
 	"os"
+	"strings"
+	"sync"
+	"time"
 )
 
 // Module configures Drivers and Controller.
