@@ -370,10 +370,6 @@ func (c *Controller) SyncUpJobConfigs() {
 			} else {
 				for aresCluster, aresClusterObj := range c.serviceConfig.ActiveAresClusters {
 					if aresClusterObj.GetSinkMode() == config.Sink_Kafka {
-						if jobConfig.NumShards == 0 {
-							// temporally set default 8 for testing
-							jobConfig.NumShards = 8
-						}
 						if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
 							updateHash = false
 							c.serviceConfig.Logger.Info("added driver (kafka sink) due to the new job",
