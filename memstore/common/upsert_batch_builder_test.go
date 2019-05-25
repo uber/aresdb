@@ -272,23 +272,4 @@ var _ = ginkgo.Describe("upsert batch builder", func() {
 		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Float32, CompareFloat32, -1)
 		Ω(*(*float32)(unsafe.Pointer(&oldValue))).Should(Equal(float32(1.0)))
 	})
-
-	ginkgo.It("set enum as string directly", func() {
-		builder := NewUpsertBatchBuilder()
-		err := builder.AddColumn(0, SmallEnum)
-		Ω(err).Should(BeNil())
-		err = builder.AddColumn(1, BigEnum)
-		Ω(err).Should(BeNil())
-
-		builder.AddRow()
-		builder.SetValue(0, 0, "s1")
-		builder.SetValue(0, 1, "b1")
-		builder.AddRow()
-		builder.SetValue(1, 0, "s2")
-		builder.SetValue(1, 1, "b2")
-
-		byts, err := builder.ToByteArray()
-		Ω(err).Should(BeNil())
-		Ω(byts).Should(Equal([]byte{1, 0, 237, 254, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 70, 0, 0, 0, 82, 0, 0, 0, 100, 0, 0, 0, 7, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 8, 0, 16, 0, 9, 0, 0, 0, 1, 0, 1, 1, 1, 115, 49, 0, 10, 115, 50, 0, 0, 0, 0, 1, 1, 98, 49, 0, 10, 98, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0}))
-	})
 })

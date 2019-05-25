@@ -18,6 +18,7 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore"
+	aresdbCommon "github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
@@ -327,5 +328,12 @@ var _ = ginkgo.Describe("device_manager", func() {
 		// archive batch columns + processing
 		memUsage = qc.estimateArchiveBatchMemoryUsage(archiveBatch, false)
 		Ω(memUsage).Should(Equal(489))
+	})
+
+	ginkgo.It("NewDeviceManager should work", func() {
+		Ω(NewDeviceManager(aresdbCommon.QueryConfig{
+			DeviceMemoryUtilization: 0.8,
+			DeviceChoosingTimeout: -1,
+		})).ShouldNot(BeNil())
 	})
 })
