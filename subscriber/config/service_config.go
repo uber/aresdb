@@ -111,22 +111,22 @@ var sinkModeStr = map[string]SinkMode{
 // SinkConfig wraps sink configurations
 type SinkConfig struct {
 	// SinkMode defines the subscriber sink mode
-	SinkModeStr string `yaml:"sinkMode"`
+	SinkModeStr string `yaml:"sinkMode" json:"sinkMode"`
 	// AresDBConnectorConfig defines aresDB client config
-	AresDBConnectorConfig client.ConnectorConfig `yaml:"aresDB"`
+	AresDBConnectorConfig client.ConnectorConfig `yaml:"aresDB" json:"aresDB"`
 	// KafkaProducerConfig defines Kafka producer config
-	KafkaProducerConfig KafkaProducerConfig `yaml:"kafkaProducer"`
+	KafkaProducerConfig KafkaProducerConfig `yaml:"kafkaProducer" json:"kafkaProducer"`
 }
 
 // KafkaProducerConfig represents Kafka producer configuration
 type KafkaProducerConfig struct {
 	// Brokers defines a list of broker addresses separated by comma
-	Brokers string `yaml:"brokers"`
+	Brokers string `yaml:"brokers" json:"brokers"`
 	// RetryMax is the max number of times to retry sending a message (default 3).
-	RetryMax int `yaml:"retryMax"`
+	RetryMax int `yaml:"retryMax" json:"retryMax"`
 	// TimeoutInMSec is the max duration the broker will wait
 	// the receipt of the number of RequiredAcks (defaults to 10 seconds)
-	TimeoutInSec int `yaml:"timeoutInSec"`
+	TimeoutInSec int `yaml:"timeoutInSec" json:"timeoutInSec"`
 }
 
 // AresNSConfig defines the mapping b/w ares namespace and its clusters
