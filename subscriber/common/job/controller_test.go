@@ -276,6 +276,12 @@ var _ = Describe("controller", func() {
 			ConsumerInitFunc: kafka.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
+		params.ServiceConfig.HeartbeatConfig = &config.HeartBeatConfig{
+			Enabled:       false,
+			Timeout:       30,
+			Interval:      10,
+			CheckInterval: 2,
+		}
 
 		controller := NewController(params)
 		Ω(controller).ShouldNot(BeNil())

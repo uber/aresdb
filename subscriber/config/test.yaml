@@ -9,15 +9,20 @@ ares:
 
   # A list of ares clusters. Each cluster includes master node address and timeout in seconds.
   clusters:
-    clusters:
-      dev-ares01:
-        aresDB:
-          address: "ares01:9000"
-          timeout: 20
-      dev-ares02:
-        aresDB:
-          address: "ares02:9000"
-          timeout: 20
+    dev-ares01:
+      aresDB:
+        address: "ares01:9000"
+        timeout: 20
+    dev-ares02:
+      aresDB:
+        address: "ares02:9000"
+        timeout: 20
+    kafka-staging:
+      sinkMode: "kafka"
+      kafkaProducer:
+        brokers: "kloak-phx2-lossless"
+        retryMax: 3
+        timeoutInSec: 10
 
 # A list of jobs which are defined in config/jobs
 jobs:
