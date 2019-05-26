@@ -25,7 +25,6 @@ import (
 	"github.com/uber/aresdb/gateway"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
-	"github.com/uber/aresdb/utils"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"net/http"
@@ -116,7 +115,7 @@ func NewController(params Params) *Controller {
 
 	drivers, err := NewDrivers(params, aresControllerClient)
 	if err != nil {
-		panic(err)
+		params.ServiceConfig.Logger.Panic("Failed to NewDrivers", zap.Error(err))
 	}
 
 	if params.ServiceConfig.ControllerConfig.RefreshInterval <= 0 {
@@ -146,22 +145,22 @@ func NewController(params Params) *Controller {
 				zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))
 			controller.etcdServices, err = connectEtcdServices(params)
 			if err != nil {
-				panic(utils.StackError(err, "Failed to createEtcdServices"))
+				params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
 			}
 			if registerHeartBeatService(params, controller.etcdServices) != nil {
-				panic(utils.StackError(err, "Failed to registerHeartBeatService"))
+				params.ServiceConfig.Logger.Panic("Failed to registerHeartBeatService", zap.Error(err))
 			}
 		} else {
 			controller.zkClient = createZKClient(params)
 			err = controller.zkClient.Start()
 			if err != nil {
-				panic(utils.StackError(err, "Failed to start zkClient"))
+				params.ServiceConfig.Logger.Panic("Failed to start zkClient", zap.Error(err))
 			}
 			params.ServiceConfig.Logger.Info("zkClient was started")
 
 			err = controller.RegisterOnZK()
 			if err != nil {
-				panic(utils.StackError(err, "Failed to register subscriber"))
+				params.ServiceConfig.Logger.Panic("Failed to register subscriber", zap.Error(err))
 			}
 			params.ServiceConfig.Logger.Info("Registered subscriber in zk")
 		}
