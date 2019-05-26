@@ -78,7 +78,7 @@ var _ = Describe("controller", func() {
 	}
 
 	testTableNames := []string{"a"}
-	re := regexp.MustCompile("/schema/tables/a/columns/(.+)/enum-cases")
+	re := regexp.MustCompile("/schema/dev01/tables/a/columns/(.+)/enum-cases")
 	testTables := map[string]metaCom.Table{
 		"a": {
 			Name: "a",
@@ -212,6 +212,7 @@ var _ = Describe("controller", func() {
       {  
          "job":"job1",
          "version":1,
+         "numShards":8,
          "aresTableConfig":{  
             "name":"job1",
             "cluster":"",
