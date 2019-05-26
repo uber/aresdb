@@ -17,7 +17,6 @@ package sink
 import (
 	"fmt"
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/utils"
@@ -114,7 +113,7 @@ func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rule
 		}
 	}
 
-	if key, err = memstore.GetPrimaryKeyBytes(primaryKeyValues, keyLength); err != nil {
+	if key, err = getAllPrimaryKeyBytes(primaryKeyValues, keyLength); err != nil {
 		return key, err
 	}
 	if strBytes != nil {
@@ -135,4 +134,28 @@ func getDataValue(col interface{}, columnIDInSchema int, jobConfig *rules.JobCon
 	dataVal, err := memCom.ValueFromString(dataStr, dataType)
 
 	return dataVal, err
+}
+
+// getAllPrimaryKeyBytes is a copy of GetPrimaryKeyBytes in primary_key.go.
+// This copy tries to avoid building libmem during subscriber package build.
+func getAllPrimaryKeyBytes(primaryKeyValues []memCom.DataValue, keyLength int) ([]byte, error) {
+	key := make([]byte, 0, keyLength)
+	for _, value := range primaryKeyValues {
+		if !value.Valid {
+			return key, utils.StackError(nil, "Primary key cannot be null")
+		}
+
+		if value.IsBool {
+			if value.BoolVal {
+				key = append(key, byte(1))
+			} else {
+				key = append(key, byte(0))
+			}
+		} else {
+			for i := 0; i < memCom.DataTypeBits(value.DataType)/8; i++ {
+				key = append(key, *(*byte)(utils.MemAccess(value.OtherVal, i)))
+			}
+		}
+	}
+	return key, nil
 }

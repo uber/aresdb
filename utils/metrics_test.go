@@ -67,9 +67,55 @@ var _ = ginkgo.Describe("metrics", func() {
 		Ω(rf.GetReporter(tableName, shardID)).Should(Equal(rf.GetRootReporter()))
 	})
 
-	ginkgo.It("NewReportery should work", func() {
+	ginkgo.It("NewReporter should work", func() {
 		scope := tally.NewTestScope("test", nil)
 		r := NewReporter(scope)
 		Ω(r.GetRootScope()).Should(Equal(scope))
+	})
+
+	ginkgo.It("GetCounter should work", func() {
+		scope := tally.NewTestScope("test", nil)
+		r := NewReporter(scope)
+		counter := r.GetCounter(BackfillCount)
+		Ω(counter).ShouldNot(BeNil())
+
+		// Not a counter
+		Ω(func() { r.GetCounter(BackfillLockTiming) }).Should(Panic())
+	})
+
+	ginkgo.It("GetGauge should work", func() {
+		scope := tally.NewTestScope("test", nil)
+		r := NewReporter(scope)
+		gauge := r.GetGauge(ArchivingLowWatermark)
+		Ω(gauge).ShouldNot(BeNil())
+
+		// Not a gauge.
+		Ω(func() { r.GetGauge(BackfillLockTiming) }).Should(Panic())
+	})
+
+	ginkgo.It("GetTimer should work", func() {
+		scope := tally.NewTestScope("test", nil)
+		r := NewReporter(scope)
+		timer := r.GetTimer(BackfillLockTiming)
+		Ω(timer).ShouldNot(BeNil())
+
+		// Not a timer.
+		Ω(func() { r.GetTimer(ArchivingLowWatermark) }).Should(Panic())
+	})
+
+	ginkgo.It("GetChildGauge should work", func() {
+		scope := tally.NewTestScope("test", nil)
+		r := NewReporter(scope)
+		gauge := r.GetChildGauge(map[string]string{
+			"test_field": "test_value",
+		}, ArchivingLowWatermark)
+		Ω(gauge).ShouldNot(BeNil())
+
+		// Not a gauge.
+		Ω(func() {
+			r.GetChildGauge(map[string]string{
+				"test_field": "test_value",
+			}, BackfillLockTiming)
+		}).Should(Panic())
 	})
 })

@@ -26,6 +26,7 @@ import (
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"time"
+	"encoding/json"
 )
 
 const (
@@ -105,14 +106,7 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		}
 	}
 
-	if qc.isNonAggregationQuery {
-		qc.Results = make(queryCom.AQLQueryResult)
-		headers := make([]string, len(qc.Query.Dimensions))
-		for i, dim := range qc.Query.Dimensions {
-			headers[i] = dim.Expr
-		}
-		qc.Results.SetHeaders(headers)
-	}
+	qc.initializeNonAggResponse()
 
 	qc.initResultFlushContext()
 
@@ -924,7 +918,7 @@ func (qc *AQLQueryContext) processBatch(
 
 	qc.reportTimingForCurrentBatch(stream, &start, prepareForFilteringTiming)
 
-	return NewBatchExecutor(qc, batchID, customFilterFunc, stream)
+	return NewBatchExecutor(qc, batchID, customFilterFunc, stream, start)
 }
 
 // prefilterSlice does the following:
@@ -1103,7 +1097,7 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 
 		if usage&matchedColumnUsages != 0 || usage&columnUsedByPrefilter != 0 {
 			startRow, endRow, hostSlice = qc.prefilterSlice(sourceVP, prefilterIndex, startRow, endRow)
-			if endRow - startRow < maxSizeAfterPreFilter {
+			if endRow-startRow < maxSizeAfterPreFilter {
 				maxSizeAfterPreFilter = endRow - startRow
 			}
 			prefilterIndex++
@@ -1477,4 +1471,22 @@ func shouldSkipLiveBatchWithFilter(b *memstore.LiveBatch, filter expr.Expr) bool
 		}
 	}
 	return false
+}
+
+func (qc *AQLQueryContext) initializeNonAggResponse() {
+	if qc.isNonAggregationQuery {
+		headers := make([]string, len(qc.Query.Dimensions))
+		for i, dim := range qc.Query.Dimensions {
+			headers[i] = dim.Expr
+		}
+		if qc.ResponseWriter != nil {
+			headersBytes, _ := json.Marshal(headers)
+			qc.ResponseWriter.Write([]byte(`{"results":[{"headers":`))
+			qc.ResponseWriter.Write(headersBytes)
+			qc.ResponseWriter.Write([]byte(`,"matrixData":[`))
+		} else {
+			qc.Results = make(queryCom.AQLQueryResult)
+			qc.Results.SetHeaders(headers)
+		}
+	}
 }

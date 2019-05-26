@@ -163,3 +163,47 @@ func (z *ZapLogger) With(args ...interface{}) Logger {
 		z.sugaredLogger.With(args...),
 	}
 }
+
+// NoopLogger is wrapper of noop logger
+type NoopLogger struct {}
+
+// Debug is log at debug level
+func (z *NoopLogger) Debug(args ...interface{}) {}
+
+// Debugf is log at debug level with fmt.Printf-like formatting
+func (z *NoopLogger) Debugf(format string, args ...interface{}) {}
+
+// Info is log at info level
+func (z *NoopLogger) Info(args ...interface{}) {}
+
+// Infof is log at info level with fmt.Printf-like formatting
+func (z *NoopLogger) Infof(format string, args ...interface{}) {}
+
+// Warn is log at warning level
+func (z *NoopLogger) Warn(args ...interface{}) {}
+
+// Warnf is log at warning level with fmt.Printf-like formatting
+func (z *NoopLogger) Warnf(format string, args ...interface{}) {}
+
+// Error is log at error level
+func (z *NoopLogger) Error(args ...interface{}) {}
+
+// Errorf is log at error level with fmt.Printf-like formatting
+func (z *NoopLogger) Errorf(format string, args ...interface{}) {}
+
+// Fatal is log at fatal level, then terminate process (irrecoverable)
+func (z *NoopLogger) Fatal(args ...interface{}) {}
+
+// Fatalf is log at fatal level with fmt.Printf-like formatting, then terminate process (irrecoverable)
+func (z *NoopLogger) Fatalf(format string, args ...interface{}) {}
+
+// Panic is log at panic level, then panic (recoverable)
+func (z *NoopLogger) Panic(args ...interface{}) {}
+
+// Panicf is log at panic level with fmt.Printf-like formatting, then panic (recoverable)
+func (z *NoopLogger) Panicf(format string, args ...interface{}) {}
+
+// With returns a logger with the specified key-value pair set, to be logged in a subsequent normal logging call
+func (z *NoopLogger) With(args ...interface{}) Logger {
+	return &NoopLogger{}
+}

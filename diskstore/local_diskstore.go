@@ -49,8 +49,8 @@ const timeFormatForBatchID = "2006-01-02"
 
 // DeleteTableShard : Completely wipe out a table shard.
 func (l LocalDiskStore) DeleteTableShard(table string, shard int) error {
-	tableRedologDir := getPathForTableShard(l.rootPath, table, shard)
-	return os.RemoveAll(tableRedologDir)
+	tableShardDir := getPathForTableShard(l.rootPath, table, shard)
+	return os.RemoveAll(tableShardDir)
 }
 
 // Redo Logs
@@ -151,10 +151,12 @@ func (l LocalDiskStore) ListSnapshotBatches(table string, shard int,
 	for _, f := range batchDirs {
 		batch, err := strconv.ParseInt(f.Name(), 10, 32)
 		if err != nil {
-			return nil, utils.StackError(err, "Failed to parse dir name: %s as valid snapshot batch dir",
-				f.Name())
+			utils.GetLogger().With("err", err, "batch_dir_name", f.Name()).
+				Debug("Find invalid snapshot batch dir")
+			err = nil
+		} else {
+			batches = append(batches, int(batch))
 		}
-		batches = append(batches, int(batch))
 	}
 	sort.Ints(batches)
 	return batches, nil
@@ -346,10 +348,6 @@ func (l LocalDiskStore) DeleteBatches(table string, shard, batchIDStart, batchID
 	tableArchiveBatchRootDir := GetPathForTableArchiveBatchRootDir(l.rootPath, table, shard)
 	tableArchiveBatchDirs, err := ioutil.ReadDir(tableArchiveBatchRootDir)
 
-	if os.IsNotExist(err) {
-		return 0, nil
-	}
-
 	if err != nil {
 		if os.IsNotExist(err) {
 			return 0, nil
@@ -384,10 +382,6 @@ func (l LocalDiskStore) DeleteBatches(table string, shard, batchIDStart, batchID
 func (l LocalDiskStore) DeleteColumn(table string, columnID int, shard int) error {
 	tableArchiveBatchRootDir := GetPathForTableArchiveBatchRootDir(l.rootPath, table, shard)
 	tableArchiveBatchDirs, err := ioutil.ReadDir(tableArchiveBatchRootDir)
-
-	if os.IsNotExist(err) {
-		return nil
-	}
 
 	if err != nil {
 		if os.IsNotExist(err) {

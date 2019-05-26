@@ -76,6 +76,7 @@ const (
 	QuerySucceeded
 	QueryLatency
 	QuerySQLParsingLatency
+	QueryDimReadLatency
 	QueryWaitForMemoryDuration
 	QueryReceived
 	QueryLiveRecordsProcessed
@@ -97,6 +98,7 @@ const (
 	PurgeTimingTotal
 	PurgedBatches
 	PurgeCount
+	JobFailuresCount
 	RecordsFromFuture
 	BatchSize
 	BatchSizeReportTime
@@ -186,6 +188,7 @@ const (
 	scopeNameQueryFailed                     = "query_failed"
 	scopeNameQuerySucceeded                  = "query_succeeded"
 	scopeNameQueryLatency                    = "query_latency"
+	scopeNameQueryDimReadLatency             = "query_dim_read_latency"
 	scopeNameQuerySQLParsingLatency          = "sql_parsing_latency"
 	scopeNameQueryWaitForMemoryDuration      = "query_wait_for_memory_duration"
 	scopeNameQueryReceived                   = "query_received"
@@ -207,6 +210,7 @@ const (
 	scopeNameSchemaUpdateCount               = "schema_updates"
 	scopeNameSchemaDeletionCount             = "schema_deletions"
 	scopeNameSchemaCreationCount             = "schema_creations"
+	scopeNameJobFailuresCount                = "job_failures_count"
 )
 
 // Metric tag names
@@ -626,6 +630,13 @@ var metricsDefs = map[MetricName]metricDefinition{
 			metricsTagComponent: metricsComponentQuery,
 		},
 	},
+	QueryDimReadLatency: {
+		name:       scopeNameQueryDimReadLatency,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
 	QueryWaitForMemoryDuration: {
 		name:       scopeNameQueryWaitForMemoryDuration,
 		metricType: Timer,
@@ -842,6 +853,12 @@ var metricsDefs = map[MetricName]metricDefinition{
 		tags: map[string]string{
 			metricsTagOperation: metricsOperationPurge,
 			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	JobFailuresCount: {
+		name:       scopeNameJobFailuresCount,
+		metricType: Counter,
+		tags: map[string]string{
 		},
 	},
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	"time"
 	"unsafe"
+	"net/http/httptest"
 )
 
 var _ = ginkgo.Describe("AQL postprocessor", func() {
@@ -402,22 +403,100 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 	ginkgo.It("readMeasure should work", func() {
 		// read an 8 bytes int64
-		measureVectorInt := [1]int64{1}
+		measureVectorInt64 := [1]int64{1}
 		measureAST := &expr.NumberLiteral{
 			ExprType: expr.Signed,
 		}
 
-		measureVal := readMeasure(unsafe.Pointer(&measureVectorInt[0]), measureAST, 8)
+		measureVal := readMeasure(unsafe.Pointer(&measureVectorInt64[0]), measureAST, 8)
 		Ω(measureVal).ShouldNot(BeNil())
 		Ω(*measureVal).Should(Equal(1.0))
 
-		// read a 4 bytes float
-		measureVectorFloat := [2]float32{1.0, 0}
+		// read an 8 bytes uint64
+		measureVectorUint64 := [1]uint64{1 << 33}
+		measureAST = &expr.NumberLiteral{
+			ExprType: expr.Unsigned,
+		}
+
+		measureVal = readMeasure(unsafe.Pointer(&measureVectorUint64[0]), measureAST, 8)
+		Ω(measureVal).ShouldNot(BeNil())
+		Ω(*measureVal).Should(Equal(8.589934592e+09))
+
+		// read an 8 bytes float64
+		measureVectorFloat64 := [1]float64{2.0}
 		measureAST = &expr.NumberLiteral{
 			ExprType: expr.Float,
 		}
-		measureVal = readMeasure(unsafe.Pointer(&measureVectorFloat[0]), measureAST, 4)
+
+		measureVal = readMeasure(unsafe.Pointer(&measureVectorFloat64[0]), measureAST, 8)
+		Ω(measureVal).ShouldNot(BeNil())
+		Ω(*measureVal).Should(Equal(2.0))
+
+		// read a 4 bytes float
+		measureVectorFloat32 := [2]float32{1.0, 0}
+		measureAST = &expr.NumberLiteral{
+			ExprType: expr.Float,
+		}
+		measureVal = readMeasure(unsafe.Pointer(&measureVectorFloat32[0]), measureAST, 4)
 		Ω(measureVal).ShouldNot(BeNil())
 		Ω(*measureVal).Should(BeEquivalentTo(1.0))
+
+		// read a 4 bytes int32
+		measureVectorInt32 := [2]int32{1,2}
+		measureAST = &expr.NumberLiteral{
+			ExprType: expr.Signed,
+		}
+		measureVal = readMeasure(unsafe.Pointer(&measureVectorInt32[0]), measureAST, 4)
+		Ω(measureVal).ShouldNot(BeNil())
+		Ω(*measureVal).Should(BeEquivalentTo(1))
+
+		// read a 4 bytes uint32
+		measureVectorUint32 := [2]uint32{1,2}
+		measureAST = &expr.NumberLiteral{
+			ExprType: expr.Unsigned,
+		}
+		measureVal = readMeasure(unsafe.Pointer(&measureVectorUint32[0]), measureAST, 4)
+		Ω(measureVal).ShouldNot(BeNil())
+		Ω(*measureVal).Should(BeEquivalentTo(1))
+	})
+
+	ginkgo.It("works for eager flushing non agg queries", func() {
+		w := httptest.NewRecorder()
+		ctx := &AQLQueryContext{
+			Query: &AQLQuery{
+				Dimensions: []Dimension{
+					{Expr: "someField"},
+				},
+			},
+			isNonAggregationQuery: true,
+			ResponseWriter:        w,
+		}
+		oopkContext := OOPKContext{
+			Dimensions: []expr.Expr{
+				&expr.VarRef{
+					ExprType: expr.Float,
+					DataType: memCom.Float32,
+				},
+			},
+			DimRowBytes:        5,
+			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0},
+			DimensionVectorIndex: []int{
+				0,
+			},
+			ResultSize:       1,
+			dimensionVectorH: unsafe.Pointer(&[]uint8{0, 0, 0, 0, 0}[0]),
+		}
+
+		ctx.OOPK = oopkContext
+		*(*float32)(oopkContext.dimensionVectorH) = 3.2
+		*(*uint8)(utils.MemAccess(oopkContext.dimensionVectorH, 4)) = 1
+
+		ctx.initResultFlushContext()
+		ctx.flushResultBuffer()
+		Ω(w.Body.String()).Should(Equal(`["3.2"],`))
+
+		ctx.OOPK.done = true
+		ctx.flushResultBuffer()
+		Ω(w.Body.String()).Should(Equal(`["3.2"],["3.2"]`))
 	})
 })

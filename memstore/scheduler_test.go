@@ -19,8 +19,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
-	"github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/metastore/mocks"
 )
 
 type countJob struct {
@@ -42,7 +42,6 @@ func (j *countJob) String() string {
 func (j *countJob) JobType() common.JobType {
 	return "count"
 }
-
 
 var _ = ginkgo.Describe("scheduler", func() {
 	var counter int

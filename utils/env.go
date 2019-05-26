@@ -11,13 +11,11 @@ const (
 	EnvironmentKey        = "ENVIRONMENT"
 	RuntimeEnvironmentKey = "RUNTIME_ENVIRONMENT"
 	ZoneKey               = "DATACENTER_ZONE"
-	DataCenterKey         = "DATACENTER"
 	DeploymentKey         = "DEPLOYMENT_NAME"
 	HostnameKey           = "HOSTNAME"
 	PortSystemKey         = "PORT_SYSTEM"
 	AppIDKey              = "APP_ID"
 	InstanceIDKey         = "INSTANCE_ID"
-	ConfigDirKey          = "UBER_CONFIG_DIR"
 )
 
 type EnvironmentContext struct {

@@ -40,7 +40,7 @@ func ResetDefaults() {
 	scope := tally.NewTestScope("test", nil)
 	reporterFactory = NewReporterFactory(scope)
 
-	bindEnvironments(viper.GetViper())
+	BindEnvironments(viper.GetViper())
 	viper.ReadInConfig()
 
 	config = common.AresServerConfig{}

@@ -42,6 +42,7 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"net/http/httptest"
 )
 
 // readDeviceVPSlice reads a vector party from file and also translate it to device vp format:
@@ -986,6 +987,14 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc = q.Compile(memStore, false)
 		Ω(qc.Error).Should(BeNil())
+		qc.FindDeviceForQuery(memStore, -1, NewDeviceManager(common.QueryConfig{
+			DeviceMemoryUtilization: 1.0,
+			DeviceChoosingTimeout: -1,
+		}), 100)
+		Ω(qc.Device).Should(Equal(0))
+		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
+			shard.Users.Add(1)
+		}).Return(shard, nil).Once()
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
 		qc.Postprocess()
@@ -2183,5 +2192,22 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		Ω(bs).Should(MatchJSON(` {
 			"0": 12
 		  }`))
+	})
+
+	ginkgo.It("initializeNonAggResponse should work", func() {
+		qc := &AQLQueryContext{
+			Query: &AQLQuery{
+				Dimensions: []Dimension{
+					{Expr: "foo"},
+				},
+			},
+		}
+		qc.isNonAggregationQuery = true
+
+		w := httptest.NewRecorder()
+		qc.ResponseWriter = w
+
+		qc.initializeNonAggResponse()
+		Ω(w.Body.String()).Should(Equal(`{"results":[{"headers":["foo"],"matrixData":[`))
 	})
 })
