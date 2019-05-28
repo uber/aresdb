@@ -16,6 +16,8 @@ package etcd
 import (
 	"testing"
 
+	testingUtils "github.com/uber/aresdb/testing"
+
 	"github.com/stretchr/testify/assert"
 	pb "github.com/uber/aresdb/controller/generated/proto"
 	"github.com/uber/aresdb/metastore"
@@ -83,9 +85,9 @@ func TestSchemaMutator(t *testing.T) {
 	}
 
 	t.Run("create, read, list, delete should work", func(t *testing.T) {
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
-		clusterClient := utils.SetUpEtcdTestClient(t, port)
+		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
 		store, err := clusterClient.Txn()
 		assert.NoError(t, err)
 
@@ -142,10 +144,10 @@ func TestSchemaMutator(t *testing.T) {
 
 	t.Run("reuse table should success", func(t *testing.T) {
 		// test setup
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		clusterClient := utils.SetUpEtcdTestClient(t, port)
+		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
 		txnStore, err := clusterClient.Txn()
 		assert.NoError(t, err)
 
@@ -182,10 +184,10 @@ func TestSchemaMutator(t *testing.T) {
 	})
 
 	t.Run("create should fail", func(t *testing.T) {
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		clusterClient := utils.SetUpEtcdTestClient(t, port)
+		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
 		txnStore, err := clusterClient.Txn()
 		assert.NoError(t, err)
 
@@ -219,10 +221,10 @@ func TestSchemaMutator(t *testing.T) {
 
 	t.Run("force flag should work", func(t *testing.T) {
 		// test setup
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		clusterClient := utils.SetUpEtcdTestClient(t, port)
+		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
 		txnStore, err := clusterClient.Txn()
 		assert.NoError(t, err)
 		_, err = txnStore.Set(utils.SchemaListKey("ns1"), &pb.EntityList{})
@@ -242,10 +244,10 @@ func TestSchemaMutator(t *testing.T) {
 
 	t.Run("delete should fail", func(t *testing.T) {
 		// test setup
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		clusterClient := utils.SetUpEtcdTestClient(t, port)
+		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
 		txnStore, err := clusterClient.Txn()
 		assert.NoError(t, err)
 

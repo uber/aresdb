@@ -16,11 +16,12 @@ package job
 
 import (
 	"fmt"
-	controllerCom "github.com/uber/aresdb/controller/client"
-	"github.com/uber/aresdb/subscriber/common/sink"
 	"strconv"
 	"sync"
 	"time"
+
+	controllerCli "github.com/uber/aresdb/controller/client"
+	"github.com/uber/aresdb/subscriber/common/sink"
 
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
@@ -42,7 +43,7 @@ type NewDecoder func(jobConfig *rules.JobConfig, serviceConfig config.ServiceCon
 // NewSink is the type of function each decoder that implements sink should provide for initialization.
 type NewSink func(
 	serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string,
-	sinkCfg config.SinkConfig, aresControllerClient controllerCom.ControllerClient) (sink.Sink, error)
+	sinkCfg config.SinkConfig, aresControllerClient controllerCli.ControllerClient) (sink.Sink, error)
 
 // StreamingProcessor defines a individual processor that connects to a Kafka high level consumer,
 // processes the messages based on the type of job and saves to database
@@ -53,7 +54,7 @@ type StreamingProcessor struct {
 	cluster              string
 	serviceConfig        config.ServiceConfig
 	scope                tally.Scope
-	aresControllerClient controllerCom.ControllerClient
+	aresControllerClient controllerCli.ControllerClient
 	sink                 sink.Sink
 	sinkInitFunc         NewSink
 	highLevelConsumer    consumer.Consumer
@@ -69,7 +70,7 @@ type StreamingProcessor struct {
 }
 
 // NewStreamingProcessor returns Processor to consume, process and save data to db.
-func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, aresControllerClient controllerCom.ControllerClient, sinkInitFunc NewSink, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
+func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, aresControllerClient controllerCli.ControllerClient, sinkInitFunc NewSink, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
 	errors chan ProcessorError, msgSizes chan int64, serviceConfig config.ServiceConfig) (Processor, error) {
 	cluster := jobConfig.AresTableConfig.Cluster
 	// Initialize downstream DB
@@ -146,7 +147,7 @@ func initFailureHandler(serviceConfig config.ServiceConfig,
 
 // initDatabase will initialize the database for writing ingest data
 func initSink(
-	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, aresControllerClient controllerCom.ControllerClient, sinkInitFunc NewSink) (sink.Sink, error) {
+	jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig, aresControllerClient controllerCli.ControllerClient, sinkInitFunc NewSink) (sink.Sink, error) {
 	cluster := jobConfig.AresTableConfig.Cluster
 	serviceConfig.Logger.Info("Initialize database",
 		zap.String("job", jobConfig.Name),

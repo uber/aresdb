@@ -15,6 +15,7 @@ package cluster
 
 import (
 	"fmt"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/m3db/m3/src/cluster/kv"
 )

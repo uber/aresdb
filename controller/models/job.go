@@ -19,8 +19,7 @@ import (
 
 // meaningful defaults of Kafka configurations.
 const (
-	KafkaClusterFile                         = "/etc/uber/kafka8/clusters.yaml"
-	KafkaTopicType                           = "heatpipe"
+	KafkaTopicType                           = "json"
 	KafkaLatestOffset                        = true
 	KafkaErrorThreshold                      = 10
 	KafkaStatusCheckInterval                 = 60

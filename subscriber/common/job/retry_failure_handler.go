@@ -15,8 +15,9 @@
 package job
 
 import (
-	"github.com/uber/aresdb/controller/models"
 	"time"
+
+	"github.com/uber/aresdb/controller/models"
 
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"

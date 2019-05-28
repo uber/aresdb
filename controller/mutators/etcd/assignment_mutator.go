@@ -15,11 +15,12 @@ package etcd
 
 import (
 	"encoding/json"
+	"strconv"
+
 	"github.com/uber/aresdb/controller/cluster"
 	pb "github.com/uber/aresdb/controller/generated/proto"
 	"github.com/uber/aresdb/controller/models"
 	"github.com/uber/aresdb/controller/mutators/common"
-	"strconv"
 
 	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/uber/aresdb/utils"

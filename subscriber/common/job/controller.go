@@ -18,20 +18,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"os"
+
 	"github.com/curator-go/curator"
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3x/instrument"
-	controllerCom "github.com/uber/aresdb/controller/client"
+	controllerCli "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"net/http"
-	"os"
-	"strings"
-	"sync"
-	"time"
 )
 
 // Module configures Drivers and Controller.
@@ -72,7 +74,7 @@ type Controller struct {
 
 	serviceConfig config.ServiceConfig
 	// aresControllerClient is aresDB controller client
-	aresControllerClient controllerCom.ControllerClient
+	aresControllerClient controllerCli.ControllerClient
 	// Drivers are all running jobs
 	Drivers Drivers
 	// jobNS is current active job namespace
@@ -105,7 +107,7 @@ type ZKNodeSubscriber struct {
 func NewController(params Params) *Controller {
 	params.ServiceConfig.Logger.Info("Creating Controller")
 
-	aresControllerClient := controllerCom.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
+	aresControllerClient := controllerCli.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
 		time.Duration(params.ServiceConfig.ControllerConfig.Timeout)*time.Second,
 		http.Header{
 			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},

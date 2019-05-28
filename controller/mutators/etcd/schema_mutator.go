@@ -15,6 +15,7 @@ package etcd
 
 import (
 	"encoding/json"
+
 	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/uber/aresdb/controller/cluster"
 	pb "github.com/uber/aresdb/controller/generated/proto"

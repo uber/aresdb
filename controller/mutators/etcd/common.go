@@ -15,8 +15,9 @@ package etcd
 
 import (
 	"fmt"
-	"github.com/uber/aresdb/controller/mutators/common"
 	"time"
+
+	"github.com/uber/aresdb/controller/mutators/common"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/m3db/m3/src/cluster/kv"

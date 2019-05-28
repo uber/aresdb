@@ -17,11 +17,12 @@ package rules
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/controller/models"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/controller/models"
 
 	"github.com/getlantern/deepcopy"
 	memCom "github.com/uber/aresdb/memstore/common"
@@ -119,7 +120,7 @@ func NewJobConfigs(params Params) (Result, error) {
 // NewAssignmentFromController parse controller assignment and create Assignment rule
 func NewAssignmentFromController(from *models.IngestionAssignment) (*Assignment, error) {
 	assignment := &Assignment{
-		Subscriber: from.Subscriber,
+		Subscriber:   from.Subscriber,
 		AresClusters: make(map[string]config.SinkConfig),
 	}
 	for _, job := range from.Jobs {

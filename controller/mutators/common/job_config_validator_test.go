@@ -14,8 +14,9 @@
 package common
 
 import (
-	"github.com/uber/aresdb/controller/models"
 	"testing"
+
+	"github.com/uber/aresdb/controller/models"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -59,6 +60,6 @@ func TestJobConfigValidator(t *testing.T) {
 			Version: 0,
 		}
 		err := Validate(&invalid, nil)
-		assert.EqualError(t,  err, "Job config is invalid")
+		assert.EqualError(t, err, "Job config is invalid")
 	})
 }

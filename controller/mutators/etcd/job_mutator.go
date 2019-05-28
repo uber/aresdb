@@ -15,6 +15,7 @@ package etcd
 
 import (
 	"encoding/json"
+
 	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/uber/aresdb/controller/cluster"
 	pb "github.com/uber/aresdb/controller/generated/proto"
@@ -50,18 +51,17 @@ func (j *jobMutatorImpl) GetJob(namespace, name string) (job models.JobConfig, e
 	}
 
 	job.StreamingConfig = models.KafkaConfig{
-		File:            models.KafkaClusterFile,
-		TopicType:            models.KafkaTopicType,
-		LatestOffset:          models.KafkaLatestOffset,
-		ErrorThreshold:  models.KafkaErrorThreshold,
-		StatusCheckInterval:      models.KafkaStatusCheckInterval,
-		ARThreshold:     models.KafkaAutoRecoveryThreshold,
-		ProcessorCount:  models.KafkaProcessorCount,
-		BatchSize:       models.KafkaBatchSize,
-		MaxBatchDelayMS:    models.KafkaMaxBatchDelayMS,
+		TopicType:           models.KafkaTopicType,
+		LatestOffset:        models.KafkaLatestOffset,
+		ErrorThreshold:      models.KafkaErrorThreshold,
+		StatusCheckInterval: models.KafkaStatusCheckInterval,
+		ARThreshold:         models.KafkaAutoRecoveryThreshold,
+		ProcessorCount:      models.KafkaProcessorCount,
+		BatchSize:           models.KafkaBatchSize,
+		MaxBatchDelayMS:     models.KafkaMaxBatchDelayMS,
 		MegaBytePerSec:      models.KafkaMegaBytePerSec,
-		RestartOnFailure:         models.KafkaRestartOnFailure,
-		RestartInterval: models.KafkaRestartInterval,
+		RestartOnFailure:    models.KafkaRestartOnFailure,
+		RestartInterval:     models.KafkaRestartInterval,
 		FailureHandler: models.FailureHandler{
 			Type: models.FailureHandlerType,
 			Config: models.FailureHandlerConfig{

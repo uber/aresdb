@@ -15,10 +15,13 @@ package etcd
 
 import (
 	"encoding/json"
-	"github.com/uber/aresdb/controller/models"
 	"sort"
 	"testing"
 	"time"
+
+	testingUtils "github.com/uber/aresdb/testing"
+
+	"github.com/uber/aresdb/controller/models"
 
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
@@ -39,21 +42,20 @@ func TestIngestionAssignmentTask(t *testing.T) {
 	subInstance3 := placement.NewInstance().SetID("sub3")
 
 	job1 := models.JobConfig{
-		Name:  "job1",
+		Name:            "job1",
 		AresTableConfig: models.TableConfig{Name: "table1"},
 		StreamingConfig: models.KafkaConfig{
-			File:            models.KafkaClusterFile,
-			TopicType:            models.KafkaTopicType,
-			LatestOffset:          models.KafkaLatestOffset,
-			ErrorThreshold:  models.KafkaErrorThreshold,
-			StatusCheckInterval:      models.KafkaStatusCheckInterval,
-			ARThreshold:     models.KafkaAutoRecoveryThreshold,
-			ProcessorCount:  2,
-			BatchSize:       models.KafkaBatchSize,
-			MaxBatchDelayMS:    models.KafkaMaxBatchDelayMS,
+			TopicType:           models.KafkaTopicType,
+			LatestOffset:        models.KafkaLatestOffset,
+			ErrorThreshold:      models.KafkaErrorThreshold,
+			StatusCheckInterval: models.KafkaStatusCheckInterval,
+			ARThreshold:         models.KafkaAutoRecoveryThreshold,
+			ProcessorCount:      2,
+			BatchSize:           models.KafkaBatchSize,
+			MaxBatchDelayMS:     models.KafkaMaxBatchDelayMS,
 			MegaBytePerSec:      models.KafkaMegaBytePerSec,
-			RestartOnFailure:         models.KafkaRestartOnFailure,
-			RestartInterval: models.KafkaRestartInterval,
+			RestartOnFailure:    models.KafkaRestartOnFailure,
+			RestartInterval:     models.KafkaRestartInterval,
 			FailureHandler: models.FailureHandler{
 				Type: models.FailureHandlerType,
 				Config: models.FailureHandlerConfig{
@@ -81,10 +83,10 @@ func TestIngestionAssignmentTask(t *testing.T) {
 
 	t.Run("suite", func(t *testing.T) {
 		// test setup
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		testClient0 := utils.SetUpEtcdTestClient(t, port)
+		testClient0 := testingUtils.SetUpEtcdTestClient(t, port)
 		txnStore, err := testClient0.Txn()
 		assert.NoError(t, err)
 
@@ -172,7 +174,7 @@ func TestIngestionAssignmentTask(t *testing.T) {
 			SetName("controller")
 
 		// task1
-		testClient1 := utils.SetUpEtcdTestClient(t, port)
+		testClient1 := testingUtils.SetUpEtcdTestClient(t, port)
 		assert.NoError(t, err)
 		clusterServices1, err := testClient1.Services(nil)
 		assert.NoError(t, err)
@@ -209,7 +211,7 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		}
 
 		// client2
-		testClient2 := utils.SetUpEtcdTestClient(t, port)
+		testClient2 := testingUtils.SetUpEtcdTestClient(t, port)
 		assert.NoError(t, err)
 		clusterServices2, err := testClient2.Services(nil)
 		assert.NoError(t, err)

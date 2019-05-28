@@ -14,9 +14,12 @@
 package etcd
 
 import (
+	"testing"
+
+	testingUtils "github.com/uber/aresdb/testing"
+
 	"github.com/uber/aresdb/controller/models"
 	"github.com/uber/aresdb/controller/mutators/common"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 	pb "github.com/uber/aresdb/controller/generated/proto"
@@ -56,20 +59,19 @@ func TestJobMutator(t *testing.T) {
 			Name: "rta_table1",
 		},
 		StreamingConfig: models.KafkaConfig{
-			Topic:           "demand_topic1",
-			Cluster:         "demand_cluster",
-			File:            "/etc/uber/kafka8/clusters.yaml",
-			TopicType:            "heatpipe",
-			LatestOffset:          true,
-			ErrorThreshold:  10,
-			StatusCheckInterval:      60,
-			ARThreshold:     8,
-			ProcessorCount:  1,
-			BatchSize:       32768,
-			MaxBatchDelayMS:    10000,
+			Topic:               "demand_topic1",
+			Cluster:             "demand_cluster",
+			TopicType:           "json",
+			LatestOffset:        true,
+			ErrorThreshold:      10,
+			StatusCheckInterval: 60,
+			ARThreshold:         8,
+			ProcessorCount:      1,
+			BatchSize:           32768,
+			MaxBatchDelayMS:     10000,
 			MegaBytePerSec:      600,
-			RestartOnFailure:         true,
-			RestartInterval: 300,
+			RestartOnFailure:    true,
+			RestartInterval:     300,
 			FailureHandler: models.FailureHandler{
 				Type: "retry",
 				Config: models.FailureHandlerConfig{
@@ -86,10 +88,10 @@ func TestJobMutator(t *testing.T) {
 
 	t.Run("CRUD should work", func(t *testing.T) {
 		// test setup
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		client := utils.SetUpEtcdTestClient(t, port)
+		client := testingUtils.SetUpEtcdTestClient(t, port)
 		txnStore, err := client.Txn()
 		assert.NoError(t, err)
 
@@ -142,10 +144,10 @@ func TestJobMutator(t *testing.T) {
 	})
 
 	t.Run("CRUD should fail", func(t *testing.T) {
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		client := utils.SetUpEtcdTestClient(t, port)
+		client := testingUtils.SetUpEtcdTestClient(t, port)
 		txnStore, err := client.Txn()
 		assert.NoError(t, err)
 

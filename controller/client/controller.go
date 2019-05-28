@@ -17,13 +17,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/controller/models"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/controller/models"
 
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"

@@ -16,10 +16,11 @@ package rules
 
 import (
 	"encoding/json"
-	"github.com/uber/aresdb/controller/models"
 	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/uber/aresdb/controller/models"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -100,7 +101,7 @@ var _ = Describe("job_config", func() {
 		assigned := models.IngestionAssignment{
 			Subscriber: "0",
 			Jobs:       []models.JobConfig{jc},
-			Instances:  map[string]models.Instance{
+			Instances: map[string]models.Instance{
 				"instance0": {
 					Address: "instance0:9374",
 				},

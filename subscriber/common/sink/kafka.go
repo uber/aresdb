@@ -16,17 +16,18 @@ package sink
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/Shopify/sarama"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	controllerCom "github.com/uber/aresdb/controller/client"
+	controllerCli "github.com/uber/aresdb/controller/client"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"strings"
-	"time"
 )
 
 type KafkaPublisher struct {
@@ -40,7 +41,7 @@ type KafkaPublisher struct {
 }
 
 func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string,
-	sinkCfg config.SinkConfig, aresControllerClient controllerCom.ControllerClient) (Sink, error) {
+	sinkCfg config.SinkConfig, aresControllerClient controllerCli.ControllerClient) (Sink, error) {
 	if sinkCfg.GetSinkMode() != config.Sink_Kafka {
 		return nil, fmt.Errorf("Failed to NewKafkaPublisher, wrong sinkMode=%d", sinkCfg.GetSinkMode())
 	}

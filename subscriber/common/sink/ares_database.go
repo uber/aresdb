@@ -16,9 +16,10 @@ package sink
 
 import (
 	"fmt"
+
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	controllerCom "github.com/uber/aresdb/controller/client"
+	controllerCli "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
@@ -37,7 +38,7 @@ type AresDatabase struct {
 // NewAresDatabase initialize an AresDatabase cluster
 func NewAresDatabase(
 	serviceConfig config.ServiceConfig, jobConfig *rules.JobConfig, cluster string,
-	sinkCfg config.SinkConfig, aresControllerClient controllerCom.ControllerClient) (Sink, error) {
+	sinkCfg config.SinkConfig, aresControllerClient controllerCli.ControllerClient) (Sink, error) {
 	if sinkCfg.GetSinkMode() != config.Sink_AresDB {
 		return nil, fmt.Errorf("Failed to NewAresDatabase, wrong sinkMode=%d", sinkCfg.GetSinkMode())
 	}

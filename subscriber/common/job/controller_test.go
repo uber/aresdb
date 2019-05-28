@@ -16,6 +16,12 @@ package job
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"regexp"
+	"strings"
+
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/client/etcd"
@@ -32,11 +38,6 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"regexp"
-	"strings"
 )
 
 var _ = Describe("controller", func() {

@@ -14,8 +14,11 @@
 package etcd
 
 import (
-	"github.com/uber/aresdb/controller/mutators/common"
 	"testing"
+
+	testingUtils "github.com/uber/aresdb/testing"
+
+	"github.com/uber/aresdb/controller/mutators/common"
 
 	"github.com/stretchr/testify/assert"
 	pb "github.com/uber/aresdb/controller/generated/proto"
@@ -25,10 +28,10 @@ import (
 func TestNamespaceMutator(t *testing.T) {
 	t.Run("list namespaces should work", func(t *testing.T) {
 		// test setup
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		client := utils.SetUpEtcdTestClient(t, port)
+		client := testingUtils.SetUpEtcdTestClient(t, port)
 		etcdStore, err := client.Txn()
 		assert.NoError(t, err)
 
@@ -50,10 +53,10 @@ func TestNamespaceMutator(t *testing.T) {
 
 	t.Run("create namespace should work", func(t *testing.T) {
 		// test setup
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		client := utils.SetUpEtcdTestClient(t, port)
+		client := testingUtils.SetUpEtcdTestClient(t, port)
 		etcdStore, err := client.Txn()
 		assert.NoError(t, err)
 

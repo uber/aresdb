@@ -14,13 +14,14 @@
 package etcd
 
 import (
-	"github.com/uber/aresdb/controller/models"
-	mutators "github.com/uber/aresdb/controller/mutators/common"
-	"github.com/uber/aresdb/controller/tasks/common"
 	"math/rand"
 	"os"
 	"reflect"
 	"time"
+
+	"github.com/uber/aresdb/controller/models"
+	mutators "github.com/uber/aresdb/controller/mutators/common"
+	"github.com/uber/aresdb/controller/tasks/common"
 
 	"github.com/m3db/m3/src/cluster/services"
 	xwatch "github.com/m3db/m3x/watch"

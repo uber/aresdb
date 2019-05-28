@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"testing"
 
+	testingUtils "github.com/uber/aresdb/testing"
+
 	"github.com/stretchr/testify/assert"
 	pb "github.com/uber/aresdb/controller/generated/proto"
 	"github.com/uber/aresdb/controller/mutators/mocks"
@@ -38,10 +40,10 @@ func TestEnumMutator(t *testing.T) {
 
 	t.Run("Extend and get enum cases", func(t *testing.T) {
 		// test setup
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
+		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
 		defer cleanUp()
 
-		client := utils.SetUpEtcdTestClient(t, port)
+		client := testingUtils.SetUpEtcdTestClient(t, port)
 		txnStore, err := client.Txn()
 		assert.NoError(t, err)
 

@@ -14,12 +14,13 @@
 package etcd
 
 import (
-	"github.com/uber/aresdb/controller/cluster"
-	"github.com/uber/aresdb/controller/generated/proto"
-	"github.com/uber/aresdb/controller/mutators/common"
 	"path"
 	"strconv"
 	"sync"
+
+	"github.com/uber/aresdb/controller/cluster"
+	"github.com/uber/aresdb/controller/generated/proto"
+	"github.com/uber/aresdb/controller/mutators/common"
 
 	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/uber/aresdb/metastore"
