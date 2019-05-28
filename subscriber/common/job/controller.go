@@ -374,6 +374,10 @@ func (c *Controller) SyncUpJobConfigs() {
 								zap.String("job", jobConfig.Name),
 								zap.String("aresCluster", aresCluster))
 						}
+					} else {
+						c.serviceConfig.Logger.Error("missing aresDB instance in assignment",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
 					}
 				}
 			}
