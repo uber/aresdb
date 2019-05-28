@@ -46,11 +46,11 @@ const (
 )
 
 type columnBuilder struct {
-	columnID int
-	dataType DataType
-	values   []interface{}
-	numValidValues        int
-	updateMode            ColumnUpdateMode
+	columnID       int
+	dataType       DataType
+	values         []interface{}
+	numValidValues int
+	updateMode     ColumnUpdateMode
 }
 
 // SetValue write a value into the column at given row.

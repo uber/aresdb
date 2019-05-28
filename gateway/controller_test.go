@@ -124,7 +124,7 @@ var _ = ginkgo.Describe("Controller", func() {
 		testRouter.HandleFunc("/schema/ns1/tables/test2", func(w http.ResponseWriter, r *http.Request) {
 			w.Write(tableBytes1)
 		})
-		testRouter.HandleFunc("/enum/ns1/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
+		testRouter.HandleFunc("/schema/ns1/tables/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodGet {
 				w.Write(enumCasesBytes)
 			} else if r.Method == http.MethodPost {
@@ -134,7 +134,7 @@ var _ = ginkgo.Describe("Controller", func() {
 		testRouter.HandleFunc("/schema/ns_baddata/tables/test1", func(w http.ResponseWriter, r *http.Request) {
 			w.Write(enumCasesBytes)
 		})
-		testRouter.HandleFunc("/enum/ns_baddata/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
+		testRouter.HandleFunc("/schema/ns_baddata/tables/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodGet {
 				w.Write(enumIDBytes)
 			} else if r.Method == http.MethodPost {

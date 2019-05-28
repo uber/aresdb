@@ -18,13 +18,13 @@ package query
 import "C"
 
 import (
+	"encoding/json"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"unsafe"
-	"encoding/json"
 )
 
 var bytesComma = []byte(",")
@@ -64,7 +64,7 @@ func (qc *AQLQueryContext) initResultFlushContext() {
 // flushResultBuffer reads dimension and measure data from current OOPK buffer to Results
 func (qc *AQLQueryContext) flushResultBuffer() {
 	start := utils.Now()
-	defer func() {qc.reportTiming(qc.cudaStreams[0], &start, resultFlushTiming)}()
+	defer func() { qc.reportTiming(qc.cudaStreams[0], &start, resultFlushTiming) }()
 
 	if qc.Results == nil {
 		qc.Results = make(queryCom.AQLQueryResult)
@@ -122,7 +122,7 @@ func (qc *AQLQueryContext) flushResultBuffer() {
 			if qc.ResponseWriter != nil {
 				valuesBytes, _ := json.Marshal(dimValues)
 				qc.ResponseWriter.Write(valuesBytes)
-				if !(qc.OOPK.done && i == oopkContext.ResultSize - 1) {
+				if !(qc.OOPK.done && i == oopkContext.ResultSize-1) {
 					qc.ResponseWriter.Write(bytesComma)
 				}
 			} else {

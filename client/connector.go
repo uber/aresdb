@@ -92,14 +92,14 @@ type connector struct {
 // ConnectorConfig holds the configurations for ares Connector.
 type ConnectorConfig struct {
 	// Address is in the format of host:port
-	Address string `yaml:"address"`
+	Address string `yaml:"address" json:"address"`
 	// DeviceChoosingTimeout value is the request timeout in seconds for http calls
 	// if <= 0, will use default
-	Timeout int `yaml:"timeout"`
+	Timeout int `yaml:"timeout" json:"timeout"`
 	// SchemaRefreshInterval is the interval in seconds for the connector to
 	// fetch and refresh schema from ares
 	// if <= 0, will use default
-	SchemaRefreshInterval int `yaml:"schemaRefreshInterval"`
+	SchemaRefreshInterval int `yaml:"schemaRefreshInterval" json:"schemaRefreshInterval"`
 }
 
 func NewUpsertBatchBuilderImpl(logger *zap.SugaredLogger, scope tally.Scope, schemaHandler *CachedSchemaHandler) UpsertBatchBuilder {
