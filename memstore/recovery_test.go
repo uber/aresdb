@@ -18,8 +18,8 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
 	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/imports"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
 
@@ -47,7 +47,7 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		file := &testing.TestReadWriteCloser{}
 		writer := utils.NewStreamDataWriter(file)
-		writer.WriteUint32(imports.UpsertHeader)
+		writer.WriteUint32(redolog.UpsertHeader)
 		writer.WriteUint32(uint32(len(buffer)))
 		writer.Write(buffer)
 
@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		memstore := createMemStore("abc", 0, []memCom.DataType{memCom.Uint32}, []int{0}, 10, true, false, metaStore, diskStore)
 		memstore.TableShards["abc"] = nil
-		memstore.redologManagerFactory.Stop()
+		memstore.redologManagerMaster.Stop()
 		memstore.InitShards(false)
 		shard := memstore.TableShards["abc"][0]
 		Ω(len(shard.LiveStore.Batches)).Should(Equal(1))
@@ -76,14 +76,14 @@ var _ = ginkgo.Describe("recovery", func() {
 		Ω(*(*uint32)(value)).Should(Equal(uint32(123)))
 		Ω(validity).Should(BeTrue())
 		//  Validate redo log max event time.
-		redologManager := shard.LiveStore.RedoLogManager.(*imports.CompositeRedologManager)
-		Ω(len(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile)).Should(Equal(1))
-		Ω(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile).Should(Equal(map[int64]uint32{1: 123}))
+		redologManager := shard.LiveStore.RedoLogManager.(*redolog.FileRedoLogManager)
+		Ω(len(redologManager.MaxEventTimePerFile)).Should(Equal(1))
+		Ω(redologManager.MaxEventTimePerFile).Should(Equal(map[int64]uint32{1: 123}))
 
 		// New shard abc-1 being assigned.
 		file2 := &testing.TestReadWriteCloser{}
 		writer2 := utils.NewStreamDataWriter(file2)
-		writer2.WriteUint32(imports.UpsertHeader)
+		writer2.WriteUint32(redolog.UpsertHeader)
 		writer2.WriteUint32(uint32(len(buffer)))
 		writer2.Write(buffer)
 
@@ -100,8 +100,8 @@ var _ = ginkgo.Describe("recovery", func() {
 		Ω(*(*uint32)(value)).Should(Equal(uint32(123)))
 		Ω(validity).Should(BeTrue())
 		//  Validate redo log max event time.
-		Ω(len(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile)).Should(Equal(1))
-		Ω(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile).Should(Equal(map[int64]uint32{1: 123}))
+		Ω(len(redologManager.MaxEventTimePerFile)).Should(Equal(1))
+		Ω(redologManager.MaxEventTimePerFile).Should(Equal(map[int64]uint32{1: 123}))
 
 		Ω(shard.LiveStore.BackfillManager.CurrentRedoFile).Should(BeEquivalentTo(1))
 		Ω(shard.LiveStore.BackfillManager.CurrentBatchOffset).Should(BeEquivalentTo(0))
@@ -129,7 +129,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		diskStore.AssertCalled(utils.TestingT, "DeleteSnapshot", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
 
-	ginkgo.It("StartDataPipe should work for file redolog", func() {
+	ginkgo.It("PlayRedoLog should work for file redolog", func() {
 		diskStore := &diskMocks.DiskStore{}
 		metaStore := &metaMocks.MetaStore{}
 
@@ -141,24 +141,26 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		file := &testing.TestReadWriteCloser{}
 		writer := utils.NewStreamDataWriter(file)
-		writer.WriteUint32(imports.UpsertHeader)
+		writer.WriteUint32(redolog.UpsertHeader)
 		writer.WriteUint32(uint32(len(buffer)))
 		writer.Write(buffer)
 
 		diskStore.On("ListLogFiles", tableName, 0).Return([]int64{1}, nil)
 		diskStore.On("OpenLogFileForReplay", tableName, 0, int64(1)).Return(file, nil)
+		diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
+
 		m := createMemStore(tableName, 0, []memCom.DataType{memCom.Uint32},
 			[]int{0}, batchSize, true, false, metaStore, diskStore)
 		shard, _ := m.GetTableShard(tableName, 0)
-		shard.StartDataPipe()
-		Ω(shard.LiveStore.RedoLogManager.IsDone()).Should(BeTrue())
+		shard.PlayRedoLog()
+		Ω(shard.LiveStore.RedoLogManager.GetBatchRecovered()).Should(Equal(1))
 		// add data after recovery
 		batch, _ := memCom.NewUpsertBatch(buffer)
-		err := shard.saveBatch(batch, 1, 0, false)
+		err := shard.saveUpsertBatch(batch, 1, 0, false, false)
 		Ω(err).Should(BeNil())
 	})
 
-	ginkgo.It("StartDataPipe should work for kafka ingestion", func() {
+	ginkgo.It("PlayRedoLog should work for kafka ingestion", func() {
 		diskStore := &diskMocks.DiskStore{}
 		metaStore := &metaMocks.MetaStore{}
 
@@ -170,39 +172,39 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		file := &testing.TestReadWriteCloser{}
 		writer := utils.NewStreamDataWriter(file)
-		writer.WriteUint32(imports.UpsertHeader)
+		writer.WriteUint32(redolog.UpsertHeader)
 		writer.WriteUint32(uint32(len(buffer)))
 		writer.Write(buffer)
 
-		c := &common.ImportsConfig{
+		c := &common.RedoLogConfig{
 			Namespace: "ns1",
-			Source:    common.KafkaSoureOnly,
-			RedoLog: common.RedoLogConfig{
+			DiskConfig: common.DiskRedoLogConfig{
 				Disabled: false,
 			},
-			KafkaConfig: common.KafkaConfig{
+			KafkaConfig: common.KafkaRedoLogConfig{
 				Brokers: []string{
 					"host1",
 					"host2",
 				},
+				Enabled: true,
 			},
 		}
 
 		diskStore.On("ListLogFiles", tableName, 1).Return([]int64{1}, nil)
 		diskStore.On("OpenLogFileForReplay", tableName, 1, int64(1)).Return(file, nil)
 		diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
-		metaStore.On("GetIngestionCommitOffset", tableName, 1).Return(int64(1), nil)
-		//metaStore.On("GetIngestionCheckpointOffset", tableName, 1).Return(int64(5), nil)
+		metaStore.On("GetRedoLogCommitOffset", tableName, 1).Return(int64(1), nil)
+		//metaStore.On("GetRedoLogCheckpointOffset", tableName, 1).Return(int64(5), nil)
 
 		m := createMemStore(tableName, 0, []memCom.DataType{memCom.Uint32},
 			[]int{0}, batchSize, true, false, metaStore, diskStore)
 		// close the default one
-		m.redologManagerFactory.Stop()
+		m.redologManagerMaster.Stop()
 		//reassign
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
-		m.redologManagerFactory, _ = imports.NewKafkaRedologManagerFactory(c, diskStore, metaStore, consumer)
+		m.redologManagerMaster, _ = redolog.NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
 		schema, _ := m.GetSchema(tableName)
-		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, m.redologManagerFactory)
+		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, m.redologManagerMaster)
 
 		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		for i := 0; i < 10; i++ {
@@ -212,12 +214,11 @@ var _ = ginkgo.Describe("recovery", func() {
 				})
 		}
 
-		shard.StartDataPipe()
-		Ω(shard.LiveStore.RedoLogManager.IsDone()).Should(BeFalse())
-		time.Sleep(time.Millisecond)
-		shard.LiveStore.RedoLogManager.Close()
+		shard.PlayRedoLog()
 		time.Sleep(time.Millisecond)
 
-		Ω(shard.LiveStore.RedoLogManager.IsDone()).Should(BeTrue())
+		Ω(shard.LiveStore.RedoLogManager.GetBatchRecovered()).Should(Equal(1))
+		Ω(shard.LiveStore.RedoLogManager.GetBatchReceived()).Should(Equal(10))
+		shard.LiveStore.RedoLogManager.Close()
 	})
 })

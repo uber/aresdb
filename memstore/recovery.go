@@ -24,8 +24,8 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-// StartDataPipe loads data for the table Shard from disk store and recovers the Shard for serving.
-func (shard *TableShard) StartDataPipe() {
+// PlayRedoLog loads data for the table Shard from disk store and recovers the Shard for serving.
+func (shard *TableShard) PlayRedoLog() {
 	timer := utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetTimer(utils.RecoveryLatency).Start()
 	defer timer.Stop()
 
@@ -43,12 +43,32 @@ func (shard *TableShard) StartDataPipe() {
 	utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID, "redoLogFile",
 		redoLogFilePersisted, "offset", offsetPersisted).Info("Checkpointed redolog file")
 
-	err := shard.LiveStore.RedoLogManager.Start(redoLogFilePersisted, offsetPersisted)
-	if err != nil {
-		utils.GetLogger().With("err", err).Panic("Failed to start recovery")
-	}
+	go func() {
+		nextUpsertBatchFunc, err := shard.LiveStore.RedoLogManager.Iterator()
+		if err != nil {
+			panic("Fail to start redolog manager")
+		}
+		for {
+			batchInfo := nextUpsertBatchFunc()
+			if batchInfo == nil {
+				utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Info("Redolog manager stopped")
+				return
+			}
+			var skipBackfillRows bool
+			if batchInfo.Recovery {
+				// check if this batch has already been backfilled and persisted
+				skipBackfillRows = batchInfo.RedoLogFile < redoLogFilePersisted ||
+					(batchInfo.RedoLogFile == redoLogFilePersisted && batchInfo.BatchOffset <= offsetPersisted)
+			}
+			shard.saveUpsertBatch(batchInfo.Batch, batchInfo.RedoLogFile, batchInfo.BatchOffset, batchInfo.Recovery, skipBackfillRows)
+		}
+	}()
 
 	shard.LiveStore.RedoLogManager.WaitForRecoveryDone()
+
+	// report redolog size after replay
+	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.NumberOfRedologs).Update(float64(shard.LiveStore.RedoLogManager.GetNumFiles()))
+	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetGauge(utils.SizeOfRedologs).Update(float64(shard.LiveStore.RedoLogManager.GetTotalSize()))
 
 	// proactively purge redo files
 	if shard.LiveStore.BackfillManager != nil {
@@ -147,8 +167,8 @@ func (m *memStoreImpl) loadSnapshots() {
 	utils.GetLogger().Info("Finish loading snapshots for all table shards")
 }
 
-// startDataPipe replay redo logs for all tables in parallel, and then start the data ingestion
-func (m *memStoreImpl) startDataPipe() {
+// playRedoLogs replay redo logs for all tables in parallel, and then start the data ingestion
+func (m *memStoreImpl) playRedoLogs() {
 	utils.GetLogger().Info("Start replaying redo logs for all table shards")
 	var wg sync.WaitGroup
 	for table := range m.TableSchemas {
@@ -162,7 +182,7 @@ func (m *memStoreImpl) startDataPipe() {
 					"table", shard.Schema.Schema.Name,
 					"shard", shard.ShardID).
 					Info("Replaying redo logs")
-				shard.StartDataPipe()
+				shard.PlayRedoLog()
 				utils.GetLogger().With(
 					"job", "replay_redo_logs",
 					"table", shard.Schema.Schema.Name,
@@ -212,7 +232,7 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 		utils.GetLogger().Info("Scheduler is off")
 	}
 
-	m.startDataPipe()
+	m.playRedoLogs()
 
 	if !schedulerOff {
 		// re-enable archiving after redolog replay
@@ -269,10 +289,10 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 // LoadShard loads/recovers the specified Shard and attaches it to memStoreImpl for serving. If will load the metadata
 // first and then replay redologs only if replayRedologs is true.
 func (m *memStoreImpl) LoadShard(schema *memcom.TableSchema, shard int, replayRedologs bool) error {
-	tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shard, m.redologManagerFactory)
+	tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shard, m.redologManagerMaster)
 	tableShard.LoadMetaData()
 	if replayRedologs {
-		tableShard.StartDataPipe()
+		tableShard.PlayRedoLog()
 	}
 
 	m.Lock()

@@ -18,10 +18,6 @@ import (
 	"net/http"
 )
 
-const (
-	KafkaSoureOnly = "kafkaOnly"
-)
-
 // TimezoneConfig is the static config for timezone column support
 type TimezoneConfig struct {
 	// table to lookup timezone columns
@@ -73,29 +69,27 @@ type ClusterConfig struct {
 }
 
 // local redolog config
-type RedoLogConfig struct {
-	// disable local redolog, default will be enabled
+type DiskRedoLogConfig struct {
+	// disable local disk redolog, default will be enabled
 	Disabled bool `yaml:"disabled"`
 }
 
 // Kafka source config
-type KafkaConfig struct {
+type KafkaRedoLogConfig struct {
+	// enable redolog from kafka, default will be disabled
+	Enabled bool `yaml:"enabled"`
 	// kafka brokers
 	Brokers []string `yaml:"brokers"`
 }
 
 // Configs related to data import and redolog option
-type ImportsConfig struct {
-	// namespace for this db
-	Namespace string
-	// Source specify the ingestion source, default can be from any source
-	// if source is mixed, then LocalRedolog will be always enabled
-	// if source is kafka, then the LocalRedolog can be disabled
-	Source string `yaml:"source"`
-	// Redolog config
-	RedoLog RedoLogConfig `yaml:"redolog"`
-	// Kafka consumer config
-	KafkaConfig KafkaConfig `yaml:"kafka"`
+type RedoLogConfig struct {
+	// namespace or cluster named for this db
+	Namespace string `yaml:"namespace"`
+	// Disk redolog config
+	DiskConfig DiskRedoLogConfig `yaml:"disk"`
+	// Kafka redolog config
+	KafkaConfig KafkaRedoLogConfig `yaml:"kafka"`
 }
 
 // AresServerConfig is config specific for ares server.
@@ -127,5 +121,5 @@ type AresServerConfig struct {
 	Cluster   ClusterConfig   `yaml:"cluster"`
 	Gateway   GatewayConfig   `yaml:"gateway"`
 
-	Imports ImportsConfig `yaml:"imports"`
+	RedoLogConfig RedoLogConfig `yaml:"imports"`
 }

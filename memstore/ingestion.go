@@ -23,8 +23,9 @@ import (
 
 // HandleIngestion logs an upsert batch and applies it to the in-memory store.
 func (m *memStoreImpl) HandleIngestion(table string, shardID int, upsertBatch *common.UpsertBatch) error {
-	utils.GetReporter(table, shardID).GetCounter(utils.IngestedUpsertBatches).Inc(1)
-	utils.GetReporter(table, shardID).GetGauge(utils.UpsertBatchSize).Update(float64(len(upsertBatch.GetBuffer())))
+	if m.redologManagerMaster.RedoLogConfig.DiskConfig.Disabled {
+		return utils.StackError(nil, "Local redolog file not enabled")
+	}
 	shard, err := m.GetTableShard(table, shardID)
 	if err != nil {
 		return utils.StackError(nil, "Failed to get shard %d for table %s for upsert batch", shardID, table)
@@ -32,17 +33,38 @@ func (m *memStoreImpl) HandleIngestion(table string, shardID int, upsertBatch *c
 	// Release the wait group that proctects the shard to be deleted.
 	defer shard.Users.Done()
 
-	return shard.LiveStore.RedoLogManager.WriteUpsertBatch(upsertBatch)
+	return shard.saveUpsertBatch(upsertBatch, 0, 0, false, false)
 }
 
-// function now will be called from redolog manager, which save the message into redolog first and callback to update livestore
-func (shard *TableShard) saveBatch(batch *common.UpsertBatch, redoLogFile int64, offset uint32, skipBackFillRows bool) error {
+// saveUpsertBatch handles data ingestion from both redolog and http
+func (shard *TableShard) saveUpsertBatch(upsertBatch *common.UpsertBatch, redoLogFile int64, offset uint32, recovery, skipBackFillRows bool) error {
+	tableName := shard.Schema.Schema.Name
+	shardID := shard.ShardID
 	shard.LiveStore.WriterLock.Lock()
-	needToWaitForBackfillBuffer, err := shard.ApplyUpsertBatch(batch, redoLogFile, offset, skipBackFillRows)
+
+	if recovery {
+		utils.GetReporter(tableName, shardID).GetCounter(utils.IngestedRecoveryBatches).Inc(1)
+		utils.GetReporter(tableName, shardID).GetGauge(utils.UpsertBatchSize).Update(float64(len(upsertBatch.GetBuffer())))
+		// Put a 0 in maxEventTimePerFile in case this is redolog is full of backfill batches.
+		shard.LiveStore.RedoLogManager.UpdateMaxEventTime(0, redoLogFile)
+	} else {
+		utils.GetReporter(tableName, shardID).GetCounter(utils.IngestedUpsertBatches).Inc(1)
+		utils.GetReporter(tableName, shardID).GetGauge(utils.UpsertBatchSize).Update(float64(len(upsertBatch.GetBuffer())))
+		// for non-recovery and local file based redolog, need write the upsertbatch into redolog file
+		if !shard.redoLogManagerMaster.RedoLogConfig.DiskConfig.Disabled {
+			// change original file/offset to be local redolog file/offset
+			redoLogFile, offset = shard.LiveStore.RedoLogManager.AppendToRedoLog(upsertBatch)
+		}
+	}
+
+	needToWaitForBackfillBuffer, err := shard.ApplyUpsertBatch(upsertBatch, redoLogFile, offset, skipBackFillRows)
 	shard.LiveStore.WriterLock.Unlock()
+	if err != nil {
+		utils.GetReporter(tableName, shardID).GetCounter(utils.IngestedErrorBatches).Inc(1)
+	}
 
 	// return immediately if it does not need to wait for backfill buffer availability
-	if !needToWaitForBackfillBuffer {
+	if recovery || !needToWaitForBackfillBuffer {
 		return err
 	}
 

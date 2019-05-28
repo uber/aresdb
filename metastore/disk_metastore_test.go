@@ -265,30 +265,30 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1,0,1,1")))
 	})
 
-	ginkgo.It("GetIngestionCommitOffset", func() {
+	ginkgo.It("GetRedoLogCommitOffset", func() {
 		diskMetastore := createDiskMetastore("base")
-		offset, err := diskMetastore.GetIngestionCommitOffset("b", 0)
+		offset, err := diskMetastore.GetRedoLogCommitOffset("b", 0)
 		Ω(err).Should(BeNil())
 		Ω(offset).Should(Equal(int64(1)))
 	})
 
-	ginkgo.It("UpdateIngestionCommitOffset", func() {
+	ginkgo.It("UpdateRedoLogCommitOffset", func() {
 		diskMetastore := createDiskMetastore("base")
-		err := diskMetastore.UpdateIngestionCheckpointOffset("b", 0, 1)
+		err := diskMetastore.UpdateRedoLogCheckpointOffset("b", 0, 1)
 		Ω(err).Should(BeNil())
 		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
 	})
 
-	ginkgo.It("GetIngestionCheckpointOffset", func() {
+	ginkgo.It("GetRedoLogCheckpointOffset", func() {
 		diskMetastore := createDiskMetastore("base")
-		offset, err := diskMetastore.GetIngestionCheckpointOffset("b", 0)
+		offset, err := diskMetastore.GetRedoLogCheckpointOffset("b", 0)
 		Ω(err).Should(BeNil())
 		Ω(offset).Should(Equal(int64(1)))
 	})
 
-	ginkgo.It("UpdateIngestionCheckpointOffset", func() {
+	ginkgo.It("UpdateRedoLogCheckpointOffset", func() {
 		diskMetastore := createDiskMetastore("base")
-		err := diskMetastore.UpdateIngestionCheckpointOffset("b", 0, 1)
+		err := diskMetastore.UpdateRedoLogCheckpointOffset("b", 0, 1)
 		Ω(err).Should(BeNil())
 		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
 	})

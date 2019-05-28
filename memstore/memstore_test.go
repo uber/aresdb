@@ -21,10 +21,10 @@ import (
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/diskstore/mocks"
-	"github.com/uber/aresdb/imports"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
 )
@@ -61,7 +61,7 @@ func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType
 		schema.SetDefaultValue(i)
 	}
 
-	redoManagerFactory, _ := imports.NewRedologManagerFactory(&common.ImportsConfig{}, diskStore, metaStore)
+	redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
 	memStore := NewMemStore(metaStore, diskStore, redoManagerFactory).(*memStoreImpl)
 	// Create shards.
 	shards := map[int]*TableShard{

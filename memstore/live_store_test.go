@@ -30,9 +30,9 @@ var _ = ginkgo.Describe("live store", func() {
 				ValueTypeByColumn: []common.DataType{common.Uint32, common.Uint16, common.Uint8},
 				DefaultValues:     []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue},
 			},
-			diskStore:             mockDiskStore,
-			HostMemoryManager:     hostMemoryManager,
-			redoLogManagerFactory: m.redologManagerFactory,
+			diskStore:            mockDiskStore,
+			HostMemoryManager:    hostMemoryManager,
+			redoLogManagerMaster: m.redologManagerMaster,
 		}
 		vs := NewLiveStore(0, shard)
 
@@ -60,11 +60,11 @@ var _ = ginkgo.Describe("live store", func() {
 				ValueTypeByColumn: []common.DataType{common.Uint32, common.Uint16, common.Uint8},
 				DefaultValues:     []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue},
 			},
-			diskStore:             mockDiskStore,
-			HostMemoryManager:     hostMemoryManager,
-			redoLogManagerFactory: m.redologManagerFactory,
+			diskStore:            mockDiskStore,
+			HostMemoryManager:    hostMemoryManager,
+			redoLogManagerMaster: m.redologManagerMaster,
 		}
-		m.redologManagerFactory.Stop()
+		m.redologManagerMaster.Stop()
 		vs := NewLiveStore(16, shard)
 
 		vs.appendBatch(BaseBatchID)
@@ -107,11 +107,11 @@ var _ = ginkgo.Describe("live store", func() {
 				DefaultValues: []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue,
 					&common.NullDataValue, &common.NullDataValue},
 			},
-			diskStore:             mockDiskStore,
-			HostMemoryManager:     hostMemoryManager,
-			redoLogManagerFactory: m.redologManagerFactory,
+			diskStore:            mockDiskStore,
+			HostMemoryManager:    hostMemoryManager,
+			redoLogManagerMaster: m.redologManagerMaster,
 		}
-		m.redologManagerFactory.Stop()
+		m.redologManagerMaster.Stop()
 		vs := NewLiveStore(0, shard)
 
 		vs.appendBatch(BaseBatchID)
@@ -151,11 +151,11 @@ var _ = ginkgo.Describe("live store", func() {
 				ValueTypeByColumn: []common.DataType{common.Uint32, common.Uint16, common.Uint8, common.Uint8, common.Uint8, common.Bool},
 				DefaultValues:     []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue},
 			},
-			diskStore:             mockDiskStore,
-			HostMemoryManager:     hostMemoryManager,
-			redoLogManagerFactory: m.redologManagerFactory,
+			diskStore:            mockDiskStore,
+			HostMemoryManager:    hostMemoryManager,
+			redoLogManagerMaster: m.redologManagerMaster,
 		}
-		m.redologManagerFactory.Stop()
+		m.redologManagerMaster.Stop()
 		vs := NewLiveStore(16, shard)
 
 		vs.appendBatch(BaseBatchID)
@@ -188,11 +188,11 @@ var _ = ginkgo.Describe("live store", func() {
 				PrimaryKeyBytes:       keyBytes,
 				PrimaryKeyColumnTypes: primaryKeyDataTypes,
 			},
-			diskStore:             mockDiskStore,
-			HostMemoryManager:     hostMemoryManager,
-			redoLogManagerFactory: m.redologManagerFactory,
+			diskStore:            mockDiskStore,
+			HostMemoryManager:    hostMemoryManager,
+			redoLogManagerMaster: m.redologManagerMaster,
 		}
-		m.redologManagerFactory.Stop()
+		m.redologManagerMaster.Stop()
 		vs := NewLiveStore(0, shard)
 		vs.PrimaryKey = pk
 
@@ -213,11 +213,11 @@ var _ = ginkgo.Describe("live store", func() {
 				DefaultValues: []*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue,
 					&common.NullDataValue, &common.NullDataValue},
 			},
-			diskStore:             mockDiskStore,
-			HostMemoryManager:     hostMemoryManager,
-			redoLogManagerFactory: m.redologManagerFactory,
+			diskStore:            mockDiskStore,
+			HostMemoryManager:    hostMemoryManager,
+			redoLogManagerMaster: m.redologManagerMaster,
 		}
-		m.redologManagerFactory.Stop()
+		m.redologManagerMaster.Stop()
 		vs := NewLiveStore(0, shard)
 		liveBatch1 := vs.getOrCreateBatch(-1)
 		Ω(liveBatch1).ShouldNot(BeNil())

@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"time"
 )
@@ -461,13 +461,13 @@ var _ = ginkgo.Describe("ingestion", func() {
 		Ω(*(*uint8)(value)).Should(Equal(uint8(123)))
 
 		Ω(shard.LiveStore.LastReadRecord.Index).Should(Equal(uint32(1)))
-		redologManager := shard.LiveStore.RedoLogManager.(*imports.CompositeRedologManager)
-		redoFile := redologManager.GetLocalFileRedologManager().CurrentFileCreationTime
+		redologManager := shard.LiveStore.RedoLogManager.(*redolog.FileRedoLogManager)
+		redoFile := redologManager.CurrentFileCreationTime
 
 		// advance batch offset by 1.
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
-		Ω(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile[redoFile]).Should(Equal(uint32(23456)))
+		Ω(redologManager.MaxEventTimePerFile[redoFile]).Should(Equal(uint32(23456)))
 		Ω(shard.LiveStore.BackfillManager.CurrentRedoFile).Should(BeEquivalentTo(redoFile))
 		Ω(shard.LiveStore.BackfillManager.CurrentBatchOffset).Should(BeEquivalentTo(1))
 	})
@@ -499,14 +499,14 @@ var _ = ginkgo.Describe("ingestion", func() {
 		Ω(valid).Should(BeTrue())
 		Ω(*(*uint8)(value)).Should(Equal(uint8(123)))
 
-		redologManager := shard.LiveStore.RedoLogManager.(*imports.CompositeRedologManager)
+		redologManager := shard.LiveStore.RedoLogManager.(*redolog.FileRedoLogManager)
 		Ω(shard.LiveStore.LastReadRecord.Index).Should(Equal(uint32(1)))
-		redoFile := redologManager.GetLocalFileRedologManager().CurrentFileCreationTime
+		redoFile := redologManager.CurrentFileCreationTime
 
 		// advance batch offset by 1.
 		err = memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
-		Ω(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile[redoFile]).Should(Equal(uint32(0)))
+		Ω(redologManager.MaxEventTimePerFile[redoFile]).Should(Equal(uint32(0)))
 		Ω(shard.LiveStore.SnapshotManager.CurrentRedoFile).Should(BeEquivalentTo(redoFile))
 		Ω(shard.LiveStore.SnapshotManager.CurrentBatchOffset).Should(BeEquivalentTo(1))
 	})

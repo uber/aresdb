@@ -31,7 +31,6 @@ import (
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
-	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
@@ -42,6 +41,7 @@ import (
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"net/http/httptest"
 )
@@ -71,7 +71,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	var diskStore diskstore.DiskStore
 	var hostMemoryManager memCom.HostMemoryManager
 	var shard *memstore.TableShard
-	var redologManagerFactory *imports.RedologManagerFactory
+	var redologManagerMaster *redolog.RedoLogManagerMaster
 	table := "table1"
 	shardID := 0
 
@@ -109,7 +109,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		diskStore.(*diskMocks.DiskStore).On(
 			"OpenVectorPartyFileForRead", table, mock.Anything, shardID, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
-		redologManagerFactory, _ = imports.NewRedologManagerFactory(&common.ImportsConfig{}, diskStore, metaStore)
+		redologManagerMaster, _ = redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
 		shard = memstore.NewTableShard(&memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: table,
@@ -132,7 +132,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID, redologManagerFactory)
+		}, metaStore, diskStore, hostMemoryManager, shardID, redologManagerMaster)
 
 		shardMap := map[int]*memstore.TableShard{
 			shardID: shard,
@@ -1110,7 +1110,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		memStore.On("RLock").Return(nil)
 		memStore.On("RUnlock").Return(nil)
 
-		redoManagerFactory, _ := imports.NewRedologManagerFactory(&common.ImportsConfig{}, diskStore, metaStore)
+		redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
 		timezoneTableShard := memstore.NewTableShard(&memCom.TableSchema{
 			Schema:            timezoneTableSchema,
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.SmallEnum},
@@ -1368,7 +1368,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		shapeLiveVP := memstore.NewLiveVectorParty(3, memCom.GeoShape, memCom.NullDataValue, mockMemoryManager)
 		shapeLiveVP.Allocate(false)
 
-		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, redologManagerFactory)
+		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, redologManagerMaster)
 		geoFenceLiveStore := geoFenceTableShard.LiveStore
 
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{
@@ -1634,7 +1634,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		shapeLiveVP := memstore.NewLiveVectorParty(3, memCom.GeoShape, memCom.NullDataValue, mockMemoryManager)
 		shapeLiveVP.Allocate(false)
 
-		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, redologManagerFactory)
+		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, redologManagerMaster)
 		geoFenceLiveStore := geoFenceTableShard.LiveStore
 
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{

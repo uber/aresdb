@@ -75,16 +75,16 @@ type MetaStore interface {
 	GetBackfillProgressInfo(table string, shard int) (int64, uint32, error)
 
 	// Update ingestion commit offset, used for kafka like streaming ingestion
-	UpdateIngestionCommitOffset(table string, shard int, offset int64) error
+	UpdateRedoLogCommitOffset(table string, shard int, offset int64) error
 
 	// Get ingestion commit offset, used for kafka like streaming ingestion
-	GetIngestionCommitOffset(table string, shard int) (int64, error)
+	GetRedoLogCommitOffset(table string, shard int) (int64, error)
 
 	// Update ingestion checkpoint offset, used for kafka like streaming ingestion
-	UpdateIngestionCheckpointOffset(table string, shard int, offset int64) error
+	UpdateRedoLogCheckpointOffset(table string, shard int, offset int64) error
 
 	// Get ingestion checkpoint offset, used for kafka like streaming ingestion
-	GetIngestionCheckpointOffset(table string, shard int) (int64, error)
+	GetRedoLogCheckpointOffset(table string, shard int) (int64, error)
 
 	TableSchemaWatchable
 	TableSchemaMutator

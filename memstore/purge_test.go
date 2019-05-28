@@ -23,8 +23,8 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 
-	"github.com/uber/aresdb/imports"
 	metaStoreMocks "github.com/uber/aresdb/metastore/mocks"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("Purge", func() {
 
 		diskStore = &diskStoreMocks.DiskStore{}
 		metaStore = &metaStoreMocks.MetaStore{}
-		redologManagerFactory, _ := imports.NewRedologManagerFactory(&common.ImportsConfig{}, diskStore, metaStore)
+		redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
 		memStore = &memStoreImpl{
 			TableShards: map[string]map[int]*TableShard{
 				testTable: {},
@@ -70,13 +70,13 @@ var _ = ginkgo.Describe("Purge", func() {
 			TableSchemas: map[string]*memCom.TableSchema{
 				testTable: tableSchema,
 			},
-			diskStore:             diskStore,
-			metaStore:             metaStore,
-			HostMemManager:        hostMemoryManager,
-			redologManagerFactory: redologManagerFactory,
+			diskStore:            diskStore,
+			metaStore:            metaStore,
+			HostMemManager:       hostMemoryManager,
+			redologManagerMaster: redologManagerMaster,
 		}
 		hostMemoryManager = NewHostMemoryManager(memStore, 1<<10)
-		tableShard = NewTableShard(tableSchema, metaStore, diskStore, hostMemoryManager, testShardID, redologManagerFactory)
+		tableShard = NewTableShard(tableSchema, metaStore, diskStore, hostMemoryManager, testShardID, redologManagerMaster)
 
 		archiveBatch0, err := testFactory.ReadArchiveBatch("archiving/archiveBatch0")
 		Ω(err).Should(BeNil())

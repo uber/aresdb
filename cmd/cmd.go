@@ -34,8 +34,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"github.com/uber/aresdb/gateway"
-	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/redolog"
 )
 
 // Options represents options for executing command
@@ -141,13 +141,13 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	// Create DiskStore.
 	diskStore := diskstore.NewLocalDiskStore(cfg.RootPath)
 
-	redoLogManagerFactory, err := imports.NewRedologManagerFactory(&cfg.Imports, diskStore, metaStore)
+	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(&cfg.RedoLogConfig, diskStore, metaStore)
 	if err != nil {
 		utils.GetLogger().Fatal(err)
 	}
 
 	// Create MemStore.
-	memStore := memstore.NewMemStore(metaStore, diskStore, redoLogManagerFactory)
+	memStore := memstore.NewMemStore(metaStore, diskStore, redoLogManagerMaster)
 
 	// Read schema.
 	utils.GetLogger().Infof("Reading schema from local MetaStore %s", metaStorePath)
@@ -230,5 +230,5 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
 	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	batchStatsReporter.Stop()
-	redoLogManagerFactory.Stop()
+	redoLogManagerMaster.Stop()
 }

@@ -43,8 +43,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/query"
+	"github.com/uber/aresdb/redolog"
 	"sync"
 	"unsafe"
 )
@@ -183,7 +183,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		redoLogTableSchema := &memCom.TableSchema{
 			Schema: *redoLogTable,
 		}
-		redoManagerFactory, _ := imports.NewRedologManagerFactory(&common.ImportsConfig{}, mockDiskStore, mockMetaStore)
+		redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, mockDiskStore, mockMetaStore)
 
 		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID, redoManagerFactory)
 
@@ -625,8 +625,14 @@ var _ = ginkgo.Describe("DebugHandler", func() {
       "size": 1
     },
     "redoLogManager": {
-      "table": "test",
-      "shard": 1
+      "rotationInterval": 0,
+       "maxRedoLogSize": 0,
+       "currentRedoLogSize": 0,
+       "totalRedologSize": 0,
+       "maxEventTimePerFile": {},
+       "batchCountPerFile": {},
+       "sizePerFile": {},
+       "currentFileCreationTime": 0
     },
     "snapshotManager": null
   },

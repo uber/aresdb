@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("job manager", func() {
 			},
 			IsFactTable: true,
 		},
-	}, m.metaStore, m.diskStore, hostMemoryManager, 1, m.redologManagerFactory)
+	}, m.metaStore, m.diskStore, hostMemoryManager, 1, m.redologManagerMaster)
 
 	shard1.ArchiveStore = &ArchiveStore{
 		PurgeManager: NewPurgeManager(shard1),
@@ -86,7 +86,7 @@ var _ = ginkgo.Describe("job manager", func() {
 			},
 			IsFactTable: true,
 		},
-	}, m.metaStore, m.diskStore, hostMemoryManager, 2, m.redologManagerFactory)
+	}, m.metaStore, m.diskStore, hostMemoryManager, 2, m.redologManagerMaster)
 
 	shard2.LiveStore.BackfillManager.CurrentBufferSize = 15
 
@@ -109,7 +109,7 @@ var _ = ginkgo.Describe("job manager", func() {
 			},
 			IsFactTable: true,
 		},
-	}, m.metaStore, m.diskStore, hostMemoryManager, 1, m.redologManagerFactory)
+	}, m.metaStore, m.diskStore, hostMemoryManager, 1, m.redologManagerMaster)
 
 	shard3.LiveStore.BackfillManager.CurrentBufferSize = 15
 
@@ -129,7 +129,7 @@ var _ = ginkgo.Describe("job manager", func() {
 			},
 			IsFactTable: false,
 		},
-	}, m.metaStore, m.diskStore, hostMemoryManager, 1, m.redologManagerFactory)
+	}, m.metaStore, m.diskStore, hostMemoryManager, 1, m.redologManagerMaster)
 
 	shard4.LiveStore.SnapshotManager.NumMutations = 200
 

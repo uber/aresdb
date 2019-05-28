@@ -210,8 +210,8 @@ func (_m *MetaStore) GetEnumDict(table string, column string) ([]string, error) 
 	return r0, r1
 }
 
-// GetIngestionCheckpointOffset provides a mock function with given fields: table, shard
-func (_m *MetaStore) GetIngestionCheckpointOffset(table string, shard int) (int64, error) {
+// GetRedoLogCheckpointOffset provides a mock function with given fields: table, shard
+func (_m *MetaStore) GetRedoLogCheckpointOffset(table string, shard int) (int64, error) {
 	ret := _m.Called(table, shard)
 
 	var r0 int64
@@ -231,8 +231,8 @@ func (_m *MetaStore) GetIngestionCheckpointOffset(table string, shard int) (int6
 	return r0, r1
 }
 
-// GetIngestionCommitOffset provides a mock function with given fields: table, shard
-func (_m *MetaStore) GetIngestionCommitOffset(table string, shard int) (int64, error) {
+// GetRedoLogCommitOffset provides a mock function with given fields: table, shard
+func (_m *MetaStore) GetRedoLogCommitOffset(table string, shard int) (int64, error) {
 	ret := _m.Called(table, shard)
 
 	var r0 int64
@@ -419,8 +419,8 @@ func (_m *MetaStore) UpdateColumn(table string, column string, config common.Col
 	return r0
 }
 
-// UpdateIngestionCheckpointOffset provides a mock function with given fields: table, shard, offset
-func (_m *MetaStore) UpdateIngestionCheckpointOffset(table string, shard int, offset int64) error {
+// UpdateRedoLogCheckpointOffset provides a mock function with given fields: table, shard, offset
+func (_m *MetaStore) UpdateRedoLogCheckpointOffset(table string, shard int, offset int64) error {
 	ret := _m.Called(table, shard, offset)
 
 	var r0 error
@@ -433,8 +433,8 @@ func (_m *MetaStore) UpdateIngestionCheckpointOffset(table string, shard int, of
 	return r0
 }
 
-// UpdateIngestionCommitOffset provides a mock function with given fields: table, shard, offset
-func (_m *MetaStore) UpdateIngestionCommitOffset(table string, shard int, offset int64) error {
+// UpdateRedoLogCommitOffset provides a mock function with given fields: table, shard, offset
+func (_m *MetaStore) UpdateRedoLogCommitOffset(table string, shard int, offset int64) error {
 	ret := _m.Called(table, shard, offset)
 
 	var r0 error

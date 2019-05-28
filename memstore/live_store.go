@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -65,7 +65,7 @@ type LiveStore struct {
 	ArchivingCutoffHighWatermark uint32
 
 	// Logs.
-	RedoLogManager imports.RedologManager
+	RedoLogManager redolog.RedologManager
 
 	// Manage backfill queue during ingestion.
 	BackfillManager *BackfillManager
@@ -104,7 +104,7 @@ type LiveStore struct {
 func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
 	schema := shard.Schema
 	tableCfg := schema.Schema.Config
-	redoLogManager, err := shard.redoLogManagerFactory.NewRedologManager(schema.Schema.Name, shard.ShardID, &tableCfg, shard.saveBatch)
+	redoLogManager, err := shard.redoLogManagerMaster.NewRedologManager(schema.Schema.Name, shard.ShardID, &tableCfg)
 	if err != nil {
 		utils.GetLogger().Fatal(err)
 	}
@@ -277,10 +277,6 @@ func (s *LiveStore) Destruct() {
 			s.HostMemoryManager.ReportUnmanagedSpaceUsageChange(
 				-int64(s.BackfillManager.MaxBufferSize * utils.GolangMemoryFootprintFactor))
 		}()
-	}
-	if s.RedoLogManager != nil {
-		s.RedoLogManager.Close()
-		s.RedoLogManager = nil
 	}
 }
 

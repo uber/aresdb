@@ -48,7 +48,7 @@ var _ = ginkgo.Describe("snapshot manager", func() {
 		},
 		ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 		DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-	}, nil, nil, hostMemoryManager, shardID, m.redologManagerFactory)
+	}, nil, nil, hostMemoryManager, shardID, m.redologManagerMaster)
 	var metaStore *mocks.MetaStore
 
 	var snapshotManager *SnapshotManager

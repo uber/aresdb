@@ -19,9 +19,9 @@ import (
 
 	"fmt"
 	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -94,9 +94,9 @@ type memStoreImpl struct {
 
 	// reference to metaStore for registering watchers,
 	// fetch latest schema and store Shard versions.
-	metaStore             metastore.MetaStore
-	diskStore             diskstore.DiskStore
-	redologManagerFactory *imports.RedologManagerFactory
+	metaStore            metastore.MetaStore
+	diskStore            diskstore.DiskStore
+	redologManagerMaster *redolog.RedoLogManagerMaster
 
 	// each MemStore should only have one scheduler instance.
 	scheduler Scheduler
@@ -107,13 +107,13 @@ func getTableShardKey(tableName string, shardID int) string {
 }
 
 // NewMemStore creates a MemStore from the specified MetaStore.
-func NewMemStore(metaStore metastore.MetaStore, diskStore diskstore.DiskStore, redologManagerFactory *imports.RedologManagerFactory) MemStore {
+func NewMemStore(metaStore metastore.MetaStore, diskStore diskstore.DiskStore, redologManagerMaster *redolog.RedoLogManagerMaster) MemStore {
 	memStore := &memStoreImpl{
-		TableShards:           make(map[string]map[int]*TableShard),
-		TableSchemas:          make(map[string]*common.TableSchema),
-		metaStore:             metaStore,
-		diskStore:             diskStore,
-		redologManagerFactory: redologManagerFactory,
+		TableShards:          make(map[string]map[int]*TableShard),
+		TableSchemas:         make(map[string]*common.TableSchema),
+		metaStore:            metaStore,
+		diskStore:            diskStore,
+		redologManagerMaster: redologManagerMaster,
 	}
 	// Create HostMemoryManager
 	memStore.HostMemManager = NewHostMemoryManager(memStore, utils.GetConfig().TotalMemorySize)

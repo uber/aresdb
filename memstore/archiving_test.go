@@ -25,9 +25,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/imports"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		},
 		ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 		DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-	}, nil, nil, hostMemoryManager, shardID, m.redologManagerFactory)
+	}, nil, nil, hostMemoryManager, shardID, m.redologManagerMaster)
 
 	shard.ArchiveStore = &ArchiveStore{CurrentVersion: &ArchiveStoreVersion{
 		ArchivingCutoff: 0,
@@ -120,7 +120,7 @@ var _ = ginkgo.Describe("archiving", func() {
 			HostMemoryManager: hostMemoryManager,
 		}
 
-		redoLogManagerFactory, _ := imports.NewRedologManagerFactory(&common.ImportsConfig{}, m.diskStore, m.metaStore)
+		redoLogManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, m.diskStore, m.metaStore)
 
 		shardMap[shardID].diskStore = m.diskStore
 		shardMap[shardID].metaStore = m.metaStore
@@ -129,7 +129,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardMap[shardID].ArchiveStore.CurrentVersion.shard = shardMap[shardID]
 		shardMap[shardID].ArchiveStore.CurrentVersion.Batches[0] = archiveBatch0
 		// Map from max event time to file creation time.
-		shardMap[shardID].LiveStore.RedoLogManager, err = redoLogManagerFactory.NewRedologManager(table, shardID, &shard.Schema.Schema.Config, nil)
+		shardMap[shardID].LiveStore.RedoLogManager, err = redoLogManagerMaster.NewRedologManager(table, shardID, &shard.Schema.Schema.Config)
 		shardMap[shardID].LiveStore.RedoLogManager.UpdateMaxEventTime(1, 1)
 
 		// make purge to pass
@@ -234,8 +234,8 @@ var _ = ginkgo.Describe("archiving", func() {
 		(m.diskStore).(*diskMocks.DiskStore).On(
 			"OpenVectorPartyFileForWrite", table, mock.Anything, shardID, day, mock.Anything, mock.Anything).Return(writer, nil)
 
-		redologManager := tableShard.LiveStore.RedoLogManager.(*imports.CompositeRedologManager)
-		redologManager.GetLocalFileRedologManager().CurrentFileCreationTime = 2
+		redologManager := tableShard.LiveStore.RedoLogManager.(*redolog.FileRedoLogManager)
+		redologManager.CurrentFileCreationTime = 2
 
 		timeIncrementer := &utils.TimeIncrementer{IncBySecond: 1}
 		utils.SetClockImplementation(timeIncrementer.Now)
@@ -282,7 +282,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		}
 
 		// MaxEventTimePerFile should be purged.
-		Ω(redologManager.GetLocalFileRedologManager().MaxEventTimePerFile).ShouldNot(HaveKey(int64(1)))
+		Ω(redologManager.MaxEventTimePerFile).ShouldNot(HaveKey(int64(1)))
 
 		// Archive again, there should be no crashes or errors.
 		Ω(m.Archive(table, shardID, cutoff+100, jobManager.reportArchiveJobDetail)).Should(BeNil())

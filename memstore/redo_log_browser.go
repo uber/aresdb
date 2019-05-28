@@ -18,8 +18,8 @@ import (
 	"io"
 
 	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/imports"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/redolog"
 
 	"github.com/uber/aresdb/utils"
 )
@@ -65,7 +65,7 @@ func (rb *redoLogBrowser) ListUpsertBatch(creationTime int64) ([]int64, error) {
 		return nil, err
 	}
 
-	if header != imports.UpsertHeader {
+	if header != redolog.UpsertHeader {
 		return nil, utils.StackError(nil,
 			"Invalid header %#x", header)
 	}

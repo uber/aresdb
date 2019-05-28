@@ -252,7 +252,7 @@ func (dm *diskMetaStore) GetBackfillProgressInfo(table string, shard int) (int64
 }
 
 // Update ingestion commit offset, used for kafka like streaming ingestion
-func (dm *diskMetaStore) UpdateIngestionCommitOffset(table string, shard int, offset int64) error {
+func (dm *diskMetaStore) UpdateRedoLogCommitOffset(table string, shard int, offset int64) error {
 	dm.Lock()
 	defer dm.Unlock()
 
@@ -275,7 +275,7 @@ func (dm *diskMetaStore) UpdateIngestionCommitOffset(table string, shard int, of
 }
 
 // Get ingestion commit offset, used for kafka like streaming ingestion
-func (dm *diskMetaStore) GetIngestionCommitOffset(table string, shard int) (int64, error) {
+func (dm *diskMetaStore) GetRedoLogCommitOffset(table string, shard int) (int64, error) {
 	dm.RLock()
 	defer dm.RUnlock()
 
@@ -299,7 +299,7 @@ func (dm *diskMetaStore) GetIngestionCommitOffset(table string, shard int) (int6
 }
 
 // Update ingestion checkpoint offset, used for kafka like streaming ingestion
-func (dm *diskMetaStore) UpdateIngestionCheckpointOffset(table string, shard int, offset int64) error {
+func (dm *diskMetaStore) UpdateRedoLogCheckpointOffset(table string, shard int, offset int64) error {
 	dm.Lock()
 	defer dm.Unlock()
 
@@ -322,7 +322,7 @@ func (dm *diskMetaStore) UpdateIngestionCheckpointOffset(table string, shard int
 }
 
 // Get ingestion checkpoint offset, used for kafka like streaming ingestion
-func (dm *diskMetaStore) GetIngestionCheckpointOffset(table string, shard int) (int64, error) {
+func (dm *diskMetaStore) GetRedoLogCheckpointOffset(table string, shard int) (int64, error) {
 	dm.RLock()
 	defer dm.RUnlock()
 
