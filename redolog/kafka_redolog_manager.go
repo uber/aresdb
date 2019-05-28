@@ -280,10 +280,7 @@ func (k *kafkaRedoLogManager) setRecoveryDone() {
 }
 
 func (k *kafkaRedoLogManager) WaitForRecoveryDone() {
-	select {
-	case <-k.recoveryChan:
-		break
-	}
+	<-k.recoveryChan
 }
 
 func (k *kafkaRedoLogManager) GetTotalSize() int {
