@@ -85,7 +85,7 @@ func NewBatchExecutor(qc *AQLQueryContext, batchID int32, customFilterFunc custo
 				batchID:          batchID,
 				customFilterFunc: customFilterFunc,
 				stream:           stream,
-				start:			  start,
+				start:            start,
 			},
 		}
 	}
@@ -95,7 +95,7 @@ func NewBatchExecutor(qc *AQLQueryContext, batchID int32, customFilterFunc custo
 		batchID:          batchID,
 		customFilterFunc: customFilterFunc,
 		stream:           stream,
-		start:			  start,
+		start:            start,
 	}
 }
 

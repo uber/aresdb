@@ -23,10 +23,10 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
+	"net/http"
 	"strings"
 	"time"
 	"unsafe"
-	"net/http"
 )
 
 type boundaryType int

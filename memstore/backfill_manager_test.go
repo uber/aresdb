@@ -10,7 +10,7 @@ import (
 	"github.com/uber/aresdb/metastore/mocks"
 )
 
-var _ = ginkgo.Describe("backfill manager", func(){
+var _ = ginkgo.Describe("backfill manager", func() {
 
 	table := "test"
 	tableSchema := &TableSchema{
@@ -20,7 +20,7 @@ var _ = ginkgo.Describe("backfill manager", func(){
 				ArchivingDelayMinutes:    500,
 				ArchivingIntervalMinutes: 300,
 				BackfillStoreBatchSize:   20000,
-				BackfillMaxBufferSize: 1,
+				BackfillMaxBufferSize:    1,
 			},
 			IsFactTable:          true,
 			ArchivingSortColumns: []int{1, 5},

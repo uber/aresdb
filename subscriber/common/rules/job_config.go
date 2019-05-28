@@ -67,7 +67,7 @@ type JobConfig struct {
 	// AresTableConfig contains destination ares table schema
 	AresTableConfig AresTableConfig `json:"aresTableConfig" yaml:"aresTableConfig"`
 	// NumShards is the number of shards defined in this aresCluster
-	NumShards uint32
+	NumShards uint32 `json:"numShards" yaml:"numShards"`
 
 	// maps from column name to columnID for convenience
 	columnDict      map[string]int

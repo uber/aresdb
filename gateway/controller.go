@@ -208,7 +208,7 @@ func (c *ControllerHTTPClient) FetchSchema(tableName string) (table *common.Tabl
 
 // FetchAllEnums fetches all enums for given table and column
 func (c *ControllerHTTPClient) FetchAllEnums(tableName string, columnName string) (enumDictReponse []string, err error) {
-	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("enum/%s/%s/columns/%s/enum-cases", c.namespace, tableName, columnName), nil)
+	request, err := c.buildRequest(http.MethodGet, fmt.Sprintf("schema/%s/tables/%s/columns/%s/enum-cases", c.namespace, tableName, columnName), nil)
 	if err != nil {
 		return
 	}
@@ -228,7 +228,7 @@ func (c *ControllerHTTPClient) ExtendEnumCases(tableName, columnName string, enu
 		return nil, utils.StackError(err, "Failed to marshal enum cases")
 	}
 
-	request, err := c.buildRequest(http.MethodPost, fmt.Sprintf("enum/%s/%s/columns/%s/enum-cases", c.namespace, tableName, columnName), bytes.NewReader(enumCasesBytes))
+	request, err := c.buildRequest(http.MethodPost, fmt.Sprintf("schema/%s/tables/%s/columns/%s/enum-cases", c.namespace, tableName, columnName), bytes.NewReader(enumCasesBytes))
 	if err != nil {
 		return
 	}
