@@ -71,7 +71,7 @@ func Execute(setters ...Option) {
 		Example: `./ares --config config/ares.yaml --port 9374 --debug_port 43202 --root_path ares-root`,
 		Run: func(cmd *cobra.Command, args []string) {
 
-			cfg, err := utils.ReadConfig(options.DefaultCfg, cmd.Flags())
+			cfg, err := ReadConfig(options.DefaultCfg, cmd.Flags())
 			if err != nil {
 				options.ServerLogger.With("err", err.Error()).Fatal("failed to read configs")
 			}
@@ -85,7 +85,7 @@ func Execute(setters ...Option) {
 			)
 		},
 	}
-	utils.AddFlags(cmd)
+	AddFlags(cmd)
 	cmd.Execute()
 }
 

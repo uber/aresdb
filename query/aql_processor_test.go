@@ -990,6 +990,14 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc = q.Compile(memStore, false)
 		Ω(qc.Error).Should(BeNil())
+		qc.FindDeviceForQuery(memStore, -1, NewDeviceManager(common.QueryConfig{
+			DeviceMemoryUtilization: 1.0,
+			DeviceChoosingTimeout: -1,
+		}), 100)
+		Ω(qc.Device).Should(Equal(0))
+		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
+			shard.Users.Add(1)
+		}).Return(shard, nil).Once()
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
 		qc.Postprocess()

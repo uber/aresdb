@@ -100,6 +100,7 @@ const (
 	PurgeTimingTotal
 	PurgedBatches
 	PurgeCount
+	JobFailuresCount
 	RecordsFromFuture
 	BatchSize
 	BatchSizeReportTime
@@ -213,6 +214,7 @@ const (
 	scopeNameSchemaUpdateCount               = "schema_updates"
 	scopeNameSchemaDeletionCount             = "schema_deletions"
 	scopeNameSchemaCreationCount             = "schema_creations"
+	scopeNameJobFailuresCount                = "job_failures_count"
 )
 
 // Metric tag names
@@ -871,6 +873,12 @@ var metricsDefs = map[MetricName]metricDefinition{
 		tags: map[string]string{
 			metricsTagOperation: metricsOperationPurge,
 			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	JobFailuresCount: {
+		name:       scopeNameJobFailuresCount,
+		metricType: Counter,
+		tags: map[string]string{
 		},
 	},
 }

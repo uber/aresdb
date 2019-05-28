@@ -255,18 +255,12 @@ var _ = ginkgo.Describe("snapshot", func() {
 		}
 	})
 
-	ginkgo.It("dimension table snapshot failure", func() {
+	ginkgo.It("dimension table snapshot on deleted table should not return error", func() {
 		snapshotJobM := &snapshotJobManager{
 			jobDetails: make(map[string]*SnapshotJobDetail),
 			memStore:   memStore,
 		}
-		err := memStore.Snapshot("testTable", 0, snapshotJobM.reportSnapshotJobDetail)
-		Ω(err).ShouldNot(BeNil())
-
-		diskStore.On(
-			"OpenSnapshotVectorPartyFileForWrite", mock.Anything, 1, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil, fmt.Errorf("intended error"))
-		err = memStore.Snapshot("testTable", 0, snapshotJobM.reportSnapshotJobDetail)
-		Ω(err).ShouldNot(BeNil())
+		err := memStore.Snapshot("NonExistTable", 0, snapshotJobM.reportSnapshotJobDetail)
+		Ω(err).Should(BeNil())
 	})
 })

@@ -32,10 +32,19 @@ make test-cuda -j
 make aresd -j
 
 # run test
-cd query/expr
-ginkgo -r
-cd ../..
-ginkgo -r -cover -skipPackage expr
+function run_skipped_package(){
+for pkg in "$@"
+do
+    pushd .
+    echo "testing ${pkg}"
+    cd ${pkg}
+    ginkgo -r
+    popd
+done
+}
+
+run_skipped_package query/expr
+ginkgo -r -cover -skipPackage query/expr,cmd
 
 # update cached_commit
 if [ "${cudaFileChanged}" == "true" ]; then

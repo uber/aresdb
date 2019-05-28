@@ -96,6 +96,14 @@ func (b BufferReader) ReadUint64(offset int) (uint64, error) {
 	return *(*uint64)(unsafe.Pointer(&b.buffer[offset])), nil
 }
 
+// ReadInt64 reads 8 bytes from buffer.
+func (b BufferReader) ReadInt64(offset int) (int64, error) {
+	if offset+8 > len(b.buffer) {
+		return 0, StackError(nil, "Failed to read int64 from offset %d", offset)
+	}
+	return *(*int64)(unsafe.Pointer(&b.buffer[offset])), nil
+}
+
 // ReadFloat32 reads 4 bytes from buffer.
 func (b BufferReader) ReadFloat32(offset int) (float32, error) {
 	if offset+4 > len(b.buffer) {
