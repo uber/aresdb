@@ -36,7 +36,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 	namespace := "ns1"
 	tableConfig := &metaCom.TableConfig{
 		RedoLogRotationInterval: 1000,
-		MaxRedoLogFileSize:      1000,
+		MaxRedoLogFileSize:      10000000,
 	}
 	redoLogConfig := &common.RedoLogConfig{
 		Namespace: namespace,
