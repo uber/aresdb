@@ -9,7 +9,7 @@ import (
 
 var (
 	// defaultBootstrapProcessProvider is the default bootstrap provider for the database.
-	defaultBootstrapProcessProvider = bootstrap.NewNoOpProcessProvider()
+	// TODO: defaultBootstrapProcessProvider = bootstrap.NewNoOpProcessProvider()
 	timeZero                        time.Time
 )
 
@@ -26,8 +26,8 @@ type options struct {
 // NewOptions creates a new set of storage options with defaults
 func NewOptions() Options {
 	opts := options{
-		utils.NewOptions(),
-		defaultBootstrapProcessProvider,
+		instrumentOpts: utils.NewOptions(),
+		// TODO: bootstrapProcessProvider: defaultBootstrapProcessProvider,
 	}
 	return &opts
 }
