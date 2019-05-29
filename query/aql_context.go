@@ -393,7 +393,7 @@ type AQLQueryContext struct {
 
 	// fields for non aggregate query
 	// Flag to indicate if this query is not aggregation query
-	isNonAggregationQuery      bool
+	IsNonAggregationQuery      bool
 	numberOfRowsWritten        int
 	maxBatchSizeAfterPrefilter int
 

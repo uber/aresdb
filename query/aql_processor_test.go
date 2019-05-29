@@ -2202,7 +2202,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				},
 			},
 		}
-		qc.isNonAggregationQuery = true
+		qc.IsNonAggregationQuery = true
 
 		w := httptest.NewRecorder()
 		qc.ResponseWriter = w

@@ -79,7 +79,7 @@ const (
 
 // Compile returns the compiled AQLQueryContext for data feeding and query
 // execution. Caller should check for AQLQueryContext.Error.
-func (q *AQLQuery) Compile(store memstore.MemStore, returnHLL bool) *AQLQueryContext {
+func (q *AQLQuery) Compile(tableSchemaReader memstore.TableSchemaReader, returnHLL bool) *AQLQueryContext {
 	qc := &AQLQueryContext{Query: q, ReturnHLLData: returnHLL}
 
 	// processTimezone might append additional joins
@@ -89,7 +89,7 @@ func (q *AQLQuery) Compile(store memstore.MemStore, returnHLL bool) *AQLQueryCon
 	}
 
 	// Read schema for every table used.
-	qc.readSchema(store)
+	qc.readSchema(tableSchemaReader)
 	defer qc.releaseSchema()
 	if qc.Error != nil {
 		return qc
@@ -506,16 +506,16 @@ func (qc *AQLQueryContext) processTimezone() {
 	}
 }
 
-func (qc *AQLQueryContext) readSchema(store memstore.MemStore) {
+func (qc *AQLQueryContext) readSchema(tableSchemaReader memstore.TableSchemaReader) {
 	qc.TableScanners = make([]*TableScanner, 1+len(qc.Query.Joins))
 	qc.TableIDByAlias = make(map[string]int)
 	qc.TableSchemaByName = make(map[string]*memCom.TableSchema)
 
-	store.RLock()
-	defer store.RUnlock()
+	tableSchemaReader.RLock()
+	defer tableSchemaReader.RUnlock()
 
 	// Main table.
-	schema := store.GetSchemas()[qc.Query.Table]
+	schema := tableSchemaReader.GetSchemas()[qc.Query.Table]
 	if schema == nil {
 		qc.Error = utils.StackError(nil, "unknown main table %s", qc.Query.Table)
 		return
@@ -534,7 +534,7 @@ func (qc *AQLQueryContext) readSchema(store memstore.MemStore) {
 
 	// Foreign tables.
 	for i, join := range qc.Query.Joins {
-		schema = store.GetSchemas()[join.Table]
+		schema = tableSchemaReader.GetSchemas()[join.Table]
 		if schema == nil {
 			qc.Error = utils.StackError(nil, "unknown join table %s", join.Table)
 			return
@@ -1704,7 +1704,7 @@ func (qc *AQLQueryContext) processMeasure() {
 	}
 
 	if _, ok := qc.Query.Measures[0].expr.(*expr.NumberLiteral); ok {
-		qc.isNonAggregationQuery = true
+		qc.IsNonAggregationQuery = true
 		// in case user forgot to provide limit
 		if qc.Query.Limit == 0 {
 			qc.Query.Limit = nonAggregationQueryLimit
@@ -1922,7 +1922,7 @@ func (qc *AQLQueryContext) sortDimensionColumns() {
 	// plus one byte per dimension column for validity
 	qc.OOPK.DimRowBytes += numDimensions
 
-	if !qc.isNonAggregationQuery {
+	if !qc.IsNonAggregationQuery {
 		// no dimension size checking for non-aggregation query
 		if qc.OOPK.DimRowBytes > C.MAX_DIMENSION_BYTES {
 			qc.Error = utils.StackError(nil, "maximum dimension bytes: %d, got: %d", C.MAX_DIMENSION_BYTES, qc.OOPK.DimRowBytes)

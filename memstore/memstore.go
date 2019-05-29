@@ -31,19 +31,27 @@ type TableShardMemoryUsage struct {
 	PrimaryKeyMemory uint                                 `json:"pk"`
 }
 
+type TableSchemaReader interface {
+	// GetSchema returns schema for a table.
+	GetSchema(table string) (*common.TableSchema, error)
+	// GetSchemas returns all table schemas.
+	GetSchemas() map[string]*common.TableSchema
+
+	// Provide exclusive access to read/write data protected by MemStore.
+	utils.RWLocker
+}
+
 // MemStore defines the interface for managing multiple table shards in memory. This is for mocking
 // in unit tests
 type MemStore interface {
+	TableSchemaReader
+
 	// GetMemoryUsageDetails
 	GetMemoryUsageDetails() (map[string]TableShardMemoryUsage, error)
 	// GetScheduler returns the scheduler for scheduling archiving and backfill jobs.
 	GetScheduler() Scheduler
 	// GetTableShard gets the data for a pinned table Shard. Caller needs to unpin after use.
 	GetTableShard(table string, shardID int) (*TableShard, error)
-	// GetSchema returns schema for a table.
-	GetSchema(table string) (*common.TableSchema, error)
-	// GetSchemas returns all table schemas.
-	GetSchemas() map[string]*common.TableSchema
 	// FetchSchema fetches schema from metaStore and updates in-memory copy of table schema,
 	// and set up watch channels for metaStore schema changes, used for bootstrapping mem store.
 	FetchSchema() error
@@ -64,9 +72,6 @@ type MemStore interface {
 
 	// Purge is the process to purge out of retention archive batches
 	Purge(table string, shardID, batchIDStart, batchIDEnd int, reporter PurgeJobDetailReporter) error
-
-	// Provide exclusive access to read/write data protected by MemStore.
-	utils.RWLocker
 }
 
 // memStoreImpl implements the MemStore interface.
