@@ -3,9 +3,8 @@ package bootstrap
 import (
 	"github.com/uber/aresdb/datanode/topology"
 	"time"
-
 	"github.com/m3db/m3/src/dbnode/storage/bootstrap/result"
-	"github.com/m3db/m3/src/dbnode/storage/namespace"
+	"github.com/m3db/m3/src/dbnode/namespace"
 )
 
 // ProcessProvider constructs a bootstrap process that can execute a bootstrap run.
