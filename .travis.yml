@@ -30,6 +30,7 @@ branches:
 before_install:
   - sudo apt-get clean
   - sudo apt-get update -q
+  - sudo apt-get install -y librdkafka-dev
 
 install:
   - rm -rf ./build && mkdir -p build
