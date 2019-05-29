@@ -4,6 +4,7 @@ set -ex
 output_dir=./build
 cmake_version=3.12.0
 # install cppcheck
+
 sudo apt-get update
 sudo apt-get install cppcheck
 
