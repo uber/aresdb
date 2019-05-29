@@ -76,6 +76,11 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 				},
 			},
 		}
+		// real kafka consumer creation will fail
+		f, err = NewRedoLogManagerMaster(c, diskStore, metaStore)
+		Ω(err).ShouldNot(BeNil())
+
+		// mock kafka consumer will success
 		f, err = NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
@@ -104,12 +109,17 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 	})
 
 	ginkgo.It("NewRedologManager and close", func() {
-		f, _ := NewRedoLogManagerMaster(nil, diskStore, metaStore)
+		consumer, _ := testing.MockKafkaConsumerFunc(nil)
+		f, _ := NewKafkaRedoLogManagerMaster(nil, diskStore, metaStore, consumer)
 		_, err := f.NewRedologManager("table1", 0, &metaCom.TableConfig{})
 		Ω(err).Should(BeNil())
 		f.NewRedologManager("table1", 1, &metaCom.TableConfig{})
 		f.NewRedologManager("table2", 0, &metaCom.TableConfig{})
 		f.NewRedologManager("table2", 1, &metaCom.TableConfig{})
+		_, err = f.NewRedologManager("table2", 1, &metaCom.TableConfig{})
+		// repeat create redolog manager on same table/shard should fail
+		Ω(err).ShouldNot(BeNil())
+
 		Ω(len(f.managers)).Should(Equal(2))
 		Ω(len(f.managers["table1"])).Should(Equal(2))
 		Ω(len(f.managers["table2"])).Should(Equal(2))

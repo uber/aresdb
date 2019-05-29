@@ -376,7 +376,7 @@ func newBackfillStore(tableSchema *memCom.TableSchema, hostMemoryManager common.
 func newBackfillContext(baseBatch *ArchiveBatch, patch *backfillPatch, tableSchema *memCom.TableSchema, columnDeletions []bool,
 	sortColumns []int, primaryKeyColumns []int, dataTypes []common.DataType, defaultValues []*common.DataValue,
 	hostMemoryManager common.HostMemoryManager) backfillContext {
-	initBuckets := (baseBatch.Size + len(patch.recordIDs)) / memCom.ShareBucketSize
+	initBuckets := (baseBatch.Size + len(patch.recordIDs)) / memCom.BucketSize
 	// allocate more space for insertion.
 	initBuckets += initBuckets / 8
 	// column delection will be blocked during backfill, so we are safe to get column deletions from schema without

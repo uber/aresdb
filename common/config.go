@@ -121,5 +121,5 @@ type AresServerConfig struct {
 	Cluster   ClusterConfig   `yaml:"cluster"`
 	Gateway   GatewayConfig   `yaml:"gateway"`
 
-	RedoLogConfig RedoLogConfig `yaml:"imports"`
+	RedoLogConfig RedoLogConfig `yaml:"redolog"`
 }

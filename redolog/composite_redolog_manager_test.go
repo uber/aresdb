@@ -1,6 +1,8 @@
 package redolog
 
 import (
+	"encoding/json"
+
 	"github.com/Shopify/sarama"
 	kafkaMocks "github.com/Shopify/sarama/mocks"
 	"github.com/onsi/ginkgo"
@@ -33,8 +35,8 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 	shard := 0
 	namespace := "ns1"
 	tableConfig := &metaCom.TableConfig{
-		RedoLogRotationInterval: 1,
-		MaxRedoLogFileSize:      100000,
+		RedoLogRotationInterval: 1000,
+		MaxRedoLogFileSize:      1000,
 	}
 	redoLogConfig := &common.RedoLogConfig{
 		Namespace: namespace,
@@ -76,20 +78,38 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 
 		nextUpsertBatch, err := cm.Iterator()
 		for i := 1; i <= 2*maxBatchesPerFile; i++ {
-			 nextUpsertBatch()
+			 batchInfo := nextUpsertBatch()
+			 if i < 6000 {
+			 	m.UpdateMaxEventTime(uint32(1), batchInfo.RedoLogFile)
+			 } else {
+				 m.UpdateMaxEventTime(uint32(utils.Now().Unix()), batchInfo.RedoLogFile)
+			 }
 		}
 
-		Ω(cm.batchReceived).Should(Equal(2*maxBatchesPerFile - 2000))
-		Ω(cm.batchRecovered).Should(Equal(2000))
+		// should not block
+		m.WaitForRecoveryDone()
+
+		Ω(cm.GetBatchReceived()).Should(Equal(2*maxBatchesPerFile - 2000))
+		Ω(cm.GetBatchRecovered()).Should(Equal(2000))
 		Ω(cm.GetNumFiles()).Should(Equal(3))
 
-		err = m.CheckpointRedolog(1, 1, 0)
 		Ω(cm.GetNumFiles()).Should(Equal(3))
 		Ω(cm.FirstKafkaOffsetPerFile[0]).Should(Equal(int64(1)))
 		Ω(cm.FirstKafkaOffsetPerFile[1]).Should(Equal(int64(5000)))
 		Ω(cm.FirstKafkaOffsetPerFile[2]).Should(Equal(int64(10000)))
 
+		err = m.CheckpointRedolog(10, 1, 0)
+
+		Ω(cm.GetNumFiles()).Should(Equal(2))
+
+		Ω(cm.FirstKafkaOffsetPerFile[1]).Should(Equal(int64(5000)))
+		Ω(cm.FirstKafkaOffsetPerFile[2]).Should(Equal(int64(10000)))
+
 		Ω(mockMetaStore.AssertNumberOfCalls(utils.TestingT, "UpdateRedoLogCommitOffset", 80)).Should(BeTrue())
+		Ω(mockMetaStore.AssertNumberOfCalls(utils.TestingT, "UpdateRedoLogCheckpointOffset", 1)).Should(BeTrue())
+
+		f.Stop()
+		Ω(cm.partitionConsumer).Should(BeNil())
 	})
 
 	ginkgo.It("Test kafka with local file redolog manager", func() {
@@ -116,6 +136,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 		diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(1)).Return(file1, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(2)).Return(file2, nil)
+		diskStore.On("DeleteLogFile", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		redoLogConfig.DiskConfig.Disabled = false
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
@@ -129,7 +150,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 		cm := m.(*compositeRedoLogManager)
 		Ω(cm).ShouldNot(BeNil())
 		Ω(cm.fileRedoLogManager).ShouldNot(BeNil())
-		Ω(cm.kafkaReader).ShouldNot(BeNil())
+		Ω(cm.kafkaRedoLogManager).ShouldNot(BeNil())
 
 		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		for i := 0; i < 2*maxBatchesPerFile; i++ {
@@ -141,12 +162,44 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 
 		nextUpsertBatch, err := cm.Iterator()
 		for i := 1; i <= 2*maxBatchesPerFile+3; i++ {
-			 nextUpsertBatch()
+			batchInfo := nextUpsertBatch()
+
+			if !batchInfo.Recovery {
+				redoLogFile, _ := cm.AppendToRedoLog(batchInfo.Batch)
+				if i < 6000 {
+					m.UpdateMaxEventTime(uint32(1), redoLogFile)
+				} else {
+					m.UpdateMaxEventTime(uint32(utils.Now().Unix()), redoLogFile)
+				}
+			} else {
+				m.UpdateMaxEventTime(uint32(1), batchInfo.RedoLogFile)
+			}
 		}
 
-		Ω(cm.fileRedoLogManager.batchRecovered).Should(Equal(3))
-		Ω(cm.kafkaReader.batchReceived).Should(Equal(2 * maxBatchesPerFile))
+		// should not block
+		m.WaitForRecoveryDone()
+
+		Ω(cm.GetBatchRecovered()).Should(Equal(3))
+		Ω(cm.GetBatchReceived()).Should(Equal(2 * maxBatchesPerFile))
+
+		Ω(cm.GetNumFiles()).Should(Equal(3))
+		Ω(cm.fileRedoLogManager.MaxEventTimePerFile[1]).Should(Equal(uint32(1)))
+		Ω(len(cm.fileRedoLogManager.MaxEventTimePerFile)).Should(Equal(3))
+
+		err = m.CheckpointRedolog(10, 2, 0)
+
+		Ω(cm.GetNumFiles()).Should(Equal(1))
 
 		Ω(mockMetaStore.AssertNumberOfCalls(utils.TestingT, "UpdateRedoLogCommitOffset", 100)).Should(BeTrue())
+
+		jsonStr, err := json.Marshal(&cm)
+		Ω(jsonStr).Should(MatchJSON(`{
+			"table":"table1",
+			"shard":0
+		}`))
+		f.Stop()
+		Ω(cm.fileRedoLogManager).Should(BeNil())
+		Ω(cm.kafkaRedoLogManager).Should(BeNil())
+
 	})
 })

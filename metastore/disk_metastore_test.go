@@ -364,7 +364,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 	ginkgo.It("UpdateRedoLogCommitOffset", func() {
 		diskMetastore := createDiskMetastore("base")
-		err := diskMetastore.UpdateRedoLogCheckpointOffset("b", 0, 1)
+		err := diskMetastore.UpdateRedoLogCommitOffset("b", 0, 1)
 		Ω(err).Should(BeNil())
 		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
 	})

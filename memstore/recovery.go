@@ -60,7 +60,16 @@ func (shard *TableShard) PlayRedoLog() {
 				skipBackfillRows = batchInfo.RedoLogFile < redoLogFilePersisted ||
 					(batchInfo.RedoLogFile == redoLogFilePersisted && batchInfo.BatchOffset <= offsetPersisted)
 			}
-			shard.saveUpsertBatch(batchInfo.Batch, batchInfo.RedoLogFile, batchInfo.BatchOffset, batchInfo.Recovery, skipBackfillRows)
+			if err = shard.saveUpsertBatch(batchInfo.Batch, batchInfo.RedoLogFile, batchInfo.BatchOffset, batchInfo.Recovery, skipBackfillRows); err != nil {
+				if batchInfo.Recovery {
+					utils.GetLogger().With("error", err).Panic("Failed to apply upsert batch during recovery")
+				} else {
+					// for normal ingestion, will log error and keep going
+					utils.GetLogger().With("action", "ingestion", "table", shard.Schema.Schema.Name, "shard", shard.ShardID, "redologFile", batchInfo.RedoLogFile,
+						"offset", batchInfo.BatchOffset, "error", err).Error("Failed to apply upsert batch")
+					utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetCounter(utils.IngestedErrorBatches).Inc(1)
+				}
+			}
 		}
 	}()
 

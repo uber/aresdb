@@ -47,6 +47,7 @@ const (
 	IngestedRecoveryBatches
 	IngestedErrorBatches
 	UpsertBatchSize
+	RecoveryUpsertBatchSize
 	PrimaryKeyMissing
 	TimeColumnMissing
 	BackfillRecords
@@ -173,6 +174,7 @@ const (
 	scopeNameIngestedRecoveryBatches         = "ingested_recovery_batches"
 	scopeNameIngestedErrorBatches            = "ingested_error_batches"
 	scopeNameUpsertBatchSize                 = "upsert_batch_size"
+	scopeNameRecoveryUpsertBatchSize         = "recovery_upsert_batch_size"
 	scopeNameLoad                            = "load"
 	scopeNameTotal                           = "total"
 	scopeNameCount                           = "count"
@@ -413,6 +415,14 @@ var metricsDefs = map[MetricName]metricDefinition{
 	},
 	UpsertBatchSize: {
 		name:       scopeNameUpsertBatchSize,
+		metricType: Gauge,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationIngestion,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	RecoveryUpsertBatchSize: {
+		name:       scopeNameRecoveryUpsertBatchSize,
 		metricType: Gauge,
 		tags: map[string]string{
 			metricsTagOperation: metricsOperationIngestion,

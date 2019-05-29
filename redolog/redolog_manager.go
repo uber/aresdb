@@ -16,7 +16,7 @@ package redolog
 
 import "github.com/uber/aresdb/memstore/common"
 
-// IteratorInfo contains
+// NextUpsertBatchInfo contains UpsertBatch and its related info from redolog
 type NextUpsertBatchInfo struct {
 	// upsertbatch
 	Batch *common.UpsertBatch

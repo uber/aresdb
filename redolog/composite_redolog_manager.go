@@ -34,7 +34,7 @@ type compositeRedoLogManager struct {
 	// Local file redolog manager
 	fileRedoLogManager *FileRedoLogManager
 	// Kafka consumer if kafka import is supported
-	kafkaReader *kafkaRedoLogManager
+	kafkaRedoLogManager *kafkaRedoLogManager
 }
 
 // NewCompositeRedoLogManager create compositeRedoLogManager oibject
@@ -50,10 +50,10 @@ func newCompositeRedoLogManager(namespace, table string, shard int, tableConfig 
 	kafkaReader := newKafkaRedoLogManager(namespace, table, shard, consumer, false, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
 
 	manager := &compositeRedoLogManager{
-		Table:              table,
-		Shard:              shard,
-		fileRedoLogManager: fileRedoLogManager,
-		kafkaReader:        kafkaReader,
+		Table:               table,
+		Shard:               shard,
+		fileRedoLogManager:  fileRedoLogManager,
+		kafkaRedoLogManager: kafkaReader,
 	}
 
 	return manager
@@ -61,8 +61,14 @@ func newCompositeRedoLogManager(namespace, table string, shard int, tableConfig 
 
 // Iterator walk through redolog batch from both file and kafka
 func (s *compositeRedoLogManager) Iterator() (NextUpsertFunc, error) {
-	fileNext, _ := s.fileRedoLogManager.Iterator()
-	kafkaNext, _ := s.kafkaReader.Iterator()
+	fileNext, err := s.fileRedoLogManager.Iterator()
+	if err != nil {
+		return nil, err
+	}
+	kafkaNext, _ := s.kafkaRedoLogManager.Iterator()
+	if err != nil {
+		return nil, err
+	}
 
 	return func() *NextUpsertBatchInfo {
 		var res *NextUpsertBatchInfo
@@ -106,7 +112,7 @@ func (s *compositeRedoLogManager) GetNumFiles() int {
 }
 
 func (s *compositeRedoLogManager) GetBatchReceived() int {
-	return s.kafkaReader.batchReceived
+	return s.kafkaRedoLogManager.batchReceived
 }
 
 func (s *compositeRedoLogManager) GetBatchRecovered() int {
@@ -117,9 +123,9 @@ func (s *compositeRedoLogManager) Close() {
 	s.Lock()
 	defer s.Unlock()
 
-	if s.kafkaReader != nil {
-		s.kafkaReader.Close()
-		s.kafkaReader = nil
+	if s.kafkaRedoLogManager != nil {
+		s.kafkaRedoLogManager.Close()
+		s.kafkaRedoLogManager = nil
 	}
 
 	if s.fileRedoLogManager != nil {

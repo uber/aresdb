@@ -44,7 +44,7 @@ func (shard *TableShard) saveUpsertBatch(upsertBatch *common.UpsertBatch, redoLo
 
 	if recovery {
 		utils.GetReporter(tableName, shardID).GetCounter(utils.IngestedRecoveryBatches).Inc(1)
-		utils.GetReporter(tableName, shardID).GetGauge(utils.UpsertBatchSize).Update(float64(len(upsertBatch.GetBuffer())))
+		utils.GetReporter(tableName, shardID).GetGauge(utils.RecoveryUpsertBatchSize).Update(float64(len(upsertBatch.GetBuffer())))
 		// Put a 0 in maxEventTimePerFile in case this is redolog is full of backfill batches.
 		shard.LiveStore.RedoLogManager.UpdateMaxEventTime(0, redoLogFile)
 	} else {
@@ -59,9 +59,6 @@ func (shard *TableShard) saveUpsertBatch(upsertBatch *common.UpsertBatch, redoLo
 
 	needToWaitForBackfillBuffer, err := shard.ApplyUpsertBatch(upsertBatch, redoLogFile, offset, skipBackFillRows)
 	shard.LiveStore.WriterLock.Unlock()
-	if err != nil {
-		utils.GetReporter(tableName, shardID).GetCounter(utils.IngestedErrorBatches).Inc(1)
-	}
 
 	// return immediately if it does not need to wait for backfill buffer availability
 	if recovery || !needToWaitForBackfillBuffer {

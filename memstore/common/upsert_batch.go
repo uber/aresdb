@@ -15,10 +15,10 @@
 package common
 
 import (
-	"unsafe"
 	"bytes"
 	"github.com/uber/aresdb/utils"
 	"math"
+	"unsafe"
 )
 
 // columnReader contains meta data for accessing the data of a column in an UpsertBatch.

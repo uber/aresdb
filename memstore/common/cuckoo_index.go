@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	bucketSize = 8
+	BucketSize = 8
 	// log2(numHashes)
 	log2NumHashes = 2
 	// number of hash functions
@@ -46,12 +46,10 @@ const (
 	// offsets for bucket
 	// the data layout in a bucket is the following manner
 	// RecordID[8]|signature[8]|eventTime[8](optional)|key[8]
-	offsetToSignature           = bucketSize * recordIDBytes
-	offsetToEventTime           = offsetToSignature + bucketSize*1
-	offsetToKeyWithEventTime    = offsetToEventTime + bucketSize*4
+	offsetToSignature           = BucketSize * recordIDBytes
+	offsetToEventTime           = offsetToSignature + BucketSize*1
+	offsetToKeyWithEventTime    = offsetToEventTime + BucketSize*4
 	offsetToKeyWithoutEventTime = offsetToEventTime
-
-	ShareBucketSize = bucketSize
 )
 
 type stashEntry struct {
@@ -141,7 +139,7 @@ func (c *CuckooIndex) Update(key Key, value RecordID) bool {
 	keyPtr := unsafe.Pointer(&key[0])
 	for hashIndex := 0; hashIndex < numHashes; hashIndex++ {
 		hashResult := c.hash(keyPtr, hashIndex)
-		for i := 0; i < bucketSize; i++ {
+		for i := 0; i < BucketSize; i++ {
 			existingSignature := *c.getSignature(hashResult.bucket, i)
 			if !c.recordExpired(hashResult.bucket, i) &&
 				existingSignature == hashResult.signature &&
@@ -168,7 +166,7 @@ func (c *CuckooIndex) Find(key Key) (RecordID, bool) {
 	keyPtr := unsafe.Pointer(&key[0])
 	for hashIndex := 0; hashIndex < numHashes; hashIndex++ {
 		hashResult := c.hash(keyPtr, hashIndex)
-		for i := 0; i < bucketSize; i++ {
+		for i := 0; i < BucketSize; i++ {
 			existingSignature := *c.getSignature(hashResult.bucket, i)
 			if !c.recordExpired(hashResult.bucket, i) &&
 				existingSignature == hashResult.signature &&
@@ -190,7 +188,7 @@ func (c *CuckooIndex) Find(key Key) (RecordID, bool) {
 
 // Capacity returns how many items current primary key can hold.
 func (c *CuckooIndex) Capacity() uint {
-	return uint(c.numBuckets * bucketSize)
+	return uint(c.numBuckets * BucketSize)
 }
 
 // AllocatedBytes returns the allocated size of primary key in bytes.
@@ -230,7 +228,7 @@ func (c *CuckooIndex) Delete(key Key) {
 	for hashIndex := 0; hashIndex < numHashes; hashIndex++ {
 		hashResult := c.hash(unsafe.Pointer(&key[0]), hashIndex)
 		hashResults[hashIndex] = hashResult
-		for i := 0; i < bucketSize; i++ {
+		for i := 0; i < BucketSize; i++ {
 			if *c.getSignature(hashResult.bucket, i) == hashResult.signature &&
 				utils.MemEqual(c.getKey(hashResult.bucket, i), unsafe.Pointer(&key[0]), c.keyBytes) {
 				c.numBucketEntries--
@@ -299,7 +297,7 @@ func (c *CuckooIndex) generateRandomSeeds() {
 }
 
 func (c *CuckooIndex) loadFactor() float64 {
-	return float64(c.numBucketEntries+c.numStashEntries) / float64(c.numBuckets*bucketSize)
+	return float64(c.numBucketEntries+c.numStashEntries) / float64(c.numBuckets*BucketSize)
 }
 
 // extractSignatureByte get the most significant byte from the hash value
@@ -347,7 +345,7 @@ func (c *CuckooIndex) eventTimeExpired(eventTime uint32) bool {
 // randomSwap randomly pick a bucket position and swap with the value
 func (c *CuckooIndex) randomSwap(key unsafe.Pointer, recordID *RecordID, eventTime *uint32, hashResults [numHashes]hashResult) {
 	hashResult := hashResults[c.rand.Intn(numHashes)]
-	slotIndex := c.rand.Intn(bucketSize)
+	slotIndex := c.rand.Intn(BucketSize)
 
 	*c.getRecordID(hashResult.bucket, slotIndex), *recordID = *recordID, *c.getRecordID(hashResult.bucket, slotIndex)
 	*c.getSignature(hashResult.bucket, slotIndex) = hashResult.signature
@@ -365,7 +363,7 @@ func (c *CuckooIndex) addNew(key unsafe.Pointer, recordID RecordID, eventTime ui
 	for hashIndex := 0; hashIndex < numHashes; hashIndex++ {
 		hashResult := c.hash(key, hashIndex)
 		hashResults[hashIndex] = hashResult
-		for i := 0; i < bucketSize; i++ {
+		for i := 0; i < BucketSize; i++ {
 			if c.isEmpty(hashResult.bucket, i) {
 				c.insertBucket(key, recordID, hashResult.signature, eventTime, hashResult.bucket, i)
 				c.numBucketEntries++
@@ -393,7 +391,7 @@ func (c *CuckooIndex) findOrAddNew(key unsafe.Pointer, value RecordID, eventTime
 	for hashIndex := 0; hashIndex < numHashes; hashIndex++ {
 		hashResult := c.hash(key, hashIndex)
 		hashResults[hashIndex] = hashResult
-		for i := 0; i < bucketSize; i++ {
+		for i := 0; i < BucketSize; i++ {
 			isEmpty := c.isEmpty(hashResult.bucket, i)
 			if isEmpty || c.recordExpired(hashResult.bucket, i) {
 				if indexToInsert < 0 {
@@ -507,7 +505,7 @@ func (c *CuckooIndex) resize(resizeFactor float32) (ok bool) {
 	// insert existing keys to new index
 	for i := 0; i < c.numBuckets+1; i++ {
 		var bucket unsafe.Pointer
-		numElements := bucketSize
+		numElements := BucketSize
 		if i == c.numBuckets {
 			bucket = c.stash
 			numElements = stashSize
@@ -593,7 +591,7 @@ func newCuckooIndex(keyBytes int, hasEventTime bool, initNumBuckets int,
 	if cuckooIndex.hasEventTime {
 		cellBytes += 4
 	}
-	cuckooIndex.bucketBytes = bucketSize * cellBytes
+	cuckooIndex.bucketBytes = BucketSize * cellBytes
 
 	hostMemoryManager.ReportUnmanagedSpaceUsageChange(int64(cuckooIndex.allocatedBytes()))
 	cuckooIndex.allocate()
