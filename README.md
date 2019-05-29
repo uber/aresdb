@@ -52,7 +52,7 @@ cmake -DQUERY_MODE=DEVICE .
 
 Alternatively, if you want to run the query in CPU mode, run following commands:
 ```
-
+cmake -DQUERY_MODE=HOST .
 ```
 
 Local Test
