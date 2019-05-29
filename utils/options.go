@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	defaultSamplingRate      = 1.0
+	defaultSamplingRate = 1.0
 )
 
 // Options represents the options for instrumentation.
@@ -25,17 +25,17 @@ type Options interface {
 }
 
 type options struct {
-	log            common.Logger
-	scope          tally.Scope
-	samplingRate   float64
+	log          common.Logger
+	scope        tally.Scope
+	samplingRate float64
 }
 
 // NewOptions creates new instrument options.
 func NewOptions() Options {
 	return &options{
-		log:            GetLogger(),
-		scope:          GetRootReporter().GetRootScope(),
-		samplingRate:   defaultSamplingRate,
+		log:          GetLogger(),
+		scope:        GetRootReporter().GetRootScope(),
+		samplingRate: defaultSamplingRate,
 	}
 }
 
