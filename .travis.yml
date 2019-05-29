@@ -13,6 +13,7 @@ env:
     - CUDA_HOME=${CUDA_LIB_LOCAL}
     - PATH=${CUDA_HOME}/bin:${GOPATH}/bin:${CUDA_HOME}/nvvm/bin:${PATH}
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
+    - GO111MODULE=on
 
 cache:
   directories:
