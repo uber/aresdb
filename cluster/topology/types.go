@@ -4,8 +4,8 @@ import (
 	"errors"
 	"github.com/m3db/m3/src/cluster/client"
 	"github.com/m3db/m3/src/cluster/services"
-	"github.com/m3db/m3/src/cluster/shard"
-	aresShard "github.com/uber/aresdb/datanode/shard"
+	m3Shard "github.com/m3db/m3/src/cluster/shard"
+	"github.com/uber/aresdb/cluster/shard"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -31,7 +31,7 @@ type HostShardSet interface {
 	Host() Host
 
 	// ShardSet returns the shard set owned by the host
-	ShardSet() aresShard.ShardSet
+	ShardSet() shard.ShardSet
 }
 
 // Map describes a placement
@@ -49,7 +49,7 @@ type Map interface {
 	HostsLen() int
 
 	// ShardSet returns the shard set for the topology
-	ShardSet() aresShard.ShardSet
+	ShardSet() shard.ShardSet
 
 	// RouteShard will route a given shard to a set of hosts
 	RouteShard(shard int) ([]Host, error)
@@ -121,10 +121,10 @@ type StaticOptions interface {
 	Validate() error
 
 	// SetShardSet sets the ShardSet
-	SetShardSet(value aresShard.ShardSet) StaticOptions
+	SetShardSet(value shard.ShardSet) StaticOptions
 
 	// ShardSet returns the ShardSet
-	ShardSet() aresShard.ShardSet
+	ShardSet() shard.ShardSet
 
 	// SetHostShardSets sets the hostShardSets
 	SetHostShardSets(value []HostShardSet) StaticOptions
@@ -196,7 +196,7 @@ type ShardStates map[ShardID]map[HostID]HostShardState
 // HostShardState contains the state of a shard as owned by a given host.
 type HostShardState struct {
 	Host       Host
-	ShardState shard.State
+	ShardState m3Shard.State
 }
 
 // HostID is the string representation of a host ID.

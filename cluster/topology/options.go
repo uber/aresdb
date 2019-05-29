@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/m3db/m3/src/cluster/client"
 	"github.com/m3db/m3/src/cluster/services"
-	aresShard "github.com/uber/aresdb/datanode/shard"
+	"github.com/uber/aresdb/cluster/shard"
 	"github.com/uber/aresdb/utils"
 	"time"
 )
@@ -23,7 +23,7 @@ var (
 
 // staticOptions is the implementation of the interface StaticOptions
 type staticOptions struct {
-	shardSet      aresShard.ShardSet
+	shardSet      shard.ShardSet
 	hostShardSets []HostShardSet
 	replicas      int
 }
@@ -35,13 +35,13 @@ func NewStaticOptions() StaticOptions {
 	}
 }
 
-func (o *staticOptions) SetShardSet(value aresShard.ShardSet) StaticOptions {
+func (o *staticOptions) SetShardSet(value shard.ShardSet) StaticOptions {
 	opts := *o
 	opts.shardSet = value
 	return &opts
 }
 
-func (o *staticOptions) ShardSet() aresShard.ShardSet {
+func (o *staticOptions) ShardSet() shard.ShardSet {
 	return o.shardSet
 }
 

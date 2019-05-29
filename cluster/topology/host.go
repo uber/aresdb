@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3/src/cluster/shard"
-	aresShard "github.com/uber/aresdb/datanode/shard"
+	aresShard "github.com/uber/aresdb/cluster/shard"
 )
 
 var errInstanceHasNoShardsAssignment = errors.New("invalid instance with no shards assigned")

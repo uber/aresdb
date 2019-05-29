@@ -3,8 +3,8 @@ package testutil
 import (
 	"fmt"
 	"github.com/m3db/m3/src/cluster/shard"
-	aresShard "github.com/uber/aresdb/datanode/shard"
-	"github.com/uber/aresdb/datanode/topology"
+	aresShard "github.com/uber/aresdb/cluster/shard"
+	"github.com/uber/aresdb/cluster/topology"
 )
 
 const (

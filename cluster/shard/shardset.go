@@ -1,6 +1,8 @@
 package shard
 
-import "github.com/m3db/m3/src/cluster/shard"
+import (
+	"github.com/m3db/m3/src/cluster/shard"
+)
 
 // shardSet is the implementation of the interface ShardSet
 type shardSet struct {

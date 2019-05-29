@@ -4,7 +4,7 @@ import (
 	"github.com/m3db/m3/src/cluster/shard"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	aresShard "github.com/uber/aresdb/datanode/shard"
+	aresShard "github.com/uber/aresdb/cluster/shard"
 )
 
 func newTestShardSet(shards []uint32) aresShard.ShardSet {

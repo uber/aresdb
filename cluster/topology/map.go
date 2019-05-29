@@ -2,12 +2,12 @@ package topology
 
 import (
 	xwatch "github.com/m3db/m3/src/x/watch"
-	"github.com/uber/aresdb/datanode/shard"
+	aresShard "github.com/uber/aresdb/cluster/shard"
 )
 
 // staticMap is the implementation of the interface Map
 type staticMap struct {
-	shardSet          shard.ShardSet
+	shardSet          aresShard.ShardSet
 	hostShardSets     []HostShardSet
 	hostShardSetsByID map[string]HostShardSet
 	hostsByShard      [][]Host
@@ -56,7 +56,7 @@ func (sm *staticMap) HostsLen() int {
 	return len(sm.orderedHosts)
 }
 
-func (sm *staticMap) ShardSet() shard.ShardSet {
+func (sm *staticMap) ShardSet() aresShard.ShardSet {
 	return sm.shardSet
 }
 

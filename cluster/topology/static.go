@@ -2,6 +2,7 @@ package topology
 
 import (
 	xwatch "github.com/m3db/m3/src/x/watch"
+	"github.com/uber/aresdb/cluster"
 )
 
 type staticInitializer struct {
