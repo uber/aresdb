@@ -1,4 +1,5 @@
 language: go
+dist: xenial
 sudo: required
 go:
   - "1.11.4"
@@ -26,8 +27,6 @@ branches:
 
 before_install:
   - sudo apt-get clean
-  - sudo rm -rf /var/lib/apt/lists/*
-  - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
   - sudo apt-get update -q
 
 install:
