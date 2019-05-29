@@ -85,6 +85,15 @@ if (QUERY_MODE STREQUAL "DEVICE" AND USE_RMM)
     set_target_properties(rmm PROPERTIES IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/librmm.so)
     add_dependencies(rmm project_rmm)
 endif ()
+######################################################
+# CUDF
+# Need cpp/src/hash/concurrent_unordered_map.cuh only
+######################################################
+set(CUDF_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf/cpp/src)
+set(CUDF_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf/cpp/include)
+if (QUERY_MODE STREQUAL "DEVICE")
+    include_directories(${CUDF_INCLUDE_DIR} ${CUDF_SRC_DIR})
+endif ()
 ################################
 # Mem
 ################################
