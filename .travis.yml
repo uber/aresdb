@@ -1,7 +1,7 @@
 language: go
 sudo: required
 go:
-    - "1.11.4"
+  - "1.11.4"
 
 env:
   global:
@@ -23,6 +23,9 @@ cache:
 branches:
   only:
     - master
+
+before_install:
+  - sudo apt-get update
 install:
   - rm -rf ./build && mkdir -p build
   - .travis/install_clang_tools.sh
