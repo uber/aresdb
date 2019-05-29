@@ -26,8 +26,10 @@ branches:
 
 before_install:
   - sudo apt-get clean
+  - sudo rm -rf /var/lib/apt/lists/*
   - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
-  - sudo apt-get update
+  - sudo apt-get update -q
+
 install:
   - rm -rf ./build && mkdir -p build
   - .travis/install_clang_tools.sh
