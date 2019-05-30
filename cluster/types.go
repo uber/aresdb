@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"github.com/m3db/m3/src/dbnode/namespace"
 	"github.com/m3db/m3x/ident"
 	"github.com/uber/aresdb/cluster/shard"
 	"github.com/uber/aresdb/cluster/topology"
@@ -26,16 +25,10 @@ type database interface {
 
 	// GetOwnedNamespaces returns the namespaces this database owns.
 	GetOwnedNamespaces() ([]databaseNamespace, error)
-
-	// UpdateOwnedNamespaces updates the namespaces this database owns.
-	UpdateOwnedNamespaces(namespaces namespace.Map) error
 }
 
 // Namespace is aresDB database namespace
 type Namespace interface {
-	// Options returns the namespace options
-	Options() namespace.Options
-
 	// ID returns the ID of the namespace
 	ID() ident.ID
 
