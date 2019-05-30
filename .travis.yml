@@ -1,8 +1,7 @@
 language: go
-dist: xenial
 sudo: required
 go:
-  - "1.11.4"
+    - "1.9"
 
 env:
   global:
@@ -13,8 +12,17 @@ env:
     - CUDA_HOME=${CUDA_LIB_LOCAL}
     - PATH=${CUDA_HOME}/bin:${GOPATH}/bin:${CUDA_HOME}/nvvm/bin:${PATH}
     - LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${TRAVIS_HOME}/gopath/src/github.com/uber/aresdb/lib
-    - GO111MODULE=on
+    - NVCCFLAGS="-ccbin /usr/bin/g++-6"
     - PKG_CONFIG_PATH=${LD_LIBRARY_PATH}/pkgconfig:${PKG_CONFIG_PATH}
+    - COMPILER_NAME=gcc CXX=g++-6 CC=gcc-6
+
+addons:
+  apt:
+    packages:
+      - g++-6
+    sources:
+      - llvm-toolchain-precise-3.8
+      - ubuntu-toolchain-r-test
 
 cache:
   directories:
@@ -26,10 +34,6 @@ cache:
 branches:
   only:
     - master
-
-before_install:
-  - sudo .travis/pre_install.sh
-
 install:
   - rm -rf ./build && mkdir -p build
   - .travis/install_clang_tools.sh

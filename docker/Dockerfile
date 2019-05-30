@@ -12,7 +12,7 @@ RUN apt-get install -y --reinstall software-properties-common
 
 RUN add-apt-repository ppa:gophers/archive
 RUN apt-get update
-RUN apt-get install -y golang-1.11-go git npm wget
+RUN apt-get install -y golang-1.9-go git npm wget
 
 # install cmake 3.12
 ARG CMAKE_VERSION=3.12.0
@@ -34,4 +34,6 @@ RUN cmake .
 RUN make npm-install
 RUN mkdir log
 
+# install go tools
+RUN go get github.com/Masterminds/glide
 RUN make aresd -j

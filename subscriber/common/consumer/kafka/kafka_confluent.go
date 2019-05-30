@@ -156,10 +156,10 @@ func (c *KafkaConsumer) CommitUpTo(msg consumer.Message) error {
 	} else {
 		topic := msg.Topic()
 		c.CommitOffsets([]kafkaConfluent.TopicPartition{
-			{
-				Topic:     &topic,
-				Partition: msg.Partition(),
-				Offset:    kafkaConfluent.Offset(msg.Offset()),
+			{&topic,
+				msg.Partition(),
+				kafkaConfluent.Offset(msg.Offset()),
+				nil,
 			},
 		})
 	}

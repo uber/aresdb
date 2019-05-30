@@ -106,7 +106,7 @@ var _ = Describe("streaming_processor", func() {
 
 	topic := "topic"
 	msg := &kafka2.KafkaMessage{
-		Message: &kafka.Message{
+		&kafka.Message{
 			TopicPartition: kafka.TopicPartition{
 				Topic:     &topic,
 				Partition: int32(0),
@@ -115,11 +115,12 @@ var _ = Describe("streaming_processor", func() {
 			Value: []byte(`{"project": "ares-subscriber"}`),
 			Key:   []byte("key"),
 		},
-		ClusterName: "kafka-cluster1",
+		nil,
+		"kafka-cluster1",
 	}
 
 	errMsg := &kafka2.KafkaMessage{
-		Message: &kafka.Message{
+		&kafka.Message{
 			TopicPartition: kafka.TopicPartition{
 				Topic:     &topic,
 				Partition: int32(0),
@@ -128,7 +129,8 @@ var _ = Describe("streaming_processor", func() {
 			Value: []byte(`{project: ares-subscriber}`),
 			Key:   []byte("key"),
 		},
-		ClusterName: "kafka-cluster1",
+		nil,
+		"kafka-cluster1",
 	}
 
 	var address string
