@@ -4,6 +4,7 @@ import (
 	"github.com/m3db/m3/src/dbnode/namespace"
 	"github.com/m3db/m3x/ident"
 	"github.com/uber/aresdb/cluster/shard"
+	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -43,6 +44,9 @@ type Namespace interface {
 
 	// Shards returns the shard description
 	Shards() []Shard
+
+	// Topology return the topology description
+	Topology() topology.Topology
 }
 
 type databaseNamespace interface {
