@@ -24,13 +24,6 @@ import (
 
 	"encoding/json"
 	"fmt"
-	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/subscriber/common/message"
-	"github.com/uber/aresdb/subscriber/common/rules"
-	"github.com/uber/aresdb/subscriber/common/tools"
-	"github.com/uber/aresdb/subscriber/config"
-	"github.com/uber/aresdb/utils"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -38,6 +31,14 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/subscriber/common/message"
+	"github.com/uber/aresdb/subscriber/common/rules"
+	"github.com/uber/aresdb/subscriber/common/tools"
+	"github.com/uber/aresdb/subscriber/config"
+	"github.com/uber/aresdb/utils"
+	"go.uber.org/zap"
 )
 
 var _ = Describe("driver", func() {

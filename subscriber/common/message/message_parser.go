@@ -16,6 +16,9 @@ package message
 
 import (
 	"fmt"
+	"runtime"
+	"sort"
+
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
 	memcom "github.com/uber/aresdb/memstore/common"
@@ -25,8 +28,6 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"runtime"
-	"sort"
 )
 
 // Parser holds all resources needed to parse one message
@@ -140,7 +141,7 @@ func (mp *Parser) CheckPrimaryKeys(destination sink.Destination, row client.Row)
 }
 
 // CheckTimeColumnExistence checks if time column is missing for fact table
-func (mp *Parser) CheckTimeColumnExistence(schema metaCom.Table, columnDict map[string]int,
+func (mp *Parser) CheckTimeColumnExistence(schema *metaCom.Table, columnDict map[string]int,
 	destination sink.Destination, row client.Row) error {
 	if !schema.IsFactTable || schema.Config.AllowMissingEventTime {
 		return nil

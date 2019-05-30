@@ -16,6 +16,14 @@ package job
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"regexp"
+	"strings"
+	"time"
+
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,13 +40,6 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"regexp"
-	"strings"
-	"time"
 )
 
 var _ = Describe("streaming_processor", func() {
