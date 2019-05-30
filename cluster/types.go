@@ -40,13 +40,13 @@ type Namespace interface {
 	ID() ident.ID
 
 	// Tables returns the tables of the namespace.
-	Tables() []string
+	Tables() ([]string, error)
 
 	// Shards returns the shard description
-	Shards() []Shard
+	Shards() ([]Shard, error)
 
 	// Topology return the topology description
-	Topology() topology.Topology
+	Topology() (topology.Topology, error)
 }
 
 type databaseNamespace interface {
