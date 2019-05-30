@@ -11,12 +11,10 @@ require (
 	github.com/bkaradzic/go-lz4 v0.0.0-20160924222819-7224d8d8f27e // indirect
 	github.com/chzyer/logex v1.1.10 // indirect
 	github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1 // indirect
-	github.com/cockroachdb/cmux v0.0.0-20160228191917-112f0506e774 // indirect
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
 	github.com/confluentinc/confluent-kafka-go v0.0.0-20190207113419-213e7cd9dd31
 	github.com/coreos/bbolt v1.3.1-coreos.5 // indirect
-	github.com/coreos/etcd v3.2.10+incompatible
-	github.com/coreos/go-semver v0.2.0 // indirect
+	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/coreos/go-systemd v0.0.0-20161114122254-48702e0da86b // indirect
 	github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea // indirect
 	github.com/curator-go/curator v0.0.0-20180923140012-8a961ea3b252
@@ -35,6 +33,8 @@ require (
 	github.com/google/btree v0.0.0-20161005200959-925471ac9e21 // indirect
 	github.com/gorilla/handlers v0.0.0-20190227193432-ac6d24f88de4
 	github.com/gorilla/mux v1.7.1
+	github.com/gorilla/websocket v1.4.0 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v0.0.0-20160910222444-6b7015e65d36 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
@@ -61,18 +61,19 @@ require (
 	github.com/prometheus/procfs v0.0.0-20170216223256-a1dba9ce8bae // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/satori/go.uuid v0.0.0-20181028125025-b2ce2384e17b
+	github.com/sirupsen/logrus v1.4.2 // indirect
+	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
-	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.3
-	github.com/spf13/viper v1.2.1
+	github.com/spf13/viper v0.0.0-20190408140645-7a605a50e69c
 	github.com/stretchr/testify v1.3.0
+	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/uber-go/atomic v1.4.0 // indirect
 	github.com/uber-go/tally v3.3.9+incompatible
 	github.com/uber/jaeger-client-go v2.15.0+incompatible // indirect
 	github.com/uber/jaeger-lib v1.5.0 // indirect
-	github.com/ugorji/go v0.0.0-20170107133203-ded73eae5db7 // indirect
 	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/config v0.0.0-20190430173543-773b5421bfe9
