@@ -157,10 +157,10 @@ type AQLQuery struct {
 	// Limit is the max number of rows need to be return, and only used for non-aggregation
 	Limit int `json:"limit,omitempty"`
 
-	Sorts []SortField `json:"sorts, omitempty" yaml:"sorts"`
+	Sorts []SortField `json:"sorts,omitempty" yaml:"sorts"`
 
 	// SQLQuery
-	SQLQuery string `json:"sql, omitempty"`
+	SQLQuery string `json:"sql,omitempty"`
 }
 
 // AQLRequest contains multiple of AQLQueries.
