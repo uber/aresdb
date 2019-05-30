@@ -18,7 +18,7 @@ import (
 	"github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/m3db/m3/src/cluster/services"
-	"github.com/m3db/m3x/instrument"
+	"github.com/m3db/m3/src/x/instrument"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +48,7 @@ func NewEtcdClient(logger *zap.SugaredLogger, config EtcdConfig) *EtcdClient {
 	logger.Info("etcd enabled")
 	csclient, err := config.NewClient(
 		instrument.NewOptions().
-			SetZapLogger(logger.Desugar()))
+			SetLogger(logger.Desugar()))
 
 	if err != nil {
 		logger.Fatal("Failed to initialize etcd client")
