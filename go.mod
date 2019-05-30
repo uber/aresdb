@@ -74,6 +74,7 @@ require (
 	github.com/uber-go/tally v3.3.9+incompatible
 	github.com/uber/jaeger-client-go v2.15.0+incompatible // indirect
 	github.com/uber/jaeger-lib v1.5.0 // indirect
+	github.com/ugorji/go v0.0.0-20170107133203-ded73eae5db7 // indirect
 	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/config v0.0.0-20190430173543-773b5421bfe9
