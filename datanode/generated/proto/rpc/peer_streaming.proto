@@ -109,9 +109,24 @@ message KeepAliveResponse {
     int64 ttl = 2;
 }
 
+// PeerDataNode service defines the service for data fetching from peer data node
+// A data fetching process will proceed with the following sequence:
+//  1. StartSession to start data fetching session. (as long as any ongoing session is alive, the peer data node will
+//     not purge its raw data during archiving/backfill/snapshot process until all sessions exprired or closed)
+//  2. KeepAlive in sub routine to keep session alive througout the data copying process. close the stream
+//     on client side will close the session.
+//  3. FetchTableShardMetaData to fetch table shard metadata with a range [startBatchID, endBatchID] of batche needed
+//     the response will return the list of metadata for batches, including available column ids
+//     at the peer node
+//  4. FetchVectorPartyRawData to fetch vector party from peer data node
 service PeerDataNode {
+    // StartSession starts a session for data streaming
     rpc StartSession(StartSessionRequest ) returns (Session ) {}
+    // KeepAlive sends keep alive message to the peer data service to
+    // renew session and get new ttl for the session
     rpc KeepAlive(stream Session ) returns (stream KeepAliveResponse ) {}
-    rpc FetchBatchMetaData(TableShardMetaDataRequest ) returns (TableShardMetaData ) {}
-    rpc FetchBatchDataRaw(VectorPartyRawDataRequest ) returns (stream VectorPartyRawData) {}
+    // FetchTableShardMetaData fetches metadata for given table shard
+    rpc FetchTableShardMetaData(TableShardMetaDataRequest ) returns (TableShardMetaData ) {}
+    // FetchVectorPartyRawData fetches raw data for specified vector party
+    rpc FetchVectorPartyRawData(VectorPartyRawDataRequest ) returns (stream VectorPartyRawData) {}
 }
