@@ -21,7 +21,7 @@ require (
 	github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
 	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
-	github.com/golang/mock v1.1.1
+	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.3.1
 	github.com/gorilla/handlers v0.0.0-20190227193432-ac6d24f88de4
 	github.com/gorilla/mux v1.7.1
@@ -61,7 +61,6 @@ require (
 	go.uber.org/zap v1.10.0
 	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20190425150028-36563e24a262 // indirect
 	gopkg.in/validator.v2 v2.0.0-20180514200540-135c24b11c19
 	gopkg.in/yaml.v2 v2.2.2
 )
