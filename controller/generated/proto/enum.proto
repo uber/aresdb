@@ -1,0 +1,10 @@
+syntax = "proto3";
+package proto;
+
+message EnumCases {
+    repeated string cases = 1;
+}
+
+message EnumNodeList {
+    int32 numEnumNodes = 1;
+}

@@ -15,6 +15,8 @@
 package kafka
 
 import (
+	"os"
+
 	kafkaConfluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -25,7 +27,6 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"os"
 )
 
 var _ = Describe("KafkaConsumer", func() {

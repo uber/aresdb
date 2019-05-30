@@ -3,29 +3,31 @@ package sink
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"time"
+
 	"github.com/Shopify/sarama"
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
-	"github.com/uber/aresdb/gateway"
+	controllerCli "github.com/uber/aresdb/controller/client"
+	"github.com/uber/aresdb/controller/models"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"go.uber.org/zap"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"time"
 )
 
 var _ = Describe("Kafka producer", func() {
 	var testServer *httptest.Server
 	var seedBroker *sarama.MockBroker
 	var leader *sarama.MockBroker
-	var aresControllerClient gateway.ControllerClient
+	var aresControllerClient controllerCli.ControllerClient
 
 	rows := []client.Row{
 		{"1", "v12", "true"},
@@ -56,34 +58,36 @@ var _ = Describe("Kafka producer", func() {
 	}
 
 	jobConfig := rules.JobConfig{
-		AresTableConfig: rules.AresTableConfig{
-			Table: metaCom.Table{
-				Name:        "test",
-				IsFactTable: true,
-				Columns: []metaCom.Column{
-					{
-						Name: "c2",
-						Type: "string",
+		JobConfig: models.JobConfig{
+			AresTableConfig: models.TableConfig{
+				Table: &metaCom.Table{
+					Name:        "test",
+					IsFactTable: true,
+					Columns: []metaCom.Column{
+						{
+							Name: "c2",
+							Type: "string",
+						},
+						{
+							Name: "c1",
+							Type: "Int8",
+						},
+						{
+							Name: "c3",
+							Type: "Bool",
+						},
 					},
-					{
-						Name: "c1",
-						Type: "Int8",
+					Config: metaCom.TableConfig{
+						BatchSize: 10,
 					},
-					{
-						Name: "c3",
-						Type: "Bool",
-					},
+					PrimaryKeyColumns: []int{1},
 				},
-				Config: metaCom.TableConfig{
-					BatchSize: 10,
-				},
-				PrimaryKeyColumns: []int{1},
 			},
 		},
 	}
 
 	tableBytes, _ := json.Marshal(jobConfig.AresTableConfig.Table)
-	tables := []metaCom.Table{
+	tables := []*metaCom.Table{
 		jobConfig.AresTableConfig.Table,
 	}
 
@@ -123,13 +127,13 @@ var _ = Describe("Kafka producer", func() {
 		})
 		testServer.Start()
 		serviceConfig.ControllerConfig.Address = testServer.Listener.Addr().String()
-		aresControllerClient = gateway.NewControllerHTTPClient(serviceConfig.ControllerConfig.Address,
+		aresControllerClient = controllerCli.NewControllerHTTPClient(serviceConfig.ControllerConfig.Address,
 			time.Duration(serviceConfig.ControllerConfig.Timeout)*time.Second,
 			http.Header{
 				"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
 				"RPC-Service": []string{serviceConfig.ControllerConfig.ServiceName},
 			})
-		aresControllerClient.(*gateway.ControllerHTTPClient).SetNamespace(cluster)
+		aresControllerClient.(*controllerCli.ControllerHTTPClient).SetNamespace(cluster)
 
 		// kafka broker mock setup
 		seedBroker = sarama.NewMockBroker(serviceConfig.Logger.Sugar(), 1)

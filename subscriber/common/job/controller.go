@@ -18,20 +18,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+	"os"
 	"github.com/curator-go/curator"
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3/src/x/instrument"
-	"github.com/uber/aresdb/gateway"
+	controllerCli "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"net/http"
-	"os"
-	"strings"
-	"sync"
-	"time"
 )
 
 // Module configures Drivers and Controller.
@@ -72,7 +72,7 @@ type Controller struct {
 
 	serviceConfig config.ServiceConfig
 	// aresControllerClient is aresDB controller client
-	aresControllerClient gateway.ControllerClient
+	aresControllerClient controllerCli.ControllerClient
 	// Drivers are all running jobs
 	Drivers Drivers
 	// jobNS is current active job namespace
@@ -105,7 +105,7 @@ type ZKNodeSubscriber struct {
 func NewController(params Params) *Controller {
 	params.ServiceConfig.Logger.Info("Creating Controller")
 
-	aresControllerClient := gateway.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
+	aresControllerClient := controllerCli.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
 		time.Duration(params.ServiceConfig.ControllerConfig.Timeout)*time.Second,
 		http.Header{
 			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
@@ -294,7 +294,7 @@ func (c *Controller) SyncUpJobConfigs() {
 	}
 
 	// Get assignment from aresDB controller since hash is changed
-	assignment, err := c.aresControllerClient.GetAssignment(c.jobNS, c.serviceConfig.Environment.InstanceID)
+	assigned, err := c.aresControllerClient.GetAssignment(c.jobNS, c.serviceConfig.Environment.InstanceID)
 	if err != nil {
 		c.serviceConfig.Logger.Error("Failed to get assignment from aresDB controller",
 			zap.String("jobNamespace", c.jobNS),
@@ -303,6 +303,17 @@ func (c *Controller) SyncUpJobConfigs() {
 		c.serviceConfig.Scope.Counter("syncUp.failed").Inc(1)
 		return
 	}
+
+	assignment, err := rules.NewAssignmentFromController(assigned)
+	if err != nil {
+		c.serviceConfig.Logger.Error("Failed to populate assignment from controller assignment",
+			zap.String("jobNamespace", c.jobNS),
+			zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address),
+			zap.Error(err))
+		c.serviceConfig.Scope.Counter("syncUp.failed").Inc(1)
+		return
+	}
+
 	c.serviceConfig.Logger.Info("Got assignment from aresDB controller",
 		zap.String("jobNamespace", c.jobNS),
 		zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address),

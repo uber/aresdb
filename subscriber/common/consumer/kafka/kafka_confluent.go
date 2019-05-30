@@ -16,8 +16,11 @@ package kafka
 
 import (
 	"fmt"
-	"github.com/uber/aresdb/subscriber/common/consumer"
 	"sync"
+
+	"github.com/uber/aresdb/subscriber/common/consumer"
+
+	"strconv"
 
 	kafkaConfluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/uber-go/tally"
@@ -25,7 +28,6 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"strconv"
 )
 
 // KafkaConsumer implements Consumer interface
