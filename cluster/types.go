@@ -61,9 +61,8 @@ type databaseNamespace interface {
 	// GetOwnedShards returns the database shards.
 	GetOwnedShards() []Shard
 
-	// BootstrapState captures and returns a snapshot of the namespaces'
-	// bootstrap state.
-	BootstrapState() ShardBootstrapStates
+	// BootstrapState captures and returns a snapshot of the namespaces' bootstrap state.
+	BootstrapState() TableShardBootstrapStates
 }
 
 // Shard is aresDB database shard.
@@ -86,10 +85,10 @@ type DatabaseBootstrapState struct {
 
 // NamespaceBootstrapStates stores a snapshot of the bootstrap state for all shards across a
 // number of namespaces at a given moment in time.
-type NamespaceBootstrapStates map[string]ShardBootstrapStates
+type NamespaceBootstrapStates map[string]TableShardBootstrapStates
 
-// ShardBootstrapStates stores a snapshot of the bootstrap state for all shards for a given namespace.
-type ShardBootstrapStates map[uint32]BootstrapState
+// TableShardBootstrapStates stores a snapshot of the bootstrap state for all shards for a given namespace.
+type TableShardBootstrapStates map[string]map[uint32]BootstrapState
 
 // BootstrapState is an enum representing the possible bootstrap states for a shard.
 type BootstrapState int
