@@ -366,7 +366,7 @@ func newBackfillStore(tableSchema *memCom.TableSchema, hostMemoryManager common.
 		tableSchema:     tableSchema,
 		LastReadRecord:  memCom.RecordID{BatchID: BaseBatchID, Index: 0},
 		NextWriteRecord: memCom.RecordID{BatchID: BaseBatchID, Index: 0},
-		PrimaryKey: memCom.NewPrimaryKey(tableSchema.PrimaryKeyBytes,
+		PrimaryKey: NewPrimaryKey(tableSchema.PrimaryKeyBytes,
 			false, initBuckets, hostMemoryManager),
 		HostMemoryManager: hostMemoryManager,
 	}

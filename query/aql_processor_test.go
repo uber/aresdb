@@ -195,7 +195,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					Capacity: 5,
 				},
 			},
-			PrimaryKey:        memCom.NewPrimaryKey(16, true, 0, hostMemoryManager),
+			PrimaryKey:        memstore.NewPrimaryKey(16, true, 0, hostMemoryManager),
 			HostMemoryManager: hostMemoryManager,
 		}
 
@@ -1136,7 +1136,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Batches: map[int32]*memstore.LiveBatch{
 				-2147483648: &timezoneTableBatch,
 			},
-			PrimaryKey:        memCom.NewPrimaryKey(4, false, 5, hostMemoryManager),
+			PrimaryKey:        memstore.NewPrimaryKey(4, false, 5, hostMemoryManager),
 			HostMemoryManager: hostMemoryManager,
 		}
 		// build foreign table primary key index
@@ -1164,7 +1164,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					Capacity: 5,
 				},
 			},
-			PrimaryKey:        memCom.NewPrimaryKey(16, true, 0, hostMemoryManager),
+			PrimaryKey:        memstore.NewPrimaryKey(16, true, 0, hostMemoryManager),
 			HostMemoryManager: hostMemoryManager,
 		}
 		memStore.On("GetTableShard", timezoneTable, 0).Run(func(args mock.Arguments) {

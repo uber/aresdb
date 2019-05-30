@@ -52,10 +52,10 @@ func NewKafkaRedoLogManagerMaster(cfg *common.RedoLogConfig, diskStore diskstore
 		cfg = &common.RedoLogConfig{}
 	}
 	if cfg.KafkaConfig.Enabled {
-		if len(cfg.KafkaConfig.Brokers) == 0 {
-			return nil, fmt.Errorf("No kafka broker info configured")
-		}
 		if consumer == nil {
+			if len(cfg.KafkaConfig.Brokers) == 0 {
+				return nil, fmt.Errorf("No kafka broker info configured")
+			}
 			var err error
 			if consumer, err = sarama.NewConsumer(cfg.KafkaConfig.Brokers, sarama.NewConfig()); err != nil {
 				return nil, err

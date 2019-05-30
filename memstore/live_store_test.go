@@ -182,7 +182,7 @@ var _ = ginkgo.Describe("live store", func() {
 	ginkgo.It("Looks up key in primary key", func() {
 		primaryKeyDataTypes := []common.DataType{common.UUID, common.Uint32, common.Bool}
 		keyBytes := 21
-		pk := common.NewPrimaryKey(keyBytes, true, 10, hostMemoryManager)
+		pk := NewPrimaryKey(keyBytes, true, 10, hostMemoryManager)
 		shard := &TableShard{
 			Schema: &common.TableSchema{
 				PrimaryKeyBytes:       keyBytes,

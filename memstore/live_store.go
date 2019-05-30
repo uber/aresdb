@@ -114,7 +114,7 @@ func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
 		tableSchema:       schema,
 		LastReadRecord:    common.RecordID{BatchID: BaseBatchID, Index: 0},
 		NextWriteRecord:   common.RecordID{BatchID: BaseBatchID, Index: 0},
-		PrimaryKey:        common.NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable, schema.Schema.Config.InitialPrimaryKeyNumBuckets, shard.HostMemoryManager),
+		PrimaryKey:        NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable, schema.Schema.Config.InitialPrimaryKeyNumBuckets, shard.HostMemoryManager),
 		RedoLogManager:    redoLogManager,
 		HostMemoryManager: shard.HostMemoryManager,
 	}

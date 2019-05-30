@@ -173,7 +173,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			},
 		}
 
-		pk := memCom.NewPrimaryKey(2, false, 0, hostMemoryManager)
+		pk := NewPrimaryKey(2, false, 0, hostMemoryManager)
 		err = archiveBatch.BuildIndex(tableSchema.Schema.ArchivingSortColumns, tableSchema.Schema.PrimaryKeyColumns, pk)
 		row0, err := hex.DecodeString("0000")
 		recordID, existing := pk.Find(row0)

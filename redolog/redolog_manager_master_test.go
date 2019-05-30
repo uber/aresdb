@@ -59,10 +59,13 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 				Brokers: []string{},
 			},
 		}
-		consumer, _ := testing.MockKafkaConsumerFunc(nil)
-		f, err = NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
+		f, err = NewRedoLogManagerMaster(c, diskStore, metaStore)
 		Ω(err).ShouldNot(BeNil())
 		Ω(err.Error()).Should(ContainSubstring("No kafka broker"))
+
+		consumer, _ := testing.MockKafkaConsumerFunc(nil)
+		f, err = NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
+		Ω(err).Should(BeNil())
 
 		c = &common.RedoLogConfig{
 			DiskConfig: common.DiskRedoLogConfig{

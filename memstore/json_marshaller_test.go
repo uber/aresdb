@@ -54,7 +54,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 			BackfillMaxBufferSize:    1 << 32,
 			BackfillThresholdInBytes: 1 << 21,
 		}),
-		PrimaryKey: common.NewPrimaryKey(4, true, 10, hostMemoryManager),
+		PrimaryKey: NewPrimaryKey(4, true, 10, hostMemoryManager),
 		BatchSize:  10,
 		lastModifiedTimePerColumn: []uint32{
 			1,
@@ -92,7 +92,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 				BackfillMaxBufferSize:    1 << 32,
 				BackfillThresholdInBytes: 1 << 21,
 			}),
-			PrimaryKey: common.NewPrimaryKey(4, true, 10, hostMemoryManager),
+			PrimaryKey: NewPrimaryKey(4, true, 10, hostMemoryManager),
 			lastModifiedTimePerColumn: []uint32{
 				1,
 			},

@@ -116,7 +116,7 @@ var _ = ginkgo.Describe("archiving", func() {
 				},
 			},
 			tableSchema:       shard.Schema,
-			PrimaryKey:        memCom.NewPrimaryKey(16, true, 0, hostMemoryManager),
+			PrimaryKey:        NewPrimaryKey(16, true, 0, hostMemoryManager),
 			HostMemoryManager: hostMemoryManager,
 		}
 

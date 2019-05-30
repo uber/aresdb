@@ -21,6 +21,16 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
+const (
+	BucketSize = 8
+	// log2(numHashes)
+	log2NumHashes = 2
+	// number of hash functions
+	NumHashes = 1 << log2NumHashes
+
+	RecordIDBytes = int(unsafe.Sizeof(RecordID{}))
+)
+
 // RecordID represents a record location with BatchID as the inflated vector id
 // and offset determines the offset of record inside the vector
 type RecordID struct {
@@ -35,7 +45,7 @@ type Key []byte
 type PrimaryKeyData struct {
 	Data       unsafe.Pointer
 	NumBytes   int
-	Seeds      [numHashes]uint32
+	Seeds      [NumHashes]uint32
 	KeyBytes   int
 	NumBuckets int
 }
@@ -67,20 +77,6 @@ type PrimaryKey interface {
 	Capacity() uint
 	// AllocatedBytes returns the size of primary key in bytes.
 	AllocatedBytes() uint
-}
-
-const (
-	recordIDBytes = int(unsafe.Sizeof(RecordID{}))
-)
-
-// NewPrimaryKey create a primary key data structure
-// params:
-//   1. keyBytes, number of bytes of key
-//   2. hasEventTime determine whether primary key should record event time for expiration
-//   3. initNumBuckets determines the starting number of buckets, setting to 0 to use default
-func NewPrimaryKey(keyBytes int, hasEventTime bool, initNumBuckets int,
-	hostMemoryManager HostMemoryManager) PrimaryKey {
-	return newCuckooIndex(keyBytes, hasEventTime, initNumBuckets, hostMemoryManager)
 }
 
 // MarshalPrimaryKey marshals a PrimaryKey into json. We cannot define MarshalJson for PrimaryKey
