@@ -24,7 +24,7 @@ import (
 	"github.com/coreos/etcd/pkg/types"
 	"github.com/m3db/m3/src/cluster/client"
 	"github.com/m3db/m3/src/cluster/client/etcd"
-	"github.com/m3db/m3x/instrument"
+	"github.com/m3db/m3/src/x/instrument"
 	"github.com/stretchr/testify/assert"
 )
 
