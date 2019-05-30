@@ -34,5 +34,4 @@ RUN cmake .
 RUN make npm-install
 RUN mkdir log
 
-# install go tools
 RUN make aresd -j
