@@ -38,24 +38,22 @@ export PKG_CONFIG_PATH=${LD_LIBRARY_PATH}/pkgconfig:${PKG_CONFIG_PATH}
 Language Requirements
 ---------------------
 Building and running AresDB requires:
-* [golang](https://golang.org/) 1.9+
+* [golang](https://golang.org/) 1.11+
 * C++ compiler that support c++14
 * [cmake](https://cmake.org/download/) 3.12+
 * [nvcc](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html) version 9.1
 
-Build
------
-The following dependencies need to be installed before building the binary.
-
-### glide
-We use [glide](https://glide.sh) to manage Go dependencies. Please make sure `glide` is in your PATH before you attempt to build.
-###
-
+Configure
+---------
 Run following commands to generate makefile:
 ```
-cmake .
+cmake -DQUERY_MODE=DEVICE .
 ```
 
+Alternatively, if you want to run the query in CPU mode, run following commands:
+```
+cmake -DQUERY_MODE=HOST .
+```
 
 Local Test
 ----------

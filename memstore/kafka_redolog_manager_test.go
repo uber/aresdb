@@ -12,11 +12,11 @@ import (
 type GinkgoTestReporter struct{}
 
 func (g GinkgoTestReporter) Errorf(format string, args ...interface{}) {
-	ginkgo.Fail(fmt.Sprintf(format, args))
+	ginkgo.Fail(fmt.Sprintf(format, args...))
 }
 
 func (g GinkgoTestReporter) Fatalf(format string, args ...interface{}) {
-	ginkgo.Fail(fmt.Sprintf(format, args))
+	ginkgo.Fail(fmt.Sprintf(format, args...))
 }
 
 var _ = ginkgo.Describe("kafka redolog manager", func() {
