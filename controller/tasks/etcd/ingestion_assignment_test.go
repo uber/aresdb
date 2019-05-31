@@ -117,7 +117,6 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		heartBeatService1.EXPECT().Watch().Return(&mockWatch{heartBeatChangeEvent1}, nil)
 
 		heartBeatService2 := services.NewMockHeartbeatService(ctrl)
-		heartBeatService2.EXPECT().Watch().Return(&mockWatch{heartBeatChangeEvent2}, nil)
 
 		_, err := txnStore.Set(utils.NamespaceListKey(), &pb.EntityList{
 			Entities: []*pb.EntityName{

@@ -35,6 +35,8 @@ const (
 type LeaderElector interface {
 	// Start starts leader election
 	Start() error
+	// nofity channel for change in status
+	C() <-chan struct{}
 	// Status check current leader election status
 	Status() ElectionStatus
 	// Resign leader status if leader
@@ -46,6 +48,11 @@ type LeaderElector interface {
 type leaderElector struct {
 	leaderService   services.LeaderService
 	statusWatchable xwatch.Watchable
+	watch xwatch.Watch
+}
+
+func (l *leaderElector) C() <-chan struct{} {
+	return l.watch.C()
 }
 
 func (l *leaderElector) Start() error {
@@ -57,6 +64,12 @@ func (l *leaderElector) Start() error {
 	if err != nil {
 		return err
 	}
+
+	_, l.watch, err = l.statusWatchable.Watch()
+	if err != nil {
+		return err
+	}
+
 	go func() {
 		for status := range statusCh {
 			_ = l.statusWatchable.Update(status)
