@@ -14,9 +14,8 @@
 package etcd
 
 import (
+	"github.com/m3db/m3/src/cluster/kv/mem"
 	"testing"
-
-	testingUtils "github.com/uber/aresdb/testing"
 
 	"github.com/uber/aresdb/controller/models"
 	"github.com/uber/aresdb/controller/mutators/common"
@@ -67,15 +66,8 @@ func TestIngestionAssignmentMutator(t *testing.T) {
 	}
 
 	t.Run("CRUD should work", func(t *testing.T) {
-		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-
-		client := testingUtils.SetUpEtcdTestClient(t, port)
-		etcdStore, err := client.Txn()
-		assert.NoError(t, err)
-		_, err = etcdStore.Set(utils.JobAssignmentsListKey("ns1"), &pb.EntityList{})
-		assert.NoError(t, err)
+		etcdStore := mem.NewStore()
+		_, err := etcdStore.Set(utils.JobAssignmentsListKey("ns1"), &pb.EntityList{})
 
 		// test
 		ingestionAssignmentMutator := NewIngestionAssignmentMutator(etcdStore)
@@ -115,13 +107,8 @@ func TestIngestionAssignmentMutator(t *testing.T) {
 	})
 
 	t.Run("CRUD should fail", func(t *testing.T) {
-		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-
-		client := testingUtils.SetUpEtcdTestClient(t, port)
-		etcdStore, err := client.Txn()
-		assert.NoError(t, err)
+		etcdStore := mem.NewStore()
+		_, err := etcdStore.Set(utils.JobAssignmentsListKey("ns1"), &pb.EntityList{})
 
 		// test
 		ingestionAssignmentMutator := NewIngestionAssignmentMutator(etcdStore)

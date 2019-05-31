@@ -198,6 +198,7 @@ func (ia *ingestionAssignmentTask) taskAssginmentLoop() {
 			if ia.isLeader() {
 				ia.tryRecalculateAllNamespaces()
 			}
+		// periodic updates
 		case <-ia.stopChan:
 			return
 		}

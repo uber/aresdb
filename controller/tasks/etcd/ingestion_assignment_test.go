@@ -15,11 +15,12 @@ package etcd
 
 import (
 	"encoding/json"
+	"github.com/golang/mock/gomock"
+	"github.com/m3db/m3/src/cluster/kv/mem"
+	"github.com/m3db/m3/src/cluster/services/leader/campaign"
 	"sort"
 	"testing"
 	"time"
-
-	testingUtils "github.com/uber/aresdb/testing"
 
 	"github.com/uber/aresdb/controller/models"
 
@@ -34,6 +35,22 @@ import (
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
 )
+
+type mockWatch struct {
+	c chan struct{}
+}
+
+func (m *mockWatch) C() <-chan struct{} {
+	return m.c
+}
+
+func (m *mockWatch) Close() {
+	close(m.c)
+}
+
+func (m *mockWatch) Get() interface{} {
+	return nil
+}
 
 func TestIngestionAssignmentTask(t *testing.T) {
 
@@ -83,35 +100,26 @@ func TestIngestionAssignmentTask(t *testing.T) {
 
 	t.Run("suite", func(t *testing.T) {
 		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
+		txnStore := mem.NewStore()
 
-		testClient0 := testingUtils.SetUpEtcdTestClient(t, port)
-		txnStore, err := testClient0.Txn()
-		assert.NoError(t, err)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-		clusterServices0, err := testClient0.Services(nil)
-		assert.NoError(t, err)
+		subscribers := []string{subInstance1.ID(), subInstance2.ID(), subInstance3.ID()}
+		heartBeatChangeEvent1 := make(chan struct{}, 1)
+		heartBeatChangeEvent1 <- struct{}{}
 
-		subscriberServiceID := services.NewServiceID().
-			SetZone("test").
-			SetEnvironment("test").
-			SetName(utils.SubscriberServiceName("ns1"))
+		heartBeatChangeEvent2 := make(chan struct{}, 1)
+		heartBeatChangeEvent2 <- struct{}{}
 
-		err = clusterServices0.SetMetadata(subscriberServiceID, services.
-			NewMetadata().
-			SetHeartbeatInterval(1*time.Second).
-			SetLivenessInterval(2*time.Second))
-		assert.NoError(t, err)
+		heartBeatService1 := services.NewMockHeartbeatService(ctrl)
+		heartBeatService1.EXPECT().Get().Return(subscribers, nil)
+		heartBeatService1.EXPECT().Watch().Return(&mockWatch{heartBeatChangeEvent1}, nil)
 
-		err = clusterServices0.Advertise(services.NewAdvertisement().SetPlacementInstance(subInstance1).SetServiceID(subscriberServiceID))
-		assert.NoError(t, err)
-		err = clusterServices0.Advertise(services.NewAdvertisement().SetPlacementInstance(subInstance2).SetServiceID(subscriberServiceID))
-		assert.NoError(t, err)
-		err = clusterServices0.Advertise(services.NewAdvertisement().SetPlacementInstance(subInstance3).SetServiceID(subscriberServiceID))
-		assert.NoError(t, err)
+		heartBeatService2 := services.NewMockHeartbeatService(ctrl)
+		heartBeatService2.EXPECT().Watch().Return(&mockWatch{heartBeatChangeEvent2}, nil)
 
-		_, err = txnStore.Set(utils.NamespaceListKey(), &pb.EntityList{
+		_, err := txnStore.Set(utils.NamespaceListKey(), &pb.EntityList{
 			Entities: []*pb.EntityName{
 				{
 					Name: "ns1",
@@ -168,18 +176,14 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		err = assignmentMutator.AddIngestionAssignment("ns1", as1)
 		assert.NoError(t, err)
 
-		controllerServiceID := services.NewServiceID().
-			SetZone("test").
-			SetEnvironment("test").
-			SetName("controller")
-
 		// task1
-		testClient1 := testingUtils.SetUpEtcdTestClient(t, port)
-		assert.NoError(t, err)
-		clusterServices1, err := testClient1.Services(nil)
-		assert.NoError(t, err)
-		leaderService1, err := clusterServices1.LeaderService(controllerServiceID, nil)
-		assert.NoError(t, err)
+		clusterServices1 := services.NewMockServices(ctrl)
+		leaderService1 := services.NewMockLeaderService(ctrl)
+		clusterServices1.EXPECT().HeartbeatService(gomock.Any()).Return(heartBeatService1, nil).AnyTimes()
+		statusChan1 := make(chan campaign.Status, 1)
+		statusChan1 <- campaign.NewStatus(campaign.Leader)
+		leaderService1.EXPECT().Campaign("", gomock.Any()).Return(statusChan1, nil)
+		leaderService1.EXPECT().Close().Return(nil).AnyTimes()
 
 		task1 := ingestionAssignmentTask{
 			intervalSeconds:    10,
@@ -211,12 +215,13 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		}
 
 		// client2
-		testClient2 := testingUtils.SetUpEtcdTestClient(t, port)
-		assert.NoError(t, err)
-		clusterServices2, err := testClient2.Services(nil)
-		assert.NoError(t, err)
-		leaderService2, err := clusterServices2.LeaderService(controllerServiceID, nil)
-		assert.NoError(t, err)
+		clusterServices2 := services.NewMockServices(ctrl)
+		leaderService2 := services.NewMockLeaderService(ctrl)
+		clusterServices2.EXPECT().HeartbeatService(gomock.Any()).Return(heartBeatService2, nil).AnyTimes()
+		statusChan2 := make(chan campaign.Status, 1)
+		statusChan2 <- campaign.NewStatus(campaign.Follower)
+		leaderService2.EXPECT().Campaign("", gomock.Any()).Return(statusChan2, nil)
+		leaderService2.EXPECT().Close().Return(nil).AnyTimes()
 
 		task2 := ingestionAssignmentTask{
 			intervalSeconds:    10,
@@ -251,7 +256,7 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		go task1.Run()
 		go task2.Run()
 
-		// existing:
+		//existing:
 		//jobs: job1
 		//subscribers: sub1, sub2, sub3
 		//assignments: as1, asx
