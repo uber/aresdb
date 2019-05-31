@@ -12,14 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package redolog
 
-import "fmt"
+import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
-// ares redolog kafka topic prefix
-const aresRedologKafkaTopicPrefix = "ares-redolog"
+	"testing"
 
-// GetTopicFromTable get the topic name for namespace and table name
-func GetTopicFromTable(namespace, table string) string {
-	return fmt.Sprintf("%s-%s-%s", aresRedologKafkaTopicPrefix, namespace, table)
+	"github.com/onsi/ginkgo/reporters"
+)
+
+func TestMemStore(t *testing.T) {
+	RegisterFailHandler(Fail)
+	junitReporter := reporters.NewJUnitReporter("junit.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Ares imports package Suite", []Reporter{junitReporter})
 }

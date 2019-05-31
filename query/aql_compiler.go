@@ -251,8 +251,8 @@ func (qc *AQLQueryContext) processJoinConditions() {
 // 7. Geo filter operator must be EQ or IN
 // 8. Geo table's fields are not allowed in measures.
 // 9. Only one geo dimension allowed.
-func (qc *AQLQueryContext) matchGeoJoin(joinTableID int, mainTableSchema *memstore.TableSchema,
-	joinSchema *memstore.TableSchema, conditions []expr.Expr) {
+func (qc *AQLQueryContext) matchGeoJoin(joinTableID int, mainTableSchema *memCom.TableSchema,
+	joinSchema *memCom.TableSchema, conditions []expr.Expr) {
 	if len(conditions) != 1 {
 		qc.Error = utils.StackError(nil, "At most one join condition allowed per geo join")
 		return
@@ -315,7 +315,7 @@ func isGeoJoin(j Join) bool {
 // 5. foreign table primary key can have only one column
 // 6. every foreign table must be joined directly to the main table, i.e. no bridges?
 // 7. up to 8 foreign tables
-func (qc *AQLQueryContext) matchEqualJoin(joinTableID int, joinSchema *memstore.TableSchema, conditions []expr.Expr) {
+func (qc *AQLQueryContext) matchEqualJoin(joinTableID int, joinSchema *memCom.TableSchema, conditions []expr.Expr) {
 	if len(conditions) != 1 {
 		qc.Error = utils.StackError(nil, "%d join conditions expected, got %d", 1, len(conditions))
 		return
@@ -509,7 +509,7 @@ func (qc *AQLQueryContext) processTimezone() {
 func (qc *AQLQueryContext) readSchema(store memstore.MemStore) {
 	qc.TableScanners = make([]*TableScanner, 1+len(qc.Query.Joins))
 	qc.TableIDByAlias = make(map[string]int)
-	qc.TableSchemaByName = make(map[string]*memstore.TableSchema)
+	qc.TableSchemaByName = make(map[string]*memCom.TableSchema)
 
 	store.RLock()
 	defer store.RUnlock()
@@ -1482,7 +1482,7 @@ func getStrFromNumericalOrStrLiteral(e expr.Expr) (string, error) {
 // matchGeoFilter tries to match the filter as a geo filter and prepare shapeUUIDs for aql processor. It returns whether
 // the filterExpr is a geo filter.
 func (qc *AQLQueryContext) matchGeoFilter(filterExpr expr.Expr, joinTableID int,
-	joinSchema *memstore.TableSchema, geoFilterFound bool) (geoFilterFoundInCurrentExpr bool) {
+	joinSchema *memCom.TableSchema, geoFilterFound bool) (geoFilterFoundInCurrentExpr bool) {
 	var shapeUUIDs []string
 	invalidOpsFound, geoFilterFoundInCurrentExpr := qc.matchGeoFilterHelper(filterExpr, joinTableID, joinSchema, &shapeUUIDs)
 	if qc.Error != nil {
@@ -1509,7 +1509,7 @@ func (qc *AQLQueryContext) matchGeoFilter(filterExpr expr.Expr, joinTableID int,
 }
 
 func (qc *AQLQueryContext) matchGeoFilterHelper(filterExpr expr.Expr, joinTableID int,
-	joinSchema *memstore.TableSchema, shapeUUIDs *[]string) (inValidOpFound, foundGeoFilter bool) {
+	joinSchema *memCom.TableSchema, shapeUUIDs *[]string) (inValidOpFound, foundGeoFilter bool) {
 	switch e := filterExpr.(type) {
 	case *expr.BinaryExpr:
 		if e.Op == expr.OR {

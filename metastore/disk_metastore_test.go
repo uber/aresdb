@@ -186,6 +186,8 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("ReadFile", "base/a/shards/0/redolog-offset").Return([]byte("1,0"), nil)
 	mockFileSystem.On("ReadFile", "base/b/shards/0/snapshot").Return([]byte("1,0,-1,1"), nil)
 	mockFileSystem.On("ReadFile", "base/c/shards/0/version").Return([]byte("1"), nil)
+	mockFileSystem.On("ReadFile", "base/b/shards/0/commit-offset").Return([]byte("1"), nil)
+	mockFileSystem.On("ReadFile", "base/b/shards/0/checkpoint-offset").Return([]byte("1"), nil)
 	mockFileSystem.On("ReadFile", "base/notexist/shards/0/redolog-offset").Return(nil, os.ErrNotExist)
 	mockFileSystem.On("ReadFile", "base/nopermission/shards/0/redolog-offset").Return(nil, os.ErrPermission)
 	mockFileSystem.On("ReadFile", "base/bad1/shards/0/redolog-offset").Return([]byte("10"), nil)
@@ -198,6 +200,8 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("ReadFile", "base/bad15/shards/0/redolog-offset").Return([]byte("1,1,1,a"), nil)
 	mockFileSystem.On("ReadFile", "base/bad16/shards/0/redolog-offset").Return([]byte("1,2,3,4"), nil)
 
+	mockFileSystem.On("OpenFileForWrite", "base/b/shards/0/checkpoint-offset", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
+	mockFileSystem.On("OpenFileForWrite", "base/b/shards/0/commit-offset", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/a/schema", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/c/schema", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
 	mockFileSystem.On("OpenFileForWrite", "base/a/shards/0/version", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser, nil)
@@ -348,6 +352,34 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 		_, _, err = diskMetastore.GetBackfillProgressInfo("unknown_shard", 0)
 		Ω(err).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("GetRedoLogCommitOffset", func() {
+		diskMetastore := createDiskMetastore("base")
+		offset, err := diskMetastore.GetRedoLogCommitOffset("b", 0)
+		Ω(err).Should(BeNil())
+		Ω(offset).Should(Equal(int64(1)))
+	})
+
+	ginkgo.It("UpdateRedoLogCommitOffset", func() {
+		diskMetastore := createDiskMetastore("base")
+		err := diskMetastore.UpdateRedoLogCommitOffset("b", 0, 1)
+		Ω(err).Should(BeNil())
+		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
+	})
+
+	ginkgo.It("GetRedoLogCheckpointOffset", func() {
+		diskMetastore := createDiskMetastore("base")
+		offset, err := diskMetastore.GetRedoLogCheckpointOffset("b", 0)
+		Ω(err).Should(BeNil())
+		Ω(offset).Should(Equal(int64(1)))
+	})
+
+	ginkgo.It("UpdateRedoLogCheckpointOffset", func() {
+		diskMetastore := createDiskMetastore("base")
+		err := diskMetastore.UpdateRedoLogCheckpointOffset("b", 0, 1)
+		Ω(err).Should(BeNil())
+		Ω(mockWriterCloser.Bytes()).Should(Equal([]byte("1")))
 	})
 
 	ginkgo.It("WatchTableListEvents", func() {

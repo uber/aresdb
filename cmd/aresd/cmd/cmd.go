@@ -35,6 +35,7 @@ import (
 	"github.com/spf13/cobra"
 	controllerCli "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/redolog"
 )
 
 // Options represents options for executing command
@@ -140,8 +141,13 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	// Create DiskStore.
 	diskStore := diskstore.NewLocalDiskStore(cfg.RootPath)
 
+	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(&cfg.RedoLogConfig, diskStore, metaStore)
+	if err != nil {
+		utils.GetLogger().Fatal(err)
+	}
+
 	// Create MemStore.
-	memStore := memstore.NewMemStore(metaStore, diskStore)
+	memStore := memstore.NewMemStore(metaStore, diskStore, redoLogManagerMaster)
 
 	// Read schema.
 	utils.GetLogger().Infof("Reading schema from local MetaStore %s", metaStorePath)
@@ -224,4 +230,5 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
 	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	batchStatsReporter.Stop()
+	redoLogManagerMaster.Stop()
 }

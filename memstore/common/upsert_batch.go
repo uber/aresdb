@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package common
 
 import (
-	"unsafe"
-
 	"bytes"
-	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"math"
+	"unsafe"
 )
 
 // columnReader contains meta data for accessing the data of a column in an UpsertBatch.
@@ -28,11 +26,11 @@ type columnReader struct {
 	// The logic id of the column.
 	columnID int
 	// The column mode.
-	columnMode memCom.ColumnMode
+	columnMode ColumnMode
 	// The column update mode
-	columnUpdateMode memCom.ColumnUpdateMode
+	columnUpdateMode ColumnUpdateMode
 	// DataType of the column.
-	dataType memCom.DataType
+	dataType DataType
 	// The value vector. can be empty depending on column mode.
 	valueVector []byte
 	// The null vector. can be empty depending on column mode.
@@ -40,17 +38,17 @@ type columnReader struct {
 	// The offset vector. Only used for variable length values. Not used yet.
 	offsetVector []byte
 	// Compare function if any.
-	cmpFunc memCom.CompareFunc
+	cmpFunc CompareFunc
 }
 
 // ReadGoValue returns the GoDataValue from upsert batch at given row
-func (c *columnReader) ReadGoValue(row int) memCom.GoDataValue {
+func (c *columnReader) ReadGoValue(row int) GoDataValue {
 	offset := c.readOffset(row)
 	nextOffset := c.readOffset(row + 1)
 	if offset == nextOffset {
 		return nil
 	}
-	goValue := memCom.GetGoDataValue(c.dataType)
+	goValue := GetGoDataValue(c.dataType)
 	dataReader := utils.NewStreamDataReader(bytes.NewReader(c.valueVector[offset:]))
 	err := goValue.Read(&dataReader)
 	if err != nil {
@@ -66,7 +64,7 @@ func (c *columnReader) ReadValue(row int) (unsafe.Pointer, bool) {
 	if !validity {
 		return nil, false
 	}
-	return unsafe.Pointer(&c.valueVector[row*memCom.DataTypeBits(c.dataType)/8]), true
+	return unsafe.Pointer(&c.valueVector[row*DataTypeBits(c.dataType)/8]), true
 }
 
 // ReadValue returns the row data (boolean type) for a column, and its validity.
@@ -85,9 +83,9 @@ func (c *columnReader) readOffset(row int) uint32 {
 // readValidity return the validity value of a row in a column.
 func (c *columnReader) readValidity(row int) bool {
 	switch c.columnMode {
-	case memCom.AllValuesDefault:
+	case AllValuesDefault:
 		return false
-	case memCom.AllValuesPresent:
+	case AllValuesPresent:
 		return true
 	}
 	return readBool(c.nullVector, row)
@@ -168,6 +166,31 @@ func (u *UpsertBatch) GetBuffer() []byte {
 	return u.buffer
 }
 
+// GetAlternativeBytes returns alternativeBytes
+func (u *UpsertBatch) GetAlternativeBytes() int {
+	return u.alternativeBytes
+}
+
+// convenient function to get columns len
+func (u *UpsertBatch) GetColumnLen() int {
+	return len(u.columns)
+}
+
+// convenient function to get ColumnMode, assume no out of index
+func (u *UpsertBatch) GetColumMode(col int) ColumnMode {
+	return u.columns[col].columnMode
+}
+
+// convenient function to get ColumnUpdateMode, assume no out of index
+func (u *UpsertBatch) GetColumnUpdateMode(col int) ColumnUpdateMode {
+	return u.columns[col].columnUpdateMode
+}
+
+// convenient function to get GoDataValue
+func (u *UpsertBatch) ReadGoValue(row, col int) GoDataValue {
+	return u.columns[col].ReadGoValue(row)
+}
+
 // GetColumnID returns the logical id of a column.
 func (u *UpsertBatch) GetColumnID(col int) (int, error) {
 	if col >= len(u.columns) {
@@ -177,7 +200,7 @@ func (u *UpsertBatch) GetColumnID(col int) (int, error) {
 }
 
 // GetColumnType returns the data type of a column.
-func (u *UpsertBatch) GetColumnType(col int) (memCom.DataType, error) {
+func (u *UpsertBatch) GetColumnType(col int) (DataType, error) {
 	if col >= len(u.columns) {
 		return 0, utils.StackError(nil, "Column index %d out of range %d", col, len(u.columns))
 	}
@@ -222,8 +245,8 @@ func (u *UpsertBatch) GetBool(row int, col int) (bool, bool, error) {
 // It first check validity of the value, then it check whether it's a
 // boolean column to decide whether to load bool value or other value
 // type.
-func (u *UpsertBatch) GetDataValue(row, col int) (memCom.DataValue, error) {
-	val := memCom.DataValue{}
+func (u *UpsertBatch) GetDataValue(row, col int) (DataValue, error) {
+	val := DataValue{}
 	if col >= len(u.columns) {
 		return val, utils.StackError(nil, "Column index %d out of range %d", col, u.columns)
 	}
@@ -235,20 +258,20 @@ func (u *UpsertBatch) GetDataValue(row, col int) (memCom.DataValue, error) {
 
 	val.DataType = dataType
 
-	if dataType == memCom.Bool {
+	if dataType == Bool {
 		val.IsBool = true
 		val.BoolVal, val.Valid = u.columns[col].ReadBool(row)
 		return val, nil
 	}
 
-	if memCom.IsGoType(dataType) {
+	if IsGoType(dataType) {
 		val.GoVal = u.columns[col].ReadGoValue(row)
 		val.Valid = val.GoVal != nil
 		return val, nil
 	}
 
 	val.OtherVal, val.Valid = u.columns[col].ReadValue(row)
-	val.CmpFunc = memCom.GetCompareFunc(dataType)
+	val.CmpFunc = GetCompareFunc(dataType)
 	return val, nil
 }
 
@@ -284,7 +307,7 @@ func (u *UpsertBatch) GetPrimaryKeyCols(primaryKeyColumnIDs []int) ([]int, error
 func (u *UpsertBatch) GetPrimaryKeyBytes(row int, primaryKeyCols []int, keyLength int) ([]byte, error) {
 	var key []byte
 	var err error
-	primaryKeyValues := make([]memCom.DataValue, len(primaryKeyCols))
+	primaryKeyValues := make([]DataValue, len(primaryKeyCols))
 	for i, col := range primaryKeyCols {
 		primaryKeyValues[i], err = u.GetDataValue(row, col)
 		if err != nil {
@@ -311,7 +334,7 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 	newBatch.columns = make([]*columnReader, 0, len(u.columns))
 	for _, oldCol := range u.columns {
 		newCol := *oldCol
-		if newCol.columnUpdateMode > memCom.UpdateForceOverwrite {
+		if newCol.columnUpdateMode > UpdateForceOverwrite {
 			// ignore those columns with conditional updates from backfill
 			// clean up the column data
 			colID := newCol.columnID
@@ -328,8 +351,8 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 		newCol.offsetVector = nil
 
 		switch newCol.columnMode {
-		case memCom.AllValuesDefault:
-		case memCom.HasNullVector:
+		case AllValuesDefault:
+		case HasNullVector:
 			nullVectorLength := utils.AlignOffset(newBatch.NumRows, 8) / 8
 			newCol.nullVector = make([]byte, nullVectorLength)
 			newBatch.alternativeBytes += nullVectorLength
@@ -339,8 +362,8 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 				writeBool(newCol.nullVector, newRow, validity)
 			}
 			fallthrough
-		case memCom.AllValuesPresent:
-			valueBits := memCom.DataTypeBits(newCol.dataType)
+		case AllValuesPresent:
+			valueBits := DataTypeBits(newCol.dataType)
 			valueVectorLength := utils.AlignOffset(newBatch.NumRows*valueBits, 8) / 8
 			newCol.valueVector = make([]byte, valueVectorLength)
 			newBatch.alternativeBytes += valueVectorLength
@@ -450,11 +473,11 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 	batch.ArrivalTime = arrivalTime
 
 	// Header too small, error out.
-	if len(buffer) < 28+memCom.ColumnHeaderSize(batch.NumColumns) {
+	if len(buffer) < 28+ColumnHeaderSize(batch.NumColumns) {
 		return nil, utils.StackError(nil, "Invalid upsert batch data with incomplete header section")
 	}
 
-	header := memCom.NewUpsertBatchHeader(buffer[28:], batch.NumColumns)
+	header := NewUpsertBatchHeader(buffer[28:], batch.NumColumns)
 
 	columns := make([]*columnReader, batch.NumColumns)
 	for i := range columns {
@@ -475,7 +498,7 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 		}
 
 		columns[i] = &columnReader{columnID: columnID, columnMode: columnMode, columnUpdateMode: columnUpdateMode, dataType: columnType,
-			cmpFunc: memCom.GetCompareFunc(columnType)}
+			cmpFunc: GetCompareFunc(columnType)}
 
 		columnStartOffset, err := header.ReadColumnOffset(i)
 		if err != nil {
@@ -487,11 +510,12 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 			return nil, utils.StackError(err, "Failed to read end offset for column %d", i)
 		}
 
-		isGoType := memCom.IsGoType(columnType)
+		isGoType := IsGoType(columnType)
+
 		currentOffset := columnStartOffset
 		switch columnMode {
-		case memCom.AllValuesDefault:
-		case memCom.HasNullVector:
+		case AllValuesDefault:
+		case HasNullVector:
 			if !isGoType {
 				// Null vector points to the beginning of the column data section.
 				nullVectorLength := utils.AlignOffset(batch.NumRows, 8) / 8
@@ -499,7 +523,7 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 				currentOffset += nullVectorLength
 			}
 			fallthrough
-		case memCom.AllValuesPresent:
+		case AllValuesPresent:
 			if isGoType {
 				currentOffset = utils.AlignOffset(currentOffset, 4)
 				offsetVectorLength := (batch.NumRows + 1) * 4
@@ -527,7 +551,7 @@ func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 		return nil, utils.StackError(err, "Failed to read upsert batch version number")
 	}
 
-	if memCom.UpsertBatchVersion(version) == memCom.V1 {
+	if UpsertBatchVersion(version) == V1 {
 		return readUpsertBatch(buffer)
 	}
 	return nil, utils.StackError(nil, "Unsupported upsert batch version %x", version)

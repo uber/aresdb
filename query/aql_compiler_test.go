@@ -23,7 +23,6 @@ import (
 
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
@@ -135,11 +134,11 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		store := new(mocks.MemStore)
 		store.On("RLock").Return()
 		store.On("RUnlock").Return()
-		tripsSchema := &memstore.TableSchema{
+		tripsSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{IsFactTable: true},
 		}
-		apiCitiesSchema := &memstore.TableSchema{}
-		store.On("GetSchemas").Return(map[string]*memstore.TableSchema{
+		apiCitiesSchema := &memCom.TableSchema{}
+		store.On("GetSchemas").Return(map[string]*memCom.TableSchema{
 			"trips":      tripsSchema,
 			"api_cities": apiCitiesSchema,
 		})
@@ -176,7 +175,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				ColumnUsages: map[int]columnUsage{0: columnUsedByLiveBatches},
 			},
 		}))
-		Ω(qc.TableSchemaByName).Should(Equal(map[string]*memstore.TableSchema{
+		Ω(qc.TableSchemaByName).Should(Equal(map[string]*memCom.TableSchema{
 			"trips":      tripsSchema,
 			"api_cities": apiCitiesSchema,
 		}))
@@ -211,7 +210,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 			TableScanners: []*TableScanner{
 				{
-					Schema: &memstore.TableSchema{
+					Schema: &memCom.TableSchema{
 						ValueTypeByColumn: []memCom.DataType{
 							memCom.Int64,
 						},
@@ -269,14 +268,14 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 			TableScanners: []*TableScanner{
 				{
-					Schema: &memstore.TableSchema{
+					Schema: &memCom.TableSchema{
 						ValueTypeByColumn: []memCom.DataType{
 							memCom.Float32,
 							memCom.Uint16,
 							memCom.SmallEnum,
 							memCom.Bool,
 						},
-						EnumDicts: map[string]memstore.EnumDict{
+						EnumDicts: map[string]memCom.EnumDict{
 							"status": {
 								Dict: dict,
 							},
@@ -570,7 +569,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc := &AQLQueryContext{
 			TableScanners: []*TableScanner{
 				{
-					Schema: &memstore.TableSchema{},
+					Schema: &memCom.TableSchema{},
 				},
 			},
 		}
@@ -613,7 +612,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Query: q,
 			TableScanners: []*TableScanner{
 				{
-					Schema: &memstore.TableSchema{},
+					Schema: &memCom.TableSchema{},
 				},
 			},
 			TableIDByAlias: map[string]int{
@@ -635,7 +634,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Query: q,
 			TableScanners: []*TableScanner{
 				{
-					Schema: &memstore.TableSchema{
+					Schema: &memCom.TableSchema{
 						ColumnIDs: map[string]int{
 							"columnx": 0,
 						},
@@ -663,7 +662,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Query: q,
 			TableScanners: []*TableScanner{
 				{
-					Schema: &memstore.TableSchema{
+					Schema: &memCom.TableSchema{
 						ColumnIDs: map[string]int{
 							"columnx": 0,
 						},
@@ -691,7 +690,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Query: q,
 			TableScanners: []*TableScanner{
 				{
-					Schema: &memstore.TableSchema{},
+					Schema: &memCom.TableSchema{},
 				},
 			},
 		}
@@ -700,7 +699,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("matches prefilters", func() {
-		schema := &memstore.TableSchema{
+		schema := &memCom.TableSchema{
 			ValueTypeByColumn: []memCom.DataType{
 				memCom.Uint8,
 				memCom.Int16,
@@ -953,7 +952,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("processes common filters and prefilters", func() {
-		schema := &memstore.TableSchema{
+		schema := &memCom.TableSchema{
 			ValueTypeByColumn: []memCom.DataType{
 				memCom.Uint8,
 				memCom.Int16,
@@ -1055,7 +1054,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		schema := memstore.NewTableSchema(&table)
+		schema := memCom.NewTableSchema(&table)
 
 		q := &AQLQuery{
 			Table: "trips",
@@ -1188,7 +1187,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 			IsFactTable: false,
 		}
-		schema := memstore.NewTableSchema(&table)
+		schema := memCom.NewTableSchema(&table)
 		q := &AQLQuery{
 			Table: "trips",
 			Measures: []Measure{
@@ -1315,7 +1314,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("'from' should be defined for time filters", func() {
-		schema := &memstore.TableSchema{
+		schema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"request_at": 0,
 			},
@@ -1362,7 +1361,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Name: "request_at", Type: metaCom.Uint32},
 			},
 		}
-		schema := memstore.NewTableSchema(&table)
+		schema := memCom.NewTableSchema(&table)
 
 		qc := &AQLQueryContext{
 			TableIDByAlias: map[string]int{
@@ -1436,7 +1435,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Name: "request_at", Type: metaCom.Uint32},
 			},
 		}
-		schema := memstore.NewTableSchema(&table)
+		schema := memCom.NewTableSchema(&table)
 
 		qc := &AQLQueryContext{
 			TableIDByAlias: map[string]int{
@@ -1469,7 +1468,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("sorts used columns", func() {
-		schema := &memstore.TableSchema{
+		schema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				ArchivingSortColumns: []int{1, 3, 5},
 			},
@@ -1520,7 +1519,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("processJoinConditions", func() {
-		tripsSchema := &memstore.TableSchema{
+		tripsSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"request_at": 0,
 				"city_id":    1,
@@ -1539,7 +1538,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		badJoinSchema := &memstore.TableSchema{
+		badJoinSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"id": 0,
 			},
@@ -1556,7 +1555,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		apiCitySchema := &memstore.TableSchema{
+		apiCitySchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"id": 0,
 			},
@@ -1595,7 +1594,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		qc = &AQLQueryContext{
 			Query: goodQuery,
-			TableSchemaByName: map[string]*memstore.TableSchema{
+			TableSchemaByName: map[string]*memCom.TableSchema{
 				"trips":      tripsSchema,
 				"api_cities": apiCitySchema,
 				"bad_table":  badJoinSchema,
@@ -1732,7 +1731,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("processes foreign table related filters", func() {
-		tripsSchema := &memstore.TableSchema{
+		tripsSchema := &memCom.TableSchema{
 			ValueTypeByColumn: []memCom.DataType{
 				memCom.Uint32,
 				memCom.Uint16,
@@ -1749,7 +1748,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				},
 			},
 		}
-		apiCitiesSchema := &memstore.TableSchema{
+		apiCitiesSchema := &memCom.TableSchema{
 			ValueTypeByColumn: []memCom.DataType{
 				memCom.Uint16,
 				memCom.BigEnum,
@@ -1764,7 +1763,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					{Name: "name", Type: metaCom.BigEnum},
 				},
 			},
-			EnumDicts: map[string]memstore.EnumDict{
+			EnumDicts: map[string]memCom.EnumDict{
 				"name": {
 					Capacity: 65535,
 					Dict: map[string]int{
@@ -1779,7 +1778,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"trips":      0,
 				"api_cities": 1,
 			},
-			TableSchemaByName: map[string]*memstore.TableSchema{
+			TableSchemaByName: map[string]*memCom.TableSchema{
 				"trips":      tripsSchema,
 				"api_cities": apiCitiesSchema,
 			},
@@ -1866,13 +1865,13 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Name: "client_uuid_hll", Type: metaCom.UUID, HLLConfig: metaCom.HLLConfig{IsHLLColumn: true}},
 			},
 		}
-		tripsSchema := memstore.NewTableSchema(&table)
+		tripsSchema := memCom.NewTableSchema(&table)
 
 		qc := &AQLQueryContext{
 			TableIDByAlias: map[string]int{
 				"trips": 0,
 			},
-			TableSchemaByName: map[string]*memstore.TableSchema{
+			TableSchemaByName: map[string]*memCom.TableSchema{
 				"trips": tripsSchema,
 			},
 			TableScanners: []*TableScanner{
@@ -1938,7 +1937,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		store.On("RLock").Return()
 		store.On("RUnlock").Return()
 
-		orderSchema := &memstore.TableSchema{
+		orderSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"request_at":      0,
 				"restaurant_uuid": 1,
@@ -1957,7 +1956,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		merchantInfoSchema := &memstore.TableSchema{
+		merchantInfoSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"uuid":     0,
 				"location": 1,
@@ -1977,7 +1976,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		geoSchema := &memstore.TableSchema{
+		geoSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"geofence_uuid": 0,
 				"shape":         1,
@@ -2001,7 +2000,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		store.On("GetSchemas").Return(map[string]*memstore.TableSchema{
+		store.On("GetSchemas").Return(map[string]*memCom.TableSchema{
 			"orders":                              orderSchema,
 			"merchant_info":                       merchantInfoSchema,
 			"geofences_configstore_udr_geofences": geoSchema,
@@ -2046,7 +2045,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		parsedQC := AQLQueryContext{
 			Query: query,
-			TableSchemaByName: map[string]*memstore.TableSchema{
+			TableSchemaByName: map[string]*memCom.TableSchema{
 				"orders":                              orderSchema,
 				"merchant_info":                       merchantInfoSchema,
 				"geofences_configstore_udr_geofences": geoSchema,
@@ -2085,7 +2084,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		store.On("RLock").Return()
 		store.On("RUnlock").Return()
 
-		tripsSchema := &memstore.TableSchema{
+		tripsSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"request_at":    0,
 				"city_id":       1,
@@ -2107,7 +2106,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		apiCitySchema := &memstore.TableSchema{
+		apiCitySchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"id": 0,
 			},
@@ -2124,7 +2123,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		geoSchema := &memstore.TableSchema{
+		geoSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"geofence_uuid": 0,
 				"shape":         1,
@@ -2148,7 +2147,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		store.On("GetSchemas").Return(map[string]*memstore.TableSchema{
+		store.On("GetSchemas").Return(map[string]*memCom.TableSchema{
 			"trips":                               tripsSchema,
 			"api_cities":                          apiCitySchema,
 			"geofences_configstore_udr_geofences": geoSchema,
@@ -2194,7 +2193,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		parsedQC := AQLQueryContext{
 			Query: query,
-			TableSchemaByName: map[string]*memstore.TableSchema{
+			TableSchemaByName: map[string]*memCom.TableSchema{
 				"trips":                               tripsSchema,
 				"api_cities":                          apiCitySchema,
 				"geofences_configstore_udr_geofences": geoSchema,
@@ -2268,7 +2267,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		parsedQC = AQLQueryContext{
 			Query: query,
-			TableSchemaByName: map[string]*memstore.TableSchema{
+			TableSchemaByName: map[string]*memCom.TableSchema{
 				"trips":                               tripsSchema,
 				"api_cities":                          apiCitySchema,
 				"geofences_configstore_udr_geofences": geoSchema,
@@ -3083,7 +3082,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Table:   "table1",
 			Filters: []string{"id in (1, 2)"},
 		}
-		tableSchema := &memstore.TableSchema{
+		tableSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"time_col": 0,
 				"id":       1,
@@ -3103,7 +3102,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 		qc := AQLQueryContext{
 			Query: query,
-			TableSchemaByName: map[string]*memstore.TableSchema{
+			TableSchemaByName: map[string]*memCom.TableSchema{
 				"table1": tableSchema,
 			},
 			TableIDByAlias: map[string]int{
@@ -3159,7 +3158,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Table:   "table1",
 			Filters: []string{"dayofweek(table1.time_col) = 2", "hour(table1.time_col) = 21"},
 		}
-		tableSchema := &memstore.TableSchema{
+		tableSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"time_col": 0,
 				"id":       1,
@@ -3179,7 +3178,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 		qc := AQLQueryContext{
 			Query: query,
-			TableSchemaByName: map[string]*memstore.TableSchema{
+			TableSchemaByName: map[string]*memCom.TableSchema{
 				"table1": tableSchema,
 			},
 			TableIDByAlias: map[string]int{
@@ -3206,7 +3205,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"convert_tz(from_unixtime(table1.time_col / 1000), 'GMT', 'America/Phoenix') = 2",
 			},
 		}
-		tableSchema := &memstore.TableSchema{
+		tableSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"time_col": 0,
 				"id":       1,
@@ -3226,7 +3225,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 		qc := AQLQueryContext{
 			Query: query,
-			TableSchemaByName: map[string]*memstore.TableSchema{
+			TableSchemaByName: map[string]*memCom.TableSchema{
 				"table1": tableSchema,
 			},
 			TableIDByAlias: map[string]int{
@@ -3268,7 +3267,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 			TableScanners: []*TableScanner{
 				{
-					Schema: &memstore.TableSchema{
+					Schema: &memCom.TableSchema{
 						ValueTypeByColumn: []memCom.DataType{
 							memCom.Uint16,
 							memCom.GeoPoint,
@@ -3393,7 +3392,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("adjust filter to time filters", func() {
-		schema := &memstore.TableSchema{
+		schema := &memCom.TableSchema{
 			ValueTypeByColumn: []memCom.DataType{
 				memCom.Uint32,
 				memCom.Uint16,

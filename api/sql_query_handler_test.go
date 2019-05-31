@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 
@@ -33,7 +33,7 @@ import (
 
 var _ = ginkgo.Describe("QueryHandler SQL", func() {
 	var testServer *httptest.Server
-	var testSchema = memstore.NewTableSchema(&metaCom.Table{
+	var testSchema = memCom.NewTableSchema(&metaCom.Table{
 		Name:        "trips",
 		IsFactTable: false,
 		Columns: []metaCom.Column{

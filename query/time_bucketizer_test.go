@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 )
@@ -103,7 +103,7 @@ var _ = ginkgo.Describe("Time Bucketizer", func() {
 		qc.timezoneTable.tableColumn = "timezone"
 		qc.timezoneTable.tableAlias = defaultTimezoneTableAlias
 		qc.TableIDByAlias = map[string]int{defaultTimezoneTableAlias: 0}
-		qc.TableScanners = []*TableScanner{{Schema: &memstore.TableSchema{ColumnIDs: map[string]int{"timezone": 1}}}}
+		qc.TableScanners = []*TableScanner{{Schema: &memCom.TableSchema{ColumnIDs: map[string]int{"timezone": 1}}}}
 		exp, err = qc.buildTimeDimensionExpr("week", timeColumn)
 		Ω(exp).ShouldNot(BeNil())
 		Ω(exp.String()).Should(Equal("GET_WEEK_START(request_at CONVERT_TZ __timezone_lookup.timezone)"))

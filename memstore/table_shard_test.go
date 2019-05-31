@@ -28,7 +28,7 @@ var _ = ginkgo.Describe("table Shard", func() {
 	ginkgo.It("deletes data for a column upon request", func() {
 		// Prepare schema and Shard
 		diskStore := &mocks.DiskStore{}
-		schema := NewTableSchema(&metaCom.Table{
+		schema := common.NewTableSchema(&metaCom.Table{
 			Name:                 "trips",
 			IsFactTable:          true,
 			PrimaryKeyColumns:    []int{1},
@@ -58,8 +58,9 @@ var _ = ginkgo.Describe("table Shard", func() {
 			schema.SetDefaultValue(columnID)
 		}
 
+		m := getFactory().NewMockMemStore()
 		shard := NewTableShard(schema, nil, diskStore,
-			NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32), 0)
+			NewHostMemoryManager(m, 1<<32), 0, m.redologManagerMaster)
 
 		// Prepare live store
 		shard.LiveStore.AdvanceNextWriteRecord()

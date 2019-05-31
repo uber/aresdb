@@ -21,6 +21,7 @@ import (
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -40,16 +41,16 @@ type MemStore interface {
 	// GetTableShard gets the data for a pinned table Shard. Caller needs to unpin after use.
 	GetTableShard(table string, shardID int) (*TableShard, error)
 	// GetSchema returns schema for a table.
-	GetSchema(table string) (*TableSchema, error)
+	GetSchema(table string) (*common.TableSchema, error)
 	// GetSchemas returns all table schemas.
-	GetSchemas() map[string]*TableSchema
+	GetSchemas() map[string]*common.TableSchema
 	// FetchSchema fetches schema from metaStore and updates in-memory copy of table schema,
 	// and set up watch channels for metaStore schema changes, used for bootstrapping mem store.
 	FetchSchema() error
 	// InitShards loads/recovers data for shards initially owned by the current instance.
 	InitShards(schedulerOff bool)
 	// HandleIngestion logs an upsert batch and applies it to the in-memory store.
-	HandleIngestion(table string, shardID int, upsertBatch *UpsertBatch) error
+	HandleIngestion(table string, shardID int, upsertBatch *common.UpsertBatch) error
 	// Archive is the process moving stable records in fact tables from live batches to archive
 	// batches.
 	Archive(table string, shardID int, cutoff uint32, reporter ArchiveJobDetailReporter) error
@@ -87,14 +88,15 @@ type memStoreImpl struct {
 	// Table name and Shard ID as the map keys.
 	TableShards map[string]map[int]*TableShard
 	// Schema for all tables in the system. Schemas are not deleted for simplicity
-	TableSchemas map[string]*TableSchema
+	TableSchemas map[string]*common.TableSchema
 
 	HostMemManager common.HostMemoryManager
 
 	// reference to metaStore for registering watchers,
 	// fetch latest schema and store Shard versions.
-	metaStore metastore.MetaStore
-	diskStore diskstore.DiskStore
+	metaStore            metastore.MetaStore
+	diskStore            diskstore.DiskStore
+	redologManagerMaster *redolog.RedoLogManagerMaster
 
 	// each MemStore should only have one scheduler instance.
 	scheduler Scheduler
@@ -105,12 +107,13 @@ func getTableShardKey(tableName string, shardID int) string {
 }
 
 // NewMemStore creates a MemStore from the specified MetaStore.
-func NewMemStore(metaStore metastore.MetaStore, diskStore diskstore.DiskStore) MemStore {
+func NewMemStore(metaStore metastore.MetaStore, diskStore diskstore.DiskStore, redologManagerMaster *redolog.RedoLogManagerMaster) MemStore {
 	memStore := &memStoreImpl{
-		TableShards:  make(map[string]map[int]*TableShard),
-		TableSchemas: make(map[string]*TableSchema),
-		metaStore:    metaStore,
-		diskStore:    diskStore,
+		TableShards:          make(map[string]map[int]*TableShard),
+		TableSchemas:         make(map[string]*common.TableSchema),
+		metaStore:            metaStore,
+		diskStore:            diskStore,
+		redologManagerMaster: redologManagerMaster,
 	}
 	// Create HostMemoryManager
 	memStore.HostMemManager = NewHostMemoryManager(memStore, utils.GetConfig().TotalMemorySize)
@@ -207,7 +210,7 @@ func (m *memStoreImpl) GetTableShard(table string, shardID int) (*TableShard, er
 }
 
 // GetSchema returns schema for a table.
-func (m *memStoreImpl) GetSchema(table string) (*TableSchema, error) {
+func (m *memStoreImpl) GetSchema(table string) (*common.TableSchema, error) {
 	m.RLock()
 	defer m.RUnlock()
 	schema, ok := m.TableSchemas[table]
@@ -218,7 +221,7 @@ func (m *memStoreImpl) GetSchema(table string) (*TableSchema, error) {
 }
 
 // GetSchemas returns all table schemas. Callers need to hold a reader lock to access this function.
-func (m *memStoreImpl) GetSchemas() map[string]*TableSchema {
+func (m *memStoreImpl) GetSchemas() map[string]*common.TableSchema {
 	return m.TableSchemas
 }
 

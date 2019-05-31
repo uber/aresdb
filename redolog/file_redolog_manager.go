@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package redolog
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"io"
 	"sync"
-
-	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/utils"
 )
 
 // UpsertHeader is the magic header written into the beginning of each redo log file.
@@ -28,7 +28,7 @@ const UpsertHeader uint32 = 0xADDAFEED
 
 // fileRedologManager manages the redo log file append, rotation, purge. It is used by ingestion,
 // recovery and archiving. Accessor must hold the TableShard.WriterLock to access it.
-type fileRedologManager struct {
+type FileRedoLogManager struct {
 	// The lock is to protect MaxEventTimePerFile.
 	sync.RWMutex `json:"-"`
 
@@ -69,11 +69,16 @@ type fileRedologManager struct {
 
 	// The shard id of the table.
 	shard int
+	// used for external blocking check if recovery done
+	recoveryChan chan bool
+	recoveryDone bool
+	// batch recovered counts
+	batchRecovered int
 }
 
-// NewFileRedoLogManager creates a new fileRedologManager instance.
-func NewFileRedoLogManager(rotationInterval int64, maxRedoLogSize int64, diskStore diskstore.DiskStore, tableName string, shard int) RedologManager {
-	return &fileRedologManager{
+// newFileRedoLogManager creates a new fileRedologManager instance.
+func newFileRedoLogManager(rotationInterval int64, maxRedoLogSize int64, diskStore diskstore.DiskStore, tableName string, shard int) *FileRedoLogManager {
+	return &FileRedoLogManager{
 		RotationInterval:    rotationInterval,
 		MaxEventTimePerFile: make(map[int64]uint32),
 		BatchCountPerFile:   make(map[int64]uint32),
@@ -83,19 +88,13 @@ func NewFileRedoLogManager(rotationInterval int64, maxRedoLogSize int64, diskSto
 		shard:               shard,
 		MaxRedoLogSize:      maxRedoLogSize,
 		CurrentRedoLogSize:  0,
-	}
-}
-
-// Close closes the current log file.
-func (r *fileRedologManager) Close() {
-	if r.currentLogFile != nil {
-		r.currentLogFile.Close()
+		recoveryChan:        make(chan bool, 1),
 	}
 }
 
 // openFileForWrite handles redo log file opening and rotation (if needed). It guarantees the
 // validity of the currentLogFile upon return.
-func (r *fileRedologManager) openFileForWrite(upsertBatchSize uint32) {
+func (r *FileRedoLogManager) openFileForWrite(upsertBatchSize uint32) {
 	dataTime := utils.Now().Unix()
 
 	// If current file is still valid we just return the writer back.
@@ -117,7 +116,6 @@ func (r *fileRedologManager) openFileForWrite(upsertBatchSize uint32) {
 			"shard", r.shard,
 			"error", err.Error()).Panic("Failed to open new redo log file")
 	}
-
 	writer := utils.NewStreamDataWriter(r.currentLogFile)
 	if err = writer.WriteUint32(UpsertHeader); err != nil {
 		utils.GetLogger().Panic("Failed to write magic header to the new redo log")
@@ -132,10 +130,10 @@ func (r *fileRedologManager) openFileForWrite(upsertBatchSize uint32) {
 	r.CurrentRedoLogSize = 4
 }
 
-// WriteUpsertBatch saves an upsert batch into disk before applying it. Any errors from diskStore
+// AppendToRedoLog saves an upsert batch into disk before applying it. Any errors from diskStore
 // will trigger system panic.
-func (r *fileRedologManager) WriteUpsertBatch(upsertBatch *UpsertBatch) (int64, uint32) {
-	r.openFileForWrite(uint32(len(upsertBatch.buffer)))
+func (r *FileRedoLogManager) AppendToRedoLog(upsertBatch *common.UpsertBatch) (int64, uint32) {
+	r.openFileForWrite(uint32(len(upsertBatch.GetBuffer())))
 
 	buffer := upsertBatch.GetBuffer()
 
@@ -150,9 +148,9 @@ func (r *fileRedologManager) WriteUpsertBatch(upsertBatch *UpsertBatch) (int64, 
 	}
 
 	// update current redo log size
-	r.CurrentRedoLogSize += uint32(len(upsertBatch.buffer)) + 4
-	r.SizePerFile[r.CurrentFileCreationTime] += uint32(len(upsertBatch.buffer)) + 4
-	r.TotalRedoLogSize += uint(len(upsertBatch.buffer)) + 4
+	r.CurrentRedoLogSize += uint32(len(upsertBatch.GetBuffer())) + 4
+	r.SizePerFile[r.CurrentFileCreationTime] += uint32(len(upsertBatch.GetBuffer())) + 4
+	r.TotalRedoLogSize += uint(len(upsertBatch.GetBuffer())) + 4
 
 	utils.GetReporter(r.tableName, r.shard).GetGauge(utils.CurrentRedologSize).Update(float64(r.CurrentRedoLogSize))
 	utils.GetReporter(r.tableName, r.shard).GetGauge(utils.SizeOfRedologs).Update(float64(r.TotalRedoLogSize))
@@ -166,7 +164,7 @@ func (r *fileRedologManager) WriteUpsertBatch(upsertBatch *UpsertBatch) (int64, 
 // redoFile == 0 is used in serving ingestion requests where the current file's max event time is
 // updated. redoFile != 0 is used in recovery where the redo log file loaded from disk needs to
 // get its max event time calculated.
-func (r *fileRedologManager) UpdateMaxEventTime(eventTime uint32, redoFile int64) {
+func (r *FileRedoLogManager) UpdateMaxEventTime(eventTime uint32, redoFile int64) {
 	r.Lock()
 	defer r.Unlock()
 	if _, ok := r.MaxEventTimePerFile[redoFile]; ok && eventTime <= r.MaxEventTimePerFile[redoFile] {
@@ -176,7 +174,7 @@ func (r *fileRedologManager) UpdateMaxEventTime(eventTime uint32, redoFile int64
 	r.MaxEventTimePerFile[redoFile] = eventTime
 }
 
-func (r *fileRedologManager) closeRedoLogFile(creationTime int64, offset uint32, currentFile *io.ReadCloser,
+func (r *FileRedoLogManager) closeRedoLogFile(creationTime int64, offset uint32, currentFile *io.ReadCloser,
 	currentIndex *int, needToTruncate bool) {
 	// End of file encountered. Move to next file.
 	if err := (*currentFile).Close(); err != nil {
@@ -203,28 +201,34 @@ func (r *fileRedologManager) closeRedoLogFile(creationTime int64, offset uint32,
 	}
 }
 
-// NextUpsertBatch returns a functor that can be used to iterate over redo logs on disk and returns
+// Iterator returns a functor that can be used to iterate over redo logs on disk and returns
 // one UpsertBatch at each call. It returns nil to indicate the end of the upsert batch stream.
 //
 // Any failure in file reading and upsert batch creation will trigger system panic.
-func (r *fileRedologManager) NextUpsertBatch() func() (*UpsertBatch, int64, uint32) {
+func (r *FileRedoLogManager) Iterator() (NextUpsertFunc, error) {
 	files, err := r.diskStore.ListLogFiles(r.tableName, r.shard)
 	if err != nil {
 		utils.GetLogger().Panic("Failed to list redo log files", err)
 	}
+
+	utils.GetLogger().With(
+		"table", r.tableName,
+		"shard", r.shard, "action", "recover",
+	).Infof("Start replaying local redolog files")
 
 	currentIndex := 0
 	var currentReader utils.StreamDataReader
 	var currentFile io.ReadCloser
 	var offset uint32
 
-	return func() (*UpsertBatch, int64, uint32) {
+	return func() *NextUpsertBatchInfo {
 		for {
 			// Open the next redo file.
 			if currentFile == nil {
 				// End of file list, done.
 				if currentIndex >= len(files) {
-					return nil, 0, 0
+					r.setRecoveryDone()
+					return nil
 				}
 
 				key := files[currentIndex]
@@ -274,7 +278,7 @@ func (r *fileRedologManager) NextUpsertBatch() func() (*UpsertBatch, int64, uint
 					r.closeRedoLogFile(files[currentIndex], offset-4, &currentFile, &currentIndex, true)
 				} else {
 					offset += size
-					upsertBatch, err := NewUpsertBatch(buffer)
+					upsertBatch, err := common.NewUpsertBatch(buffer)
 					if err != nil {
 						utils.GetLogger().Errorf(
 							"Failed to create upsert batch from buffer of size %v from file %v at offset %v for table %v shard %v",
@@ -286,17 +290,33 @@ func (r *fileRedologManager) NextUpsertBatch() func() (*UpsertBatch, int64, uint
 						// increment size per file
 						r.SizePerFile[files[currentIndex]] += size + 4
 
+						r.batchRecovered++
 						// update lastBatchOffset for the current redo log file
-						return upsertBatch, files[currentIndex], r.updateBatchCount(files[currentIndex]) - 1
+						return &NextUpsertBatchInfo{
+							Batch:       upsertBatch,
+							RedoLogFile: files[currentIndex],
+							BatchOffset: r.updateBatchCount(files[currentIndex]) - 1,
+							Recovery:    true,
+						}
 					}
 				}
 			}
 		}
-	}
+	}, nil
+}
+
+func (r *FileRedoLogManager) setRecoveryDone() {
+	r.Lock()
+	defer r.Unlock()
+
+	r.recoveryChan <- true
+	r.recoveryDone = true
+	utils.GetLogger().With("action", "recover", "table", r.tableName, "shard", r.shard,
+		"batchRecovered", r.batchRecovered).Info("Finished recovery from local redolog files")
 }
 
 // updateBatchCount saves/updates batch counts for the given redolog
-func (r *fileRedologManager) updateBatchCount(redoFile int64) uint32 {
+func (r *FileRedoLogManager) updateBatchCount(redoFile int64) uint32 {
 	r.RLock()
 	defer r.RUnlock()
 	if _, ok := r.BatchCountPerFile[redoFile]; !ok {
@@ -310,7 +330,7 @@ func (r *fileRedologManager) updateBatchCount(redoFile int64) uint32 {
 // getRedoLogFilesToPurge returns all redo log files whose max event time is less than cutoff and thus
 // is eligible for purging. Readers need to hold the reader lock to access this function.
 // At the same, make sure all records should've backfilled successfully
-func (r *fileRedologManager) getRedoLogFilesToPurge(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) []int64 {
+func (r *FileRedoLogManager) getRedoLogFilesToPurge(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) []int64 {
 	r.RLock()
 	var creationTimes []int64
 	for creationTime, maxEventTime := range r.MaxEventTimePerFile {
@@ -327,7 +347,7 @@ func (r *fileRedologManager) getRedoLogFilesToPurge(cutoff uint32, redoFileCheck
 }
 
 // evictRedoLogData evict data belongs to redologs already purged from disk
-func (r *fileRedologManager) evictRedoLogData(creationTime int64) {
+func (r *FileRedoLogManager) evictRedoLogData(creationTime int64) {
 	r.Lock()
 	delete(r.MaxEventTimePerFile, creationTime)
 	delete(r.BatchCountPerFile, creationTime)
@@ -339,7 +359,7 @@ func (r *fileRedologManager) evictRedoLogData(creationTime int64) {
 }
 
 // CheckpointRedolog purges disk files and in memory data of redologs that are eligible to be purged.
-func (r *fileRedologManager) CheckpointRedolog(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) error {
+func (r *FileRedoLogManager) CheckpointRedolog(cutoff uint32, redoFileCheckpointed int64, batchOffset uint32) error {
 	creationTimes := r.getRedoLogFilesToPurge(cutoff, redoFileCheckpointed, batchOffset)
 
 	utils.GetLogger().With("action", "purgeRedoLog", "table", r.tableName, "shard", r.shard, "cutoff", cutoff,
@@ -355,23 +375,42 @@ func (r *fileRedologManager) CheckpointRedolog(cutoff uint32, redoFileCheckpoint
 	return nil
 }
 
+func (r *FileRedoLogManager) WaitForRecoveryDone() {
+	<-r.recoveryChan
+}
+
 // CheckpointRedolog purges disk files and in memory data of redologs that are eligible to be purged.
-func (r *fileRedologManager) GetTotalSize() int {
+func (r *FileRedoLogManager) GetTotalSize() int {
 	r.RLock()
 	defer r.RUnlock()
 	return int(r.TotalRedoLogSize)
 }
 
-func (r *fileRedologManager) GetNumFiles() int {
+func (r *FileRedoLogManager) GetNumFiles() int {
 	r.RLock()
 	defer r.RUnlock()
 	return len(r.SizePerFile)
 }
 
+func (r *FileRedoLogManager) GetBatchReceived() int {
+	return 0
+}
+
+func (r *FileRedoLogManager) GetBatchRecovered() int {
+	return r.batchRecovered
+}
+
+// Close closes the current log file.
+func (r *FileRedoLogManager) Close() {
+	if r.currentLogFile != nil {
+		r.currentLogFile.Close()
+	}
+}
+
 // MarshalJSON marshals a fileRedologManager into json.
-func (r *fileRedologManager) MarshalJSON() ([]byte, error) {
+func (r *FileRedoLogManager) MarshalJSON() ([]byte, error) {
 	// Avoid json.Marshal loop calls.
-	type alias fileRedologManager
+	type alias FileRedoLogManager
 	r.RLock()
 	defer r.RUnlock()
 	return json.Marshal((*alias)(r))

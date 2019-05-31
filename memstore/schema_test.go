@@ -19,10 +19,12 @@ import (
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/metastore/mocks"
+	"github.com/uber/aresdb/redolog"
 )
 
 var _ = ginkgo.Describe("memStoreImpl schema", func() {
@@ -141,25 +143,29 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 
 	mockMetastore := &mocks.MetaStore{}
 	mockDiskstore := CreateMockDiskStore()
+	redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, mockDiskstore, mockMetastore)
+
 	var testHostMemoryManager *hostMemoryManager
 
 	var getTestMemstore = func() *memStoreImpl {
+
 		testMemstore := memStoreImpl{
-			TableSchemas: make(map[string]*TableSchema),
-			TableShards:  make(map[string]map[int]*TableShard),
-			metaStore:    mockMetastore,
-			diskStore:    mockDiskstore,
+			TableSchemas:         make(map[string]*memCom.TableSchema),
+			TableShards:          make(map[string]map[int]*TableShard),
+			metaStore:            mockMetastore,
+			diskStore:            mockDiskstore,
+			redologManagerMaster: redologManagerMaster,
 		}
 
 		testMemstore.scheduler = newScheduler(&testMemstore)
 
-		tableSchema := NewTableSchema(&testTable)
-		tableSchema.createEnumDict(testColumn2.Name, testColumn2EnumCases)
-		tableSchema.createEnumDict(testColumn3.Name, testColumn3EnumCases)
+		tableSchema := memCom.NewTableSchema(&testTable)
+		tableSchema.CreateEnumDict(testColumn2.Name, testColumn2EnumCases)
+		tableSchema.CreateEnumDict(testColumn3.Name, testColumn3EnumCases)
 		testMemstore.TableSchemas[testTable.Name] = tableSchema
 
 		testTableShard := NewTableShard(tableSchema, mockMetastore, mockDiskstore,
-			NewHostMemoryManager(&testMemstore, 1<<32), 0)
+			NewHostMemoryManager(&testMemstore, 1<<32), 0, redologManagerMaster)
 
 		testMemstore.TableShards[testTable.Name] = map[int]*TableShard{
 			0: testTableShard,
@@ -180,7 +186,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 	}
 
 	ginkgo.It("NewTableSchema should work", func() {
-		tableSchema := NewTableSchema(&testTable)
+		tableSchema := memCom.NewTableSchema(&testTable)
 		Ω(tableSchema.Schema).Should(Equal(testTable))
 		Ω(tableSchema.ColumnIDs).Should(Equal(map[string]int{
 			testColumn1.Name: 0,
@@ -197,20 +203,20 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 	})
 
 	ginkgo.It("GetColumnDeletions should work", func() {
-		tableSchema := NewTableSchema(&testModifiedTable)
+		tableSchema := memCom.NewTableSchema(&testModifiedTable)
 		Ω(tableSchema.GetColumnDeletions()).Should(BeEquivalentTo([]bool{false, true, false, false}))
 
-		tableSchema = NewTableSchema(&testTable)
+		tableSchema = memCom.NewTableSchema(&testTable)
 		Ω(tableSchema.GetColumnDeletions()).Should(BeEquivalentTo([]bool{false, false, false}))
 	})
 
 	ginkgo.It("SetEnumDict should work", func() {
-		tableSchema := NewTableSchema(&testTable)
-		tableSchema.createEnumDict(testColumn2.Name, testColumn2EnumCases)
-		tableSchema.createEnumDict(testColumn3.Name, testColumn3EnumCases)
+		tableSchema := memCom.NewTableSchema(&testTable)
+		tableSchema.CreateEnumDict(testColumn2.Name, testColumn2EnumCases)
+		tableSchema.CreateEnumDict(testColumn3.Name, testColumn3EnumCases)
 
 		Ω(tableSchema.EnumDicts).Should(Equal(
-			map[string]EnumDict{
+			map[string]memCom.EnumDict{
 				testColumn2.Name: {
 					Capacity: 0x100,
 					Dict: map[string]int{
@@ -234,7 +240,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 
 	ginkgo.It("FetchSchema should succeed with no metaStore error", func() {
 		memstore := memStoreImpl{
-			TableSchemas: make(map[string]*TableSchema),
+			TableSchemas: make(map[string]*memCom.TableSchema),
 			TableShards:  make(map[string]map[int]*TableShard),
 			metaStore:    mockMetastore,
 		}
@@ -271,7 +277,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		}))
 		Ω(memstore.TableSchemas[testTable.Name].ValueTypeByColumn).Should(Equal([]memCom.DataType{memCom.Bool, memCom.SmallEnum, memCom.BigEnum}))
 		Ω(memstore.TableSchemas[testTable.Name].EnumDicts).Should(Equal(
-			map[string]EnumDict{
+			map[string]memCom.EnumDict{
 				testColumn2.Name: {
 					Capacity: 0x100,
 					Dict: map[string]int{
@@ -295,7 +301,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 
 	ginkgo.It("FetchSchema should fail with metaStore errors", func() {
 		memstore := memStoreImpl{
-			TableSchemas: make(map[string]*TableSchema),
+			TableSchemas: make(map[string]*memCom.TableSchema),
 			TableShards:  make(map[string]map[int]*TableShard),
 			metaStore:    mockMetastore,
 		}
@@ -360,7 +366,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		testMemstore := getTestMemstore()
 		mockDiskstore.On("DeleteTableShard", testTable.Name, 0).Return(nil)
 		testMemstore.applyTableList([]string{})
-		Ω(testMemstore.TableSchemas).Should(Equal(map[string]*TableSchema{}))
+		Ω(testMemstore.TableSchemas).Should(Equal(map[string]*memCom.TableSchema{}))
 		Ω(testMemstore.TableShards).Should(Equal(map[string]map[int]*TableShard{}))
 		destroyTestMemstore(testMemstore)
 	})
@@ -380,7 +386,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		// block until done
 		<-doneChannel
 
-		Ω(testMemstore.TableSchemas).Should(Equal(map[string]*TableSchema{}))
+		Ω(testMemstore.TableSchemas).Should(Equal(map[string]*memCom.TableSchema{}))
 		Ω(testMemstore.TableShards).Should(Equal(map[string]map[int]*TableShard{}))
 		destroyTestMemstore(testMemstore)
 	})
@@ -394,7 +400,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 			testColumn4.Name: 3,
 		}
 
-		expectedEnumDict := map[string]EnumDict{
+		expectedEnumDict := map[string]memCom.EnumDict{
 			testColumn4.Name: {
 				Capacity: 0x10000,
 				Dict:     map[string]int{},
@@ -476,7 +482,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 			testColumn4.Name: 3,
 		}
 
-		expectedEnumDict := map[string]EnumDict{
+		expectedEnumDict := map[string]memCom.EnumDict{
 			testColumn4.Name: {
 				Capacity: 0x10000,
 				Dict:     map[string]int{},
@@ -504,7 +510,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 	ginkgo.It("applyEnumCase should work", func() {
 		testMemstore := getTestMemstore()
 
-		oldEnumDict := EnumDict{
+		oldEnumDict := memCom.EnumDict{
 			Capacity: 0x100,
 			Dict: map[string]int{
 				"a": 0,
@@ -514,7 +520,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 			ReverseDict: []string{"a", "b", "c"},
 		}
 
-		newEnumDict := EnumDict{
+		newEnumDict := memCom.EnumDict{
 			Capacity: 0x100,
 			Dict: map[string]int{
 				"a": 0,
@@ -547,7 +553,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		// block until processing done
 		close(enumDictChanges)
 		<-doneChannel
-		newEnumDict := EnumDict{
+		newEnumDict := memCom.EnumDict{
 			Capacity: 0x100,
 			Dict: map[string]int{
 				"a": 0,
@@ -563,7 +569,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 
 	ginkgo.It("SetDefaultValue should work", func() {
 		testMemstore := getTestMemstore()
-		tableSchema := NewTableSchema(&testTableWithDefaultValue)
+		tableSchema := memCom.NewTableSchema(&testTableWithDefaultValue)
 		testMemstore.TableSchemas[tableSchema.Schema.Name] = tableSchema
 
 		Ω(tableSchema.DefaultValues).Should(HaveLen(5))
@@ -577,7 +583,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		Ω(tableSchema.DefaultValues[0]).ShouldNot(Equal(BeNil()))
 		Ω(tableSchema.DefaultValues[0].Valid).Should(BeFalse())
 
-		tableSchema.createEnumDict(testColumn5.Name, []string{defaultBigEnumValue})
+		tableSchema.CreateEnumDict(testColumn5.Name, []string{defaultBigEnumValue})
 		tableSchema.SetDefaultValue(1)
 		Ω(tableSchema.DefaultValues[1].Valid).ShouldNot(BeFalse())
 		Ω(*(*uint16)(tableSchema.DefaultValues[1].OtherVal)).Should(Equal(uint16(0)))
@@ -588,7 +594,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 
 		Ω(func() { tableSchema.SetDefaultValue(3) }).Should(Panic())
 
-		tableSchema.createEnumDict(testColumn8.Name, []string{defaultSmallEnumValue})
+		tableSchema.CreateEnumDict(testColumn8.Name, []string{defaultSmallEnumValue})
 		tableSchema.SetDefaultValue(4)
 		Ω(tableSchema.DefaultValues[4].Valid).ShouldNot(BeFalse())
 		Ω(*(*uint8)(tableSchema.DefaultValues[4].OtherVal)).Should(Equal(uint8(0)))

@@ -68,6 +68,30 @@ type ClusterConfig struct {
 	InstanceName string `yaml:"instance_name"`
 }
 
+// local redolog config
+type DiskRedoLogConfig struct {
+	// disable local disk redolog, default will be enabled
+	Disabled bool `yaml:"disabled"`
+}
+
+// Kafka source config
+type KafkaRedoLogConfig struct {
+	// enable redolog from kafka, default will be disabled
+	Enabled bool `yaml:"enabled"`
+	// kafka brokers
+	Brokers []string `yaml:"brokers"`
+}
+
+// Configs related to data import and redolog option
+type RedoLogConfig struct {
+	// namespace or cluster named for this db
+	Namespace string `yaml:"namespace"`
+	// Disk redolog config
+	DiskConfig DiskRedoLogConfig `yaml:"disk"`
+	// Kafka redolog config
+	KafkaConfig KafkaRedoLogConfig `yaml:"kafka"`
+}
+
 // AresServerConfig is config specific for ares server.
 type AresServerConfig struct {
 	// HTTP port for serving.
@@ -96,4 +120,6 @@ type AresServerConfig struct {
 	HTTP      HTTPConfig      `yaml:"http"`
 	Cluster   ClusterConfig   `yaml:"cluster"`
 	Gateway   GatewayConfig   `yaml:"gateway"`
+
+	RedoLogConfig RedoLogConfig `yaml:"redolog"`
 }

@@ -22,9 +22,10 @@ import (
 )
 
 // HandleIngestion logs an upsert batch and applies it to the in-memory store.
-func (m *memStoreImpl) HandleIngestion(table string, shardID int, upsertBatch *UpsertBatch) error {
-	utils.GetReporter(table, shardID).GetCounter(utils.IngestedUpsertBatches).Inc(1)
-	utils.GetReporter(table, shardID).GetGauge(utils.UpsertBatchSize).Update(float64(len(upsertBatch.buffer)))
+func (m *memStoreImpl) HandleIngestion(table string, shardID int, upsertBatch *common.UpsertBatch) error {
+	if m.redologManagerMaster.RedoLogConfig.DiskConfig.Disabled {
+		return utils.StackError(nil, "Local redolog file not enabled")
+	}
 	shard, err := m.GetTableShard(table, shardID)
 	if err != nil {
 		return utils.StackError(nil, "Failed to get shard %d for table %s for upsert batch", shardID, table)
@@ -32,31 +33,46 @@ func (m *memStoreImpl) HandleIngestion(table string, shardID int, upsertBatch *U
 	// Release the wait group that proctects the shard to be deleted.
 	defer shard.Users.Done()
 
-	// Put the memStore in writer lock mode so other writers cannot enter.
+	return shard.saveUpsertBatch(upsertBatch, 0, 0, false, false)
+}
+
+// saveUpsertBatch handles data ingestion from both redolog and http
+func (shard *TableShard) saveUpsertBatch(upsertBatch *common.UpsertBatch, redoLogFile int64, offset uint32, recovery, skipBackFillRows bool) error {
+	tableName := shard.Schema.Schema.Name
+	shardID := shard.ShardID
 	shard.LiveStore.WriterLock.Lock()
 
-	// Persist to disk first.
-	redoFile, offset := shard.LiveStore.RedoLogManager.WriteUpsertBatch(upsertBatch)
+	if recovery {
+		utils.GetReporter(tableName, shardID).GetCounter(utils.IngestedRecoveryBatches).Inc(1)
+		utils.GetReporter(tableName, shardID).GetGauge(utils.RecoveryUpsertBatchSize).Update(float64(len(upsertBatch.GetBuffer())))
+		// Put a 0 in maxEventTimePerFile in case this is redolog is full of backfill batches.
+		shard.LiveStore.RedoLogManager.UpdateMaxEventTime(0, redoLogFile)
+	} else {
+		utils.GetReporter(tableName, shardID).GetCounter(utils.IngestedUpsertBatches).Inc(1)
+		utils.GetReporter(tableName, shardID).GetGauge(utils.UpsertBatchSize).Update(float64(len(upsertBatch.GetBuffer())))
+		// for non-recovery and local file based redolog, need write the upsertbatch into redolog file
+		if !shard.redoLogManagerMaster.RedoLogConfig.DiskConfig.Disabled {
+			// change original file/offset to be local redolog file/offset
+			redoLogFile, offset = shard.LiveStore.RedoLogManager.AppendToRedoLog(upsertBatch)
+		}
+	}
 
-	// Apply it to the memstore shard.
-	needToWaitForBackfillBuffer, err := shard.ApplyUpsertBatch(upsertBatch, redoFile, offset, false)
-
+	needToWaitForBackfillBuffer, err := shard.ApplyUpsertBatch(upsertBatch, redoLogFile, offset, skipBackFillRows)
 	shard.LiveStore.WriterLock.Unlock()
 
 	// return immediately if it does not need to wait for backfill buffer availability
-	if !needToWaitForBackfillBuffer {
+	if recovery || !needToWaitForBackfillBuffer {
 		return err
 	}
 
 	// otherwise: block until backfill buffer becomes available again
 	shard.LiveStore.BackfillManager.WaitForBackfillBufferAvailability()
-
-	return nil
+	return err
 }
 
 // ApplyUpsertBatch applies the upsert batch to the memstore shard.
 // Returns true if caller needs to wait for availability of backfill buffer
-func (shard *TableShard) ApplyUpsertBatch(upsertBatch *UpsertBatch, redoLogFile int64, offset uint32, skipBackfillRows bool) (bool, error) {
+func (shard *TableShard) ApplyUpsertBatch(upsertBatch *common.UpsertBatch, redoLogFile int64, offset uint32, skipBackfillRows bool) (bool, error) {
 	shard.Schema.RLock()
 	valueTypeByColumn := shard.Schema.ValueTypeByColumn
 	columnDeletions := shard.Schema.GetColumnDeletions()
@@ -121,7 +137,7 @@ func (shard *TableShard) ApplyUpsertBatch(upsertBatch *UpsertBatch, redoLogFile 
 	return shard.postUpsertBatchApplication(upsertBatch, backfillUpsertBatch, redoLogFile, offset, numMutations), nil
 }
 
-func (shard *TableShard) postUpsertBatchApplication(upsertBatch, backfillUpsertBatch *UpsertBatch, redoLogFile int64,
+func (shard *TableShard) postUpsertBatchApplication(upsertBatch, backfillUpsertBatch *common.UpsertBatch, redoLogFile int64,
 	offset uint32, numMutations int) bool {
 	if shard.Schema.Schema.IsFactTable {
 		// add records to backfill queue if any.
@@ -151,8 +167,8 @@ type recordInfo struct {
 // Insert primary keys and return the records for update, insert grouped by batch.
 // eventTimeColumnIndex will be used to extract the event time value per row if it >= 0.
 func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeColumnIndex int, redoLogFile int64,
-	upsertBatch *UpsertBatch, skipBackfillRows bool) (
-	map[int32][]recordInfo, map[int32][]recordInfo, *UpsertBatch, error) {
+	upsertBatch *common.UpsertBatch, skipBackfillRows bool) (
+	map[int32][]recordInfo, map[int32][]recordInfo, *common.UpsertBatch, error) {
 	// Get primary key column indices and calculate the primary key width.
 	primaryKeyBytes := shard.Schema.PrimaryKeyBytes
 	primaryKeyCols, err := upsertBatch.GetPrimaryKeyCols(primaryKeyColumns)
@@ -341,7 +357,7 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 
 // Read rows from a batch group and write to memStore. Batch id = 0 is for records to be inserted.
 func (shard *TableShard) writeBatchRecords(columnDeletions []bool,
-	upsertBatch *UpsertBatch, batchID int32, records []recordInfo, forUpdate bool) error {
+	upsertBatch *common.UpsertBatch, batchID int32, records []recordInfo, forUpdate bool) error {
 	var batch *LiveBatch
 	if forUpdate {
 		// We need to lock the batch for update to achieve row level consistency.
@@ -377,8 +393,8 @@ func (shard *TableShard) writeBatchRecords(columnDeletions []bool,
 			continue
 		}
 
-		columnUpdateMode := upsertBatch.columns[col].columnUpdateMode
-		columnMode := upsertBatch.columns[col].columnMode
+		columnUpdateMode := upsertBatch.GetColumnUpdateMode(col)
+		columnMode := upsertBatch.GetColumMode(col)
 
 		// we will skip processing this column if
 		// 1. columnMode is AllValuesDefault
@@ -387,12 +403,12 @@ func (shard *TableShard) writeBatchRecords(columnDeletions []bool,
 			continue
 		}
 
-		if col >= len(upsertBatch.columns) {
-			return utils.StackError(nil, "Column index %d out of range %d", col, upsertBatch.columns)
+		if col >= upsertBatch.GetColumnLen() {
+			return utils.StackError(nil, "Column index %d out of range %d", col, upsertBatch.GetColumnLen())
 		}
 
 		vectorParty := batch.GetOrCreateVectorParty(columnID, true)
-		dataType := upsertBatch.columns[col].dataType
+		dataType, _ := upsertBatch.GetColumnType(col)
 		cmpFunc := common.GetCompareFunc(dataType)
 
 		// check whether the update mode is valid based on data type.
@@ -424,20 +440,20 @@ func (shard *TableShard) writeBatchRecords(columnDeletions []bool,
 			// 3. Other types
 			// Via doing this, we save lots of stack space to storing all related fields for different cases.
 			if dataType == common.Bool {
-				val, valid := upsertBatch.columns[col].ReadBool(recordInfo.row)
+				val, valid, _ := upsertBatch.GetBool(recordInfo.row, col)
 				if !valid && !forceWrite {
 					continue
 				}
 				vectorParty.SetBool(recordInfo.index, val, valid)
 			} else if common.IsGoType(dataType) {
-				val := upsertBatch.columns[col].ReadGoValue(recordInfo.row)
+				val := upsertBatch.ReadGoValue(recordInfo.row, col)
 				valid := val != nil
 				if !valid && !forceWrite {
 					continue
 				}
 				vectorParty.SetGoValue(recordInfo.index, val, valid)
 			} else {
-				val, valid := upsertBatch.columns[col].ReadValue(recordInfo.row)
+				val, valid, _ := upsertBatch.GetValue(recordInfo.row, col)
 				if !valid && !forceWrite {
 					continue
 				}

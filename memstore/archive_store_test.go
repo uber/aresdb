@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			Shard: &TableShard{
 				diskStore: ds,
 				ShardID:   shardID,
-				Schema: &TableSchema{
+				Schema: &memCom.TableSchema{
 					Schema: metaCom.Table{
 						Name: table,
 					},
@@ -96,7 +96,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			Shard: &TableShard{
 				diskStore: ds,
 				ShardID:   shardID,
-				Schema: &TableSchema{
+				Schema: &memCom.TableSchema{
 					Schema: metaCom.Table{
 						Name: table,
 					},
@@ -146,7 +146,7 @@ var _ = ginkgo.Describe("archive store", func() {
 	})
 
 	ginkgo.It("BuildIndex should work", func() {
-		tableSchema := &TableSchema{
+		tableSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name:                 "test",
 				IsFactTable:          true,
@@ -178,22 +178,22 @@ var _ = ginkgo.Describe("archive store", func() {
 		row0, err := hex.DecodeString("0000")
 		recordID, existing := pk.Find(row0)
 		Ω(existing).Should(BeTrue())
-		Ω(recordID).Should(Equal(RecordID{Index: 0}))
+		Ω(recordID).Should(Equal(memCom.RecordID{Index: 0}))
 		row1, _ := hex.DecodeString("0001")
 		recordID, existing = pk.Find(row1)
 		Ω(existing).Should(BeTrue())
-		Ω(recordID).Should(Equal(RecordID{Index: 1}))
+		Ω(recordID).Should(Equal(memCom.RecordID{Index: 1}))
 		row2, _ := hex.DecodeString("0102")
 		recordID, existing = pk.Find(row2)
 		Ω(existing).Should(BeTrue())
-		Ω(recordID).Should(Equal(RecordID{Index: 2}))
+		Ω(recordID).Should(Equal(memCom.RecordID{Index: 2}))
 		notExistingRow, _ := hex.DecodeString("0004")
 		recordID, existing = pk.Find(notExistingRow)
 		Ω(existing).Should(BeFalse())
 	})
 
 	ginkgo.It("CopyOnWrite should work", func() {
-		tableSchema := &TableSchema{
+		tableSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name:                 "test",
 				IsFactTable:          true,
@@ -244,7 +244,7 @@ var _ = ginkgo.Describe("archive store", func() {
 	})
 
 	ginkgo.It("UnpinVectorParties should work", func() {
-		tableSchema := &TableSchema{
+		tableSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name:                 "test",
 				IsFactTable:          true,

@@ -12,14 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package common
 
 import (
 	"encoding/json"
 	"unsafe"
 
-	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
+)
+
+const (
+	BucketSize = 8
+	// log2(numHashes)
+	log2NumHashes = 2
+	// number of hash functions
+	NumHashes = 1 << log2NumHashes
+
+	RecordIDBytes = int(unsafe.Sizeof(RecordID{}))
 )
 
 // RecordID represents a record location with BatchID as the inflated vector id
@@ -36,7 +45,7 @@ type Key []byte
 type PrimaryKeyData struct {
 	Data       unsafe.Pointer
 	NumBytes   int
-	Seeds      [numHashes]uint32
+	Seeds      [NumHashes]uint32
 	KeyBytes   int
 	NumBuckets int
 }
@@ -70,20 +79,6 @@ type PrimaryKey interface {
 	AllocatedBytes() uint
 }
 
-const (
-	recordIDBytes = int(unsafe.Sizeof(RecordID{}))
-)
-
-// NewPrimaryKey create a primary key data structure
-// params:
-//   1. keyBytes, number of bytes of key
-//   2. hasEventTime determine whether primary key should record event time for expiration
-//   3. initNumBuckets determines the starting number of buckets, setting to 0 to use default
-func NewPrimaryKey(keyBytes int, hasEventTime bool, initNumBuckets int,
-	hostMemoryManager common.HostMemoryManager) PrimaryKey {
-	return newCuckooIndex(keyBytes, hasEventTime, initNumBuckets, hostMemoryManager)
-}
-
 // MarshalPrimaryKey marshals a PrimaryKey into json. We cannot define MarshalJson for PrimaryKey
 // since pointer cannot be a receiver.
 func MarshalPrimaryKey(pk PrimaryKey) ([]byte, error) {
@@ -99,7 +94,7 @@ func MarshalPrimaryKey(pk PrimaryKey) ([]byte, error) {
 }
 
 // GetPrimaryKeyBytes returns primary key bytes for a given row.
-func GetPrimaryKeyBytes(primaryKeyValues []common.DataValue, keyLength int) ([]byte, error) {
+func GetPrimaryKeyBytes(primaryKeyValues []DataValue, keyLength int) ([]byte, error) {
 	key := make([]byte, 0, keyLength)
 	for _, value := range primaryKeyValues {
 		if !value.Valid {
@@ -113,7 +108,7 @@ func GetPrimaryKeyBytes(primaryKeyValues []common.DataValue, keyLength int) ([]b
 				key = append(key, byte(0))
 			}
 		} else {
-			for i := 0; i < common.DataTypeBits(value.DataType)/8; i++ {
+			for i := 0; i < DataTypeBits(value.DataType)/8; i++ {
 				key = append(key, *(*byte)(utils.MemAccess(value.OtherVal, i)))
 			}
 		}

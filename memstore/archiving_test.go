@@ -24,8 +24,10 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -47,12 +49,14 @@ var _ = ginkgo.Describe("archiving", func() {
 
 	m = getFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
-	shard := NewTableShard(&TableSchema{
+	shard := NewTableShard(&memCom.TableSchema{
 		Schema: metaCom.Table{
 			Name: table,
 			Config: metaCom.TableConfig{
 				ArchivingDelayMinutes:    500,
 				ArchivingIntervalMinutes: 300,
+				RedoLogRotationInterval:  10800,
+				MaxRedoLogFileSize:       1 << 30,
 			},
 			IsFactTable:          true,
 			ArchivingSortColumns: []int{1, 2},
@@ -64,7 +68,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		},
 		ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 		DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-	}, nil, nil, hostMemoryManager, shardID)
+	}, nil, nil, hostMemoryManager, shardID, m.redologManagerMaster)
 
 	shard.ArchiveStore = &ArchiveStore{CurrentVersion: &ArchiveStoreVersion{
 		ArchivingCutoff: 0,
@@ -93,7 +97,7 @@ var _ = ginkgo.Describe("archiving", func() {
 			Batch:   *tmpBatch,
 		}
 		vs = LiveStore{
-			LastReadRecord: RecordID{-101, 3},
+			LastReadRecord: memCom.RecordID{BatchID: -101, Index: 3},
 			Batches: map[int32]*LiveBatch{
 				-110: {
 					Batch:     *batch110,
@@ -116,6 +120,8 @@ var _ = ginkgo.Describe("archiving", func() {
 			HostMemoryManager: hostMemoryManager,
 		}
 
+		redoLogManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, m.diskStore, m.metaStore)
+
 		shardMap[shardID].diskStore = m.diskStore
 		shardMap[shardID].metaStore = m.metaStore
 		shardMap[shardID].LiveStore = &vs
@@ -123,9 +129,9 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardMap[shardID].ArchiveStore.CurrentVersion.shard = shardMap[shardID]
 		shardMap[shardID].ArchiveStore.CurrentVersion.Batches[0] = archiveBatch0
 		// Map from max event time to file creation time.
-		shardMap[shardID].LiveStore.RedoLogManager = NewFileRedoLogManager(10800, 1<<30, m.diskStore, table, shardID)
-		shardMap[shardID].LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile = make(map[int64]uint32)
-		shardMap[shardID].LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile[1] = 1
+		shardMap[shardID].LiveStore.RedoLogManager, err = redoLogManagerMaster.NewRedologManager(table, shardID, &shard.Schema.Schema.Config)
+		shardMap[shardID].LiveStore.RedoLogManager.UpdateMaxEventTime(1, 1)
+
 		// make purge to pass
 		shardMap[shardID].LiveStore.BackfillManager = NewBackfillManager(table, shardID, metaCom.TableConfig{
 			BackfillMaxBufferSize:    1 << 32,
@@ -165,14 +171,14 @@ var _ = ginkgo.Describe("archiving", func() {
 			[]int{1, 2},
 		))
 		Ω(patchByDay[0].recordIDs).Should(Equal(
-			[]RecordID{
-				{0, 1},
-				{0, 2},
-				{0, 3},
-				{0, 4},
-				{1, 0},
-				{1, 1},
-				{1, 2},
+			[]memCom.RecordID{
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 0, Index: 3},
+				{BatchID: 0, Index: 4},
+				{BatchID: 1, Index: 0},
+				{BatchID: 1, Index: 1},
+				{BatchID: 1, Index: 2},
 			},
 		))
 		scheduler.RLock()
@@ -192,14 +198,14 @@ var _ = ginkgo.Describe("archiving", func() {
 		patchByDay := ss.createArchivingPatches(cutoff, oldCutoff, []int{1, 2}, jobManager.reportArchiveJobDetail, key, table, shardID)
 		sort.Sort(patchByDay[0])
 		Ω(patchByDay[0].recordIDs).Should(Equal(
-			[]RecordID{
-				{0, 3}, // null, 1.2
-				{1, 0}, // false, null
-				{0, 1}, // false, 1.0
-				{1, 2}, // false, 1.2
-				{0, 4}, // false, 1.3
-				{0, 2}, // true, null
-				{1, 1}, // true, 1.1
+			[]memCom.RecordID{
+				{BatchID: 0, Index: 3}, // null, 1.2
+				{BatchID: 1, Index: 0}, // false, null
+				{BatchID: 0, Index: 1}, // false, 1.0
+				{BatchID: 1, Index: 2}, // false, 1.2
+				{BatchID: 0, Index: 4}, // false, 1.3
+				{BatchID: 0, Index: 2}, // true, null
+				{BatchID: 1, Index: 1}, // true, 1.1
 			},
 		))
 		Ω(patchByDay[0].sortColumns).Should(Equal(
@@ -228,7 +234,8 @@ var _ = ginkgo.Describe("archiving", func() {
 		(m.diskStore).(*diskMocks.DiskStore).On(
 			"OpenVectorPartyFileForWrite", table, mock.Anything, shardID, day, mock.Anything, mock.Anything).Return(writer, nil)
 
-		tableShard.LiveStore.RedoLogManager.(*fileRedologManager).CurrentFileCreationTime = 2
+		redologManager := tableShard.LiveStore.RedoLogManager.(*redolog.FileRedoLogManager)
+		redologManager.CurrentFileCreationTime = 2
 
 		timeIncrementer := &utils.TimeIncrementer{IncBySecond: 1}
 		utils.SetClockImplementation(timeIncrementer.Now)
@@ -275,7 +282,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		}
 
 		// MaxEventTimePerFile should be purged.
-		Ω(tableShard.LiveStore.RedoLogManager.(*fileRedologManager).MaxEventTimePerFile).ShouldNot(HaveKey(int64(1)))
+		Ω(redologManager.MaxEventTimePerFile).ShouldNot(HaveKey(int64(1)))
 
 		// Archive again, there should be no crashes or errors.
 		Ω(m.Archive(table, shardID, cutoff+100, jobManager.reportArchiveJobDetail)).Should(BeNil())
@@ -317,28 +324,28 @@ var _ = ginkgo.Describe("archiving", func() {
 		})
 
 		Ω(patchByDay[0].recordIDs).Should(Or(Equal(
-			[]RecordID{
-				{0, 1},
-				{0, 2},
-				{1, 1},
-				{1, 2},
-				{1, 3},
-				{1, 4},
+			[]memCom.RecordID{
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 1, Index: 1},
+				{BatchID: 1, Index: 2},
+				{BatchID: 1, Index: 3},
+				{BatchID: 1, Index: 4},
 			}), Equal(
-			[]RecordID{
-				{0, 1},
-				{0, 2},
-				{0, 3},
-				{0, 4},
-				{1, 1},
-				{1, 2},
+			[]memCom.RecordID{
+				{BatchID: 0, Index: 1},
+				{BatchID: 0, Index: 2},
+				{BatchID: 0, Index: 3},
+				{BatchID: 0, Index: 4},
+				{BatchID: 1, Index: 1},
+				{BatchID: 1, Index: 2},
 			}),
 		))
 	})
 
 	ginkgo.It("purge live batch with missing event time", func() {
 		liveStore := &LiveStore{
-			tableSchema: &TableSchema{
+			tableSchema: &memCom.TableSchema{
 				Schema: metaCom.Table{
 					Config: metaCom.TableConfig{
 						AllowMissingEventTime: true,

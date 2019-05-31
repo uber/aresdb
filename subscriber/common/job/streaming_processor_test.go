@@ -115,6 +115,7 @@ var _ = Describe("streaming_processor", func() {
 			Value: []byte(`{"project": "ares-subscriber"}`),
 			Key:   []byte("key"),
 		},
+		Consumer: nil,
 		ClusterName: "kafka-cluster1",
 	}
 
@@ -128,6 +129,7 @@ var _ = Describe("streaming_processor", func() {
 			Value: []byte(`{project: ares-subscriber}`),
 			Key:   []byte("key"),
 		},
+		Consumer: nil,
 		ClusterName: "kafka-cluster1",
 	}
 
