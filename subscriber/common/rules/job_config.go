@@ -21,9 +21,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/controller/models"
+
 	"github.com/getlantern/deepcopy"
 	memCom "github.com/uber/aresdb/memstore/common"
-	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -56,18 +58,11 @@ type JobConfigs map[string]JobAresConfig
 // JobAresConfig contains configuration and information for each Ares cluster and job configuration.
 type JobAresConfig map[string]*JobConfig
 
-// JobConfig contains configuration and information related to the job
+// JobConfig wraps job config controller
 type JobConfig struct {
-	// Name is job name
-	Name string `json:"job" yaml:"job"`
-	// Version is jobConfig version
-	Version int `json:"version" yaml:"version"`
-	// StreamingConfig contains kafka consumer configuration and incoming message schema definition
-	StreamingConfig StreamingConfig `json:"streamConfig" yaml:"streamConfig"`
-	// AresTableConfig contains destination ares table schema
-	AresTableConfig AresTableConfig `json:"aresTableConfig" yaml:"aresTableConfig"`
+	models.JobConfig
 	// NumShards is the number of shards defined in this aresCluster
-	NumShards uint32
+	NumShards uint32 `json:"numShards" yaml:"numShards"`
 
 	// maps from column name to columnID for convenience
 	columnDict      map[string]int
@@ -75,53 +70,6 @@ type JobConfig struct {
 	transformations map[string]*TransformationConfig
 	primaryKeys     map[string]int
 	primaryKeyBytes int
-}
-
-// AresTableConfig contains ares table schema and cluster informaiton
-type AresTableConfig struct {
-	// Cluster is ares cluster name
-	Cluster string `json:"cluster" yaml:"cluster"`
-	// Table is ares table name
-	Table metaCom.Table `json:"schema" yaml:"schema"`
-	// UpdateMode defines column upsert mode
-	UpdateMode map[string]string `json:"updateMode"`
-}
-
-// StreamingConfig defines job runtime configuration used by streaming processor
-type StreamingConfig struct {
-	KafkaBroker           string               `json:"kafkaBroker" yaml:"kafkaBroker"`
-	KafkaClusterName      string               `json:"kafkaClusterName" yaml:"kafkaClusterName"`
-	KafkaClusterFile      string               `json:"kafkaClusterFile" yaml:"kafkaClusterFile"`
-	KafkaVersion          string               `json:"kafkaVersion" yaml:"kafkaVersion"`
-	ChannelBufferSize     uint                 `json:"channelBufferSize" yaml:"channelBufferSize" default:"256"`
-	MaxPollIntervalMs     int                  `json:"maxPollIntervalMs" yaml:"maxPollIntervalMs" default:"300000"`
-	SessionTimeoutNs      int                  `json:"sessionTimeoutNs" yaml:"sessionTimeoutNs" default:"10000"`
-	Topic                 string               `json:"topic" yaml:"topic"`
-	TopicType             string               `json:"topicType" yaml:"topicType"`
-	LatestOffset          bool                 `json:"latestOffset" yaml:"latestOffset"`
-	ErrorThreshold        int                  `json:"errorThreshold" yaml:"errorThreshold"`
-	StatusCheckInterval   int                  `json:"statusCheckInterval" yam:"statusCheckInterval"`
-	AutoRecoveryThreshold int                  `json:"autoRecoveryThreshold" yaml:"autoRecoveryThreshold"`
-	ProcessorCount        int                  `json:"processorCount" yaml:"processorCount"`
-	BatchSize             int                  `json:"batchSize" yaml:"batchSize"`
-	MaxBatchDelayMS       int                  `json:"maxBatchDelayMS" yaml:"maxBatchDelayMS"`
-	MegaBytePerSec        int                  `json:"megaBytePerSec" yaml:"megaBytePerSec"`
-	RestartOnFailure      bool                 `json:"restartOnFailure" yaml:"restartOnFailure"`
-	RestartInterval       int                  `json:"restartInterval" yaml:"restartInterval"`
-	FailureHandler        FailureHandlerConfig `json:"failureHandler"`
-}
-
-// FailureHandlerConfig holds the configurations for FailureHandler
-type FailureHandlerConfig struct {
-	Type   string                    `json:"type" yaml:"type"`
-	Config RetryFailureHandlerConfig `json:"config" yaml:"config"`
-}
-
-// RetryFailureHandlerConfig holds the configurations for RetryFailureHandler
-type RetryFailureHandlerConfig struct {
-	InitRetryIntervalInSeconds int     `json:"initRetryIntervalInSeconds" yaml:"initRetryIntervalInSeconds"`
-	Multiplier                 float32 `json:"multiplier" yaml:"multiplier"`
-	MaxRetryMinutes            int     `json:"maxRetryMinutes" yaml:"maxRetryMinutes"`
 }
 
 // DestinationConfig defines the configuration needed to save data in ares
@@ -167,6 +115,35 @@ func NewJobConfigs(params Params) (Result, error) {
 		JobConfigs: jobConfigs,
 	}, err
 
+}
+
+// NewAssignmentFromController parse controller assignment and create Assignment rule
+func NewAssignmentFromController(from *models.IngestionAssignment) (*Assignment, error) {
+	assignment := &Assignment{
+		Subscriber:   from.Subscriber,
+		AresClusters: make(map[string]config.SinkConfig),
+	}
+	for _, job := range from.Jobs {
+		jobConfig := &JobConfig{
+			JobConfig: job,
+		}
+		err := jobConfig.PopulateAresTableConfig()
+		if err != nil {
+			return nil, err
+		}
+		assignment.Jobs = append(assignment.Jobs, jobConfig)
+	}
+
+	for instanceName, instance := range from.Instances {
+		sinkConfig := config.SinkConfig{
+			AresDBConnectorConfig: client.ConnectorConfig{
+				Address: instance.Address,
+			},
+		}
+		assignment.AresClusters[instanceName] = sinkConfig
+	}
+
+	return assignment, nil
 }
 
 // GetDestinations returns a job's destination definition

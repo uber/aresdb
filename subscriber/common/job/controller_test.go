@@ -16,6 +16,12 @@ package job
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"regexp"
+	"strings"
+
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/client/etcd"
@@ -32,11 +38,6 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"regexp"
-	"strings"
 )
 
 var _ = Describe("controller", func() {
@@ -78,7 +79,7 @@ var _ = Describe("controller", func() {
 	}
 
 	testTableNames := []string{"a"}
-	re := regexp.MustCompile("/schema/tables/a/columns/(.+)/enum-cases")
+	re := regexp.MustCompile("/schema/job1/tables/a/columns/(.+)/enum-cases")
 	testTables := map[string]metaCom.Table{
 		"a": {
 			Name: "a",
@@ -195,9 +196,6 @@ var _ = Describe("controller", func() {
 			b, _ := json.Marshal(tables)
 			w.Write(b)
 		})
-		testRouter.HandleFunc("/schema/dev01/tables", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(`"bad data`))
-		})
 		testRouter.HandleFunc("/schema/dev01/hash", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("12345"))
 		})
@@ -208,10 +206,19 @@ var _ = Describe("controller", func() {
 			w.Write([]byte(`
 {  
    "subscriber":"0",
+   "instances":{
+      "dev-ares02":{
+         "sinkMode":"aresDB",
+         "aresDB":{
+           
+         }
+      }
+   },
    "jobs":[  
       {  
          "job":"job1",
          "version":1,
+         "numShards":8,
          "aresTableConfig":{  
             "name":"job1",
             "cluster":"",
@@ -275,7 +282,6 @@ var _ = Describe("controller", func() {
 			ConsumerInitFunc: kafka.NewKafkaConsumer,
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
-
 		controller := NewController(params)
 		Ω(controller).ShouldNot(BeNil())
 		Ω(controller.Drivers["job1"]).ShouldNot(BeNil())
@@ -285,6 +291,7 @@ var _ = Describe("controller", func() {
 		Ω(controller.Drivers["job1"]["dev-ares01"]).Should(BeNil())
 		ok := controller.addDriver(params.JobConfigs["job1"]["dev-ares01"], "dev-ares01",
 			controller.Drivers["job1"], true)
+		controller.serviceConfig.ActiveAresClusters["dev-ares01"] = sinkConfig
 		Ω(ok).Should(Equal(true))
 
 		controller.jobNS = "dev01"
@@ -324,6 +331,7 @@ var _ = Describe("controller", func() {
 				},
 			},
 		}
+		config.ActiveJobNameSpace = "test"
 
 		etcdServices, err := connectEtcdServices(params)
 		Ω(etcdServices).ShouldNot(BeNil())

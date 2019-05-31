@@ -39,6 +39,6 @@ var _ = ginkgo.Describe("reflection", func() {
 		Ω(GetFuncName(testFunc)).Should(Equal("testFunc"))
 		Ω(GetFuncName(testFunc1)).Should(Equal("testFunc1"))
 		t := &structT{}
-		Ω(GetFuncName(t.test)).Should(Equal("test-fm"))
+		Ω(GetFuncName(t.test)).Should(HaveSuffix("test-fm"))
 	})
 })

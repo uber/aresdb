@@ -85,6 +85,15 @@ if (QUERY_MODE STREQUAL "DEVICE" AND USE_RMM)
     set_target_properties(rmm PROPERTIES IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/librmm.so)
     add_dependencies(rmm project_rmm)
 endif ()
+######################################################
+# CUDF
+# Need cpp/src/hash/concurrent_unordered_map.cuh only
+######################################################
+set(CUDF_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf/cpp/src)
+set(CUDF_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf/cpp/include)
+if (QUERY_MODE STREQUAL "DEVICE")
+    include_directories(${CUDF_INCLUDE_DIR} ${CUDF_SRC_DIR})
+endif ()
 ################################
 # Mem
 ################################
@@ -145,7 +154,7 @@ add_library(algorithm SHARED
 
 target_link_libraries(algorithm mem)
 ################################
-# rdkafka 
+# rdkafka
 ################################
 include(rdkafka.cmake)
 ################################
@@ -198,32 +207,26 @@ execute_process(
 )
 
 add_custom_target(lint-all
+        DEPENDS rdkafka::rdkafka mem
         COMMAND ./scripts/clang-lint.sh ${ALL_C_SRC}
         COMMAND ./scripts/golang-lint.sh ${ALL_GO_SRC}
         VERBATIM)
 
 add_custom_target(lint
+        DEPENDS rdkafka::rdkafka mem
         COMMAND ./scripts/clang-lint.sh ${CHANGED_C_SRC}
         COMMAND ./scripts/golang-lint.sh ${CHANGED_GO_SRC}
         VERBATIM)
 
-add_custom_target(golang-dep DEPENDS vendor/glide.updated)
-add_custom_command(
-        OUTPUT vendor/glide.updated
-        COMMAND glide install && touch vendor/glide.updated
-        DEPENDS glide.lock glide.yaml
-        VERBATIM
-)
-
 add_custom_target(lib DEPENDS algorithm mem)
 
 string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
-add_custom_target(aresd DEPENDS golang-dep lib ${ALL_GO_SRC_LIST}
+add_custom_target(aresd DEPENDS lib ${ALL_GO_SRC_LIST}
         COMMAND go build -o bin/aresd ./cmd/aresd/main.go
         VERBATIM
         )
 
-add_custom_target(ares-subscriber DEPENDS golang-dep rdkafka::rdkafka ${ALL_GO_SRC_LIST}
+add_custom_target(ares-subscriber DEPENDS rdkafka::rdkafka ${ALL_GO_SRC_LIST}
         COMMAND go build -tags static -o bin/ares-subscriber ./cmd/subscriber/main.go
         VERBATIM
         )

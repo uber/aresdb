@@ -16,12 +16,13 @@ package sink
 
 import (
 	"fmt"
+	"strings"
+	"unsafe"
+
 	"github.com/uber/aresdb/client"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/utils"
-	"strings"
-	"unsafe"
 )
 
 // Sink is abstraction for interactions with downstream storage layer

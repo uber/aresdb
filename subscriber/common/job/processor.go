@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"fmt"
+
 	"github.com/uber/aresdb/subscriber/common/tools"
 )
 

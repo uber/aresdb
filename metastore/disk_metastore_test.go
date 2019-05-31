@@ -24,8 +24,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/testing"
-	"github.com/uber/aresdb/utils/mocks"
 	"github.com/uber/aresdb/utils"
+	"github.com/uber/aresdb/utils/mocks"
 )
 
 var _ = ginkgo.Describe("disk metastore", func() {
@@ -221,7 +221,6 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("MkdirAll", "base/b/shards/0", os.FileMode(0755)).Return(nil)
 	mockFileSystem.On("MkdirAll", "base/c/shards/0", os.FileMode(0755)).Return(nil)
 	mockFileSystem.On("MkdirAll", "base/d/shards/0", os.FileMode(0755)).Return(os.ErrPermission)
-
 
 	mockFileSystem.On("RemoveAll", "base/b").Return(nil)
 	mockFileSystem.On("Remove", "base/a/enums/column4").Return(nil)

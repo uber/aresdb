@@ -165,7 +165,7 @@ func (z *ZapLogger) With(args ...interface{}) Logger {
 }
 
 // NoopLogger is wrapper of noop logger
-type NoopLogger struct {}
+type NoopLogger struct{}
 
 // Debug is log at debug level
 func (z *NoopLogger) Debug(args ...interface{}) {}

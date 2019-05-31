@@ -23,17 +23,17 @@ import (
 	"sync"
 	"time"
 
+	"os"
+
 	"github.com/curator-go/curator"
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3x/instrument"
-	"github.com/uber/aresdb/gateway"
+	controllerCli "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
-	"github.com/uber/aresdb/utils"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"os"
 )
 
 // Module configures Drivers and Controller.
@@ -74,7 +74,7 @@ type Controller struct {
 
 	serviceConfig config.ServiceConfig
 	// aresControllerClient is aresDB controller client
-	aresControllerClient gateway.ControllerClient
+	aresControllerClient controllerCli.ControllerClient
 	// Drivers are all running jobs
 	Drivers Drivers
 	// jobNS is current active job namespace
@@ -107,17 +107,17 @@ type ZKNodeSubscriber struct {
 func NewController(params Params) *Controller {
 	params.ServiceConfig.Logger.Info("Creating Controller")
 
-	aresControllerClient := gateway.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
+	aresControllerClient := controllerCli.NewControllerHTTPClient(params.ServiceConfig.ControllerConfig.Address,
 		time.Duration(params.ServiceConfig.ControllerConfig.Timeout)*time.Second,
 		http.Header{
 			"RPC-Caller":  []string{os.Getenv("UDEPLOY_APP_ID")},
 			"RPC-Service": []string{params.ServiceConfig.ControllerConfig.ServiceName},
 		})
-	aresControllerClient.SetNamespace(config.ActiveAresNameSpace)
+	aresControllerClient.SetNamespace(config.ActiveJobNameSpace)
 
 	drivers, err := NewDrivers(params, aresControllerClient)
 	if err != nil {
-		panic(err)
+		params.ServiceConfig.Logger.Panic("Failed to NewDrivers", zap.Error(err))
 	}
 
 	if params.ServiceConfig.ControllerConfig.RefreshInterval <= 0 {
@@ -143,27 +143,29 @@ func NewController(params Params) *Controller {
 		params.ServiceConfig.Logger.Info("aresDB Controller is enabled")
 
 		if params.ServiceConfig.HeartbeatConfig.Enabled {
+			params.ServiceConfig.Logger.Info("heartbeat config",
+				zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))
 			controller.etcdServices, err = connectEtcdServices(params)
 			if err != nil {
-				panic(utils.StackError(err, "Failed to createEtcdServices"))
+				params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
 			}
 			if registerHeartBeatService(params, controller.etcdServices) != nil {
-				panic(utils.StackError(err, "Failed to registerHeartBeatService"))
+				params.ServiceConfig.Logger.Panic("Failed to registerHeartBeatService", zap.Error(err))
 			}
-		}
+		} else {
+			controller.zkClient = createZKClient(params)
+			err = controller.zkClient.Start()
+			if err != nil {
+				params.ServiceConfig.Logger.Panic("Failed to start zkClient", zap.Error(err))
+			}
+			params.ServiceConfig.Logger.Info("zkClient was started")
 
-		controller.zkClient = createZKClient(params)
-		err = controller.zkClient.Start()
-		if err != nil {
-			panic(utils.StackError(err, "Failed to start zkClient"))
+			err = controller.RegisterOnZK()
+			if err != nil {
+				params.ServiceConfig.Logger.Panic("Failed to register subscriber", zap.Error(err))
+			}
+			params.ServiceConfig.Logger.Info("Registered subscriber in zk")
 		}
-		params.ServiceConfig.Logger.Info("zkClient was started")
-
-		err = controller.RegisterOnZK()
-		if err != nil {
-			panic(utils.StackError(err, "Failed to register subscriber"))
-		}
-		params.ServiceConfig.Logger.Info("Registered subscriber in zk")
 
 		go controller.SyncUpJobConfigs()
 	}
@@ -179,16 +181,21 @@ func connectEtcdServices(params Params) (services.Services, error) {
 		SetMetricsScope(params.ServiceConfig.Scope)
 
 	// etcd key format: prefix/${env}/namespace/service/instanceId
-	params.ServiceConfig.EtcdConfig.Service = fmt.Sprintf("%s/%s",
-		config.ActiveAresNameSpace, params.ServiceConfig.EtcdConfig.Service)
+	params.ServiceConfig.EtcdConfig.Env = fmt.Sprintf("%s/%s",
+		params.ServiceConfig.EtcdConfig.Env, config.ActiveJobNameSpace)
+
 	// create a config service client to access to the etcd cluster services.
 	csClient, err := params.ServiceConfig.EtcdConfig.NewClient(iopts)
 	if err != nil {
+		params.ServiceConfig.Logger.Error("Failed to NewClient for etcd",
+			zap.Error(err))
 		return nil, err
 	}
 
 	servicesClient, err := csClient.Services(nil)
 	if err != nil {
+		params.ServiceConfig.Logger.Error("Failed to create services for etcd",
+			zap.Error(err))
 		return nil, err
 	}
 
@@ -201,20 +208,35 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		SetZone(params.ServiceConfig.EtcdConfig.Zone).
 		SetName(params.ServiceConfig.EtcdConfig.Service)
 
-	pInstance := placement.NewInstance().SetID(params.ServiceConfig.Environment.InstanceID)
+	err := servicesClient.SetMetadata(sid, services.NewMetadata().
+		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
+		SetLivenessInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Timeout)*time.Second))
+	if err != nil {
+		params.ServiceConfig.Logger.Error("Failed to config heartbeart",
+			zap.Error(err))
+		return err
+	}
+
+	pInstance := placement.NewInstance().
+		SetID(params.ServiceConfig.Environment.InstanceID)
 
 	ad := services.NewAdvertisement().
 		SetServiceID(sid).
 		SetPlacementInstance(pInstance)
 
-	err := servicesClient.SetMetadata(sid, services.NewMetadata().
-		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
-		SetLivenessInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Timeout)*time.Second))
-	if err != nil {
-		return err
-	}
+	params.ServiceConfig.Logger.Info("service, placement, and ad info",
+		zap.Any("serviceID", sid),
+		zap.Any("placement", pInstance),
+		zap.Any("ad", ad))
 
 	err = servicesClient.Advertise(ad)
+	if err != nil {
+		params.ServiceConfig.Logger.Error("Failed to advertise heartbeat service",
+			zap.Error(err))
+	} else {
+		params.ServiceConfig.Logger.Info("advertised heartbeat")
+	}
+
 	return err
 }
 
@@ -274,7 +296,7 @@ func (c *Controller) SyncUpJobConfigs() {
 	}
 
 	// Get assignment from aresDB controller since hash is changed
-	assignment, err := c.aresControllerClient.GetAssignment(c.jobNS, c.serviceConfig.Environment.InstanceID)
+	assigned, err := c.aresControllerClient.GetAssignment(c.jobNS, c.serviceConfig.Environment.InstanceID)
 	if err != nil {
 		c.serviceConfig.Logger.Error("Failed to get assignment from aresDB controller",
 			zap.String("jobNamespace", c.jobNS),
@@ -283,9 +305,24 @@ func (c *Controller) SyncUpJobConfigs() {
 		c.serviceConfig.Scope.Counter("syncUp.failed").Inc(1)
 		return
 	}
+
+	assignment, err := rules.NewAssignmentFromController(assigned)
+	if err != nil {
+		c.serviceConfig.Logger.Error("Failed to populate assignment from controller assignment",
+			zap.String("jobNamespace", c.jobNS),
+			zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address),
+			zap.Error(err))
+		c.serviceConfig.Scope.Counter("syncUp.failed").Inc(1)
+		return
+	}
+
 	c.serviceConfig.Logger.Info("Got assignment from aresDB controller",
 		zap.String("jobNamespace", c.jobNS),
-		zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address))
+		zap.String("aresDB Controller", c.serviceConfig.ControllerConfig.Address),
+		zap.String("activeAresNameSpace", config.ActiveAresNameSpace),
+		zap.Any("aresClusterNSConfig", c.serviceConfig.AresNSConfig),
+		zap.Any("activeAresClusters", c.serviceConfig.ActiveAresClusters),
+		zap.Any("assignement", assignment))
 
 	newJobs := make(map[string]*rules.JobConfig)
 	// Add or Update jobs
@@ -296,13 +333,22 @@ func (c *Controller) SyncUpJobConfigs() {
 			for aresCluster, driver := range aresClusterDrivers {
 				if _, ok := assignment.AresClusters[aresCluster]; !ok {
 					// case1.1: delete the driver because aresCluster is deleted
-					c.deleteDriver(driver, aresCluster, aresClusterDrivers)
+					activeAresCluster, exist := c.serviceConfig.ActiveAresClusters[aresCluster]
+					if exist && activeAresCluster.GetSinkMode() != config.Sink_Kafka {
+						c.deleteDriver(driver, aresCluster, aresClusterDrivers)
+						c.serviceConfig.Logger.Info("deleted driver due to the removed aresCluster",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
+					}
 					continue
 				}
 				if driver.jobConfig.Version != jobConfig.Version {
 					// case1.2: restart the driver because jobConfig version is changed,
 					if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, true) {
 						updateHash = false
+						c.serviceConfig.Logger.Info("restarted driver due to version changes",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
 					}
 				}
 			}
@@ -312,23 +358,46 @@ func (c *Controller) SyncUpJobConfigs() {
 					c.serviceConfig.ActiveAresClusters[aresCluster] = aresClusterObj
 					if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
 						updateHash = false
+						c.serviceConfig.Logger.Info("added driver due to the new aresCluster",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
 					}
 				}
 			}
 		} else {
 			// case2: a new jobConfig
 			aresClusterDrivers := make(map[string]*Driver)
-			for aresCluster, aresClusterObj := range assignment.AresClusters {
-				// case2.1: add a new driver for each aresCluster
-				c.serviceConfig.ActiveAresClusters[aresCluster] = aresClusterObj
-				if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
-					updateHash = false
+			if len(assignment.AresClusters) != 0 {
+				for aresCluster, aresClusterObj := range assignment.AresClusters {
+					// case2.1: add a new driver for each aresCluster
+					c.serviceConfig.ActiveAresClusters[aresCluster] = aresClusterObj
+					if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
+						updateHash = false
+						c.serviceConfig.Logger.Info("added driver (aresDB sink) due to the new job",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
+					}
+				}
+			} else {
+				for aresCluster, aresClusterObj := range c.serviceConfig.ActiveAresClusters {
+					if aresClusterObj.GetSinkMode() == config.Sink_Kafka {
+						if !c.addDriver(jobConfig, aresCluster, aresClusterDrivers, false) {
+							updateHash = false
+							c.serviceConfig.Logger.Info("added driver (kafka sink) due to the new job",
+								zap.String("job", jobConfig.Name),
+								zap.String("aresCluster", aresCluster))
+						}
+					} else {
+						c.serviceConfig.Logger.Error("missing aresDB instance in assignment",
+							zap.String("job", jobConfig.Name),
+							zap.String("aresCluster", aresCluster))
+					}
 				}
 			}
 			c.Drivers[jobConfig.Name] = aresClusterDrivers
-			for aresCluster := range c.serviceConfig.ActiveAresClusters {
+			for aresCluster, aresClusterObj := range c.serviceConfig.ActiveAresClusters {
 				// case2.2: delete the aresCluster from ActiveAresClusters because it is deleted from assignment
-				if _, ok := assignment.AresClusters[aresCluster]; !ok {
+				if _, ok := assignment.AresClusters[aresCluster]; !ok && aresClusterObj.GetSinkMode() != config.Sink_Kafka {
 					delete(c.serviceConfig.ActiveAresClusters, aresCluster)
 				}
 			}

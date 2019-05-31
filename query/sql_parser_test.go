@@ -20,8 +20,6 @@ import (
 	"github.com/uber/aresdb/common"
 )
 
-
-
 var _ = ginkgo.Describe("SQL Parser", func() {
 
 	logger := &common.NoopLogger{}
@@ -518,8 +516,8 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 					Expr: "fare",
 				},
 			},
-			Measures:             []Measure{{Expr: "1"}},
-			Filters: []string{"city_id in (1,2,3)"},
+			Measures: []Measure{{Expr: "1"}},
+			Filters:  []string{"city_id in (1,2,3)"},
 		}
 
 		runTest(sqls, res, logger)

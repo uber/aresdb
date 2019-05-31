@@ -21,9 +21,9 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"net/http/httptest"
 	"time"
 	"unsafe"
-	"net/http/httptest"
 )
 
 var _ = ginkgo.Describe("AQL postprocessor", func() {
@@ -442,7 +442,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		Ω(*measureVal).Should(BeEquivalentTo(1.0))
 
 		// read a 4 bytes int32
-		measureVectorInt32 := [2]int32{1,2}
+		measureVectorInt32 := [2]int32{1, 2}
 		measureAST = &expr.NumberLiteral{
 			ExprType: expr.Signed,
 		}
@@ -451,7 +451,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		Ω(*measureVal).Should(BeEquivalentTo(1))
 
 		// read a 4 bytes uint32
-		measureVectorUint32 := [2]uint32{1,2}
+		measureVectorUint32 := [2]uint32{1, 2}
 		measureAST = &expr.NumberLiteral{
 			ExprType: expr.Unsigned,
 		}

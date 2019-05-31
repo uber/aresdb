@@ -19,6 +19,7 @@ import (
 	"unsafe"
 
 	"encoding/binary"
+	"encoding/json"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
@@ -26,7 +27,6 @@ import (
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"time"
-	"encoding/json"
 )
 
 const (

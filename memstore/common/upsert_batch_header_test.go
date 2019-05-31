@@ -73,7 +73,7 @@ var _ = ginkgo.Describe("upsert batch header tests", func() {
 		header := UpsertBatchHeader{
 			typeVector: []byte{0, 0, 0, 0},
 		}
-		for _, t := range([]DataType{Uint8, Uint16, Uint32, Int8, Int16, Int32, Int64, UUID, GeoPoint, GeoShape}) {
+		for _, t := range []DataType{Uint8, Uint16, Uint32, Int8, Int16, Int32, Int64, UUID, GeoPoint, GeoShape} {
 			err := header.WriteColumnType(t, 0)
 			Ω(err).Should(BeNil())
 			dataType, err := header.ReadColumnType(0)

@@ -888,8 +888,7 @@ var metricsDefs = map[MetricName]metricDefinition{
 	JobFailuresCount: {
 		name:       scopeNameJobFailuresCount,
 		metricType: Counter,
-		tags: map[string]string{
-		},
+		tags:       map[string]string{},
 	},
 }
 

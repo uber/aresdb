@@ -1,4 +1,17 @@
-package gateway
+//  Copyright (c) 2017-2018 Uber Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+package client
 
 import (
 	"encoding/json"
@@ -6,7 +19,7 @@ import (
 	"net/http/httptest"
 	"time"
 
-	mux "github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/metastore/common"
@@ -124,7 +137,7 @@ var _ = ginkgo.Describe("Controller", func() {
 		testRouter.HandleFunc("/schema/ns1/tables/test2", func(w http.ResponseWriter, r *http.Request) {
 			w.Write(tableBytes1)
 		})
-		testRouter.HandleFunc("/enum/ns1/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
+		testRouter.HandleFunc("/schema/ns1/tables/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodGet {
 				w.Write(enumCasesBytes)
 			} else if r.Method == http.MethodPost {
@@ -134,7 +147,7 @@ var _ = ginkgo.Describe("Controller", func() {
 		testRouter.HandleFunc("/schema/ns_baddata/tables/test1", func(w http.ResponseWriter, r *http.Request) {
 			w.Write(enumCasesBytes)
 		})
-		testRouter.HandleFunc("/enum/ns_baddata/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
+		testRouter.HandleFunc("/schema/ns_baddata/tables/test1/columns/col2/enum-cases", func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodGet {
 				w.Write(enumIDBytes)
 			} else if r.Method == http.MethodPost {

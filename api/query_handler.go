@@ -90,7 +90,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 	var qcs []*query.AQLQueryContext
 	var statusCode int
 
-	defer func () {
+	defer func() {
 		var errStr string
 		if err != nil {
 			errStr = err.Error()
