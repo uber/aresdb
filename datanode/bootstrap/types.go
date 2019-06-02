@@ -1,6 +1,8 @@
-package utils
+package bootstrap
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrDatanodeIsBootstrapping raised when trying to bootstrap a datanode that's being bootstrapped.
@@ -23,4 +25,22 @@ var (
 
 	// ErrBootstrapEnqueued raised when trying to bootstrap and bootstrap becomes enqueued.
 	ErrBootstrapEnqueued = errors.New("database bootstrapping enqueued bootstrap")
+)
+
+// TableShardsBootstrapStates stores a snapshot of the bootstrap state for all table shards for a given datanode.
+type TableShardsBootstrapState map[string]map[uint32]BootstrapState
+
+// ShardsBootstrapState stores a snapshot of the bootstrap state for all shards for a given datanode.
+type ShardsBootstrapState map[uint32]BootstrapState
+
+// BootstrapState is an enum representing the possible bootstrap states for a shard.
+type BootstrapState int
+
+const (
+	// BootstrapNotStarted indicates bootstrap has not been started yet.
+	BootstrapNotStarted BootstrapState = iota
+	// Bootstrapping indicates bootstrap process is in progress.
+	Bootstrapping
+	// Bootstrapped indicates a bootstrap process has completed.
+	Bootstrapped
 )
