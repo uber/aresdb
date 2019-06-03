@@ -58,10 +58,4 @@ type Options interface {
 
 	// InstrumentOptions returns the instrumentation options.
 	InstrumentOptions() utils.Options
-
-	// SetBootstrapProcessProvider sets the bootstrap process provider for the database.
-	SetBootstrapProcessProvider(value bootstrap.ProcessProvider) Options
-
-	// BootstrapProcessProvider returns the bootstrap process provider for the database.
-	BootstrapProcessProvider() bootstrap.ProcessProvider
 }

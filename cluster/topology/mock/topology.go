@@ -4,7 +4,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/m3db/m3/src/cluster/client"
 	"github.com/m3db/m3/src/cluster/services"
-	"github.com/m3db/m3/src/dbnode/sharding"
+	"github.com/uber/aresdb/cluster/sharding"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/utils"
 	"reflect"
