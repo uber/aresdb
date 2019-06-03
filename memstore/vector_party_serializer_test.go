@@ -36,7 +36,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	var writer io.WriteCloser
 	var reader io.ReadCloser
 	var buf *bytes.Buffer
-	m = getFactory().NewMockMemStore()
+	m := getFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
 
 	ginkgo.BeforeEach(func() {
@@ -220,7 +220,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	})
 
 	ginkgo.It("CheckVectorPartySerializable test", func() {
-		schema := NewTableSchema(&metaCom.Table{
+		schema := common.NewTableSchema(&metaCom.Table{
 			Name:                 "trips",
 			IsFactTable:          true,
 			PrimaryKeyColumns:    []int{1},
@@ -239,7 +239,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		diskStore := &mocks.DiskStore{}
 
 		shard := NewTableShard(schema, nil, diskStore,
-			NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32), 0)
+			NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32), 0, m.redologManagerMaster)
 		archiveSerializer := NewVectorPartyArchiveSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID, 0, 0, 0, 0)
 		snapshotSerializer := NewVectorPartySnapshotSerializer(shard, 0, 0, 0, 0, 0, 0)
 

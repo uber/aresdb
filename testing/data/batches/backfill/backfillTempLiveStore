@@ -1,7 +1,0 @@
-columns:
-    - backfill/backfillTempLiveStore0
-    - backfill/backfillTempLiveStore1
-    - backfill/backfillTempLiveStore2
-    - null
-    - backfill/backfillTempLiveStore4
-    - backfill/backfillTempLiveStore5

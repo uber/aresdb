@@ -1,8 +1,0 @@
-data_type: Uint8
-length: 3
-has_counts: false
-values:
-  - 0
-  - 1
-  - 2
-

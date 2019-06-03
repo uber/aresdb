@@ -14,9 +14,8 @@
 package etcd
 
 import (
+	"github.com/m3db/m3/src/cluster/kv/mem"
 	"testing"
-
-	testingUtils "github.com/uber/aresdb/testing"
 
 	"github.com/uber/aresdb/controller/mutators/common"
 
@@ -27,15 +26,8 @@ import (
 
 func TestNamespaceMutator(t *testing.T) {
 	t.Run("list namespaces should work", func(t *testing.T) {
-		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-
-		client := testingUtils.SetUpEtcdTestClient(t, port)
-		etcdStore, err := client.Txn()
-		assert.NoError(t, err)
-
-		_, err = etcdStore.Set(utils.NamespaceListKey(), &pb.EntityList{
+		etcdStore := mem.NewStore()
+		_, err := etcdStore.Set(utils.NamespaceListKey(), &pb.EntityList{
 			Entities: []*pb.EntityName{
 				{
 					Name: "ns1",
@@ -52,15 +44,9 @@ func TestNamespaceMutator(t *testing.T) {
 	})
 
 	t.Run("create namespace should work", func(t *testing.T) {
-		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
+		etcdStore := mem.NewStore()
 
-		client := testingUtils.SetUpEtcdTestClient(t, port)
-		etcdStore, err := client.Txn()
-		assert.NoError(t, err)
-
-		_, err = etcdStore.Set(utils.NamespaceListKey(), &pb.EntityList{
+		_, err := etcdStore.Set(utils.NamespaceListKey(), &pb.EntityList{
 			Entities: []*pb.EntityName{
 				{
 					Name: "ns1",

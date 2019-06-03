@@ -18,11 +18,13 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
 )
@@ -53,16 +55,17 @@ func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType
 	for i, dataType := range columnTypes {
 		mainSchema.Columns[i].Type = memCom.DataTypeName[dataType]
 	}
-	schema := NewTableSchema(&mainSchema)
+	schema := memCom.NewTableSchema(&mainSchema)
 
 	for i := range columnTypes {
 		schema.SetDefaultValue(i)
 	}
 
-	memStore := NewMemStore(metaStore, diskStore).(*memStoreImpl)
+	redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+	memStore := NewMemStore(metaStore, diskStore, redoManagerFactory).(*memStoreImpl)
 	// Create shards.
 	shards := map[int]*TableShard{
-		shardID: NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(memStore, 1<<32), shardID),
+		shardID: NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(memStore, 1<<32), shardID, redoManagerFactory),
 	}
 	memStore.TableShards[tableName] = shards
 	memStore.TableSchemas[tableName] = schema
@@ -100,7 +103,7 @@ func ReadShardBool(shard *TableShard, columnID int, primaryKey []byte) (bool, bo
 
 // Read the vector party and record index.
 func getVectorParty(shard *TableShard, columnID int, primaryKey []byte) (memCom.VectorParty, int) {
-	existing, record, err := shard.LiveStore.PrimaryKey.FindOrInsert(primaryKey, RecordID{}, uint32(utils.Now().Unix()/1000))
+	existing, record, err := shard.LiveStore.PrimaryKey.FindOrInsert(primaryKey, memCom.RecordID{}, uint32(utils.Now().Unix()/1000))
 	if err != nil || !existing {
 		return nil, 0
 	}

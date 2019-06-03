@@ -15,8 +15,6 @@ package etcd
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/uber/aresdb/controller/mutators/common"
 
 	"github.com/golang/protobuf/proto"
@@ -26,7 +24,7 @@ import (
 )
 
 func addEntity(entityList pb.EntityList, name string) (res pb.EntityList, incarnation int, exist bool) {
-	nowTs := utils.Now().UnixNano() / int64(time.Millisecond)
+	nowTs := utils.Now().UnixNano()
 	for _, entityName := range entityList.Entities {
 		if name == entityName.Name {
 			if !entityName.Tomstoned {
@@ -74,7 +72,7 @@ func readEntityList(etcdStore kv.TxnStore, key string) (entityList pb.EntityList
 }
 
 func deleteEntity(entityList pb.EntityList, name string) (pb.EntityList, bool) {
-	nowTs := utils.Now().UnixNano() / int64(time.Millisecond)
+	nowTs := utils.Now().UnixNano()
 	entityList, found := find(entityList, name, func(entity *pb.EntityName) {
 		entity.Tomstoned = true
 		entity.LastUpdatedAt = nowTs
@@ -87,7 +85,7 @@ func deleteEntity(entityList pb.EntityList, name string) (pb.EntityList, bool) {
 }
 
 func updateEntity(entityList pb.EntityList, name string) (pb.EntityList, bool) {
-	nowTs := utils.Now().UnixNano() / int64(time.Millisecond)
+	nowTs := utils.Now().UnixNano()
 	return find(entityList, name, func(entity *pb.EntityName) {
 		entity.LastUpdatedAt = nowTs
 	})

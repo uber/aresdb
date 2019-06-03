@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/metastore/mocks"
@@ -50,8 +50,8 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 		},
 		PrimaryKeyColumns: []int{0},
 	}
-	var testTableSchema = memstore.TableSchema{
-		EnumDicts: map[string]memstore.EnumDict{
+	var testTableSchema = memCom.TableSchema{
+		EnumDicts: map[string]memCom.EnumDict{
 			"testColumn": {
 				ReverseDict: []string{"a", "b", "c"},
 				Dict: map[string]int{
@@ -83,7 +83,7 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 	})
 
 	ginkgo.It("ListTables should work", func() {
-		testMemStore.On("GetSchemas").Return(map[string]*memstore.TableSchema{"testTable": nil})
+		testMemStore.On("GetSchemas").Return(map[string]*memCom.TableSchema{"testTable": nil})
 		testMetaStore.On("ListTables").Return([]string{"testTable"}, nil)
 		hostPort := testServer.Listener.Addr().String()
 		resp, err := http.Get(fmt.Sprintf("http://%s/schema/tables", hostPort))

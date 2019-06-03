@@ -14,9 +14,8 @@
 package etcd
 
 import (
+	"github.com/m3db/m3/src/cluster/kv/mem"
 	"testing"
-
-	testingUtils "github.com/uber/aresdb/testing"
 
 	"github.com/stretchr/testify/assert"
 	pb "github.com/uber/aresdb/controller/generated/proto"
@@ -85,13 +84,9 @@ func TestSchemaMutator(t *testing.T) {
 	}
 
 	t.Run("create, read, list, delete should work", func(t *testing.T) {
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
-		store, err := clusterClient.Txn()
-		assert.NoError(t, err)
+		store := mem.NewStore()
 
-		_, err = store.Set(utils.SchemaListKey("ns1"), &pb.EntityList{})
+		_, err := store.Set(utils.SchemaListKey("ns1"), &pb.EntityList{})
 		assert.NoError(t, err)
 
 		schemaMutator := tableSchemaMutator{
@@ -143,25 +138,16 @@ func TestSchemaMutator(t *testing.T) {
 	})
 
 	t.Run("reuse table should success", func(t *testing.T) {
-		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-
-		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
-		txnStore, err := clusterClient.Txn()
-		assert.NoError(t, err)
-
+		txnStore := mem.NewStore()
 		expectedTable := testTable
 		expectedTable.Config = defaultConfig
 
-		// test
-		// fail if table doesn't exist
 		schemaMutator := tableSchemaMutator{
 			txnStore: txnStore,
 			logger:   zap.NewExample().Sugar(),
 		}
 
-		_, err = txnStore.Set(utils.SchemaListKey("ns1"), &pb.EntityList{})
+		_, err := txnStore.Set(utils.SchemaListKey("ns1"), &pb.EntityList{})
 		assert.NoError(t, err)
 
 		err = schemaMutator.CreateTable("ns1", &testTable, false)
@@ -184,18 +170,12 @@ func TestSchemaMutator(t *testing.T) {
 	})
 
 	t.Run("create should fail", func(t *testing.T) {
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-
-		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
-		txnStore, err := clusterClient.Txn()
-		assert.NoError(t, err)
-
+		txnStore := mem.NewStore()
 		schemaMutator := tableSchemaMutator{
 			txnStore: txnStore,
 			logger:   zap.NewExample().Sugar(),
 		}
-		err = schemaMutator.CreateTable("ns2", &testTable, false)
+		err := schemaMutator.CreateTable("ns2", &testTable, false)
 		assert.EqualError(t, err, "Namespace does not exist")
 
 		_, err = txnStore.Set(utils.SchemaListKey("ns"), &pb.EntityList{
@@ -221,13 +201,8 @@ func TestSchemaMutator(t *testing.T) {
 
 	t.Run("force flag should work", func(t *testing.T) {
 		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-
-		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
-		txnStore, err := clusterClient.Txn()
-		assert.NoError(t, err)
-		_, err = txnStore.Set(utils.SchemaListKey("ns1"), &pb.EntityList{})
+		txnStore := mem.NewStore()
+		_, err := txnStore.Set(utils.SchemaListKey("ns1"), &pb.EntityList{})
 		assert.NoError(t, err)
 
 		// test
@@ -244,12 +219,7 @@ func TestSchemaMutator(t *testing.T) {
 
 	t.Run("delete should fail", func(t *testing.T) {
 		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-
-		clusterClient := testingUtils.SetUpEtcdTestClient(t, port)
-		txnStore, err := clusterClient.Txn()
-		assert.NoError(t, err)
+		txnStore := mem.NewStore()
 
 		// test
 		// fail if table doesn't exist
@@ -258,7 +228,7 @@ func TestSchemaMutator(t *testing.T) {
 			logger:   zap.NewExample().Sugar(),
 		}
 
-		_, err = txnStore.Set(utils.SchemaListKey("ns2"), &pb.EntityList{})
+		_, err := txnStore.Set(utils.SchemaListKey("ns2"), &pb.EntityList{})
 		assert.NoError(t, err)
 
 		err = schemaMutator.DeleteTable("ns2", "non-exist-table")

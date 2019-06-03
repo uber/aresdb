@@ -16,18 +16,19 @@ package memstore
 
 import (
 	m3Shard "github.com/m3db/m3/src/cluster/shard"
+	xerrors "github.com/m3db/m3/src/x/errors"
+	xsync "github.com/m3db/m3/src/x/sync"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"math"
 	"math/rand"
 	"runtime"
 	"sync"
-	xsync "github.com/m3db/m3/src/x/sync"
-	xerrors "github.com/m3db/m3/src/x/errors"
 )
 
 // TableShard stores the data for one table shard in memory.
@@ -40,11 +41,12 @@ type TableShard struct {
 	ShardID int `json:"-"`
 
 	// For convenience, reference to the table schema struct.
-	Schema *TableSchema `json:"schema"`
+	Schema *common.TableSchema `json:"schema"`
 
 	// For convenience.
-	metaStore metastore.MetaStore
-	diskStore diskstore.DiskStore
+	metaStore            metastore.MetaStore
+	diskStore            diskstore.DiskStore
+	redoLogManagerMaster *redolog.RedoLogManagerMaster
 
 	// Live store. Its locks also cover the primary key.
 	LiveStore *LiveStore `json:"liveStore"`
@@ -63,14 +65,15 @@ type TableShard struct {
 }
 
 // NewTableShard creates and initiates a table shard based on the schema.
-func NewTableShard(schema *TableSchema, metaStore metastore.MetaStore,
-	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int) *TableShard {
+func NewTableShard(schema *common.TableSchema, metaStore metastore.MetaStore,
+	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int, redoLogManagerMaster *redolog.RedoLogManagerMaster) *TableShard {
 	tableShard := &TableShard{
-		ShardID:           shard,
-		Schema:            schema,
-		diskStore:         diskStore,
-		metaStore:         metaStore,
-		HostMemoryManager: hostMemoryManager,
+		ShardID:              shard,
+		Schema:               schema,
+		diskStore:            diskStore,
+		metaStore:            metaStore,
+		HostMemoryManager:    hostMemoryManager,
+		redoLogManagerMaster: redoLogManagerMaster,
 	}
 	archiveStore := NewArchiveStore(tableShard)
 	tableShard.ArchiveStore = archiveStore
@@ -83,6 +86,8 @@ func NewTableShard(schema *TableSchema, metaStore metastore.MetaStore,
 func (shard *TableShard) Destruct() {
 	// TODO: if this blocks on archiving for too long, figure out a way to cancel it.
 	shard.Users.Wait()
+
+	shard.redoLogManagerMaster.Close(shard.Schema.Schema.Name, shard.ShardID)
 
 	shard.LiveStore.Destruct()
 
@@ -208,7 +213,6 @@ func (shard *TableShard) Bootstrap(
 	// 3. archive version
 	// 4. a list of archive log files or snapshot files
 
-
 	workers := xsync.NewWorkerPool(int(math.Ceil(float64(runtime.NumCPU()) / 2)))
 	workers.Init()
 
@@ -218,19 +222,19 @@ func (shard *TableShard) Bootstrap(
 		//wg       sync.WaitGroup
 	)
 	/*
-	for _, file := range files {
-		wg.Add(1)
-		workers.Go(func() {
-			// copy archive log or snapshot
-			mutex.Lock()
-			multiErr = multiErr.Add(err)
-			mutex.Unlock()
+		for _, file := range files {
+			wg.Add(1)
+			workers.Go(func() {
+				// copy archive log or snapshot
+				mutex.Lock()
+				multiErr = multiErr.Add(err)
+				mutex.Unlock()
 
-			wg.Done()
-		})
-	}
-	wg.Wait()
-	 */
+				wg.Done()
+			})
+		}
+		wg.Wait()
+	*/
 	err := multiErr.FinalError()
 	success = err == nil
 

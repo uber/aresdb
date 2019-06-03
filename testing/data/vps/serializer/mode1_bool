@@ -1,8 +1,0 @@
-data_type: Bool
-length: 4
-has_counts: false
-values:
-  - false
-  - false
-  - true
-  - true

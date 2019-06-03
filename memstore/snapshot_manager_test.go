@@ -30,9 +30,9 @@ var _ = ginkgo.Describe("snapshot manager", func() {
 	table := "table1"
 	shardID := 0
 
-	m = getFactory().NewMockMemStore()
+	m := getFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
-	shard := NewTableShard(&TableSchema{
+	shard := NewTableShard(&memCom.TableSchema{
 		Schema: metaCom.Table{
 			Name: table,
 			Config: metaCom.TableConfig{
@@ -48,7 +48,7 @@ var _ = ginkgo.Describe("snapshot manager", func() {
 		},
 		ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 		DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-	}, nil, nil, hostMemoryManager, shardID)
+	}, nil, nil, hostMemoryManager, shardID, m.redologManagerMaster)
 	var metaStore *mocks.MetaStore
 
 	var snapshotManager *SnapshotManager
@@ -78,7 +78,7 @@ var _ = ginkgo.Describe("snapshot manager", func() {
 		Ω(record.BatchID).Should(BeZero())
 		Ω(record.Index).Should(BeZero())
 
-		record = RecordID{BatchID: 10, Index: 11}
+		record = memCom.RecordID{BatchID: 10, Index: 11}
 		snapshotManager.ApplyUpsertBatch(100, 100, 100, record)
 
 		redoLogFile, offset, numMutations, record = snapshotManager.StartSnapshot()
@@ -88,7 +88,7 @@ var _ = ginkgo.Describe("snapshot manager", func() {
 		Ω(record.BatchID).Should(BeEquivalentTo(10))
 		Ω(record.Index).Should(BeEquivalentTo(11))
 
-		record = RecordID{BatchID: 100, Index: 101}
+		record = memCom.RecordID{BatchID: 100, Index: 101}
 		snapshotManager.ApplyUpsertBatch(100, 200, 100, record)
 
 		Ω(snapshotManager.CurrentRedoFile).Should(BeEquivalentTo(100))
@@ -114,7 +114,7 @@ var _ = ginkgo.Describe("snapshot manager", func() {
 	})
 
 	ginkgo.It("QualifyForSnapshot should work", func() {
-		record := RecordID{BatchID: 100, Index: 101}
+		record := memCom.RecordID{BatchID: 100, Index: 101}
 
 		snapshotManager.LastSnapshotTime = time.Unix(0, 0)
 

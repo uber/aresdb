@@ -44,6 +44,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query"
+	"github.com/uber/aresdb/redolog"
 	"sync"
 	"unsafe"
 )
@@ -103,7 +104,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 			BackfillThresholdInBytes: 1 << 21,
 		},
 	}
-	var testSchema *memstore.TableSchema
+	var testSchema *memCom.TableSchema
 
 	redoLogTableName := "abc"
 	redoLogShardID := 0
@@ -132,12 +133,12 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		Ω(err).Should(BeNil())
 
 		// test table
-		testSchema = memstore.NewTableSchema(&testTable)
+		testSchema = memCom.NewTableSchema(&testTable)
 		for col := range testSchema.Schema.Columns {
 			testSchema.SetDefaultValue(col)
 		}
 
-		testSchema.EnumDicts["c6"] = memstore.EnumDict{}
+		testSchema.EnumDicts["c6"] = memCom.EnumDict{}
 		enumDict, ok := testSchema.EnumDicts["c6"]
 		Ω(ok).Should(BeTrue())
 		enumDict.ReverseDict = append(enumDict.ReverseDict, "enum case1")
@@ -154,15 +155,10 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 			batchID: &testArchiveBatch,
 		}
 
-		testShard.LiveStore = memstore.NewLiveStore(
-			10,
-			testShard,
-		)
-
 		testArchiveBatch.Shard = testShard
 
 		key := []byte{1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1}
-		recordID := memstore.RecordID{
+		recordID := memCom.RecordID{
 			BatchID: 1,
 			Index:   1,
 		}
@@ -184,10 +180,12 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		// redolog table.
 		redoLogTable, err := testMetaStore.GetTable(redoLogTableName)
 		Ω(err).Should(BeNil())
-		redoLogTableSchema := &memstore.TableSchema{
+		redoLogTableSchema := &memCom.TableSchema{
 			Schema: *redoLogTable,
 		}
-		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID)
+		redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, mockDiskStore, mockMetaStore)
+
+		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID, redoManagerFactory)
 
 		mockShardNotExistErr := convertToAPIError(errors.New("Failed to get shard"))
 		memStore.On("GetTableShard", redoLogTableName, redoLogShardID).Return(redoLogShard, nil).
@@ -343,9 +341,9 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		Ω(err).Should(BeNil())
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 		bs, _ := ioutil.ReadAll(resp.Body)
-		var r memstore.RecordID
+		var r memCom.RecordID
 		json.Unmarshal(bs, &r)
-		Ω(r).Should(Equal(memstore.RecordID{
+		Ω(r).Should(Equal(memCom.RecordID{
 			BatchID: 1,
 			Index:   1,
 		}))
@@ -628,13 +626,13 @@ var _ = ginkgo.Describe("DebugHandler", func() {
     },
     "redoLogManager": {
       "rotationInterval": 0,
-      "maxRedoLogSize": 0,
-      "currentRedoLogSize": 0,
-      "totalRedologSize": 0,
-      "maxEventTimePerFile": {},
-      "batchCountPerFile": {},
-      "sizePerFile": {},
-      "currentFileCreationTime": 0
+       "maxRedoLogSize": 0,
+       "currentRedoLogSize": 0,
+       "totalRedologSize": 0,
+       "maxEventTimePerFile": {},
+       "batchCountPerFile": {},
+       "sizePerFile": {},
+       "currentFileCreationTime": 0
     },
     "snapshotManager": null
   },
@@ -845,7 +843,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		builder.SetValue(0, 0, uint8(135))
 		buffer, err := builder.ToByteArray()
 		Ω(err).Should(BeNil())
-		upsertBatch, err := memstore.NewUpsertBatch(buffer)
+		upsertBatch, err := memCom.NewUpsertBatch(buffer)
 		Ω(upsertBatch).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
 

@@ -19,7 +19,6 @@ import "C"
 
 import (
 	"bytes"
-	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
@@ -76,7 +75,7 @@ func (u columnUsage) MarshalJSON() ([]byte, error) {
 // processing (scanner in a traditional terminology).
 type TableScanner struct {
 	// Snapshot of the table schema for convenience.
-	Schema *memstore.TableSchema `json:"-"`
+	Schema *memCom.TableSchema `json:"-"`
 	// IDS of all table shards to be scanned on this instance.
 	Shards []int `json:"shards"`
 	// IDs of columns to be used in this query, in the following order:
@@ -115,7 +114,7 @@ type foreignTable struct {
 	// stores the remote join column in main table
 	remoteJoinColumn *expr.VarRef
 	// primary key data at host.
-	hostPrimaryKeyData  memstore.PrimaryKeyData
+	hostPrimaryKeyData  memCom.PrimaryKeyData
 	devicePrimaryKeyPtr devicePointer
 }
 
@@ -359,7 +358,7 @@ type AQLQueryContext struct {
 	TableIDByAlias map[string]int `json:"tableIDs"`
 	// Map from table name to schema for convenience. In case of self join,
 	// only one entry is referenced here by the name of the table.
-	TableSchemaByName map[string]*memstore.TableSchema `json:"-"`
+	TableSchemaByName map[string]*memCom.TableSchema `json:"-"`
 	// Index to filters in Query.Filters that are identified as prefilters.
 	Prefilters []int `json:"prefilters,omitempty"`
 

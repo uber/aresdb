@@ -25,15 +25,15 @@ import (
 type dataNode struct {
 	sync.RWMutex
 
-	host                   topology.Host
-	namespace              cluster.Namespace
-	metadata               metastore.MetaStore
-	memdata                memstore.MemStore
-	diskdata               diskstore.DiskStore
-	opts                   Options
-	logger                 common.Logger
-	metrics                datanodeMetrics
-	bootstrapState         bootstrap.BootstrapState
+	host                 topology.Host
+	namespace            cluster.Namespace
+	metadata             metastore.MetaStore
+	memdata              memstore.MemStore
+	diskdata             diskstore.DiskStore
+	opts                 Options
+	logger               common.Logger
+	metrics              datanodeMetrics
+	bootstrapState       bootstrap.BootstrapState
 	bootstrapTableShards []*memstore.TableShard
 }
 
@@ -268,7 +268,7 @@ func (d *dataNode) addTableShard(tablename string, shardID uint32) error {
 	return nil
 }
 
-func (d *dataNode) newInitialTopologyState(topo topology.Topology) (*topology.StateSnapshot) {
+func (d *dataNode) newInitialTopologyState(topo topology.Topology) *topology.StateSnapshot {
 	topoMap := topo.Get()
 
 	var (

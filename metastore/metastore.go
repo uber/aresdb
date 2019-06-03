@@ -74,6 +74,18 @@ type MetaStore interface {
 	// Retrieve the latest redolog/offset that have been backfilled for the specified shard.
 	GetBackfillProgressInfo(table string, shard int) (int64, uint32, error)
 
+	// Update ingestion commit offset, used for kafka like streaming ingestion
+	UpdateRedoLogCommitOffset(table string, shard int, offset int64) error
+
+	// Get ingestion commit offset, used for kafka like streaming ingestion
+	GetRedoLogCommitOffset(table string, shard int) (int64, error)
+
+	// Update ingestion checkpoint offset, used for kafka like streaming ingestion
+	UpdateRedoLogCheckpointOffset(table string, shard int, offset int64) error
+
+	// Get ingestion checkpoint offset, used for kafka like streaming ingestion
+	GetRedoLogCheckpointOffset(table string, shard int) (int64, error)
+
 	TableSchemaWatchable
 	TableSchemaMutator
 }

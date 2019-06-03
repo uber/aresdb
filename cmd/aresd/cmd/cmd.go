@@ -16,22 +16,23 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/pprof"
-	"path/filepath"
-	"unsafe"
-	"github.com/uber/aresdb/api"
-	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/memstore"
-	"github.com/uber/aresdb/metastore"
-	"github.com/uber/aresdb/utils"
-	"github.com/uber/aresdb/memutils"
-	"time"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
+	"github.com/uber/aresdb/api"
+	"github.com/uber/aresdb/common"
 	controllerCli "github.com/uber/aresdb/controller/client"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/memstore"
+	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/redolog"
+	"github.com/uber/aresdb/utils"
+	"net/http"
+	"net/http/pprof"
+	"path/filepath"
+	"time"
+	"unsafe"
 )
 
 // Options represents options for executing command
@@ -140,8 +141,13 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	// Create DiskStore.
 	diskStore := diskstore.NewLocalDiskStore(cfg.RootPath)
 
+	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(&cfg.RedoLogConfig, diskStore, metaStore)
+	if err != nil {
+		utils.GetLogger().Fatal(err)
+	}
+
 	// Create MemStore.
-	memStore := memstore.NewMemStore(metaStore, diskStore)
+	memStore := memstore.NewMemStore(metaStore, diskStore, redoLogManagerMaster)
 
 	// Read schema.
 	utils.GetLogger().Infof("Reading schema from local MetaStore %s", metaStorePath)
@@ -227,4 +233,5 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
 	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	batchStatsReporter.Stop()
+	redoLogManagerMaster.Stop()
 }

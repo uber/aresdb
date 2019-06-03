@@ -17,6 +17,7 @@ package memstore
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"math/rand"
 	"testing"
 )
@@ -26,8 +27,8 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 		hashIndex := newCuckooIndex(4, true, 10, manager)
 		hashIndex.rand = rand.New(rand.NewSource(int64(0)))
 		hashIndex.UpdateEventTimeCutoff(0)
-		key := Key{'a', 'b', 'c', 'd'}
-		recordID := RecordID{
+		key := memCom.Key{'a', 'b', 'c', 'd'}
+		recordID := memCom.RecordID{
 			BatchID: 1,
 			Index:   1,
 		}
@@ -44,8 +45,8 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 		hashIndex := newCuckooIndex(4, true, 10, manager)
 		hashIndex.rand = rand.New(rand.NewSource(int64(0)))
 		hashIndex.UpdateEventTimeCutoff(1)
-		key := Key{'a', 'b', 'c', 'd'}
-		value := RecordID{
+		key := memCom.Key{'a', 'b', 'c', 'd'}
+		value := memCom.RecordID{
 			BatchID: 1,
 			Index:   1,
 		}
@@ -58,12 +59,12 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 	ginkgo.It("Should Return Existing RecordID On Insert A Existing Key", func() {
 		hashIndex := newCuckooIndex(4, true, 10, manager)
 		hashIndex.rand = rand.New(rand.NewSource(int64(0)))
-		key := Key{'a', 'b', 'c', 'd'}
-		value1 := RecordID{
+		key := memCom.Key{'a', 'b', 'c', 'd'}
+		value1 := memCom.RecordID{
 			BatchID: 1,
 			Index:   1,
 		}
-		value2 := RecordID{
+		value2 := memCom.RecordID{
 			BatchID: 1,
 			Index:   2,
 		}
@@ -78,8 +79,8 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 	ginkgo.It("Should make key deleted On deleting existing key", func() {
 		hashIndex := newCuckooIndex(4, true, 10, manager)
 		hashIndex.rand = rand.New(rand.NewSource(int64(0)))
-		key := Key{'a', 'b', 'c', 'd'}
-		value := RecordID{
+		key := memCom.Key{'a', 'b', 'c', 'd'}
+		value := memCom.RecordID{
 			BatchID: 1,
 			Index:   1,
 		}
@@ -102,9 +103,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 		numberOfInsersion := 1000
 
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -116,9 +117,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 		Ω(hashIndex.Size()).Should(Equal(uint(numberOfInsersion)))
 
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -139,9 +140,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 		numberOfInsersion := 1000
 
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -153,9 +154,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 		Ω(hashIndex.Size()).Should(Equal(uint(numberOfInsersion)))
 
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -177,9 +178,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 
 		// insert the first half
 		for i := 0; i < numberOfInsersion/2; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -194,9 +195,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 
 		// insert the second half
 		for i := numberOfInsersion / 2; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -207,9 +208,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 
 		// the first half should be expired and not found
 		for i := 0; i < numberOfInsersion/2; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -221,9 +222,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 
 		// the second half should be found
 		for i := numberOfInsersion / 2; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -235,15 +236,15 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 
 		// delete all keys
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
 			hashIndex.Delete(key)
 		}
 
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			found, _, err := hashIndex.FindOrInsert(key, RecordID{}, 2)
+			found, _, err := hashIndex.FindOrInsert(key, memCom.RecordID{}, 2)
 			Ω(found).Should(BeFalse())
 			Ω(err).Should(BeNil())
 		}
@@ -258,9 +259,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 
 		// insert the first half
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -272,9 +273,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 
 		//all items should be found
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -294,9 +295,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 
 		// insert the first half
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -308,9 +309,9 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 
 		//all items should be found
 		for i := 0; i < numberOfInsersion; i++ {
-			key := make(Key, 4, 4)
+			key := make(memCom.Key, 4, 4)
 			key[0], key[1], key[2], key[3] = byte(i), byte(i>>8), byte(i>>16), byte(i>>24)
-			value := RecordID{
+			value := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -327,8 +328,8 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 		hashIndex := newCuckooIndex(4, true, 10, manager)
 		hashIndex.rand = rand.New(rand.NewSource(int64(0)))
 		hashIndex.UpdateEventTimeCutoff(0)
-		key := Key{'a', 'b', 'c', 'd'}
-		recordID := RecordID{
+		key := memCom.Key{'a', 'b', 'c', 'd'}
+		recordID := memCom.RecordID{
 			BatchID: 1,
 			Index:   1,
 		}
@@ -353,19 +354,19 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 	ginkgo.It("Update should work on existing key and return false for missing key", func() {
 		hashIndex := newCuckooIndex(4, false, 10, manager)
 		hashIndex.rand = rand.New(rand.NewSource(int64(0)))
-		key := Key{'a', 'b', 'c', 'd'}
-		value := RecordID{
+		key := memCom.Key{'a', 'b', 'c', 'd'}
+		value := memCom.RecordID{
 			BatchID: 1,
 			Index:   1,
 		}
-		newValue := RecordID{
+		newValue := memCom.RecordID{
 			BatchID: 1,
 			Index:   2,
 		}
 
 		hashIndex.FindOrInsert(key, value, 1)
 		Ω(hashIndex.Update(key, newValue)).Should(BeTrue())
-		Ω(hashIndex.Update(Key{'a', 'b', 'c', 'c'}, newValue)).Should(BeFalse())
+		Ω(hashIndex.Update(memCom.Key{'a', 'b', 'c', 'c'}, newValue)).Should(BeFalse())
 		v, found := hashIndex.Find(key)
 		Ω(found).Should(BeTrue())
 		Ω(v).Should(Equal(newValue))
@@ -381,8 +382,8 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 		for i := 0; i < nUUID; i++ {
 			var keyBytes [16]byte
 			keyBytes[0] = byte(i)
-			key := Key(keyBytes[:])
-			recordID := RecordID{
+			key := memCom.Key(keyBytes[:])
+			recordID := memCom.RecordID{
 				BatchID: 0,
 				Index:   uint32(i),
 			}
@@ -398,15 +399,34 @@ var _ = ginkgo.Describe("CuckooIndex", func() {
 	})
 })
 
+// test purpose, need to move HostMemoryManager to some other place for mock purpose in future
+type TestHostMemoryManager struct {
+}
+
+func (*TestHostMemoryManager) ReportUnmanagedSpaceUsageChange(bytes int64) {
+}
+func (*TestHostMemoryManager) ReportManagedObject(table string, shard, batchID, columnID int, bytes int64) {
+}
+func (*TestHostMemoryManager) GetArchiveMemoryUsageByTableShard() (map[string]map[string]*memCom.ColumnMemoryUsage, error) {
+	return nil, nil
+}
+func (*TestHostMemoryManager) TriggerEviction() {
+}
+func (*TestHostMemoryManager) TriggerPreload(tableName string, columnID int, oldPreloadingDays int, newPreloadingDays int) {
+}
+func (*TestHostMemoryManager) Start() {
+}
+func (*TestHostMemoryManager) Stop() {
+}
+
 var (
-	m              = getFactory().NewMockMemStore()
-	manager        = NewHostMemoryManager(m, 1<<32)
+	manager        = &TestHostMemoryManager{}
 	benchIndex     = newCuckooIndex(4, true, 0, manager)
-	benchTestValue = RecordID{
+	benchTestValue = memCom.RecordID{
 		BatchID: 0,
 		Index:   1,
 	}
-	benchTestKey = make(Key, 4, 4)
+	benchTestKey = make(memCom.Key, 4, 4)
 )
 
 func BenchmarkCuckooIndex_Insert(b *testing.B) {

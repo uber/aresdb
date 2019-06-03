@@ -256,6 +256,100 @@ func (dm *diskMetaStore) GetBackfillProgressInfo(table string, shard int) (int64
 	return dm.readRedoLogFileAndOffset(file)
 }
 
+// Update ingestion commit offset, used for kafka like streaming ingestion
+func (dm *diskMetaStore) UpdateRedoLogCommitOffset(table string, shard int, offset int64) error {
+	dm.Lock()
+	defer dm.Unlock()
+
+	// No sanity check here for schema/fact table/directory, assuming all should be passed before calling this func
+	file := dm.getIngestionCommitOffsetFilePath(table, shard)
+
+	writer, err := dm.OpenFileForWrite(
+		file,
+		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
+		0644,
+	)
+
+	if err != nil {
+		return utils.StackError(err, "Failed to open ingestion commit offset file %s for write", file)
+	}
+	defer writer.Close()
+
+	_, err = io.WriteString(writer, fmt.Sprintf("%d", offset))
+	return err
+}
+
+// Get ingestion commit offset, used for kafka like streaming ingestion
+func (dm *diskMetaStore) GetRedoLogCommitOffset(table string, shard int) (int64, error) {
+	dm.RLock()
+	defer dm.RUnlock()
+
+	// No sanity check here for schema/fact table/directory, assuming all should be passed before calling this func
+	file := dm.getIngestionCommitOffsetFilePath(table, shard)
+
+	fileBytes, err := dm.ReadFile(file)
+	if os.IsNotExist(err) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, utils.StackError(err, "Failed to open ingestion commit offset file %s", file)
+	}
+
+	var offset int64
+	_, err = fmt.Fscanln(bytes.NewBuffer(fileBytes), &offset)
+	if err != nil {
+		return 0, utils.StackError(err, "Failed to read ingestion commit offset file %s", file)
+	}
+	return offset, nil
+}
+
+// Update ingestion checkpoint offset, used for kafka like streaming ingestion
+func (dm *diskMetaStore) UpdateRedoLogCheckpointOffset(table string, shard int, offset int64) error {
+	dm.Lock()
+	defer dm.Unlock()
+
+	// No sanity check here for schema/fact table/directory, assuming all should be passed before calling this func
+	file := dm.getIngestionCheckpointOffsetFilePath(table, shard)
+
+	writer, err := dm.OpenFileForWrite(
+		file,
+		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
+		0644,
+	)
+
+	if err != nil {
+		return utils.StackError(err, "Failed to open ingestion checkpoint offset file %s for write", file)
+	}
+	defer writer.Close()
+
+	_, err = io.WriteString(writer, fmt.Sprintf("%d", offset))
+	return err
+}
+
+// Get ingestion checkpoint offset, used for kafka like streaming ingestion
+func (dm *diskMetaStore) GetRedoLogCheckpointOffset(table string, shard int) (int64, error) {
+	dm.RLock()
+	defer dm.RUnlock()
+
+	// No sanity check here for schema/fact table/directory, assuming all should be passed before calling this func
+	file := dm.getIngestionCheckpointOffsetFilePath(table, shard)
+
+	fileBytes, err := dm.ReadFile(file)
+	if os.IsNotExist(err) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, utils.StackError(err, "Failed to open ingestion checkpoint offset file %s", file)
+	}
+
+	var offset int64
+	_, err = fmt.Fscanln(bytes.NewBuffer(fileBytes), &offset)
+	if err != nil {
+		return 0, utils.StackError(err, "Failed to read ingestion checkpoint offset file %s", file)
+	}
+	return offset, nil
+}
+
 // WatchTableListEvents register a watcher to table list change events,
 // should only be called once,
 // returns ErrWatcherAlreadyExist once watcher already exists
@@ -991,6 +1085,16 @@ func (dm *diskMetaStore) getRedoLogVersionAndOffsetFilePath(tableName string, sh
 
 func (dm *diskMetaStore) getSnapshotRedoLogVersionAndOffsetFilePath(tableName string, shard int) string {
 	return filepath.Join(dm.getShardDirPath(tableName, shard), "snapshot")
+}
+
+// Get file path which stores the ingestion commit offset, mainly used for kafka or other streaming based ingestion
+func (dm *diskMetaStore) getIngestionCommitOffsetFilePath(tableName string, shard int) string {
+	return filepath.Join(dm.getShardDirPath(tableName, shard), "commit-offset")
+}
+
+// Get file path which stores the ingestion checkpoint offset, mainly used fo kafka or other streaming based ingestion
+func (dm *diskMetaStore) getIngestionCheckpointOffsetFilePath(tableName string, shard int) string {
+	return filepath.Join(dm.getShardDirPath(tableName, shard), "checkpoint-offset")
 }
 
 // readEnumFile reads the enum cases from file.

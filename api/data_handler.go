@@ -18,6 +18,7 @@ import (
 	"net/http"
 
 	"github.com/uber/aresdb/memstore"
+	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 
 	"github.com/gorilla/mux"
@@ -56,7 +57,7 @@ func (handler *DataHandler) PostData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	upsertBatch, err := memstore.NewUpsertBatch(postDataRequest.Body)
+	upsertBatch, err := common.NewUpsertBatch(postDataRequest.Body)
 	if err != nil {
 		RespondWithBadRequest(w, err)
 		return

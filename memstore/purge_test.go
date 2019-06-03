@@ -18,10 +18,13 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/common"
 	diskStoreMocks "github.com/uber/aresdb/diskstore/mocks"
-	"github.com/uber/aresdb/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
+
 	metaStoreMocks "github.com/uber/aresdb/metastore/mocks"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -30,13 +33,13 @@ var _ = ginkgo.Describe("Purge", func() {
 	var diskStore *diskStoreMocks.DiskStore
 	var memStore *memStoreImpl
 	var tableShard *TableShard
-	var hostMemoryManager common.HostMemoryManager
+	var hostMemoryManager memCom.HostMemoryManager
 
 	testTable := "test"
 	testShardID := 0
 
 	ginkgo.BeforeEach(func() {
-		tableSchema := NewTableSchema(&metaCom.Table{
+		tableSchema := memCom.NewTableSchema(&metaCom.Table{
 			Name: testTable,
 			Columns: []metaCom.Column{
 				{
@@ -59,19 +62,21 @@ var _ = ginkgo.Describe("Purge", func() {
 
 		diskStore = &diskStoreMocks.DiskStore{}
 		metaStore = &metaStoreMocks.MetaStore{}
+		redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
 		memStore = &memStoreImpl{
 			TableShards: map[string]map[int]*TableShard{
 				testTable: {},
 			},
-			TableSchemas: map[string]*TableSchema{
+			TableSchemas: map[string]*memCom.TableSchema{
 				testTable: tableSchema,
 			},
-			diskStore:      diskStore,
-			metaStore:      metaStore,
-			HostMemManager: hostMemoryManager,
+			diskStore:            diskStore,
+			metaStore:            metaStore,
+			HostMemManager:       hostMemoryManager,
+			redologManagerMaster: redologManagerMaster,
 		}
 		hostMemoryManager = NewHostMemoryManager(memStore, 1<<10)
-		tableShard = NewTableShard(tableSchema, metaStore, diskStore, hostMemoryManager, testShardID)
+		tableShard = NewTableShard(tableSchema, metaStore, diskStore, hostMemoryManager, testShardID, redologManagerMaster)
 
 		archiveBatch0, err := testFactory.ReadArchiveBatch("archiving/archiveBatch0")
 		Ω(err).Should(BeNil())

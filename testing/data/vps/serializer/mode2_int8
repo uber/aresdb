@@ -1,8 +1,0 @@
-data_type: Int8
-length: 4
-has_counts: false
-values:
-  - 1
-  - null
-  - 2
-  - 3

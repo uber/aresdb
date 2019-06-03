@@ -41,6 +41,7 @@ import (
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"net/http/httptest"
 )
@@ -70,6 +71,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	var diskStore diskstore.DiskStore
 	var hostMemoryManager memCom.HostMemoryManager
 	var shard *memstore.TableShard
+	var redologManagerMaster *redolog.RedoLogManagerMaster
 	table := "table1"
 	shardID := 0
 
@@ -107,7 +109,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		diskStore.(*diskMocks.DiskStore).On(
 			"OpenVectorPartyFileForRead", table, mock.Anything, shardID, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
-		shard = memstore.NewTableShard(&memstore.TableSchema{
+		redologManagerMaster, _ = redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+		shard = memstore.NewTableShard(&memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: table,
 				Config: metaCom.TableConfig{
@@ -129,7 +132,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID)
+		}, metaStore, diskStore, hostMemoryManager, shardID, redologManagerMaster)
 
 		shardMap := map[int]*memstore.TableShard{
 			shardID: shard,
@@ -163,12 +166,12 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		memStore.(*memMocks.MemStore).On("RLock").Return()
 		memStore.(*memMocks.MemStore).On("RUnlock").Return()
-		memStore.(*memMocks.MemStore).On("GetSchemas").Return(map[string]*memstore.TableSchema{
+		memStore.(*memMocks.MemStore).On("GetSchemas").Return(map[string]*memCom.TableSchema{
 			table: shard.Schema,
 		})
 
 		vs = memstore.LiveStore{
-			LastReadRecord: memstore.RecordID{BatchID: -101, Index: 3},
+			LastReadRecord: memCom.RecordID{BatchID: -101, Index: 3},
 			Batches: map[int32]*memstore.LiveBatch{
 				-110: {
 					Batch: memstore.Batch{
@@ -946,8 +949,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 	ginkgo.It("prepareTimezoneTable", func() {
 		memStore := new(memMocks.MemStore)
-		memStore.On("GetSchema", mock.Anything).Return(&memstore.TableSchema{
-			EnumDicts: map[string]memstore.EnumDict{
+		memStore.On("GetSchema", mock.Anything).Return(&memCom.TableSchema{
+			EnumDicts: map[string]memCom.EnumDict{
 				"timezone": {
 					ReverseDict: []string{"America/Los_Angeles"},
 				},
@@ -1074,7 +1077,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 			PrimaryKeyColumns: []int{0},
 		}
-		memStore.On("GetSchemas", mock.Anything).Return(map[string]*memstore.TableSchema{
+		memStore.On("GetSchemas", mock.Anything).Return(map[string]*memCom.TableSchema{
 			table: {
 				Schema:            mainTableSchema,
 				ColumnIDs:         map[string]int{"c0": 0, "city_id": 1},
@@ -1086,7 +1089,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				ColumnIDs:         map[string]int{"id": 0, "timezone": 1},
 				ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.SmallEnum},
 				DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue},
-				EnumDicts: map[string]memstore.EnumDict{
+				EnumDicts: map[string]memCom.EnumDict{
 					"id": {},
 					"timezone": {
 						ReverseDict: []string{"Africa/Algiers"},
@@ -1094,18 +1097,18 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				},
 			},
 		})
-		memStore.On("GetSchema", table).Return(&memstore.TableSchema{
+		memStore.On("GetSchema", table).Return(&memCom.TableSchema{
 			Schema:            mainTableSchema,
 			ColumnIDs:         map[string]int{"c0": 0, "city_id": 1},
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Uint32},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue},
 		}, nil)
-		memStore.On("GetSchema", timezoneTable).Return(&memstore.TableSchema{
+		memStore.On("GetSchema", timezoneTable).Return(&memCom.TableSchema{
 			Schema:            timezoneTableSchema,
 			ColumnIDs:         map[string]int{"id": 0, "timezone": 1},
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.SmallEnum},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue},
-			EnumDicts: map[string]memstore.EnumDict{
+			EnumDicts: map[string]memCom.EnumDict{
 				"id": {},
 				"timezone": {
 					ReverseDict: []string{"Africa/Algiers", "", ""},
@@ -1115,11 +1118,12 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		memStore.On("RLock").Return(nil)
 		memStore.On("RUnlock").Return(nil)
 
-		timezoneTableShard := memstore.NewTableShard(&memstore.TableSchema{
+		redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+		timezoneTableShard := memstore.NewTableShard(&memCom.TableSchema{
 			Schema:            timezoneTableSchema,
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.SmallEnum},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID)
+		}, metaStore, diskStore, hostMemoryManager, shardID, redoManagerFactory)
 		timezoneTableBatch := memstore.LiveBatch{
 			Batch: memstore.Batch{
 				RWMutex: &sync.RWMutex{},
@@ -1128,7 +1132,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Capacity: 5,
 		}
 		timezoneTableShard.LiveStore = &memstore.LiveStore{
-			LastReadRecord: memstore.RecordID{BatchID: -90, Index: 0},
+			LastReadRecord: memCom.RecordID{BatchID: -90, Index: 0},
 			Batches: map[int32]*memstore.LiveBatch{
 				-2147483648: &timezoneTableBatch,
 			},
@@ -1137,20 +1141,20 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		// build foreign table primary key index
 		keyBytes := make([]byte, 4)
-		recordID := memstore.RecordID{BatchID: -2147483648, Index: 0}
+		recordID := memCom.RecordID{BatchID: -2147483648, Index: 0}
 		for i := 0; i < 5; i++ {
 			binary.LittleEndian.PutUint32(keyBytes, 100+uint32(i)*10)
 			recordID.Index = uint32(i)
 			timezoneTableShard.LiveStore.PrimaryKey.FindOrInsert(keyBytes, recordID, 0)
 		}
 
-		mainTableShard := memstore.NewTableShard(&memstore.TableSchema{
+		mainTableShard := memstore.NewTableShard(&memCom.TableSchema{
 			Schema:            mainTableSchema,
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Uint32},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID)
+		}, metaStore, diskStore, hostMemoryManager, shardID, redoManagerFactory)
 		mainTableShard.LiveStore = &memstore.LiveStore{
-			LastReadRecord: memstore.RecordID{BatchID: -90, Index: 0},
+			LastReadRecord: memCom.RecordID{BatchID: -90, Index: 0},
 			Batches: map[int32]*memstore.LiveBatch{
 				-2147483648: {
 					Batch: memstore.Batch{
@@ -1277,7 +1281,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		mockMemoryManager.On("ReportUnmanagedSpaceUsageChange", mock.Anything).Return()
 
 		// prepare trip table
-		tripsSchema := &memstore.TableSchema{
+		tripsSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: "trips",
 			},
@@ -1322,13 +1326,13 @@ var _ = ginkgo.Describe("aql_processor", func() {
 						},
 					},
 				},
-				LastReadRecord: memstore.RecordID{BatchID: memstore.BaseBatchID, Index: 5},
+				LastReadRecord: memCom.RecordID{BatchID: memstore.BaseBatchID, Index: 5},
 			},
 			HostMemoryManager: mockMemoryManager,
 		}
 
 		// prepare geofence table
-		geofenceSchema := &memstore.TableSchema{
+		geofenceSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: "geofence",
 				Config: metaCom.TableConfig{
@@ -1372,11 +1376,9 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		shapeLiveVP := memstore.NewLiveVectorParty(3, memCom.GeoShape, memCom.NullDataValue, mockMemoryManager)
 		shapeLiveVP.Allocate(false)
 
-		geoFenceTableShard := &memstore.TableShard{
-			Schema:            geofenceSchema,
-			HostMemoryManager: mockMemoryManager,
-		}
-		geoFenceLiveStore := memstore.NewLiveStore(10, geoFenceTableShard)
+		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, redologManagerMaster)
+		geoFenceLiveStore := geoFenceTableShard.LiveStore
+
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{
 			memstore.BaseBatchID: {
 				Batch: memstore.Batch{
@@ -1388,17 +1390,17 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				},
 			},
 		}
-		geoFenceLiveStore.LastReadRecord = memstore.RecordID{BatchID: memstore.BaseBatchID, Index: 4}
+		geoFenceLiveStore.LastReadRecord = memCom.RecordID{BatchID: memstore.BaseBatchID, Index: 4}
 		geoFenceTableShard.LiveStore = geoFenceLiveStore
 		for i := 0; i < 3; i++ {
 			uuidValue, _ := memCom.ValueFromString(shapeUUIDs[i], memCom.UUID)
 			shapeUUIDLiveVP.SetDataValue(i, uuidValue, memstore.IgnoreCount)
 			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, memstore.IgnoreCount)
-			key, err := memstore.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
+			key, err := memCom.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
 			Ω(err).Should(BeNil())
 			geoFenceLiveStore.PrimaryKey.FindOrInsert(
 				key,
-				memstore.RecordID{
+				memCom.RecordID{
 					BatchID: memstore.BaseBatchID,
 					Index:   uint32(i)},
 				0)
@@ -1545,7 +1547,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		mockMemoryManager.On("ReportUnmanagedSpaceUsageChange", mock.Anything).Return()
 
 		// prepare trip table
-		tripsSchema := &memstore.TableSchema{
+		tripsSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: "trips",
 			},
@@ -1590,13 +1592,13 @@ var _ = ginkgo.Describe("aql_processor", func() {
 						},
 					},
 				},
-				LastReadRecord: memstore.RecordID{BatchID: memstore.BaseBatchID, Index: 5},
+				LastReadRecord: memCom.RecordID{BatchID: memstore.BaseBatchID, Index: 5},
 			},
 			HostMemoryManager: mockMemoryManager,
 		}
 
 		// prepare geofence table
-		geofenceSchema := &memstore.TableSchema{
+		geofenceSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: "geofence",
 				Config: metaCom.TableConfig{
@@ -1640,11 +1642,9 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		shapeLiveVP := memstore.NewLiveVectorParty(3, memCom.GeoShape, memCom.NullDataValue, mockMemoryManager)
 		shapeLiveVP.Allocate(false)
 
-		geoFenceTableShard := &memstore.TableShard{
-			Schema:            geofenceSchema,
-			HostMemoryManager: mockMemoryManager,
-		}
-		geoFenceLiveStore := memstore.NewLiveStore(10, geoFenceTableShard)
+		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, redologManagerMaster)
+		geoFenceLiveStore := geoFenceTableShard.LiveStore
+
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{
 			memstore.BaseBatchID: {
 				Batch: memstore.Batch{
@@ -1656,17 +1656,17 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				},
 			},
 		}
-		geoFenceLiveStore.LastReadRecord = memstore.RecordID{BatchID: memstore.BaseBatchID, Index: 4}
+		geoFenceLiveStore.LastReadRecord = memCom.RecordID{BatchID: memstore.BaseBatchID, Index: 4}
 		geoFenceTableShard.LiveStore = geoFenceLiveStore
 		for i := 0; i < 3; i++ {
 			uuidValue, _ := memCom.ValueFromString(shapeUUIDs[i], memCom.UUID)
 			shapeUUIDLiveVP.SetDataValue(i, uuidValue, memstore.IgnoreCount)
 			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, memstore.IgnoreCount)
-			key, err := memstore.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
+			key, err := memCom.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
 			Ω(err).Should(BeNil())
 			geoFenceLiveStore.PrimaryKey.FindOrInsert(
 				key,
-				memstore.RecordID{
+				memCom.RecordID{
 					BatchID: memstore.BaseBatchID,
 					Index:   uint32(i)},
 				0)
@@ -1937,7 +1937,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		mockMemoryManager.On("ReportUnmanagedSpaceUsageChange", mock.Anything).Return()
 
 		// prepare trip table
-		tripsSchema := &memstore.TableSchema{
+		tripsSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: "trips",
 			},
@@ -1980,7 +1980,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 						},
 					},
 				},
-				LastReadRecord: memstore.RecordID{BatchID: memstore.BaseBatchID, Index: 5},
+				LastReadRecord: memCom.RecordID{BatchID: memstore.BaseBatchID, Index: 5},
 			},
 			HostMemoryManager: mockMemoryManager,
 		}

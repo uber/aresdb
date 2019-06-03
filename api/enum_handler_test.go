@@ -23,9 +23,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
+
 	"github.com/uber/aresdb/metastore/mocks"
 
 	"github.com/gorilla/mux"
@@ -47,8 +48,8 @@ var _ = ginkgo.Describe("EnumHandler", func() {
 			},
 		},
 	}
-	var testTableSchema = memstore.TableSchema{
-		EnumDicts: map[string]memstore.EnumDict{
+	var testTableSchema = memCom.TableSchema{
+		EnumDicts: map[string]memCom.EnumDict{
 			"testColumn": {
 				ReverseDict: []string{"a", "b", "c"},
 				Dict: map[string]int{

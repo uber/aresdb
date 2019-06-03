@@ -34,11 +34,11 @@ func NewBootstrapManager(datanode DataNode, opts Options, topo topology.Topology
 	}
 	scope := opts.InstrumentOptions().MetricsScope()
 	return &bootstrapManagerImpl{
-		datanode:        datanode,
-		opts:            opts,
-		log:             opts.InstrumentOptions().Logger(),
-		status:          scope.Gauge("bootstrapped"),
-		topo:            topo,
+		datanode: datanode,
+		opts:     opts,
+		log:      opts.InstrumentOptions().Logger(),
+		status:   scope.Gauge("bootstrapped"),
+		topo:     topo,
 	}, nil
 
 }
@@ -118,4 +118,3 @@ func (m *bootstrapManagerImpl) bootstrap() error {
 
 	return err
 }
-

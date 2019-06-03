@@ -1,8 +1,0 @@
-data_type: Uint16
-length: 4
-has_counts: true
-values:
-  - 1,2
-  - 2,5
-  - 1,10
-  - 2,20

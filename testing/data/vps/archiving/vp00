@@ -1,8 +1,0 @@
-data_type: Uint32
-length: 5
-values:
-    - 100
-    - 110
-    - 120
-    - 130
-    - 140
