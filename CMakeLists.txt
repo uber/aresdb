@@ -91,9 +91,7 @@ endif ()
 ######################################################
 set(CUDF_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf/cpp/src)
 set(CUDF_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf/cpp/include)
-if (QUERY_MODE STREQUAL "DEVICE")
-    include_directories(${CUDF_INCLUDE_DIR} ${CUDF_SRC_DIR})
-endif ()
+include_directories(${CUDF_INCLUDE_DIR} ${CUDF_SRC_DIR})
 ################################
 # Mem
 ################################
@@ -134,21 +132,23 @@ add_library(algorithm SHARED
         query/algorithm.hpp
         query/algorithm.cu
         query/binder.hpp
-        query/dimension_transform.cu
-        query/filter.cu
+        #        query/dimension_transform.cu
+        #        query/filter.cu
         query/functor.cu
-        query/geo_intersects.cu
-        query/hash_lookup.cu
-        query/hll.cu
+        #        query/geo_intersects.cu
+        #        query/hash_lookup.cu
+        query/hash_reduction.cu
+        #        query/hll.cu
         query/iterator.hpp
         query/memory.cu
         query/memory.hpp
-        query/measure_transform.cu
-        query/scratch_space_transform.cu
-        query/sort_reduce.cu
-        query/thrust_rmm_allocator.hpp
-        query/transform.cu
-        query/transform.hpp
+        #        query/measure_transform.cu
+        #        query/scratch_space_transform.cu
+        #        query/sort_reduce.cu
+        query/time_series_aggregate.h
+        #        query/thrust_rmm_allocator.hpp
+        #        query/transform.cu
+        #        query/transform.hpp
         query/utils.cu
         query/utils.hpp)
 
@@ -269,7 +269,7 @@ set(ANTLR_BIN "${CMAKE_SOURCE_DIR}/.bin/antlr-4.7.1-complete.jar")
 set(ANTLR_URL "http://www.antlr.org/download/antlr-4.7.1-complete.jar")
 add_custom_target(antlr DEPENDS ANTLR_BIN
         COMMAND java -jar ${ANTLR_BIN} -Dlanguage=Go -package antlrgen -Xexact-output-dir -o query/sql/antlrgen -visitor -no-listener query/sql/SqlBase.g4
-)
+        )
 add_custom_command(
         OUTPUT ANTLR_BIN
         COMMAND mkdir -p .bin && curl -L -o ${ANTLR_BIN} ${ANTLR_URL}

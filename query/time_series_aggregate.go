@@ -295,17 +295,17 @@ func makeScratchSpaceOutput(values unsafe.Pointer, nulls unsafe.Pointer, dataTyp
 	return vector
 }
 
-func makeDimensionColumnVector(dimensionVector, hashVector, indexVector unsafe.Pointer, numDims common.DimCountsPerDimWidth, vectorCapacity int) C.DimensionColumnVector {
-	var dimensionColumnVector C.DimensionColumnVector
-	dimensionColumnVector.DimValues = (*C.uint8_t)(dimensionVector)
-	dimensionColumnVector.HashValues = (*C.uint64_t)(hashVector)
-	dimensionColumnVector.IndexVector = (*C.uint32_t)(indexVector)
+func makeDimensionVector(dimensionVector, hashVector, indexVector unsafe.Pointer, numDims common.DimCountsPerDimWidth, vectorCapacity int) C.DimensionVector {
+	var dimensionVector C.DimensionVector
+	dimensionVector.DimValues = (*C.uint8_t)(dimensionVector)
+	dimensionVector.HashValues = (*C.uint64_t)(hashVector)
+	dimensionVector.IndexVector = (*C.uint32_t)(indexVector)
 
-	dimensionColumnVector.VectorCapacity = (C.int)(vectorCapacity)
+	dimensionVector.VectorCapacity = (C.int)(vectorCapacity)
 	for i := 0; i < len(numDims); i++ {
-		dimensionColumnVector.NumDimsPerDimWidth[i] = (C.uint8_t)(numDims[i])
+		dimensionVector.NumDimsPerDimWidth[i] = (C.uint8_t)(numDims[i])
 	}
-	return dimensionColumnVector
+	return dimensionVector
 }
 
 func getOutputDataType(exprType expr.Type, outputWidthInByte int) C.enum_DataType {
@@ -629,9 +629,9 @@ func (bc *oopkBatchContext) geoIntersect(geo *geoIntersection, pointColumnIndex 
 
 func (bc *oopkBatchContext) hll(numDims common.DimCountsPerDimWidth, isLastBatch bool, stream unsafe.Pointer, device int) (
 	hllVector, dimRegCount devicePointer, hllVectorSize int64) {
-	prevDimOut := makeDimensionColumnVector(bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(),
+	prevDimOut := makeDimensionVector(bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(),
 		bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
-	curDimOut := makeDimensionColumnVector(bc.dimensionVectorD[1].getPointer(), bc.hashVectorD[1].getPointer(),
+	curDimOut := makeDimensionVector(bc.dimensionVectorD[1].getPointer(), bc.hashVectorD[1].getPointer(),
 		bc.dimIndexVectorD[1].getPointer(), numDims, bc.resultCapacity)
 	prevValuesOut, curValuesOut := (*C.uint32_t)(bc.measureVectorD[0].getPointer()), (*C.uint32_t)(bc.measureVectorD[1].getPointer())
 	bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {
@@ -650,7 +650,7 @@ func (bc *oopkBatchContext) hll(numDims common.DimCountsPerDimWidth, isLastBatch
 }
 
 func (bc *oopkBatchContext) sortByKey(numDims common.DimCountsPerDimWidth, stream unsafe.Pointer, device int) {
-	keys := makeDimensionColumnVector(bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(),
+	keys := makeDimensionVector(bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(),
 		bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
 	doCGoCall(func() C.CGoCallResHandle {
 		// sort the previous result with current batch together
@@ -660,9 +660,9 @@ func (bc *oopkBatchContext) sortByKey(numDims common.DimCountsPerDimWidth, strea
 
 func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, valueWidth int, aggFunc C.enum_AggregateFunction, stream unsafe.Pointer,
 	device int) {
-	inputKeys := makeDimensionColumnVector(
+	inputKeys := makeDimensionVector(
 		bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(), bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
-	outputKeys := makeDimensionColumnVector(
+	outputKeys := makeDimensionVector(
 		bc.dimensionVectorD[1].getPointer(), bc.hashVectorD[1].getPointer(), bc.dimIndexVectorD[1].getPointer(), numDims, bc.resultCapacity)
 	inputValues, outputValues := (*C.uint8_t)(bc.measureVectorD[0].getPointer()), (*C.uint8_t)(bc.measureVectorD[1].getPointer())
 	bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {
@@ -672,9 +672,9 @@ func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, val
 }
 
 func (bc *oopkBatchContext) expand(numDims common.DimCountsPerDimWidth, stream unsafe.Pointer, device int) {
-	inputKeys := makeDimensionColumnVector(
+	inputKeys := makeDimensionVector(
 		bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(), bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
-	outputKeys := makeDimensionColumnVector(
+	outputKeys := makeDimensionVector(
 		bc.dimensionVectorD[1].getPointer(), bc.hashVectorD[1].getPointer(), bc.dimIndexVectorD[1].getPointer(), numDims, bc.resultCapacity)
 
 	bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {

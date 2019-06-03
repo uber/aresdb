@@ -24,7 +24,7 @@
 #include "query/time_series_aggregate.h"
 #include "memory.hpp"
 
-CGoCallResHandle Sort(DimensionColumnVector keys,
+CGoCallResHandle Sort(DimensionVector keys,
                       int length,
                       void *cudaStream,
                       int device) {
@@ -45,9 +45,9 @@ CGoCallResHandle Sort(DimensionColumnVector keys,
   return resHandle;
 }
 
-CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
+CGoCallResHandle Reduce(DimensionVector inputKeys,
                         uint8_t *inputValues,
-                        DimensionColumnVector outputKeys,
+                        DimensionVector outputKeys,
                         uint8_t *outputValues,
                         int valueBytes,
                         int length,
@@ -80,8 +80,8 @@ CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
 }
 
 
-CGoCallResHandle Expand(DimensionColumnVector inputKeys,
-                        DimensionColumnVector outputKeys,
+CGoCallResHandle Expand(DimensionVector inputKeys,
+                        DimensionVector outputKeys,
                         uint32_t *baseCounts,
                         uint32_t *indexVector,
                         int indexVectorLen,
@@ -114,8 +114,8 @@ CGoCallResHandle Expand(DimensionColumnVector inputKeys,
 
 namespace ares {
 
-// sort based on DimensionColumnVector
-void sort(DimensionColumnVector keys,
+// sort based on DimensionVector
+void sort(DimensionVector keys,
           int length,
           cudaStream_t cudaStream) {
   DimensionHashIterator hashIter(keys.DimValues,
@@ -156,30 +156,6 @@ int reduceInternal(uint64_t *inputHashValues, uint32_t *inputIndexVector,
                                       reduceFunc);
   return thrust::get<1>(resEnd) - zippedOutputIter;
 }
-
-struct rolling_avg {
-  typedef uint64_t first_argument_type;
-  typedef uint64_t second_argument_type;
-  typedef uint64_t result_type;
-
-  __host__  __device__ uint64_t operator()(
-      uint64_t lhs, uint64_t rhs) const {
-    uint32_t lCount = lhs >> 32;
-    uint32_t rCount = rhs >> 32;
-    uint32_t totalCount = lCount + rCount;
-    if (totalCount == 0) {
-      return 0;
-    }
-
-    uint64_t res = 0;
-    *(reinterpret_cast<uint32_t *>(&res) + 1) = totalCount;
-    // do division first to avoid overflow.
-    *reinterpret_cast<float_t*>(&res) =
-        *reinterpret_cast<float_t*>(&lhs) / totalCount * lCount +
-        *reinterpret_cast<float_t*>(&rhs) / totalCount * rCount;
-    return res;
-  }
-};
 
 int bindValueAndAggFunc(uint64_t *inputHashValues,
                         uint32_t *inputIndexVector,
@@ -234,14 +210,14 @@ int bindValueAndAggFunc(uint64_t *inputHashValues,
     case AGGR_MAX_FLOAT:
       REDUCE_INTERNAL(float_t, thrust::maximum<float_t>)
     case AGGR_AVG_FLOAT:
-      REDUCE_INTERNAL(uint64_t, rolling_avg)
+      REDUCE_INTERNAL(uint64_t, RollingAvgFunctor)
     default:
       throw std::invalid_argument("Unsupported aggregation function type");
   }
 }
 
-int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
-           DimensionColumnVector outputKeys, uint8_t *outputValues,
+int reduce(DimensionVector inputKeys, uint8_t *inputValues,
+           DimensionVector outputKeys, uint8_t *outputValues,
            int valueBytes, int length, AggregateFunction aggFunc,
            cudaStream_t cudaStream) {
   int outputLength = bindValueAndAggFunc(
@@ -273,8 +249,8 @@ int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
 }
 
 
-int expand(DimensionColumnVector inputKeys,
-           DimensionColumnVector outputKeys,
+int expand(DimensionVector inputKeys,
+           DimensionVector outputKeys,
            uint32_t *baseCounts,
            uint32_t *indexVector,
            int indexVectorLen,

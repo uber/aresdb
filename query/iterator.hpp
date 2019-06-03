@@ -224,7 +224,7 @@ class VectorPartyIterator
     }
 
     if (mode == 3) {
-      uint32_t newIndex;
+      uint32_t DnewIndex;
       if (hasBaseCounts) {
         newIndex = *this->base_reference();
       } else {
@@ -844,7 +844,7 @@ class RecordIDJoinIterator
   }
 };
 
-// DimensionHashIterator reads DimensionColumnVector and produce hashed values
+// DimensionHashIterator reads DimensionVector and produce hashed values
 class DimensionHashIterator
     : public thrust::iterator_adaptor<
         DimensionHashIterator, uint32_t *, uint64_t, thrust::use_default,

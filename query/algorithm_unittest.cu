@@ -997,7 +997,7 @@ TEST(SortDimColumnVectorTest, CheckSort) {
 
   const int vectorCapacity = 3;
   const int length = 3;
-  DimensionColumnVector keyColVector = {
+  DimensionVector keyColVector = {
       keys,
       hashValues,
       index,
@@ -1048,14 +1048,14 @@ TEST(ReduceDimColumnVectorTest, CheckReduce) {
   };
   int length = 6;
   int vectorCapacity = 6;
-  DimensionColumnVector inputKeys = {
+  DimensionVector inputKeys = {
       inputDimValues,
       inputHashValues,
       inputIndexVector,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
 
-  DimensionColumnVector outputKeys = {
+  DimensionVector outputKeys = {
       outputDimValues,
       outputHashValues,
       outputIndexVector,
@@ -1122,14 +1122,14 @@ TEST(SortAndReduceTest, CheckReduceByAvg) {
 
   int length = 6;
   int vectorCapacity = 6;
-  DimensionColumnVector inputKeys = {
+  DimensionVector inputKeys = {
       inputDimValues,
       inputHashValues,
       inputIndexVector,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)0, (uint8_t)0}};
 
-  DimensionColumnVector outputKeys = {
+  DimensionVector outputKeys = {
       outputDimValues,
       outputHashValues,
       outputIndexVector,
@@ -1179,14 +1179,14 @@ TEST(SortAndReduceTest, CheckHash) {
 
   const int length = 8;
   const int vectorCapacity = 8;
-  DimensionColumnVector inputKeyColVector = {
+  DimensionVector inputKeyColVector = {
       dimValues,
       hashValues,
       indexValues,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)1}};
 
-  DimensionColumnVector outputKeyColVector = {
+  DimensionVector outputKeyColVector = {
       dimValuesOut,
       hashValuesOut,
       indexValuesOut,
@@ -1247,14 +1247,14 @@ TEST(HyperLogLogTest, CheckSparseMode) {
   uint64_t *curHash = allocate(curHashH, 8);
   uint32_t *curIndex = allocate(curIndexH, 8);
 
-  DimensionColumnVector prevDimOut = {
+  DimensionVector prevDimOut = {
       prevDim,
       prevHash,
       prevIndex,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)1}};
 
-  DimensionColumnVector curDimOut = {
+  DimensionVector curDimOut = {
       curDim,
       curHash,
       curIndex,
@@ -1341,14 +1341,14 @@ TEST(HyperLogLogTest, CheckDenseMode) {
   uint64_t *curHash = allocate(curHashH, 5000);
   uint32_t *curIndex = allocate(curIndexH, 5000);
 
-  DimensionColumnVector prevDimOut = {
+  DimensionVector prevDimOut = {
       prevDim,
       prevHash,
       prevIndex,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)1}};
 
-  DimensionColumnVector curDimOut = {
+  DimensionVector curDimOut = {
       curDim,
       curHash,
       curIndex,
@@ -1778,7 +1778,7 @@ TEST(ExpandTest, testOverFill) {
 
     int length = 6;
     int vectorCapacity = 6;
-    DimensionColumnVector inputKeys = {
+    DimensionVector inputKeys = {
         inputDimValues,
         NULL,
         NULL,
@@ -1786,7 +1786,7 @@ TEST(ExpandTest, testOverFill) {
         {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
     int outCapacity =  10;
 
-    DimensionColumnVector outputKeys = {
+    DimensionVector outputKeys = {
         outputDimValues,
         NULL,
         NULL,
@@ -1848,14 +1848,14 @@ TEST(ExpandTest, testAppend) {
     int vectorCapacity = 6;
     int outCapacity =  10;
 
-    DimensionColumnVector inputKeys = {
+    DimensionVector inputKeys = {
         inputDimValues,
         NULL,
         NULL,
         vectorCapacity,
         {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
 
-    DimensionColumnVector outputKeys = {
+    DimensionVector outputKeys = {
         outputDimValues,
         NULL,
         NULL,
@@ -1915,7 +1915,7 @@ TEST(ExpandTest, testFillPartial) {
 
     int length = 3;
     int vectorCapacity = 6;
-    DimensionColumnVector inputKeys = {
+    DimensionVector inputKeys = {
         inputDimValues,
         NULL,
         NULL,
@@ -1923,7 +1923,7 @@ TEST(ExpandTest, testFillPartial) {
         {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
     int outCapacity =  10;
 
-    DimensionColumnVector outputKeys = {
+    DimensionVector outputKeys = {
         outputDimValues,
         NULL,
         NULL,

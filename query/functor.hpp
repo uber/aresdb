@@ -1080,5 +1080,29 @@ struct VoidFunctor {
   }
 };
 
+struct RollingAvgFunctor {
+  typedef uint64_t first_argument_type;
+  typedef uint64_t second_argument_type;
+  typedef uint64_t result_type;
+
+  __host__  __device__ uint64_t operator()(
+      uint64_t lhs, uint64_t rhs) const {
+    uint32_t lCount = lhs >> 32;
+    uint32_t rCount = rhs >> 32;
+    uint32_t totalCount = lCount + rCount;
+    if (totalCount == 0) {
+      return 0;
+    }
+
+    uint64_t res = 0;
+    *(reinterpret_cast<uint32_t *>(&res) + 1) = totalCount;
+    // do division first to avoid overflow.
+    *reinterpret_cast<float_t*>(&res) =
+        *reinterpret_cast<float_t*>(&lhs) / totalCount * lCount +
+        *reinterpret_cast<float_t*>(&rhs) / totalCount * rCount;
+    return res;
+  }
+};
+
 }  // namespace ares
 #endif  // QUERY_FUNCTOR_HPP_

@@ -52,18 +52,26 @@ int filter(TransformContext ctx, InputVector input,
 
 // reduce binds aggregate function type and data type from
 // aggFunc.
-int reduce(DimensionColumnVector inputKeys, uint8_t *inputValues,
-           DimensionColumnVector outputKeys, uint8_t *outputValues,
+int reduce(DimensionVector inputKeys, uint8_t *inputValues,
+           DimensionVector outputKeys, uint8_t *outputValues,
            int valueBytes, int length, AggregateFunction aggFunc,
            cudaStream_t cudaStream);
 
 // sort binds KeyIter type from keys.
-void sort(DimensionColumnVector keys, int length, cudaStream_t cudaStream);
+void sort(DimensionVector keys, int length, cudaStream_t cudaStream);
+
+// hash_reduction will reduce the measures according to the dim values and
+// aggregate function. Its interface is the same as reduce except it will not
+// use index vector in DimensionVector.
+int hash_reduction(DimensionVector inputKeys, uint8_t *inputValues,
+           DimensionVector outputKeys, uint8_t *outputValues,
+           int valueBytes, int length, AggregateFunction aggFunc,
+           cudaStream_t cudaStream);
 
 // expand function is used to uncompress the compressed dimension keys and
 // append to outputKeys.
-int expand(DimensionColumnVector inputKeys,
-           DimensionColumnVector outputKeys,
+int expand(DimensionVector inputKeys,
+           DimensionVector outputKeys,
            uint32_t *baseCounts,
            uint32_t *indexVector,
            int indexVectorLen,
@@ -71,8 +79,8 @@ int expand(DimensionColumnVector inputKeys,
            cudaStream_t cudaStream);
 
 // hyperloglog.
-int hyperloglog(DimensionColumnVector prevDimOut,
-                DimensionColumnVector curDimOut, uint32_t *prevValuesOut,
+int hyperloglog(DimensionVector prevDimOut,
+                DimensionVector curDimOut, uint32_t *prevValuesOut,
                 uint32_t *curValuesOut, int prevResultSize, int curBatchSize,
                 bool isLastBatch, uint8_t **hllVectorPtr,
                 size_t *hllVectorSizePtr, uint16_t **hllDimRegIDCountPtr,

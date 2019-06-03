@@ -251,8 +251,8 @@ typedef struct {
   enum InputVectorType Type;
 } InputVector;
 
-// DimensionColumnVector stores the dimension vector byte array
-// DimensionColumnVector will be allocated together
+// DimensionVector stores the dimension vector byte array
+// DimensionVector will be allocated together
 // The layout will be 4byte vectors followed by 2 byte vectors followed by 1
 // byte vectors and null vector (1 byte) Note: IndexVector is the indexVector of
 // dimension vector, not the index vector of the batch Sort and reduce will be
@@ -261,11 +261,9 @@ typedef struct {
   uint8_t *DimValues;
   uint64_t *HashValues;
   uint32_t *IndexVector;
-  // length of single vector for each dimension
-  // note: this does not necessarily equal to the length of the vector
   int VectorCapacity;
   uint8_t NumDimsPerDimWidth[NUM_DIM_WIDTH];
-} DimensionColumnVector;
+} DimensionVector;
 
 // DimensionOutputVector is used as the output vector of dimension
 // transformation for each dimension.
@@ -504,7 +502,7 @@ CGoCallResHandle BinaryFilter(InputVector lhs,
 // ascending key order. Notice we don't need data type of the measure
 // values here since we only need to move the whole 4 bytes around
 // without any change.
-CGoCallResHandle Sort(DimensionColumnVector keys,
+CGoCallResHandle Sort(DimensionVector keys,
                       int length,
                       void *cudaStream,
                       int device);
@@ -513,9 +511,9 @@ CGoCallResHandle Sort(DimensionColumnVector keys,
 // write the unique keys to outputKeys and aggregation results to outputValues.
 // It returns number of unique keys as result also. Notice outputKeys and
 // outputValues should be preallocated by caller.
-CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
+CGoCallResHandle Reduce(DimensionVector inputKeys,
                         uint8_t *inputValues,
-                        DimensionColumnVector outputKeys,
+                        DimensionVector outputKeys,
                         uint8_t *outputValues,
                         int valueBytes,
                         int length,
@@ -523,19 +521,33 @@ CGoCallResHandle Reduce(DimensionColumnVector inputKeys,
                         void *cudaStream,
                         int device);
 
-/** Expand function is used to decompress the dimensions which are compressed
- through baseCounts, and append to existing outputKeys.
- @inputKeys input DimensionColumnVector
- @outputKeys output DimensionColumnVector
- @baseCounts count vector for first column
- @indexVector index vector of the dimension keys
- @indexVectorLen length of index vector will be used for the output, it should
-  be less or equal to length of keys in inputKeys
- @outputOccupiedLen number of rows already in the outputKeys, as this will
-  be append operation
-*/
-CGoCallResHandle Expand(DimensionColumnVector inputKeys,
-                        DimensionColumnVector outputKeys,
+// HashReduce does the reduction using hash instead of sort and then reduce.
+// Note for HashReduce we will not use hash vector for keys so since
+// hash happens during hash map insertion, therefore we can skip allocation for
+// hash vector. Index vector is still needed for locating corresponding dim
+// values.
+CGoCallResHandle HashReduce(DimensionVector inputKeys,
+                        uint8_t *inputValues,
+                        DimensionVector outputKeys,
+                        uint8_t *outputValues,
+                        int valueBytes,
+                        int length,
+                        enum AggregateFunction aggFunc,
+                        void *cudaStream,
+                        int device);
+
+// Expand function is used to decompress the dimensions which are compressed
+// through baseCounts, and append to existing outputKeys.
+// @inputKeys input DimensionVector
+// @outputKeys output DimensionVector
+// @baseCounts count vector for first column
+// @indexVector index vector of the dimension keys
+// @indexVectorLen length of index vector will be used for the output, it should
+// be less or equal to length of keys in inputKeys
+// outputOccupiedLen number of rows already in the outputKeys, as this will
+// be append operation
+CGoCallResHandle Expand(DimensionVector inputKeys,
+                        DimensionVector outputKeys,
                         uint32_t *baseCounts,
                         uint32_t *indexVector,
                         int indexVectorLen,
@@ -551,8 +563,8 @@ CGoCallResHandle Expand(DimensionColumnVector inputKeys,
 // number of unique hash values in current batch),
 // hllVectorSizePtr stores the size of hllVector
 // hllDimRegIDCount stores the num of reg_id per dim
-CGoCallResHandle HyperLogLog(DimensionColumnVector prevDimOut,
-                             DimensionColumnVector curDimOut,
+CGoCallResHandle HyperLogLog(DimensionVector prevDimOut,
+                             DimensionVector curDimOut,
                              uint32_t *prevValuesOut,
                              uint32_t *curValuesOut,
                              int prevResultSize,
