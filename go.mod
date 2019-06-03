@@ -40,7 +40,7 @@ require (
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/leanovate/gopter v0.2.4 // indirect
-	github.com/m3db/m3 v0.7.0
+	github.com/m3db/m3 v0.9.5
 	github.com/m3db/m3x v0.0.0-20190128162604-b66c9c466c47
 	github.com/m3db/prometheus_client_golang v0.8.1 // indirect
 	github.com/m3db/prometheus_client_model v0.1.0 // indirect

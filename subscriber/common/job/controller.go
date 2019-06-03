@@ -28,7 +28,7 @@ import (
 	"github.com/curator-go/curator"
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
-	"github.com/m3db/m3x/instrument"
+	"github.com/m3db/m3/src/x/instrument"
 	controllerCli "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/config"
@@ -177,7 +177,7 @@ func NewController(params Params) *Controller {
 
 func connectEtcdServices(params Params) (services.Services, error) {
 	iopts := instrument.NewOptions().
-		SetZapLogger(params.ServiceConfig.Logger).
+		SetLogger(params.ServiceConfig.Logger).
 		SetMetricsScope(params.ServiceConfig.Scope)
 
 	// etcd key format: prefix/${env}/namespace/service/instanceId
