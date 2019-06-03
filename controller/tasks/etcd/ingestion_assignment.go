@@ -188,7 +188,7 @@ func (ia *ingestionAssignmentTask) startIngestionAssignment(hostName string) {
 		ia.logger.With("host", hostName).Infof("elected as leader")
 		namespaces, err := ia.namespaceMutator.ListNamespaces()
 		if err != nil {
-			ia.logger.Error(err)
+			ia.logger.Fatal(err)
 		}
 		for _, ns := range namespaces {
 			err = ia.watchManager.AddNamespace(ns)
@@ -198,15 +198,15 @@ func (ia *ingestionAssignmentTask) startIngestionAssignment(hostName string) {
 		}
 
 		tickerChan := time.NewTicker(time.Duration(ia.intervalSeconds) * time.Second).C
-
 	loop:
 		for {
 			select {
-			case <- ia.leaderElection.C():
+			case <-ia.leaderElection.C():
 				if !ia.isLeader() {
 					ia.logger.With("host", hostName).Infof("host is no longer the leader")
 					break loop
 				}
+			// watch change
 			case ns := <-ia.watchManager.C():
 				if !ia.isLeader() {
 					ia.logger.With("host", hostName).Infof("host is no longer the leader")
@@ -220,7 +220,6 @@ func (ia *ingestionAssignmentTask) startIngestionAssignment(hostName string) {
 					break loop
 				}
 				ia.tryRecalculateAllNamespaces()
-			// periodic updates
 			case <-ia.stopChan:
 				return
 			}

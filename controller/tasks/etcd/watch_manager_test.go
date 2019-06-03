@@ -27,7 +27,7 @@ func TestWatchManager(t *testing.T) {
 		notify := make(chan struct{})
 
 		go func() {
-			<- manager.C()
+			<-manager.C()
 			close(notify)
 		}()
 

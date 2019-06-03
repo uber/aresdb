@@ -28,12 +28,12 @@ func TestLeaderElect(t *testing.T) {
 		elector := NewLeaderElector(leaderService)
 		err := elector.Start()
 		assert.NoError(t, err)
-		<- elector.C()
+		<-elector.C()
 		assert.Equal(t, elector.Status(), Leader)
 
 		err = elector.Resign()
 		assert.NoError(t, err)
-		<- elector.C()
+		<-elector.C()
 		assert.Equal(t, elector.Status(), Follower)
 	})
 }

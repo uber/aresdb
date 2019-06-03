@@ -48,7 +48,7 @@ type LeaderElector interface {
 type leaderElector struct {
 	leaderService   services.LeaderService
 	statusWatchable xwatch.Watchable
-	watch xwatch.Watch
+	watch           xwatch.Watch
 }
 
 func (l *leaderElector) C() <-chan struct{} {
