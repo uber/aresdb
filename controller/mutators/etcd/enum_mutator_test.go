@@ -14,10 +14,9 @@
 package etcd
 
 import (
+	"github.com/m3db/m3/src/cluster/kv/mem"
 	"strconv"
 	"testing"
-
-	testingUtils "github.com/uber/aresdb/testing"
 
 	"github.com/stretchr/testify/assert"
 	pb "github.com/uber/aresdb/controller/generated/proto"
@@ -40,14 +39,9 @@ func TestEnumMutator(t *testing.T) {
 
 	t.Run("Extend and get enum cases", func(t *testing.T) {
 		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
+		txnStore := mem.NewStore()
 
-		client := testingUtils.SetUpEtcdTestClient(t, port)
-		txnStore, err := client.Txn()
-		assert.NoError(t, err)
-
-		_, err = txnStore.Set(utils.EnumNodeListKey("ns1", "test", 0, 0), &pb.EnumNodeList{
+		_, err := txnStore.Set(utils.EnumNodeListKey("ns1", "test", 0, 0), &pb.EnumNodeList{
 			NumEnumNodes: 1,
 		})
 		assert.NoError(t, err)

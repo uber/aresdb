@@ -14,9 +14,8 @@
 package etcd
 
 import (
+	"github.com/m3db/m3/src/cluster/kv/mem"
 	"testing"
-
-	testingUtils "github.com/uber/aresdb/testing"
 
 	"github.com/uber/aresdb/controller/models"
 	"github.com/uber/aresdb/controller/mutators/common"
@@ -88,14 +87,9 @@ func TestJobMutator(t *testing.T) {
 
 	t.Run("CRUD should work", func(t *testing.T) {
 		// test setup
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
+		txnStore := mem.NewStore()
 
-		client := testingUtils.SetUpEtcdTestClient(t, port)
-		txnStore, err := client.Txn()
-		assert.NoError(t, err)
-
-		_, err = txnStore.Set(utils.JobListKey("ns1"), &pb.EntityList{})
+		_, err := txnStore.Set(utils.JobListKey("ns1"), &pb.EntityList{})
 		assert.NoError(t, err)
 
 		// test
@@ -144,17 +138,11 @@ func TestJobMutator(t *testing.T) {
 	})
 
 	t.Run("CRUD should fail", func(t *testing.T) {
-		cleanUp, port := testingUtils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-
-		client := testingUtils.SetUpEtcdTestClient(t, port)
-		txnStore, err := client.Txn()
-		assert.NoError(t, err)
-
+		txnStore := mem.NewStore()
 		jobMutator := NewJobMutator(txnStore, sugaredLogger)
 
 		// add fail if job config already exists
-		_, err = txnStore.Set(utils.JobListKey("ns"), &pb.EntityList{
+		_, err := txnStore.Set(utils.JobListKey("ns"), &pb.EntityList{
 			Entities: []*pb.EntityName{
 				{
 					Name:      "demand",
@@ -188,7 +176,5 @@ func TestJobMutator(t *testing.T) {
 		// update fail if job not exists
 		err = jobMutator.UpdateJob("ns1", testConfig1)
 		assert.EqualError(t, err, common.ErrNamespaceDoesNotExist.Error())
-
-		// test cleanup
 	})
 }

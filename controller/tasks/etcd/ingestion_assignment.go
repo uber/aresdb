@@ -163,7 +163,7 @@ func (ia *ingestionAssignmentTask) Run() {
 	}()
 
 	ia.logger.With("host", hostName).Infof("Starting ingestion assignment calculation loop")
-	ia.taskAssginmentLoop()
+	ia.startIngestionAssignment(hostName)
 	ia.logger.With("host", hostName).Infof("Exited ingestion assignment calculation loop")
 }
 
@@ -173,33 +173,56 @@ func (ia *ingestionAssignmentTask) Done() {
 	close(ia.stopChan)
 }
 
-func (ia *ingestionAssignmentTask) taskAssginmentLoop() {
-	namespaces, err := ia.namespaceMutator.ListNamespaces()
-	if err != nil {
-		ia.logger.Error(err)
-	}
-	for _, ns := range namespaces {
-		err = ia.watchManager.AddNamespace(ns)
-		if err != nil {
-			ia.logger.Fatal(err)
-		}
-	}
-
-	tickerChan := time.NewTicker(time.Duration(ia.intervalSeconds) * time.Second).C
+func (ia *ingestionAssignmentTask) startIngestionAssignment(hostName string) {
 	for {
 		select {
-		// watch changes (i.e: heartbeat changes)
-		case ns := <-ia.watchManager.C():
-			if ia.isLeader() {
-				ia.recalculateForNamespace(ns)
-			}
-		// periodic updates
-		case <-tickerChan:
-			if ia.isLeader() {
-				ia.tryRecalculateAllNamespaces()
+		// waiting for new election status change
+		case <-ia.leaderElection.C():
+			if !ia.isLeader() {
+				continue
 			}
 		case <-ia.stopChan:
 			return
+		}
+
+		ia.logger.With("host", hostName).Infof("elected as leader")
+		namespaces, err := ia.namespaceMutator.ListNamespaces()
+		if err != nil {
+			ia.logger.Fatal(err)
+		}
+		for _, ns := range namespaces {
+			err = ia.watchManager.AddNamespace(ns)
+			if err != nil {
+				ia.logger.Fatal(err)
+			}
+		}
+
+		tickerChan := time.NewTicker(time.Duration(ia.intervalSeconds) * time.Second).C
+	loop:
+		for {
+			select {
+			case <-ia.leaderElection.C():
+				if !ia.isLeader() {
+					ia.logger.With("host", hostName).Infof("host is no longer the leader")
+					break loop
+				}
+			// watch change
+			case ns := <-ia.watchManager.C():
+				if !ia.isLeader() {
+					ia.logger.With("host", hostName).Infof("host is no longer the leader")
+					break loop
+				}
+				ia.recalculateForNamespace(ns)
+			// periodic updates
+			case <-tickerChan:
+				if !ia.isLeader() {
+					ia.logger.With("host", hostName).Infof("host is no longer the leader")
+					break loop
+				}
+				ia.tryRecalculateAllNamespaces()
+			case <-ia.stopChan:
+				return
+			}
 		}
 	}
 }
