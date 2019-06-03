@@ -19,9 +19,9 @@ import (
 	"math/rand"
 	"unsafe"
 
-	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"sync"
 	"time"
 )
