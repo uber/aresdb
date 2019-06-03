@@ -16,7 +16,7 @@ package etcd
 import (
 	"sync"
 
-	xwatch "github.com/m3db/m3x/watch"
+	xwatch "github.com/m3db/m3/src/x/watch"
 )
 
 const stateChangeEventBufferSize = 6

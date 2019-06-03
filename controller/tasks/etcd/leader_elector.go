@@ -16,7 +16,7 @@ package etcd
 import (
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3/src/cluster/services/leader/campaign"
-	xwatch "github.com/m3db/m3x/watch"
+	xwatch "github.com/m3db/m3/src/x/watch"
 )
 
 // ElectionStatus represents the leader election status

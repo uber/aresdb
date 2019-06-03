@@ -26,7 +26,7 @@ import (
 
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
-	xwatch "github.com/m3db/m3x/watch"
+	xwatch "github.com/m3db/m3/src/x/watch"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
 	pb "github.com/uber/aresdb/controller/generated/proto"
