@@ -472,10 +472,9 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 					testTableName, columnID, 0, day, uint32(0), uint32(0)).Return(reader, nil)
 			}
 		}
-
-		testHostMemoryManager.Start()
 		// avoid eviction.
 		testHostMemoryManager.unManagedMemorySize = 0
+		testHostMemoryManager.Start()
 		defer testHostMemoryManager.Stop()
 		Ω(testHostMemoryManager.getManagedSpaceUsage()).Should(Equal(int64(128 * (10 + 5))))
 
