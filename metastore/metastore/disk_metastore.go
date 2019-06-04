@@ -136,6 +136,11 @@ func (dm *diskMetaStore) GetTable(name string) (*common.Table, error) {
 	return dm.readSchemaFile(name)
 }
 
+// GetOwnedTables returns tables ownership
+func (dm *diskMetaStore) GetOwnedTables() ([]string, error) {
+	return dm.listTables()
+}
+
 // GetOwnedShards returns the list of shards that are owned by this instance.
 func (dm *diskMetaStore) GetOwnedShards(table string) ([]int, error) {
 	return []int{0}, nil
