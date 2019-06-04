@@ -24,7 +24,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/m3db/m3/src/cluster/client"
 	"github.com/m3db/m3/src/cluster/services"
-	"github.com/uber/aresdb/cluster/sharding"
+	"github.com/uber/aresdb/cluster/shard"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/utils"
 	"reflect"
@@ -133,10 +133,10 @@ func (mr *MockHostShardSetMockRecorder) Host() *gomock.Call {
 }
 
 // ShardSet mocks base method
-func (m *MockHostShardSet) ShardSet() sharding.ShardSet {
+func (m *MockHostShardSet) ShardSet() shard.ShardSet {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ShardSet")
-	ret0, _ := ret[0].(sharding.ShardSet)
+	ret0, _ := ret[0].(shard.ShardSet)
 	return ret0
 }
 
@@ -490,10 +490,10 @@ func (mr *MockMapMockRecorder) HostsLen() *gomock.Call {
 }
 
 // ShardSet mocks base method
-func (m *MockMap) ShardSet() sharding.ShardSet {
+func (m *MockMap) ShardSet() shard.ShardSet {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ShardSet")
-	ret0, _ := ret[0].(sharding.ShardSet)
+	ret0, _ := ret[0].(shard.ShardSet)
 	return ret0
 }
 
@@ -584,7 +584,7 @@ func (mr *MockStaticOptionsMockRecorder) Validate() *gomock.Call {
 }
 
 // SetShardSet mocks base method
-func (m *MockStaticOptions) SetShardSet(value sharding.ShardSet) topology.StaticOptions {
+func (m *MockStaticOptions) SetShardSet(value shard.ShardSet) topology.StaticOptions {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetShardSet", value)
 	ret0, _ := ret[0].(topology.StaticOptions)
@@ -598,10 +598,10 @@ func (mr *MockStaticOptionsMockRecorder) SetShardSet(value interface{}) *gomock.
 }
 
 // ShardSet mocks base method
-func (m *MockStaticOptions) ShardSet() sharding.ShardSet {
+func (m *MockStaticOptions) ShardSet() shard.ShardSet {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ShardSet")
-	ret0, _ := ret[0].(sharding.ShardSet)
+	ret0, _ := ret[0].(shard.ShardSet)
 	return ret0
 }
 
@@ -842,34 +842,6 @@ func (m *MockDynamicOptions) InstrumentOptions() utils.Options {
 func (mr *MockDynamicOptionsMockRecorder) InstrumentOptions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstrumentOptions", reflect.TypeOf((*MockDynamicOptions)(nil).InstrumentOptions))
-}
-
-// SetHashGen mocks base method
-func (m *MockDynamicOptions) SetHashGen(h sharding.HashGen) topology.DynamicOptions {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetHashGen", h)
-	ret0, _ := ret[0].(topology.DynamicOptions)
-	return ret0
-}
-
-// SetHashGen indicates an expected call of SetHashGen
-func (mr *MockDynamicOptionsMockRecorder) SetHashGen(h interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHashGen", reflect.TypeOf((*MockDynamicOptions)(nil).SetHashGen), h)
-}
-
-// HashGen mocks base method
-func (m *MockDynamicOptions) HashGen() sharding.HashGen {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HashGen")
-	ret0, _ := ret[0].(sharding.HashGen)
-	return ret0
-}
-
-// HashGen indicates an expected call of HashGen
-func (mr *MockDynamicOptionsMockRecorder) HashGen() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HashGen", reflect.TypeOf((*MockDynamicOptions)(nil).HashGen))
 }
 
 // MockMapProvider is a mock of MapProvider interface
