@@ -2,7 +2,7 @@ package etcd
 
 import (
 	"github.com/golang/mock/gomock"
-	xwatch "github.com/m3db/m3x/watch"
+	xwatch "github.com/m3db/m3/src/x/watch"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

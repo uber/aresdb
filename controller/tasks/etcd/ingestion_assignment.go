@@ -24,7 +24,7 @@ import (
 	"github.com/uber/aresdb/controller/tasks/common"
 
 	"github.com/m3db/m3/src/cluster/services"
-	xwatch "github.com/m3db/m3x/watch"
+	xwatch "github.com/m3db/m3/src/x/watch"
 	"github.com/uber-go/tally"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
