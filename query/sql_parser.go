@@ -354,12 +354,18 @@ func (v *ASTBuilder) VisitQueryNoWith(ctx *antlrgen.QueryNoWithContext) interfac
 	v.SQL2AqlCtx.exprOrigin = ExprOriginOthers
 	var orderBy = v.getOrderBy(ctx)
 
+	limit, err := strconv.Atoi(v.GetTextIfPresent(ctx.GetLimit()))
+	if err != nil {
+		v.Logger.Panic("failed to parse limit")
+	}
+
 	var query *tree.Query
 	if qSpec, ok := term.(*tree.QuerySpecification); ok {
 		qSpecNew := tree.NewQuerySpecification(v.getLocation(ctx),
 			qSpec.Select, qSpec.From, qSpec.Where, qSpec.GroupBy, qSpec.Having, orderBy, v.GetTextIfPresent(ctx.GetLimit()))
 		qSpecNew.SetValue(fmt.Sprintf("QuerySpecification: (%s)", v.getText(ctx.QueryTerm())))
 
+		v.SQL2AqlCtx.MapLimit[v.SQL2AqlCtx.mapKey] = limit
 		query = tree.NewQuery(v.getLocation(ctx),
 			nil,
 			qSpecNew,
@@ -372,8 +378,7 @@ func (v *ASTBuilder) VisitQueryNoWith(ctx *antlrgen.QueryNoWithContext) interfac
 			orderBy,
 			v.GetTextIfPresent(ctx.GetLimit()))
 		if ctx.GetLimit() != nil {
-			limit, err := strconv.Atoi(query.Limit)
-			if levelQuery == 0 && err == nil {
+			if levelQuery == 0 {
 				v.setCtxLevels(v.SQL2AqlCtx, level, levelWith, levelQuery)
 				v.SQL2AqlCtx.MapLimit[v.SQL2AqlCtx.mapKey] = limit
 			} else {

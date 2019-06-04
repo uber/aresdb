@@ -67,12 +67,13 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 	ginkgo.It("parse non agg AQLQuery should work", func() {
 		sqls := []string{
 			`SELECT field1, *
-			FROM trips;`,
+			FROM trips LIMIT 10;`,
 		}
 		res := AQLQuery{
 			Table:      "trips",
 			Measures:   []Measure{{Expr: "1"}},
 			Dimensions: []Dimension{{Expr: "field1"}, {Expr: "*"}},
+			Limit: 10,
 		}
 		runTest(sqls, res, logger)
 	})
