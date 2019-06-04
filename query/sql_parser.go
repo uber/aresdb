@@ -355,8 +355,10 @@ func (v *ASTBuilder) VisitQueryNoWith(ctx *antlrgen.QueryNoWithContext) interfac
 	var orderBy = v.getOrderBy(ctx)
 
 	limit := 0
-	if limitParsed, err := strconv.Atoi(v.GetTextIfPresent(ctx.GetLimit())); err != nil {
-		v.Logger.Warn("failed to parse limit")
+	limitNode := ctx.GetLimit()
+	if limitParsed, err := strconv.Atoi(v.GetTextIfPresent(limitNode)); limitNode != nil && err != nil {
+		limitLoc := v.getLocation(limitNode)
+		v.Logger.Panicf("failed to parse limit %s at (line:%d, col:%d)", limitNode.GetText(), limitLoc.Line, limitLoc.CharPosition)
 	} else {
 		limit = limitParsed
 	}

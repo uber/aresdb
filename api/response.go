@@ -133,5 +133,6 @@ func RespondWithBadRequest(w http.ResponseWriter, err error) {
 	RespondWithError(w, utils.APIError{
 		Code:  http.StatusBadRequest,
 		Cause: err,
+		Message: err.Error(),
 	})
 }
