@@ -354,9 +354,11 @@ func (v *ASTBuilder) VisitQueryNoWith(ctx *antlrgen.QueryNoWithContext) interfac
 	v.SQL2AqlCtx.exprOrigin = ExprOriginOthers
 	var orderBy = v.getOrderBy(ctx)
 
-	limit, err := strconv.Atoi(v.GetTextIfPresent(ctx.GetLimit()))
-	if err != nil {
-		v.Logger.Panic("failed to parse limit")
+	limit := 0
+	if limitParsed, err := strconv.Atoi(v.GetTextIfPresent(ctx.GetLimit())); err != nil {
+		v.Logger.Warn("failed to parse limit")
+	} else {
+		limit = limitParsed
 	}
 
 	var query *tree.Query
