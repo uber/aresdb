@@ -16,26 +16,23 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/pprof"
-	"path/filepath"
-	"unsafe"
-
-	"github.com/uber/aresdb/api"
-	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/memstore"
-	"github.com/uber/aresdb/metastore"
-	"github.com/uber/aresdb/utils"
-
-	"time"
-
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
+	"github.com/uber/aresdb/api"
+	"github.com/uber/aresdb/common"
 	controllerCli "github.com/uber/aresdb/controller/client"
+	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/redolog"
+	"github.com/uber/aresdb/utils"
+	"net/http"
+	"net/http/pprof"
+	"path/filepath"
+	"time"
+	"unsafe"
 )
 
 // Options represents options for executing command
@@ -110,6 +107,9 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	scope.Counter("restart").Inc(1)
 	serverRestartTimer := scope.Timer("restart").Start()
+
+	// TODO: Init topology
+	// topo := topology.NewDynamicInitializer().Init()
 
 	// Create MetaStore.
 	metaStorePath := filepath.Join(cfg.RootPath, "metastore")
@@ -195,6 +195,9 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	// Init shards.
 	utils.GetLogger().Infof("Initializing shards from local DiskStore %s", cfg.RootPath)
 	memStore.InitShards(cfg.SchedulerOff)
+
+	// TODO: Create topology and bootstrapManager
+	// bootstrapManager := datanode.NewBootstrapManager()
 
 	// Start serving.
 	dataHandler := api.NewDataHandler(memStore)
