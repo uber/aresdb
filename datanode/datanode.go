@@ -106,7 +106,7 @@ func (d *dataNode) ShardSet() (shard.ShardSet, error) {
 	}
 	hostShardSet, ok := t.Get().LookupHostShardSet(d.host.ID())
 	if !ok {
-		return nil, fmt.Errorf("datanode: %s not found in topology")
+		return nil, fmt.Errorf("datanode: %s not found in topology", d.host.ID())
 	}
 	return hostShardSet.ShardSet(), nil
 }
