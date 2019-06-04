@@ -3,6 +3,7 @@ coverage.*
 junit.xml
 .idea
 .gopath
+go.sum
 .*.swp
 *.coverprofile
 *.a
