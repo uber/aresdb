@@ -1,0 +1,132 @@
+//  Copyright (c) 2017-2018 Uber Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package rpc;
+
+message KafkaOffset {
+    int64 checkPointOffset = 1; // archiving/backfill/snapshot checkpoint kafka offset
+    int64 commitOffset = 2; // ingestion committed kafka offset
+}
+
+message BackfillCheckpoint {
+    int64 redoFileID = 1; // checkpoint redolog file id, dimension table only
+    uint32 redoFileOffset = 2; // checkpoint redolog file offset, dimension table only
+}
+
+message ArchiveVersion {
+    uint32 archiveVersion = 1; // archive version, fact table only
+    uint32 backfillSeq = 2; // backfillSeq, fact table only
+}
+
+message SnapshotVersion {
+    int64 redoFileID = 1; // checkpoint redolog file id, dimension table only
+    uint32 redoFileOffset = 2; // checkpoint redolog file offset, dimension table only
+}
+
+message VectorPartyMetaData {
+    uint32 columnID = 1; // column id
+}
+
+message BatchMetaData {
+    int32   batchID = 1; // batch id
+    uint32  size = 2; // size of batch
+    ArchiveVersion archiveVersion = 3; // archive version, archive only
+    repeated VectorPartyMetaData vps = 4;
+}
+
+message FactTableShardMetaData {
+    uint32 highWatermark = 1; // high watermark, fact only
+    BackfillCheckpoint backfillCheckpoint = 2;
+}
+
+message DimensionTableShardMetaData {
+    SnapshotVersion snapshotVersion = 1;
+    int32 lastBatchID = 2; // last batch id for snapshot, snapshot only
+    int32 lastBatchSize = 3; // last batch size for snapshot
+}
+
+message TableShardMetaData {
+    string table = 1; // table name
+    int32  incarnation = 2; // table incarnation
+    uint32 shard = 3; // shard id
+    KafkaOffset kafkaOffset = 4;
+    oneof meta {
+        FactTableShardMetaData factMeta = 5;
+        DimensionTableShardMetaData dimensionMeta = 6;
+    }
+    repeated BatchMetaData batches = 7; // batches
+}
+
+message TableShardMetaDataRequest {
+    string table = 1; // table name
+    int32  incarnation = 2; // table incarnation
+    uint32 shard = 3; // shard id
+
+    int32 startBatchID = 4; // first batch id to fetch, fact only
+    int32 endBatchID = 5; // last batch id to fetch, fact only
+}
+
+message VectorPartyRawDataRequest {
+    string table = 1;
+    int32 incarnation = 2;
+    uint32 shard = 3;
+    int32  batchID = 4;
+    oneof version {
+        ArchiveVersion archiveVersion = 5;
+        SnapshotVersion snapshotVersion = 6;
+    }
+    uint32 columnID = 7;
+}
+
+message VectorPartyRawData {
+    bytes chunk = 1;
+}
+
+message StartSessionRequest {
+    string table = 1;
+    uint32 shard = 2;
+    int64 ttl = 3;
+}
+
+message Session {
+    int64 ID = 1;
+}
+
+message KeepAliveResponse {
+    int64 ID = 1;
+    int64 ttl = 2;
+}
+
+// PeerDataNode service defines the service for data fetching from peer data node
+// A data fetching process will proceed with the following sequence:
+//  1. StartSession to start data fetching session. (as long as any ongoing session is alive, the peer data node will
+//     not purge its raw data during archiving/backfill/snapshot process until all sessions exprired or closed)
+//  2. KeepAlive in sub routine to keep session alive througout the data copying process. close the stream
+//     on client side will close the session.
+//  3. FetchTableShardMetaData to fetch table shard metadata with a range [startBatchID, endBatchID] of batche needed
+//     the response will return the list of metadata for batches, including available column ids
+//     at the peer node
+//  4. FetchVectorPartyRawData to fetch vector party from peer data node
+service PeerDataNode {
+    // StartSession starts a session for data streaming
+    rpc StartSession(StartSessionRequest ) returns (Session ) {}
+    // KeepAlive sends keep alive message to the peer data service to
+    // renew session and get new ttl for the session
+    rpc KeepAlive(stream Session ) returns (stream KeepAliveResponse ) {}
+    // FetchTableShardMetaData fetches metadata for given table shard
+    rpc FetchTableShardMetaData(TableShardMetaDataRequest ) returns (TableShardMetaData ) {}
+    // FetchVectorPartyRawData fetches raw data for specified vector party
+    rpc FetchVectorPartyRawData(VectorPartyRawDataRequest ) returns (stream VectorPartyRawData) {}
+}
