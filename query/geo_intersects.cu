@@ -17,29 +17,30 @@
 #include <thrust/transform.h>
 #include <algorithm>
 #include <vector>
-#include "query/algorithm.hpp"
-#include "query/binder.hpp"
-#include "query/memory.hpp"
+#include "algorithm.hpp"
+#include "binder.hpp"
+#include "memory.hpp"
+#include "utils.hpp"
 
 namespace ares {
 class GeoIntersectionContext {
  public:
   GeoIntersectionContext(GeoShapeBatch geoShapes,
-             int indexVectorLength,
-             uint32_t startCount,
-             RecordID **recordIDVectors,
-             int numForeignTables,
-             uint32_t *outputPredicate,
-             bool inOrOut,
-             void *cudaStream)
+                         int indexVectorLength,
+                         uint32_t startCount,
+                         RecordID **recordIDVectors,
+                         int numForeignTables,
+                         uint32_t *outputPredicate,
+                         bool inOrOut,
+                         void *cudaStream)
       : geoShapes(geoShapes),
-          indexVectorLength(indexVectorLength),
-          startCount(startCount),
-          recordIDVectors(recordIDVectors),
-          numForeignTables(numForeignTables),
-          outputPredicate(outputPredicate),
-          inOrOut(inOrOut),
-          cudaStream(reinterpret_cast<cudaStream_t>(cudaStream)) {}
+        indexVectorLength(indexVectorLength),
+        startCount(startCount),
+        recordIDVectors(recordIDVectors),
+        numForeignTables(numForeignTables),
+        outputPredicate(outputPredicate),
+        inOrOut(inOrOut),
+        cudaStream(reinterpret_cast<cudaStream_t>(cudaStream)) {}
 
  private:
   GeoShapeBatch geoShapes;
@@ -64,20 +65,20 @@ class GeoIntersectionContext {
 };
 
 // Specialized for GeoIntersectionContext.
-template <>
+template<>
 class InputVectorBinder<GeoIntersectionContext, 1> :
     public InputVectorBinderBase<GeoIntersectionContext, 1, 1> {
   typedef InputVectorBinderBase<GeoIntersectionContext, 1, 1> super_t;
 
  public:
   explicit InputVectorBinder(GeoIntersectionContext context,
-                                std::vector<InputVector> inputVectors,
-                                uint32_t *indexVector, uint32_t *baseCounts,
-                                uint32_t startCount) : super_t(context,
-                                                               inputVectors,
-                                                               indexVector,
-                                                               baseCounts,
-                                                               startCount) {
+                             std::vector<InputVector> inputVectors,
+                             uint32_t *indexVector, uint32_t *baseCounts,
+                             uint32_t startCount) : super_t(context,
+                                                            inputVectors,
+                                                            indexVector,
+                                                            baseCounts,
+                                                            startCount) {
   }
  public:
   template<typename ...InputIterators>
@@ -263,16 +264,12 @@ void calculateBatchIntersection(GeoShapeBatch geoShapes,
   int64_t iterLength = (int64_t) indexVectorLength * geoShapes.TotalNumPoints;
 
 #ifdef RUN_ON_DEVICE
-  int min_grid_size, block_size;
-  cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
-                                     &block_size,
-                                     geo_for_each_kernel<decltype(geoIter)>);
-  CheckCUDAError("cudaOccupancyMaxPotentialBlockSize");
-  // find needed gridsize
-  int64_t needed_grid_size = (iterLength + block_size - 1) / block_size;
-  int64_t grid_size = std::min(static_cast<int64_t>(min_grid_size),
-      needed_grid_size);
-  geo_for_each_kernel<<<grid_size, block_size, 0, cudaStream>>>(
+  int grid_size, block_size;
+  calculateDim3(&grid_size,
+                &block_size,
+                iterLength,
+                geo_for_each_kernel<decltype(geoIter)>);
+  geo_for_each_kernel <<< grid_size, block_size, 0, cudaStream >>> (
       geoIter, iterLength);
   CheckCUDAError("geo_for_each_kernel");
   // Wait for kernel to finish.
@@ -295,7 +292,7 @@ int GeoIntersectionContext::run(uint32_t *indexVector,
                              inOrOut, cudaStream);
 
   switch (numForeignTables) {
-    #define EXECUTE_GEO_REMOVE_IF(NumTotalForeignTables) \
+#define EXECUTE_GEO_REMOVE_IF(NumTotalForeignTables) \
     case NumTotalForeignTables: { \
       IndexZipIteratorMaker<NumTotalForeignTables> maker; \
       return executeRemoveIf(maker.make(indexVector, recordIDVectors)); \
@@ -337,7 +334,7 @@ void write_geo_shape_dim(
       geoPredicateIter,
       ares::make_dimension_output_iterator<uint8_t>(dimOut.DimValues,
                                                     dimOut.DimNulls),
-                                                    is_non_negative());
+      is_non_negative());
 }
 
 }  // namespace ares

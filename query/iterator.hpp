@@ -26,8 +26,8 @@
 #include <cfloat>
 #include <cmath>
 #include <tuple>
-#include "query/time_series_aggregate.h"
-#include "query/utils.hpp"
+#include "time_series_aggregate.h"
+#include "utils.hpp"
 
 namespace ares {
 
@@ -933,29 +933,16 @@ class DimensionHashIterator
 class DimValueProxy {
  public:
   __host__ __device__ DimValueProxy(uint8_t *ptr, int dimBytes)
-      : ptr(ptr), dimBytes(dimBytes) {}
+      : ptr(ptr), dimBytes(static_cast<uint16_t >(dimBytes)) {}
 
   __host__ __device__ DimValueProxy operator=(DimValueProxy t) {
-    switch (dimBytes) {
-      case 16:
-        *reinterpret_cast<UUIDT *>(ptr) = *reinterpret_cast<UUIDT *>(t.ptr);
-      case 8:
-        *reinterpret_cast<uint64_t *>(ptr) =
-            *reinterpret_cast<uint64_t *>(t.ptr);
-      case 4:
-        *reinterpret_cast<uint32_t *>(ptr) =
-            *reinterpret_cast<uint32_t *>(t.ptr);
-      case 2:
-        *reinterpret_cast<uint16_t *>(ptr) =
-            *reinterpret_cast<uint16_t *>(t.ptr);
-      case 1:*ptr = *t.ptr;
-    }
+    setDimValue(ptr, t.ptr, dimBytes);
     return *this;
   }
 
  private:
   uint8_t *ptr;
-  int dimBytes;
+  uint16_t dimBytes;
 };
 
 class DimensionColumnPermutateIterator
@@ -998,7 +985,7 @@ class DimensionColumnPermutateIterator
     int localIndex = *(begin + (baseIndex % dimOutputLength));
     int bytes = 0;
     uint8_t numDims = 0;
-    uint8_t dimBytes = 0;
+    uint8_t dimByt es = 0;
     int i = 0;
     for (; i < NUM_DIM_WIDTH; i++) {
       dimBytes = 1 << (NUM_DIM_WIDTH - i - 1);

@@ -135,6 +135,62 @@ inline uint8_t getStepInBytes(DataType dataType) {
   }
 }
 
+inline
+__host__ __device__
+void setDimValue(uint8_t* inPtr, uint8_t* outPtr, uint16_t dimBytes){
+  switch (dimBytes) {
+      case 16:
+        *reinterpret_cast<UUIDT *>(outPtr) = *reinterpret_cast<UUIDT *>(inPtr);
+      case 8:
+        *reinterpret_cast<uint64_t *>(outPtr) =
+            *reinterpret_cast<uint64_t *>(inPtr);
+      case 4:
+        *reinterpret_cast<uint32_t *>(outPtr) =
+            *reinterpret_cast<uint32_t *>(inPtr);
+      case 2:
+        *reinterpret_cast<uint16_t *>(outPtr) =
+            *reinterpret_cast<uint16_t *>(inPtr);
+      case 1:*outPtr = *inPtr;
+    }
+}
+
+template<typename kernel>
+__device__
+void calculateDim3(int *grid_size, int *block_size, size_t size, kernel k) {
+  int min_grid_size;
+  cudaOccupancyMaxPotentialBlockSize(&min_grid_size, block_size, k);
+  CheckCUDAError("cudaOccupancyMaxPotentialBlockSize");
+  // find needed gridsize
+  size_t needed_grid_size = (iterLength + block_size - 1) / block_size;
+  *grid_size = static_cast<int>(std::min(static_cast<int64_t>(min_grid_size),
+                                         needed_grid_size));
+}
+
+// Set of atomicAdd operator wrappers.
+// In device mode, they will call cuda atomicX.
+// In host mode, they will just do the addition without atomicity guarantee as
+// std::atomic protects on memory managed by itself instead of on a passed-in
+// address. This is ok for now since for host mode algorithms are not running
+// in parallel.
+// TODO(lucafuji): find atomic libraries on host.
+#ifdef RUN_ON_DEVICE
+template <typename val_type>
+__host__ __device__
+inline val_type atomicAdd(val_type* address, val_type val){
+  ::atomicAdd(address, val);
+}
+
+#else
+template <typename val_type>
+__host__ __device__
+inline val_type atomicAdd(val_type* address, val_type val){
+  *address += val;
+}
+#endif
+
+
+
+
 // GPU memory access has to be aligned to 1, 2, 4, 8, 16 bytes
 // http://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#device-memory-accesses
 // therefore we do byte to byte comparison here
