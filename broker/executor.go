@@ -16,7 +16,7 @@ package broker
 
 import (
 	"github.com/uber/aresdb/cluster/topology"
-	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/query"
 	"github.com/uber/aresdb/utils"
 	"net/http"
@@ -48,7 +48,7 @@ func (qe *queryExecutorImpl) Execute(namespace, sqlQuery string, w http.Response
 	aqlQuery, err = query.Parse(sqlQuery, utils.GetLogger())
 
 	// compile
-	var schemaReader memstore.TableSchemaReader
+	var schemaReader memCom.TableSchemaReader
 	schemaReader, err = qe.schemaManager.GetTableSchemaReader(namespace)
 	if err != nil {
 		return

@@ -16,7 +16,7 @@ package broker
 
 import (
 	"github.com/uber/aresdb/controller/client"
-	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 	"sync"
@@ -31,7 +31,7 @@ type SchemaManager interface {
 	// Run initializes all schema and starts jobs to sync from controller
 	Run()
 	// GetTable gets schema by namespace and table name
-	GetTableSchemaReader(namespace string) (memstore.TableSchemaReader, error)
+	GetTableSchemaReader(namespace string) (memCom.TableSchemaReader, error)
 }
 
 type schemaManagerImpl struct {
@@ -50,6 +50,7 @@ func NewSchemaManager(controllerCli client.ControllerClient) SchemaManager {
 
 // Run initializes all schema and starts jobs to sync from controller
 func (sm *schemaManagerImpl) Run() {
+	// TODO add job to get new namespace
 	namespaces, err := sm.controllerCli.GetNamespaces()
 	if err != nil {
 		utils.GetLogger().Fatal("Failed to fetch namespaces from controller", err)
@@ -64,7 +65,7 @@ func (sm *schemaManagerImpl) Run() {
 	}
 }
 
-func (sm *schemaManagerImpl) GetTableSchemaReader(namespace string) (tableSchemaReader memstore.TableSchemaReader, err error) {
+func (sm *schemaManagerImpl) GetTableSchemaReader(namespace string) (tableSchemaReader memCom.TableSchemaReader, err error) {
 	var exists bool
 	tableSchemaReader, exists = sm.mutators[namespace]
 	if !exists {

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package config
 
 import (
@@ -24,5 +23,5 @@ type BrokerConfig struct {
 	Port int `yaml:"port"`
 
 	ControllerConfig *common.ControllerConfig `yaml:"controller,omitempty"`
-	HTTP      common.HTTPConfig      `yaml:"http"`
+	HTTP             common.HTTPConfig        `yaml:"http"`
 }
