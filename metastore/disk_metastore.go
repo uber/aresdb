@@ -1433,7 +1433,7 @@ func (dm *diskMetaStore) createShard(tableName string, isFactTable bool, shard i
 }
 
 // NewDiskMetaStore creates a new disk based metastore
-func NewDiskMetaStore(basePath string) (MetaStore, error) {
+func NewDiskMetaStore(basePath string) (common.MetaStore, error) {
 	metaStore := &diskMetaStore{
 		FileSystem:       utils.OSFileSystem{},
 		basePath:         basePath,

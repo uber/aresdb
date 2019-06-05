@@ -29,7 +29,7 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
-	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/testing"
@@ -58,7 +58,7 @@ func CreateMockHostMemoryManger() *memComMocks.HostMemoryManager {
 }
 
 // CreateMemStore creates a mocked MemStore for testing.
-func CreateMemStore(schema *memCom.TableSchema, shardID int, metaStore metastore.MetaStore,
+func CreateMemStore(schema *memCom.TableSchema, shardID int, metaStore metaCom.MetaStore,
 	diskStore diskstore.DiskStore) *memMocks.MemStore {
 	redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
 	shard := memstore.NewTableShard(schema, metaStore, diskStore, CreateMockHostMemoryManger(), shardID, redoManagerFactory)

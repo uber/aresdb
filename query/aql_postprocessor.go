@@ -45,7 +45,7 @@ func (qc *AQLQueryContext) Postprocess() {
 		return
 	}
 
-	if !qc.isNonAggregationQuery {
+	if !qc.IsNonAggregationQuery {
 		qc.flushResultBuffer()
 	}
 }
@@ -118,7 +118,7 @@ func (qc *AQLQueryContext) flushResultBuffer() {
 		}
 		utils.GetRootReporter().GetTimer(utils.QueryDimReadLatency).Record(utils.Now().Sub(dimReadingStart))
 
-		if qc.isNonAggregationQuery {
+		if qc.IsNonAggregationQuery {
 			if qc.ResponseWriter != nil {
 				valuesBytes, _ := json.Marshal(dimValues)
 				qc.ResponseWriter.Write(valuesBytes)

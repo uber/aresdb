@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metastore
-
-import (
-	"github.com/uber/aresdb/metastore/common"
-)
+package common
 
 // MetaStore defines interfaces of the external metastore,
 // which can be implemented using file system, SQLite, Zookeeper etc.
@@ -50,7 +46,7 @@ type MetaStore interface {
 	// Should only be called once.
 	// Returns an event channel that emits desired ownership states,
 	// and a done channel for consumer to ack once the event is processed.
-	WatchShardOwnershipEvents() (events <-chan common.ShardOwnership, done chan<- struct{}, err error)
+	WatchShardOwnershipEvents() (events <-chan ShardOwnership, done chan<- struct{}, err error)
 
 	// A subset of newly added columns can be appended to the end of
 	// ArchivingSortColumns by adding their index in columns to archivingSortColumns
@@ -93,7 +89,7 @@ type MetaStore interface {
 // TableSchemaReader reads table schema
 type TableSchemaReader interface {
 	ListTables() ([]string, error)
-	GetTable(name string) (*common.Table, error)
+	GetTable(name string) (*Table, error)
 }
 
 // TableSchemaWatchable watches table schema update events
@@ -107,21 +103,21 @@ type TableSchemaWatchable interface {
 	// Should only be called once.
 	// Returns a events channel that emits the table schema on each change event for given table,
 	// and a done channel for consumer to ack once the event is processed.
-	WatchTableSchemaEvents() (events <-chan *common.Table, done chan<- struct{}, err error)
+	WatchTableSchemaEvents() (events <-chan *Table, done chan<- struct{}, err error)
 }
 
 // TableSchemaMutator mutates table metadata
 type TableSchemaMutator interface {
 	TableSchemaReader
-	CreateTable(table *common.Table) error
+	CreateTable(table *Table) error
 	DeleteTable(name string) error
-	UpdateTableConfig(table string, config common.TableConfig) error
-	UpdateTable(table common.Table) error
+	UpdateTableConfig(table string, config TableConfig) error
+	UpdateTable(table Table) error
 
 	// A subset of newly added columns can be appended to the end of
 	// ArchivingSortColumns by adding their index in columns to archivingSortColumns
-	AddColumn(table string, column common.Column, appendToArchivingSortOrder bool) error
+	AddColumn(table string, column Column, appendToArchivingSortOrder bool) error
 	// Update column config.
-	UpdateColumn(table string, column string, config common.ColumnConfig) error
+	UpdateColumn(table string, column string, config ColumnConfig) error
 	DeleteColumn(table string, column string) error
 }

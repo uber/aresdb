@@ -1462,7 +1462,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
 		qc.processMeasure()
-		Ω(qc.isNonAggregationQuery).Should(BeTrue())
+		Ω(qc.IsNonAggregationQuery).Should(BeTrue())
 		qc.processDimensions()
 		Ω(qc.OOPK.Dimensions).Should(HaveLen(7))
 	})

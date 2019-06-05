@@ -139,7 +139,7 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		if qc.OOPK.IsHLL() {
 			qc.HLLQueryResult, qc.Error = qc.PostprocessAsHLLData()
 		} else {
-			if !qc.isNonAggregationQuery {
+			if !qc.IsNonAggregationQuery {
 				// copy dimensions
 				qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
 				asyncCopyDimensionVector(qc.OOPK.dimensionVectorH, qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), qc.OOPK.ResultSize, 0,
@@ -1147,12 +1147,12 @@ func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize, columnMemUs
 
 	// 7. max(memUsageBeforeAgg, sortReduceMemoryUsage)
 	memUsage = memUsageBeforeAgg
-	if !qc.isNonAggregationQuery {
+	if !qc.IsNonAggregationQuery {
 		memUsage = int(math.Max(float64(memUsage), float64(estimateSortReduceMemUsage(firstColumnSize))))
 	}
 
 	// 8. Dimension vector memory usage (input + output)
-	if qc.isNonAggregationQuery {
+	if qc.IsNonAggregationQuery {
 		maxRowsPerBatch := maxSizeAfterPreFilter
 		if qc.Query.Limit < maxRowsPerBatch {
 			maxRowsPerBatch = qc.Query.Limit
@@ -1474,7 +1474,7 @@ func shouldSkipLiveBatchWithFilter(b *memstore.LiveBatch, filter expr.Expr) bool
 }
 
 func (qc *AQLQueryContext) initializeNonAggResponse() {
-	if qc.isNonAggregationQuery {
+	if qc.IsNonAggregationQuery {
 		headers := make([]string, len(qc.Query.Dimensions))
 		for i, dim := range qc.Query.Dimensions {
 			headers[i] = dim.Expr

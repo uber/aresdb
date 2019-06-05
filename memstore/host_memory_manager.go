@@ -19,7 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
@@ -37,7 +37,7 @@ type preloadJob struct {
 type hostMemoryManager struct {
 	sync.RWMutex
 	memStore  *memStoreImpl
-	metaStore metastore.MetaStore
+	metaStore metaCom.MetaStore
 	// totalMemorySize is configurable uplimit.
 	totalMemorySize int64
 	// unManagedMemorySize and managedMemorySize reflect current memory usage status.

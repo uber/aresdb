@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 )
@@ -217,7 +216,7 @@ func (r *BackfillManager) Destruct() {
 
 // Done updates the backfill progress both in memory and in metastore.
 func (r *BackfillManager) Done(currentRedoFile int64, currentBatchOffset uint32,
-	metaStore metastore.MetaStore) error {
+	metaStore metaCom.MetaStore) error {
 	r.Lock()
 	defer r.Unlock()
 	if currentRedoFile > r.LastRedoFile ||

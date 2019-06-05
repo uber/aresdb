@@ -15,7 +15,7 @@
 package memstore
 
 import (
-	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"time"
 )
@@ -24,12 +24,12 @@ import (
 type BatchStatsReporter struct {
 	intervalInSeconds int
 	memStore          MemStore
-	metaStore         metastore.MetaStore
+	metaStore         metaCom.MetaStore
 	stopChan          chan struct{}
 }
 
 // NewBatchStatsReporter create a new BatchStatsReporter instance
-func NewBatchStatsReporter(intervalInSeconds int, memStore MemStore, metaStore metastore.MetaStore) *BatchStatsReporter {
+func NewBatchStatsReporter(intervalInSeconds int, memStore MemStore, metaStore metaCom.MetaStore) *BatchStatsReporter {
 	return &BatchStatsReporter{
 		intervalInSeconds: intervalInSeconds,
 		memStore:          memStore,

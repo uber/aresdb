@@ -22,7 +22,7 @@ import (
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"math"
@@ -44,7 +44,7 @@ type TableShard struct {
 	Schema *common.TableSchema `json:"schema"`
 
 	// For convenience.
-	metaStore            metastore.MetaStore
+	metaStore            metaCom.MetaStore
 	diskStore            diskstore.DiskStore
 	redoLogManagerMaster *redolog.RedoLogManagerMaster
 
@@ -65,7 +65,7 @@ type TableShard struct {
 }
 
 // NewTableShard creates and initiates a table shard based on the schema.
-func NewTableShard(schema *common.TableSchema, metaStore metastore.MetaStore,
+func NewTableShard(schema *common.TableSchema, metaStore metaCom.MetaStore,
 	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int, redoLogManagerMaster *redolog.RedoLogManagerMaster) *TableShard {
 	tableShard := &TableShard{
 		ShardID:              shard,

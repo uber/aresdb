@@ -19,7 +19,6 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"sync"
@@ -35,18 +34,18 @@ type RedoLogManagerMaster struct {
 	// DiskStore
 	diskStore diskstore.DiskStore
 	// Metastore
-	metaStore metastore.MetaStore
+	metaStore metaCom.MetaStore
 	// save all table partition redolog managers
 	managers map[string]map[int]RedologManager
 }
 
 // NewRedoLogManagerMaster create RedoLogManagerMaster instance
-func NewRedoLogManagerMaster(c *common.RedoLogConfig, diskStore diskstore.DiskStore, metaStore metastore.MetaStore) (*RedoLogManagerMaster, error) {
+func NewRedoLogManagerMaster(c *common.RedoLogConfig, diskStore diskstore.DiskStore, metaStore metaCom.MetaStore) (*RedoLogManagerMaster, error) {
 	return NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, nil)
 }
 
 // NewKafkaRedoLogManagerMaster convenient function if the kafka consumer can be passed in from outside
-func NewKafkaRedoLogManagerMaster(cfg *common.RedoLogConfig, diskStore diskstore.DiskStore, metaStore metastore.MetaStore, consumer sarama.Consumer) (*RedoLogManagerMaster, error) {
+func NewKafkaRedoLogManagerMaster(cfg *common.RedoLogConfig, diskStore diskstore.DiskStore, metaStore metaCom.MetaStore, consumer sarama.Consumer) (*RedoLogManagerMaster, error) {
 
 	if cfg == nil {
 		cfg = &common.RedoLogConfig{}

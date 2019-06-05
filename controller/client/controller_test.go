@@ -59,6 +59,7 @@ var _ = ginkgo.Describe("Controller", func() {
 		table,
 		table1,
 	}
+	namespaces := []string{"ns1"}
 
 	column2EnumCases := []string{"1"}
 	enumCasesBytes, _ := json.Marshal(column2EnumCases)
@@ -68,6 +69,10 @@ var _ = ginkgo.Describe("Controller", func() {
 	ginkgo.BeforeEach(func() {
 		testRouter := mux.NewRouter()
 		testServer = httptest.NewUnstartedServer(testRouter)
+		testRouter.HandleFunc("/namespaces", func(w http.ResponseWriter, r *http.Request) {
+			b, _ := json.Marshal(namespaces)
+			w.Write(b)
+		})
 		testRouter.HandleFunc("/schema/ns1/tables", func(w http.ResponseWriter, r *http.Request) {
 			b, _ := json.Marshal(tables)
 			w.Write(b)
@@ -174,6 +179,10 @@ var _ = ginkgo.Describe("Controller", func() {
 		tablesGot, err := c.GetAllSchema("ns1")
 		Ω(err).Should(BeNil())
 		Ω(tablesGot).Should(Equal(tables))
+
+		namespacesGot, err := c.GetNamespaces()
+		Ω(err).Should(BeNil())
+		Ω(namespacesGot).Should(Equal(namespaces))
 
 		hash, err = c.GetAssignmentHash("ns1", "0")
 		Ω(err).Should(BeNil())

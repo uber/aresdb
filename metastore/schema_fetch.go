@@ -27,14 +27,14 @@ type SchemaFetchJob struct {
 	clusterName       string
 	hash              string
 	intervalInSeconds int
-	schemaMutator     TableSchemaMutator
+	schemaMutator     common.TableSchemaMutator
 	schemaValidator   TableSchemaValidator
 	controllerClient  controllerCli.ControllerClient
 	stopChan          chan struct{}
 }
 
 // NewSchemaFetchJob creates a new SchemaFetchJob
-func NewSchemaFetchJob(intervalInSeconds int, schemaMutator TableSchemaMutator, schemaValidator TableSchemaValidator, controllerClient controllerCli.ControllerClient, clusterName, initialHash string) *SchemaFetchJob {
+func NewSchemaFetchJob(intervalInSeconds int, schemaMutator common.TableSchemaMutator, schemaValidator TableSchemaValidator, controllerClient controllerCli.ControllerClient, clusterName, initialHash string) *SchemaFetchJob {
 	return &SchemaFetchJob{
 		clusterName:       clusterName,
 		hash:              initialHash,

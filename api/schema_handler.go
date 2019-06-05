@@ -16,9 +16,10 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/metastore"
 	"net/http"
 
-	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 
 	"github.com/gorilla/mux"
@@ -27,11 +28,11 @@ import (
 // SchemaHandler handles schema http requests.
 type SchemaHandler struct {
 	// all write requests will go to metaStore.
-	metaStore metastore.MetaStore
+	metaStore metaCom.MetaStore
 }
 
 // NewSchemaHandler will create a new SchemaHandler with memStore and metaStore.
-func NewSchemaHandler(metaStore metastore.MetaStore) *SchemaHandler {
+func NewSchemaHandler(metaStore metaCom.MetaStore) *SchemaHandler {
 	return &SchemaHandler{
 		metaStore: metaStore,
 	}

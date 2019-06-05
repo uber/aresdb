@@ -160,7 +160,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					{Expr: "someField"},
 				},
 			},
-			isNonAggregationQuery: true,
+			IsNonAggregationQuery: true,
 		}
 		oopkContext := OOPKContext{
 			Dimensions: []expr.Expr{
@@ -468,7 +468,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					{Expr: "someField"},
 				},
 			},
-			isNonAggregationQuery: true,
+			IsNonAggregationQuery: true,
 			ResponseWriter:        w,
 		}
 		oopkContext := OOPKContext{
