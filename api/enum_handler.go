@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/uber/aresdb/memstore"
-	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
@@ -26,11 +26,11 @@ import (
 // EnumHandler handlers enum rw
 type EnumHandler struct {
 	memStore  memstore.MemStore
-	metastore metastore.MetaStore
+	metastore metaCom.MetaStore
 }
 
 // NewEnumHandler returns a new enum handler
-func NewEnumHandler(memStore memstore.MemStore, metastore metastore.MetaStore) *EnumHandler {
+func NewEnumHandler(memStore memstore.MemStore, metastore metaCom.MetaStore) *EnumHandler {
 	return &EnumHandler{
 		memStore:  memStore,
 		metastore: metastore,

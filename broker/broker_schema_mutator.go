@@ -35,7 +35,7 @@ func NewBrokerSchemaMutator() *BrokerSchemaMutator {
 	return &BrokerSchemaMutator{}
 }
 
-// ====  metastore.TableSchemaMutator ====
+// ====  metastore/common.TableSchemaMutator ====
 // TODO: implement. TableSchemaMutator should update b.tables
 func (b *BrokerSchemaMutator) ListTables() (tables []string, err error) {
 	return
@@ -73,7 +73,7 @@ func (b *BrokerSchemaMutator) DeleteColumn(table string, column string) (err err
 	return
 }
 
-// ====  memstore.TableSchemaReader ====
+// ====  memstore/common.TableSchemaReader ====
 // TODO: implement. these are used by compiler
 func (b *BrokerSchemaMutator) GetSchema(table string) (tableSchema *memCom.TableSchema, err error) {
 	return

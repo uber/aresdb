@@ -25,7 +25,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"io"
 )
@@ -34,13 +34,13 @@ import (
 type DebugHandler struct {
 	memStore memstore.MemStore
 	// For getting cutoff of a shard.
-	metaStore          metastore.MetaStore
+	metaStore          metaCom.MetaStore
 	queryHandler       *QueryHandler
 	healthCheckHandler *HealthCheckHandler
 }
 
 // NewDebugHandler returns a new DebugHandler.
-func NewDebugHandler(memStore memstore.MemStore, metaStore metastore.MetaStore, queryHandler *QueryHandler, healthCheckHandler *HealthCheckHandler) *DebugHandler {
+func NewDebugHandler(memStore memstore.MemStore, metaStore metaCom.MetaStore, queryHandler *QueryHandler, healthCheckHandler *HealthCheckHandler) *DebugHandler {
 	return &DebugHandler{
 		memStore:           memStore,
 		metaStore:          metaStore,

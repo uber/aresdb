@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 )
@@ -31,20 +31,10 @@ type TableShardMemoryUsage struct {
 	PrimaryKeyMemory uint                                 `json:"pk"`
 }
 
-type TableSchemaReader interface {
-	// GetSchema returns schema for a table.
-	GetSchema(table string) (*common.TableSchema, error)
-	// GetSchemas returns all table schemas.
-	GetSchemas() map[string]*common.TableSchema
-
-	// Provide exclusive access to read/write data protected by MemStore.
-	utils.RWLocker
-}
-
 // MemStore defines the interface for managing multiple table shards in memory. This is for mocking
 // in unit tests
 type MemStore interface {
-	TableSchemaReader
+	common.TableSchemaReader
 
 	// GetMemoryUsageDetails
 	GetMemoryUsageDetails() (map[string]TableShardMemoryUsage, error)
@@ -99,7 +89,7 @@ type memStoreImpl struct {
 
 	// reference to metaStore for registering watchers,
 	// fetch latest schema and store Shard versions.
-	metaStore            metastore.MetaStore
+	metaStore            metaCom.MetaStore
 	diskStore            diskstore.DiskStore
 	redologManagerMaster *redolog.RedoLogManagerMaster
 
@@ -112,7 +102,7 @@ func getTableShardKey(tableName string, shardID int) string {
 }
 
 // NewMemStore creates a MemStore from the specified MetaStore.
-func NewMemStore(metaStore metastore.MetaStore, diskStore diskstore.DiskStore, redologManagerMaster *redolog.RedoLogManagerMaster) MemStore {
+func NewMemStore(metaStore metaCom.MetaStore, diskStore diskstore.DiskStore, redologManagerMaster *redolog.RedoLogManagerMaster) MemStore {
 	memStore := &memStoreImpl{
 		TableShards:          make(map[string]map[int]*TableShard),
 		TableSchemas:         make(map[string]*common.TableSchema),

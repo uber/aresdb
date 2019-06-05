@@ -36,7 +36,6 @@ import (
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
 	"github.com/uber/aresdb/memutils"
-	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	queryCom "github.com/uber/aresdb/query/common"
@@ -67,7 +66,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	var archiveBatch0 *memstore.ArchiveBatch
 	var archiveBatch1 *memstore.ArchiveBatch
 	var memStore memstore.MemStore
-	var metaStore metastore.MetaStore
+	var metaStore metaCom.MetaStore
 	var diskStore diskstore.DiskStore
 	var hostMemoryManager memCom.HostMemoryManager
 	var shard *memstore.TableShard

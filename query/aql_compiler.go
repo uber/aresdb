@@ -23,7 +23,6 @@ import (
 	"unsafe"
 
 	"fmt"
-	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/common"
@@ -79,7 +78,7 @@ const (
 
 // Compile returns the compiled AQLQueryContext for data feeding and query
 // execution. Caller should check for AQLQueryContext.Error.
-func (q *AQLQuery) Compile(tableSchemaReader memstore.TableSchemaReader, returnHLL bool) *AQLQueryContext {
+func (q *AQLQuery) Compile(tableSchemaReader memCom.TableSchemaReader, returnHLL bool) *AQLQueryContext {
 	qc := &AQLQueryContext{Query: q, ReturnHLLData: returnHLL}
 
 	// processTimezone might append additional joins
@@ -506,7 +505,7 @@ func (qc *AQLQueryContext) processTimezone() {
 	}
 }
 
-func (qc *AQLQueryContext) readSchema(tableSchemaReader memstore.TableSchemaReader) {
+func (qc *AQLQueryContext) readSchema(tableSchemaReader memCom.TableSchemaReader) {
 	qc.TableScanners = make([]*TableScanner, 1+len(qc.Query.Joins))
 	qc.TableIDByAlias = make(map[string]int)
 	qc.TableSchemaByName = make(map[string]*memCom.TableSchema)
