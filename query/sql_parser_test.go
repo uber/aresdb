@@ -81,7 +81,7 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 	ginkgo.It("parse sort by should work", func() {
 		sqls := []string{
 			`SELECT field1
-			FROM prodh.trips
+			FROM trips
 			ORDER BY field1;`,
 		}
 		res := AQLQuery{
