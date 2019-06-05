@@ -22,7 +22,6 @@ import (
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/testing"
@@ -38,7 +37,7 @@ func CreateMockDiskStore() *mocks.DiskStore {
 // createMemStore creates a memStoreImpl instance for testing.
 func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType,
 	primaryKeyColumns []int, batchSize int, isFactTable bool, allowMissingEventTime bool,
-	metaStore metastore.MetaStore, diskStore diskstore.DiskStore) *memStoreImpl {
+	metaStore metaCom.MetaStore, diskStore diskstore.DiskStore) *memStoreImpl {
 	// Create schemas.
 	mainSchema := metaCom.Table{
 		Name:              tableName,
