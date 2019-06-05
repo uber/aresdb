@@ -27,7 +27,7 @@ import (
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
-	"github.com/uber/aresdb/metastore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
 	"math"
@@ -41,7 +41,7 @@ type dataNode struct {
 
 	host                 topology.Host
 	namespace            cluster.Namespace
-	metadata             metastore.MetaStore
+	metadata             metaCom.MetaStore
 	memdata              memstore.MemStore
 	diskdata             diskstore.DiskStore
 	opts                 Options
@@ -69,7 +69,7 @@ func NewDataNode(
 	host topology.Host,
 	namespace cluster.Namespace,
 	memStore memstore.MemStore,
-	metaStore metastore.MetaStore,
+	metaStore metaCom.MetaStore,
 	diskStore diskstore.DiskStore,
 	opts Options) DataNode {
 	iOpts := opts.InstrumentOptions()
