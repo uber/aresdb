@@ -15,7 +15,7 @@ package etcd
 
 import (
 	"encoding/json"
-	"github.com/uber/aresdb/cluster/kv"
+	"github.com/uber/aresdb/cluster/store"
 
 	"github.com/m3db/m3/src/cluster/kv"
 	pb "github.com/uber/aresdb/controller/generated/proto"
@@ -122,7 +122,7 @@ func (j *jobMutatorImpl) DeleteJob(namespace, name string) error {
 	}
 	jobConfig.Tomstoned = true
 
-	return kv.NewTransaction().
+	return store.NewTransaction().
 		AddKeyValue(utils.JobListKey(namespace), jobListVersion, &jobList).
 		AddKeyValue(utils.JobKey(namespace, name), jobConfigVersion, &jobConfig).
 		WriteTo(j.etcdStore)
@@ -156,7 +156,7 @@ func (j *jobMutatorImpl) UpdateJob(namespace string, job models.JobConfig) (err 
 		return
 	}
 
-	return kv.NewTransaction().
+	return store.NewTransaction().
 		AddKeyValue(utils.JobListKey(namespace), jobListVersion, &jobListProto).
 		AddKeyValue(utils.JobKey(namespace, job.Name), jobVersion, &jobProto).
 		WriteTo(j.etcdStore)
@@ -197,7 +197,7 @@ func (j *jobMutatorImpl) AddJob(namespace string, job models.JobConfig) error {
 		jobProto.Tomstoned = false
 	}
 
-	return kv.NewTransaction().
+	return store.NewTransaction().
 		AddKeyValue(utils.JobListKey(namespace), jobListVersion, &jobListProto).
 		AddKeyValue(utils.JobKey(namespace, job.Name), jobVersion, &jobProto).
 		WriteTo(j.etcdStore)

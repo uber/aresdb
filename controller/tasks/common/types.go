@@ -15,7 +15,7 @@ package common
 
 import (
 	"github.com/uber-go/tally"
-	"github.com/uber/aresdb/cluster/kv"
+	"github.com/uber/aresdb/cluster/store"
 	"github.com/uber/aresdb/controller/mutators/common"
 	"go.uber.org/config"
 	"go.uber.org/zap"
@@ -27,7 +27,7 @@ type IngestionAssignmentTaskParams struct {
 	Logger         *zap.SugaredLogger
 	Scope          tally.Scope
 
-	EtcdClient         *kv.EtcdClient
+	EtcdClient         *store.EtcdClient
 	NamespaceMutator   common.NamespaceMutator
 	JobMutator         common.JobMutator
 	SchemaMutator      common.TableSchemaMutator

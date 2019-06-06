@@ -14,7 +14,7 @@
 package etcd
 
 import (
-	"github.com/uber/aresdb/cluster/kv"
+	"github.com/uber/aresdb/cluster/store"
 	"path"
 	"strconv"
 	"sync"
@@ -171,7 +171,7 @@ func (e *enumMutator) extendEnumCase(namespace, tableName string, incarnation, c
 		// track the last enum node
 		lastEnumNode = &proto.EnumCases{Cases: enumCases}
 		// transaction
-		txn = kv.NewTransaction().AddKeyValue(nodeKey, nodeVersion, lastEnumNode)
+		txn = store.NewTransaction().AddKeyValue(nodeKey, nodeVersion, lastEnumNode)
 		// only when there are new enum cases not in cache, we need to write to etcd for update
 		updated = false
 	)
