@@ -15,9 +15,11 @@
 package broker
 
 import (
+	"fmt"
 	"github.com/uber/aresdb/cluster/topology"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/query"
+	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
@@ -56,6 +58,8 @@ func (qe *queryExecutorImpl) Execute(namespace, sqlQuery string, w http.Response
 
 	// TODO: add timeout
 	qc := aqlQuery.Compile(schemaReader, false)
+
+	// execute
 	if qc.IsNonAggregationQuery {
 		return qe.executeNonAggQuery(qc, w)
 	}
@@ -71,9 +75,17 @@ func (qe *queryExecutorImpl) executeNonAggQuery(qc *query.AQLQueryContext, w htt
 	return
 }
 func (qe *queryExecutorImpl) executeAggQuery(qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
-	// TODO implement agg query executor
-	//1. calculate fan out plan based on topology and aggregate functions
-	//2. fan out request, wait for all response (retry on failures)
-	//3. merge, then flush to w, logging, metrics
+	plan, err := NewAggQueryPlan(qc, qe.topo)
+	if err != nil {
+		// TODO log metric etc
+		return
+	}
+	var result common.AQLQueryResult
+	result, err = plan.Run()
+	if err != nil {
+		return
+	}
+	fmt.Println(result)
+	w.Write([]byte("todo!"))
 	return
 }
