@@ -15,9 +15,9 @@ package etcd
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/cluster/kv"
 	"strconv"
 
-	"github.com/uber/aresdb/controller/cluster"
 	pb "github.com/uber/aresdb/controller/generated/proto"
 	"github.com/uber/aresdb/controller/models"
 	"github.com/uber/aresdb/controller/mutators/common"
@@ -91,7 +91,7 @@ func (j *ingestionAssignmentMutatorImpl) DeleteIngestionAssignment(namespace, na
 	}
 
 	entityConfig.Tomstoned = true
-	return cluster.NewTransaction().
+	return kv.NewTransaction().
 		AddKeyValue(utils.JobAssignmentsListKey(namespace), entityListVersion, &entityList).
 		AddKeyValue(utils.JobAssignmentsKey(namespace, name), configVersion, &entityConfig).
 		WriteTo(j.etcdStore)
@@ -120,7 +120,7 @@ func (j *ingestionAssignmentMutatorImpl) UpdateIngestionAssignment(namespace str
 		return err
 	}
 
-	return cluster.NewTransaction().
+	return kv.NewTransaction().
 		AddKeyValue(utils.JobAssignmentsListKey(namespace), entityListVersion, &entityList).
 		AddKeyValue(utils.JobAssignmentsKey(namespace, ingestionAssignment.Subscriber), configVersion, &entityConfig).
 		WriteTo(j.etcdStore)
@@ -155,7 +155,7 @@ func (j *ingestionAssignmentMutatorImpl) AddIngestionAssignment(namespace string
 		return err
 	}
 
-	return cluster.NewTransaction().
+	return kv.NewTransaction().
 		AddKeyValue(utils.JobAssignmentsListKey(namespace), entityListVersion, &entityList).
 		AddKeyValue(utils.JobAssignmentsKey(namespace, ingestionAssignment.Subscriber), configVersion, &entityConfig).
 		WriteTo(j.etcdStore)

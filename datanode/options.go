@@ -25,7 +25,7 @@ var (
 
 // options is the implementation of the interface Options
 type options struct {
-	instrumentOpts           utils.Options
+	instrumentOpts utils.Options
 }
 
 // NewOptions creates a new set of storage options with defaults

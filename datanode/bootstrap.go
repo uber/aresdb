@@ -50,7 +50,7 @@ type bootstrapManagerImpl struct {
 
 func NewBootstrapManager(datanode DataNode, opts Options, topo topology.Topology) (BootstrapManager, error) {
 	if topo == nil {
-		return nil, fmt.Errorf("Failed at NewBootstrapManager, reason: topo is nil")
+		return nil, fmt.Errorf("failed at NewBootstrapManager, reason: topo is nil")
 	}
 	scope := opts.InstrumentOptions().MetricsScope()
 	return &bootstrapManagerImpl{

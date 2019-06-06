@@ -25,6 +25,7 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
+	"github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
 	metaCom "github.com/uber/aresdb/metastore/common"
@@ -40,6 +41,7 @@ type dataNode struct {
 	sync.RWMutex
 
 	host                 topology.Host
+	peers                client.PeerSource
 	namespace            cluster.Namespace
 	metadata             metaCom.MetaStore
 	memdata              memstore.MemStore
@@ -210,12 +212,14 @@ func (d *dataNode) Bootstrap(topo topology.Topology) error {
 	for _, tableShard := range d.bootstrapTableShards {
 		wg.Add(1)
 		workers.Go(func() {
-			err := tableShard.Bootstrap(d.host, topo, topoStateSnapshot)
+			err := tableShard.Bootstrap(d.peers, d.host, topo, topoStateSnapshot)
 
 			mutex.Lock()
 			multiErr = multiErr.Add(err)
 			mutex.Unlock()
 
+			// unpin table shard after use
+			tableShard.Users.Done()
 			wg.Done()
 		})
 	}

@@ -15,4 +15,3 @@
 //go:generate protoc -I rpc/ rpc/peer_streaming.proto --go_out=plugins=grpc:rpc
 
 package proto
-

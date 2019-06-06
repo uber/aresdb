@@ -32,3 +32,4 @@ include/
 rdkafka-prefix/
 rmm-prefix/
 testing/data/
+go.sum
