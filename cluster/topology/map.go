@@ -80,7 +80,7 @@ func (sm *staticMap) ShardSet() aresShard.ShardSet {
 	return sm.shardSet
 }
 
-func (sm *staticMap) RouteShard(shard int) ([]Host, error) {
+func (sm *staticMap) RouteShard(shard uint32) ([]Host, error) {
 	if int(shard) >= len(sm.hostsByShard) {
 		return nil, errUnownedShard
 	}

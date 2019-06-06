@@ -50,6 +50,25 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 		runTest(sqls, res, logger)
 	})
 
+	ginkgo.It("geography_intersects should work", func() {
+		sqls := []string{
+			`SELECT count(*) AS completed_trips
+			FROM trips LEFT JOIN geo_table g ON geography_intersects(g.shape, request_location)
+			WHERE status='completed' AND NOT status = 'cancelled' OR marketplace='agora' AND g.geofence_uuid IN (0x9EAE9256C1F547449E9BD3A2B64826B9)
+			GROUP BY status, hex(g.geofence_uuid)`,
+		}
+		res := AQLQuery{
+			Table:      "trips",
+			Measures:   []Measure{{Alias: "completed_trips", Expr: "count(*)"}},
+			Filters:    []string{"status='completed' AND NOT status = 'cancelled' OR marketplace='agora' AND g.geofence_uuid IN (0x9EAE9256C1F547449E9BD3A2B64826B9)"},
+			Dimensions: []Dimension{{Expr: "status"}, {Expr: "hex(g.geofence_uuid)"}},
+			Joins: []Join{
+				{Table: "geo_table", Alias: "g", Conditions: []string{"geography_intersects(g.shape, request_location)"}},
+			},
+		}
+		runTest(sqls, res, logger)
+	})
+
 	ginkgo.It("parse dimensions should work", func() {
 		sqls := []string{
 			`SELECT status AS trip_status, count(*) 

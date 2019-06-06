@@ -15,6 +15,7 @@
 package broker
 
 import (
+	"context"
 	"github.com/gorilla/mux"
 	"github.com/uber/aresdb/api"
 	"github.com/uber/aresdb/broker/common"
@@ -44,7 +45,7 @@ func (handler *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	handler.exec.Execute(queryReqeust.Body.Namespace, queryReqeust.Body.Query, w)
+	handler.exec.Execute(context.TODO(), queryReqeust.Body.Namespace, queryReqeust.Body.Query, w)
 	// TODO: logging and metrics
 	return
 }

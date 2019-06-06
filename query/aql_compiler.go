@@ -56,26 +56,6 @@ const (
 	nonAggregationQueryLimit  = 1000
 )
 
-// constants for call names.
-const (
-	convertTzCallName           = "convert_tz"
-	countCallName               = "count"
-	dayOfWeekCallName           = "dayofweek"
-	fromUnixTimeCallName        = "from_unixtime"
-	geographyIntersectsCallName = "geography_intersects"
-	hexCallName                 = "hex"
-	// hll aggregation function applies to hll columns
-	hllCallName = "hll"
-	// countdistincthll aggregation function applies to all columns, hll value is computed on the fly
-	countDistinctHllCallName = "countdistincthll"
-	hourCallName             = "hour"
-	listCallName             = ""
-	maxCallName              = "max"
-	minCallName              = "min"
-	sumCallName              = "sum"
-	avgCallName              = "avg"
-)
-
 // Compile returns the compiled AQLQueryContext for data feeding and query
 // execution. Caller should check for AQLQueryContext.Error.
 func (q *AQLQuery) Compile(tableSchemaReader memCom.TableSchemaReader, returnHLL bool) *AQLQueryContext {
@@ -301,7 +281,7 @@ func isGeoJoin(j Join) bool {
 		if !ok {
 			return false
 		}
-		return c.Name == geographyIntersectsCallName
+		return c.Name == expr.GeographyIntersectsCallName
 	}
 	return false
 }
@@ -688,8 +668,8 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			e.Expr = cast(e.Expr, expr.Boolean)
 			childExpr := e.Expr
 			callRef, isCallRef := childExpr.(*expr.Call)
-			if isCallRef && callRef.Name == geographyIntersectsCallName {
-				qc.Error = utils.StackError(nil, "Not %s condition is not allowed", geographyIntersectsCallName)
+			if isCallRef && callRef.Name == expr.GeographyIntersectsCallName {
+				qc.Error = utils.StackError(nil, "Not %s condition is not allowed", expr.GeographyIntersectsCallName)
 				break
 			}
 		case expr.UNARY_MINUS:
@@ -845,7 +825,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 	case *expr.Call:
 		e.Name = strings.ToLower(e.Name)
 		switch e.Name {
-		case convertTzCallName:
+		case expr.ConvertTzCallName:
 			if len(e.Args) != 3 {
 				qc.Error = utils.StackError(
 					nil, "convert_tz must have 3 arguments",
@@ -885,9 +865,9 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				},
 				ExprType: expr.Unsigned,
 			}
-		case countCallName:
+		case expr.CountCallName:
 			e.ExprType = expr.Unsigned
-		case dayOfWeekCallName:
+		case expr.DayOfWeekCallName:
 			// dayofweek from ts: (ts / secondsInDay + 4) % 7 + 1
 			// ref: https://dev.mysql.com/doc/refman/5.5/en/date-and-time-functions.html#function_dayofweek
 			if len(e.Args) != 1 {
@@ -934,7 +914,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				},
 			}
 			// no-op, this will be over written
-		case fromUnixTimeCallName:
+		case expr.FromUnixTimeCallName:
 			// for now, only the following format is allowed for backward compatibility
 			// from_unixtime(time_col / 1000)
 			timeColumnDivideErrMsg := "from_unixtime must be time column / 1000"
@@ -957,7 +937,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				break
 			}
 			return timeColExpr
-		case hourCallName:
+		case expr.HourCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(nil, "hour takes exactly 1 argument")
 				break
@@ -982,8 +962,8 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				},
 			}
 			// list of literals, no need to cast it for now.
-		case listCallName:
-		case geographyIntersectsCallName:
+		case expr.ListCallName:
+		case expr.GeographyIntersectsCallName:
 			if len(e.Args) != 2 {
 				qc.Error = utils.StackError(
 					nil, "expect 2 argument for %s, but got %s", e.Name, e.String())
@@ -1023,7 +1003,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			}
 
 			e.ExprType = expr.Boolean
-		case hexCallName:
+		case expr.HexCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
 					nil, "expect 1 argument for %s, but got %s", e.Name, e.String())
@@ -1037,7 +1017,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				break
 			}
 			e.ExprType = e.Args[0].Type()
-		case countDistinctHllCallName:
+		case expr.CountDistinctHllCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
 					nil, "expect 1 argument for %s, but got %s", e.Name, e.String())
@@ -1050,7 +1030,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				break
 			}
 
-			e.Name = hllCallName
+			e.Name = expr.HllCallName
 			// 1. noop when column itself is hll column
 			// 2. compute hll on the fly when column is not hll column
 			if !colRef.IsHLLColumn {
@@ -1061,7 +1041,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				}
 			}
 			e.ExprType = expr.Unsigned
-		case hllCallName:
+		case expr.HllCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
 					nil, "expect 1 argument for %s, but got %s", e.Name, e.String())
@@ -1075,14 +1055,14 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				break
 			}
 			e.ExprType = e.Args[0].Type()
-		case sumCallName, minCallName, maxCallName, avgCallName:
+		case expr.SumCallName, expr.MinCallName, expr.MaxCallName, expr.AvgCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
 					nil, "expect 1 argument for %s, but got %s", e.Name, e.String())
 				break
 			}
 			// For avg, the expression type should always be float.
-			if e.Name == avgCallName {
+			if e.Name == expr.AvgCallName {
 				e.Args[0] = cast(e.Args[0], expr.Float)
 			}
 			e.ExprType = e.Args[0].Type()
@@ -1652,7 +1632,7 @@ func (qc *AQLQueryContext) matchAndRewriteGeoDimension(dimExpr expr.Expr) (expr.
 	}
 
 	if callExpr, ok := dimExpr.(*expr.Call); ok {
-		if callExpr.Name != hexCallName {
+		if callExpr.Name != expr.HexCallName {
 			return nil, utils.StackError(nil,
 				"Only hex function is supported on UUID type, but got %s", callExpr.Name)
 		}
@@ -1719,7 +1699,7 @@ func (qc *AQLQueryContext) processMeasure() {
 		return
 	}
 
-	if qc.ReturnHLLData && aggregate.Name != hllCallName {
+	if qc.ReturnHLLData && aggregate.Name != expr.HllCallName {
 		qc.Error = utils.StackError(nil, "expect hll aggregate function as client specify 'Accept' as "+
 			"'application/hll', but got %s",
 			qc.Query.Measures[0].Expr)
@@ -1736,14 +1716,14 @@ func (qc *AQLQueryContext) processMeasure() {
 	// default is 4 bytes
 	qc.OOPK.MeasureBytes = 4
 	switch strings.ToLower(aggregate.Name) {
-	case countCallName:
+	case expr.CountCallName:
 		qc.OOPK.Measure = &expr.NumberLiteral{
 			Int:      1,
 			Expr:     "1",
 			ExprType: expr.Unsigned,
 		}
 		qc.OOPK.AggregateType = C.AGGR_SUM_UNSIGNED
-	case sumCallName:
+	case expr.SumCallName:
 		qc.OOPK.MeasureBytes = 8
 		switch qc.OOPK.Measure.Type() {
 		case expr.Float:
@@ -1754,15 +1734,15 @@ func (qc *AQLQueryContext) processMeasure() {
 			qc.OOPK.AggregateType = C.AGGR_SUM_UNSIGNED
 		default:
 			qc.Error = utils.StackError(nil,
-				unsupportedInputType, sumCallName, qc.OOPK.Measure.String())
+				unsupportedInputType, expr.SumCallName, qc.OOPK.Measure.String())
 			return
 		}
-	case avgCallName:
+	case expr.AvgCallName:
 		// 4 bytes for storing average result and another 4 byte for count
 		qc.OOPK.MeasureBytes = 8
 		// for average, we should always use float type as the agg type.
 		qc.OOPK.AggregateType = C.AGGR_AVG_FLOAT
-	case minCallName:
+	case expr.MinCallName:
 		switch qc.OOPK.Measure.Type() {
 		case expr.Float:
 			qc.OOPK.AggregateType = C.AGGR_MIN_FLOAT
@@ -1772,10 +1752,10 @@ func (qc *AQLQueryContext) processMeasure() {
 			qc.OOPK.AggregateType = C.AGGR_MIN_UNSIGNED
 		default:
 			qc.Error = utils.StackError(nil,
-				unsupportedInputType, minCallName, qc.OOPK.Measure.String())
+				unsupportedInputType, expr.MinCallName, qc.OOPK.Measure.String())
 			return
 		}
-	case maxCallName:
+	case expr.MaxCallName:
 		switch qc.OOPK.Measure.Type() {
 		case expr.Float:
 			qc.OOPK.AggregateType = C.AGGR_MAX_FLOAT
@@ -1785,10 +1765,10 @@ func (qc *AQLQueryContext) processMeasure() {
 			qc.OOPK.AggregateType = C.AGGR_MAX_UNSIGNED
 		default:
 			qc.Error = utils.StackError(nil,
-				unsupportedInputType, maxCallName, qc.OOPK.Measure.String())
+				unsupportedInputType, expr.MaxCallName, qc.OOPK.Measure.String())
 			return
 		}
-	case hllCallName:
+	case expr.HllCallName:
 		qc.OOPK.AggregateType = C.AGGR_HLL
 	default:
 		qc.Error = utils.StackError(nil,

@@ -24,6 +24,11 @@ import (
 	"time"
 )
 
+const (
+	HTTPContentTypeHeaderKey = "content-type"
+	HTTPContentTypeApplicationJson = "application/json"
+)
+
 // HTTPHandlerWrapper wraps context aware httpHandler
 type HTTPHandlerWrapper func(handler http.HandlerFunc) http.HandlerFunc
 

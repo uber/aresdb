@@ -15,9 +15,11 @@
 package broker
 
 import (
+	"context"
 	"fmt"
 	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/cluster/topology"
+	dataCli "github.com/uber/aresdb/datanode/client"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/query"
 	queryCom "github.com/uber/aresdb/query/common"
@@ -26,20 +28,22 @@ import (
 )
 
 // NewQueryExecutor creates a new QueryExecutor
-func NewQueryExecutor(sm common.SchemaManager, topo topology.Topology) common.QueryExecutor {
+func NewQueryExecutor(sm common.SchemaManager, topo topology.Topology, client dataCli.DataNodeClient) common.QueryExecutor {
 	return &queryExecutorImpl{
-		schemaManager: sm,
-		topo:          topo,
+		schemaManager:  sm,
+		topo:           topo,
+		dataNodeClient: client,
 	}
 }
 
 // queryExecutorImpl will be reused across all queries
 type queryExecutorImpl struct {
-	schemaManager common.SchemaManager
-	topo          topology.Topology
+	schemaManager  common.SchemaManager
+	topo           topology.Topology
+	dataNodeClient dataCli.DataNodeClient
 }
 
-func (qe *queryExecutorImpl) Execute(namespace, sqlQuery string, w http.ResponseWriter) (err error) {
+func (qe *queryExecutorImpl) Execute(ctx context.Context, namespace, sqlQuery string, w http.ResponseWriter) (err error) {
 	// parse
 	var aqlQuery *query.AQLQuery
 	aqlQuery, err = query.Parse(sqlQuery, utils.GetLogger())
@@ -56,12 +60,12 @@ func (qe *queryExecutorImpl) Execute(namespace, sqlQuery string, w http.Response
 
 	// execute
 	if qc.IsNonAggregationQuery {
-		return qe.executeNonAggQuery(qc, w)
+		return qe.executeNonAggQuery(ctx, qc, w)
 	}
-	return qe.executeAggQuery(qc, w)
+	return qe.executeAggQuery(ctx, qc, w)
 }
 
-func (qe *queryExecutorImpl) executeNonAggQuery(qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
+func (qe *queryExecutorImpl) executeNonAggQuery(ctx context.Context, qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
 	// TODO impplement non agg query executor
 	//1. write headers
 	//2. calculate fan out plan based on topology
@@ -69,14 +73,11 @@ func (qe *queryExecutorImpl) executeNonAggQuery(qc *query.AQLQueryContext, w htt
 	//4. close, clean up, logging, metrics
 	return
 }
-func (qe *queryExecutorImpl) executeAggQuery(qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
-	plan, err := NewAggQueryPlan(qc, qe.topo)
-	if err != nil {
-		// TODO log metric etc
-		return
-	}
+
+func (qe *queryExecutorImpl) executeAggQuery(ctx context.Context, qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
+	plan := NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
 	var result queryCom.AQLQueryResult
-	result, err = plan.Run()
+	result, err = plan.Run(ctx)
 	if err != nil {
 		return
 	}
