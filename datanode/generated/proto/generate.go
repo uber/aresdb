@@ -13,5 +13,6 @@
 // limitations under the License.
 
 //go:generate protoc -I rpc/ rpc/peer_streaming.proto --go_out=plugins=grpc:rpc
+//go:generate mockery -dir rpc -output rpc/mocks -name PeerDataNodeClient
 
 package proto
