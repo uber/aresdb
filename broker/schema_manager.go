@@ -15,9 +15,9 @@
 package broker
 
 import (
+	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/controller/client"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 	"sync"
@@ -26,8 +26,6 @@ import (
 const (
 	schemaFetchInterval = 10
 )
-
-
 
 type schemaManagerImpl struct {
 	sync.RWMutex

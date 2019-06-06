@@ -16,16 +16,14 @@ package broker
 
 import (
 	"fmt"
+	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/cluster/topology"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/query"
 	queryCom "github.com/uber/aresdb/query/common"
-	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
-
-
 
 // NewQueryExecutor creates a new QueryExecutor
 func NewQueryExecutor(sm common.SchemaManager, topo topology.Topology) common.QueryExecutor {

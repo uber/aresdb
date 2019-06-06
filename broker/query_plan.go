@@ -1,15 +1,27 @@
+//  Copyright (c) 2017-2018 Uber Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package broker
 
 import (
+	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/query"
 	queryCom "github.com/uber/aresdb/query/common"
-	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/utils"
 	"sync"
 )
-
-
 
 type blockingPlanNodeImpl struct {
 	children []common.BlockingPlanNode
@@ -30,7 +42,7 @@ type MergeNode struct {
 	AggType common.AggType
 }
 
-func (mn *MergeNode) Run() (result queryCom.AQLQueryResult, err error){
+func (mn *MergeNode) Run() (result queryCom.AQLQueryResult, err error) {
 	nChildren := len(mn.children)
 	// checks before fan out
 	if common.Avg == mn.AggType {
@@ -74,7 +86,7 @@ func (mn *MergeNode) Run() (result queryCom.AQLQueryResult, err error){
 			res, err = n.Run()
 			if err != nil {
 				// err means downstream retry failed
-				errs[i ] = utils.StackError(err, "child node failed")
+				errs[i] = utils.StackError(err, "child node failed")
 				return
 			}
 			childrenResult[i] = res
@@ -98,7 +110,6 @@ func (mn *MergeNode) Run() (result queryCom.AQLQueryResult, err error){
 // AggQueryPlan is the plan for aggregate queries
 type AggQueryPlan struct {
 	root common.BlockingPlanNode
-
 }
 
 func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology) (plan AggQueryPlan, err error) {
@@ -111,7 +122,7 @@ func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology) (plan Ag
 	// TODO build query plan
 	//measure := qc.Query.Measures[0]
 	//switch measure.ExprParsed.
-		//shards := topo.Get().ShardSet().All()
+	//shards := topo.Get().ShardSet().All()
 	//for
 	return
 
@@ -128,6 +139,4 @@ func (ap *AggQueryPlan) Run() (results queryCom.AQLQueryResult, err error) {
 //4. close, clean up, logging, metrics
 // TODO
 type NonAggQueryPlan struct {
-
 }
-

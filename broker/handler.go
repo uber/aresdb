@@ -17,15 +17,16 @@ package broker
 import (
 	"github.com/gorilla/mux"
 	"github.com/uber/aresdb/api"
+	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
 
 type QueryHandler struct {
-	exec QueryExecutor
+	exec common.QueryExecutor
 }
 
-func NewQueryHandler(executor QueryExecutor) QueryHandler {
+func NewQueryHandler(executor common.QueryExecutor) QueryHandler {
 	return QueryHandler{
 		exec: executor,
 	}
