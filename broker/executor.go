@@ -19,19 +19,16 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/query"
-	"github.com/uber/aresdb/query/common"
+	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
 
-// QueryExecutor defines query executor
-type QueryExecutor interface {
-	// Execute executes query and flush result to connection
-	Execute(namespace, sqlQuery string, w http.ResponseWriter) (err error)
-}
+
 
 // NewQueryExecutor creates a new QueryExecutor
-func NewQueryExecutor(sm SchemaManager, topo topology.Topology) QueryExecutor {
+func NewQueryExecutor(sm common.SchemaManager, topo topology.Topology) common.QueryExecutor {
 	return &queryExecutorImpl{
 		schemaManager: sm,
 		topo:          topo,
@@ -40,7 +37,7 @@ func NewQueryExecutor(sm SchemaManager, topo topology.Topology) QueryExecutor {
 
 // queryExecutorImpl will be reused across all queries
 type queryExecutorImpl struct {
-	schemaManager SchemaManager
+	schemaManager common.SchemaManager
 	topo          topology.Topology
 }
 
@@ -80,7 +77,7 @@ func (qe *queryExecutorImpl) executeAggQuery(qc *query.AQLQueryContext, w http.R
 		// TODO log metric etc
 		return
 	}
-	var result common.AQLQueryResult
+	var result queryCom.AQLQueryResult
 	result, err = plan.Run()
 	if err != nil {
 		return

@@ -2,12 +2,13 @@ package broker
 
 import (
 	"fmt"
-	"github.com/uber/aresdb/query/common"
+	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/utils"
 	"reflect"
 )
 
-func newResultMergeContext(aggType AggType) resultMergeContext {
+func newResultMergeContext(aggType common.AggType) resultMergeContext {
 	return resultMergeContext{
 		agg: aggType,
 		path: []string{},
@@ -17,14 +18,14 @@ func newResultMergeContext(aggType AggType) resultMergeContext {
 // resultMergeContext is the context for merging results
 // caller should check for err after calling
 type resultMergeContext struct {
-	agg AggType
-	parent common.AQLQueryResult
+	agg common.AggType
+	parent queryCom.AQLQueryResult
 	path []string
 	err error
 }
 
 // run merges results from rhs to lhs in place
-func (c *resultMergeContext) run(lhs, rhs common.AQLQueryResult) common.AQLQueryResult {
+func (c *resultMergeContext) run(lhs, rhs queryCom.AQLQueryResult) queryCom.AQLQueryResult {
 	c.mergeResultsRecursive(map[string]interface{}(lhs), map[string]interface{}(rhs))
 	return lhs
 }
@@ -35,7 +36,7 @@ func (c *resultMergeContext) mergeResultsRecursive(lhs, rhs interface{}) {
 	}
 
 	if lhs == nil {
-		if c.agg == Avg {
+		if c.agg == common.Avg {
 			c.err = utils.StackError(nil, "error calculating avg: some dimension has only sum. path: %v", c.path)
 		}
 		c.parent[c.path[len(c.path)-1]] = rhs
@@ -44,7 +45,7 @@ func (c *resultMergeContext) mergeResultsRecursive(lhs, rhs interface{}) {
 	}
 
 	if rhs == nil {
-		if c.agg == Avg {
+		if c.agg == common.Avg {
 			c.err = utils.StackError(nil, "error calculating avg: some dimension has only count. path: %v", c.path)
 		}
 		c.parent[c.path[len(c.path)-1]] = lhs
@@ -63,17 +64,17 @@ func (c *resultMergeContext) mergeResultsRecursive(lhs, rhs interface{}) {
 	case float64:
 		r := rhs.(float64)
 		switch c.agg {
-		case Count, Sum:
+		case common.Count, common.Sum:
 			l = l + r
-		case Max:
+		case common.Max:
 			if r > l {
 				l = r
 			}
-		case Min:
+		case common.Min:
 			if r < l {
 				l = r
 			}
-		case Avg:
+		case common.Avg:
 			l = l / r
 		}
 		c.parent[c.path[len(c.path)-1]] = l

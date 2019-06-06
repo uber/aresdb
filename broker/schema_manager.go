@@ -17,6 +17,7 @@ package broker
 import (
 	"github.com/uber/aresdb/controller/client"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 	"sync"
@@ -26,13 +27,7 @@ const (
 	schemaFetchInterval = 10
 )
 
-// SchemaManager keeps table schema from all namespaces in current ENV up to date
-type SchemaManager interface {
-	// Run initializes all schema and starts jobs to sync from controller
-	Run()
-	// GetTable gets schema by namespace and table name
-	GetTableSchemaReader(namespace string) (memCom.TableSchemaReader, error)
-}
+
 
 type schemaManagerImpl struct {
 	sync.RWMutex
@@ -42,7 +37,7 @@ type schemaManagerImpl struct {
 }
 
 // NewSchemaManager returns a new SchemaManager instance
-func NewSchemaManager(controllerCli client.ControllerClient) SchemaManager {
+func NewSchemaManager(controllerCli client.ControllerClient) common.SchemaManager {
 	return &schemaManagerImpl{
 		controllerCli: controllerCli,
 	}

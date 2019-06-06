@@ -3,43 +3,23 @@ package broker
 import (
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/query"
-	"github.com/uber/aresdb/query/common"
+	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/utils"
-	"io"
 	"sync"
 )
 
-type AggType int
-const (
-	Count AggType = iota
-	Sum
-	Max
-	Min
-	Avg
-	Hll //todo
-)
 
-// BlockingPlanNode defines query plan nodes that waits for children to finish
-type BlockingPlanNode interface {
-	Run() (common.AQLQueryResult, error)
-	Children() []BlockingPlanNode
-	Add(...BlockingPlanNode)
-}
-
-// StreamingPlanNode defines query plan nodes that eager flushes to output
-type StreamingPlanNode interface {
-	Run(writer io.Writer) error
-}
 
 type blockingPlanNodeImpl struct {
-	children []BlockingPlanNode
+	children []common.BlockingPlanNode
 }
 
-func (bpn *blockingPlanNodeImpl) Children() []BlockingPlanNode {
+func (bpn *blockingPlanNodeImpl) Children() []common.BlockingPlanNode {
 	return bpn.children
 }
 
-func (bpn *blockingPlanNodeImpl) Add(nodes ...BlockingPlanNode) {
+func (bpn *blockingPlanNodeImpl) Add(nodes ...common.BlockingPlanNode) {
 	bpn.children = append(bpn.children, nodes...)
 }
 
@@ -47,13 +27,13 @@ func (bpn *blockingPlanNodeImpl) Add(nodes ...BlockingPlanNode) {
 type MergeNode struct {
 	blockingPlanNodeImpl
 	// MeasureType decides merge behaviour
-	AggType AggType
+	AggType common.AggType
 }
 
-func (mn *MergeNode) Run() (result common.AQLQueryResult, err error){
+func (mn *MergeNode) Run() (result queryCom.AQLQueryResult, err error){
 	nChildren := len(mn.children)
 	// checks before fan out
-	if Avg == mn.AggType {
+	if common.Avg == mn.AggType {
 		if nChildren != 2 {
 			err = utils.StackError(nil, "Avg MergeNode should have 2 children")
 			return
@@ -63,7 +43,7 @@ func (mn *MergeNode) Run() (result common.AQLQueryResult, err error){
 			err = utils.StackError(nil, "LHS of avg node must be sum node")
 			return
 		}
-		if Sum != lhs.AggType {
+		if common.Sum != lhs.AggType {
 			err = utils.StackError(nil, "LHS of avg node must be sum node")
 			return
 		}
@@ -72,25 +52,25 @@ func (mn *MergeNode) Run() (result common.AQLQueryResult, err error){
 			err = utils.StackError(nil, "RHS of avg node must be count node")
 			return
 		}
-		if Count != rhs.AggType {
+		if common.Count != rhs.AggType {
 			err = utils.StackError(nil, "RHS of avg node must be count node")
 			return
 		}
 	}
 
-	childrenResult := make([]common.AQLQueryResult, nChildren)
+	childrenResult := make([]queryCom.AQLQueryResult, nChildren)
 	errs := make([]error, nChildren)
 	wg := &sync.WaitGroup{}
 	for i, c := range mn.children {
 		wg.Add(1)
-		bpn, ok := c.(BlockingPlanNode)
+		bpn, ok := c.(common.BlockingPlanNode)
 		if !ok {
 			err = utils.StackError(nil, "expecting BlockingPlanNode")
 			return
 		}
-		go func(i int, n BlockingPlanNode) {
+		go func(i int, n common.BlockingPlanNode) {
 			defer wg.Done()
-			var res common.AQLQueryResult
+			var res queryCom.AQLQueryResult
 			res, err = n.Run()
 			if err != nil {
 				// err means downstream retry failed
@@ -104,7 +84,6 @@ func (mn *MergeNode) Run() (result common.AQLQueryResult, err error){
 
 	result = childrenResult[0]
 	for i := 1; i < nChildren; i++ {
-		//mergeResults(&result, childrenResult[i], mn.AggType)
 		ctx := newResultMergeContext(mn.AggType)
 		result = ctx.run(result, childrenResult[i])
 		if ctx.err != nil {
@@ -118,7 +97,7 @@ func (mn *MergeNode) Run() (result common.AQLQueryResult, err error){
 
 // AggQueryPlan is the plan for aggregate queries
 type AggQueryPlan struct {
-	root BlockingPlanNode
+	root common.BlockingPlanNode
 
 }
 
@@ -128,6 +107,8 @@ func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology) (plan Ag
 		err = utils.StackError(nil, "aggregate query has to have exactly 1 measure")
 		return
 	}
+
+	// TODO build query plan
 	//measure := qc.Query.Measures[0]
 	//switch measure.ExprParsed.
 		//shards := topo.Get().ShardSet().All()
@@ -136,7 +117,7 @@ func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology) (plan Ag
 
 }
 
-func (ap *AggQueryPlan) Run() (results common.AQLQueryResult, err error) {
+func (ap *AggQueryPlan) Run() (results queryCom.AQLQueryResult, err error) {
 	return
 }
 
