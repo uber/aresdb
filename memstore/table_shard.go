@@ -273,7 +273,7 @@ func (shard *TableShard) fetchDataFromPeer(
 	}
 
 	// 2. set metadata and trigger recovery
-	if err := shard.setMetaData(tableShardMeta); err != nil {
+	if err := shard.setTableShardMetadata(tableShardMeta); err != nil {
 		return err
 	}
 
@@ -282,13 +282,18 @@ func (shard *TableShard) fetchDataFromPeer(
 	workerPool.Init()
 
 	var (
-		mutex            sync.Mutex
-		failedVPRequests []retryVPRequest
-		errors           xerrors.MultiError
-		wg               sync.WaitGroup
+		mutex           sync.Mutex
+		retryVPRequests []retryVPRequest
+		errors          xerrors.MultiError
+		wg              sync.WaitGroup
 	)
 
 	for _, batchMeta := range tableShardMeta.Batches {
+		err := shard.setBatchMetadata(tableShardMeta, batchMeta)
+		if err != nil {
+			return utils.StackError(err, "failed to set batch level metadata")
+		}
+
 		for _, vpMeta := range batchMeta.Vps {
 			// TODO: add checksum to vp file and vpMeta to avoid copying existing data on disk
 			wg.Add(1)
@@ -297,7 +302,7 @@ func (shard *TableShard) fetchDataFromPeer(
 				request, vpWriter, err := shard.createVectorPartyRawDataRequest(tableShardMeta, batchMeta, vpMeta)
 				if err != nil {
 					mutex.Lock()
-					failedVPRequests = append(failedVPRequests, retryVPRequest{tableShardMeta, batchMeta, vpMeta})
+					retryVPRequests = append(retryVPRequests, retryVPRequest{tableShardMeta, batchMeta, vpMeta})
 					errors = errors.Add(err)
 					mutex.Unlock()
 				}
@@ -309,7 +314,7 @@ func (shard *TableShard) fetchDataFromPeer(
 						With("peer", peerHost.String(), "table", shard.Schema.Schema.Name, "shard", shard.ShardID, "batch", batchMeta.GetBatchID(), "column", vpMeta.GetColumnID(), "request", request, "error", err.Error()).
 						Errorf("failed fetching data from peer")
 					mutex.Lock()
-					failedVPRequests = append(failedVPRequests, retryVPRequest{tableShardMeta, batchMeta, vpMeta})
+					retryVPRequests = append(retryVPRequests, retryVPRequest{tableShardMeta, batchMeta, vpMeta})
 					errors = errors.Add(err)
 					mutex.Unlock()
 				} else {
@@ -320,9 +325,7 @@ func (shard *TableShard) fetchDataFromPeer(
 			})
 		}
 	}
-
 	wg.Wait()
-
 	// TODO: add retry for failed vps
 	// 4. retry for failed vector parties
 	if !errors.Empty() {
@@ -435,9 +438,57 @@ func (shard *TableShard) fetchVectorPartyRawDataFromPeer(
 	return totalBytes, nil
 }
 
-func (shard *TableShard) setMetaData(data *rpc.TableShardMetaData) error {
-	// TODO: set metadata to metastore
-	// mark next stage
+func (shard *TableShard) setBatchMetadata(tableShardMeta *rpc.TableShardMetaData, batchMeta *rpc.BatchMetaData) error {
+	if shard.Schema.Schema.IsFactTable {
+		err := shard.metaStore.OverwriteArchiveBatchVersion(shard.Schema.Schema.Name, shard.ShardID,
+			int(batchMeta.BatchID),
+			batchMeta.GetArchiveVersion().GetArchiveVersion(),
+			batchMeta.GetArchiveVersion().GetBackfillSeq(),
+			int(batchMeta.GetSize()))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (shard *TableShard) setTableShardMetadata(tableShardMeta *rpc.TableShardMetaData) error {
+	// update kafka offsets
+	err := shard.metaStore.UpdateRedoLogCommitOffset(shard.Schema.Schema.Name, shard.ShardID, tableShardMeta.GetKafkaOffset().GetCommitOffset())
+	if err != nil {
+		return utils.StackError(err, "failed to update kafka commit offset")
+	}
+
+	err = shard.metaStore.UpdateRedoLogCheckpointOffset(shard.Schema.Schema.Name, shard.ShardID, tableShardMeta.GetKafkaOffset().GetCheckPointOffset())
+	if err != nil {
+		return utils.StackError(err, "failed to update archiving cutoff")
+	}
+
+	if shard.Schema.Schema.IsFactTable {
+		// update archiving low water mark cutoff and backfill progress for fact table
+		err := shard.metaStore.UpdateArchivingCutoff(shard.Schema.Schema.Name, shard.ShardID, tableShardMeta.GetFactMeta().GetHighWatermark())
+		if err != nil {
+			return utils.StackError(err, "failed to update archiving cutoff")
+		}
+
+		err = shard.metaStore.UpdateBackfillProgress(shard.Schema.Schema.Name, shard.ShardID, tableShardMeta.GetFactMeta().GetBackfillCheckpoint().GetRedoFileID(), tableShardMeta.GetFactMeta().GetBackfillCheckpoint().GetRedoFileOffset())
+		if err != nil {
+			return utils.StackError(err, "failed to update backfill progress")
+		}
+	} else {
+		// update snapshot pregress for dimension table
+		err := shard.metaStore.UpdateSnapshotProgress(
+			shard.Schema.Schema.Name,
+			shard.ShardID, tableShardMeta.GetDimensionMeta().GetSnapshotVersion().GetRedoFileID(),
+			tableShardMeta.GetDimensionMeta().GetSnapshotVersion().GetRedoFileOffset(),
+			tableShardMeta.GetDimensionMeta().GetLastBatchID(),
+			uint32(tableShardMeta.GetDimensionMeta().GetLastBatchSize()))
+		if err != nil {
+			return utils.StackError(err, "failed to update archiving cutoff")
+		}
+	}
+
+	// mark table shard level metadata bootstrap finished
 	shard.bootstrapLock.Lock()
 	shard.bootstrapState = bootstrap.MetaDataBootstrapped
 	shard.readyForRecovery.Broadcast()

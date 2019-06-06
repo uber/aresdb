@@ -217,29 +217,6 @@ func (_m *DiskStore) OpenLogFileForReplay(table string, shard int, creationTime 
 	return r0, r1
 }
 
-// OpenSnapshotVectorPartyFileForAppend provides a mock function with given fields: table, shard, redoLogFile, offset, batchID, columnID
-func (_m *DiskStore) OpenSnapshotVectorPartyFileForAppend(table string, shard int, redoLogFile int64, offset uint32, batchID int, columnID int) (io.WriteCloser, error) {
-	ret := _m.Called(table, shard, redoLogFile, offset, batchID, columnID)
-
-	var r0 io.WriteCloser
-	if rf, ok := ret.Get(0).(func(string, int, int64, uint32, int, int) io.WriteCloser); ok {
-		r0 = rf(table, shard, redoLogFile, offset, batchID, columnID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.WriteCloser)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, int, int64, uint32, int, int) error); ok {
-		r1 = rf(table, shard, redoLogFile, offset, batchID, columnID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // OpenSnapshotVectorPartyFileForRead provides a mock function with given fields: table, shard, redoLogFile, offset, batchID, columnID
 func (_m *DiskStore) OpenSnapshotVectorPartyFileForRead(table string, shard int, redoLogFile int64, offset uint32, batchID int, columnID int) (io.ReadCloser, error) {
 	ret := _m.Called(table, shard, redoLogFile, offset, batchID, columnID)
@@ -279,29 +256,6 @@ func (_m *DiskStore) OpenSnapshotVectorPartyFileForWrite(table string, shard int
 	var r1 error
 	if rf, ok := ret.Get(1).(func(string, int, int64, uint32, int, int) error); ok {
 		r1 = rf(table, shard, redoLogFile, offset, batchID, columnID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// OpenVectorPartyFileForAppend provides a mock function with given fields: table, column, shard, batchID, batchVersion, seqNum
-func (_m *DiskStore) OpenVectorPartyFileForAppend(table string, column int, shard int, batchID int, batchVersion uint32, seqNum uint32) (io.WriteCloser, error) {
-	ret := _m.Called(table, column, shard, batchID, batchVersion, seqNum)
-
-	var r0 io.WriteCloser
-	if rf, ok := ret.Get(0).(func(string, int, int, int, uint32, uint32) io.WriteCloser); ok {
-		r0 = rf(table, column, shard, batchID, batchVersion, seqNum)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.WriteCloser)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, int, int, int, uint32, uint32) error); ok {
-		r1 = rf(table, column, shard, batchID, batchVersion, seqNum)
 	} else {
 		r1 = ret.Error(1)
 	}

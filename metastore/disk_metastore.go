@@ -770,8 +770,17 @@ func (dm *diskMetaStore) PurgeArchiveBatches(tableName string, shard, batchIDSta
 	return nil
 }
 
+// OverwriteArchiveBatchVersion overwrites batch version
+func (dm *diskMetaStore) OverwriteArchiveBatchVersion(tableName string, shard, batchID int, version uint32, seqNum uint32, batchSize int) error {
+	return dm.writeArchiveBatchVersionWithMode(tableName, shard, batchID, version, seqNum, batchSize, os.O_WRONLY|os.O_TRUNC|os.O_CREATE)
+}
+
 // AddArchiveBatchVersion adds a new version to archive batch.
 func (dm *diskMetaStore) AddArchiveBatchVersion(tableName string, shard, batchID int, version uint32, seqNum uint32, batchSize int) error {
+	return dm.writeArchiveBatchVersionWithMode(tableName, shard, batchID, version, seqNum, batchSize, os.O_WRONLY|os.O_APPEND|os.O_CREATE)
+}
+
+func (dm *diskMetaStore) writeArchiveBatchVersionWithMode(tableName string, shard, batchID int, version uint32, seqNum uint32, batchSize int, mode int) error {
 	dm.Lock()
 	defer dm.Unlock()
 
@@ -787,7 +796,7 @@ func (dm *diskMetaStore) AddArchiveBatchVersion(tableName string, shard, batchID
 
 	writer, err := dm.OpenFileForWrite(
 		path,
-		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
+		mode,
 		0644,
 	)
 
