@@ -15,7 +15,7 @@ package etcd
 
 import (
 	"encoding/json"
-	"github.com/uber/aresdb/cluster/store"
+	"github.com/uber/aresdb/cluster/kvstore"
 
 	"github.com/m3db/m3/src/cluster/kv"
 	pb "github.com/uber/aresdb/controller/generated/proto"
@@ -127,7 +127,7 @@ func (m *tableSchemaMutator) CreateTable(namespace string, table *metaCom.Table,
 		return
 	}
 
-	txn := store.NewTransaction().
+	txn := kvstore.NewTransaction().
 		AddKeyValue(utils.SchemaListKey(namespace), tableListVersion, &tableListProto).
 		AddKeyValue(utils.SchemaKey(namespace, table.Name), schemaVersion, &schemaProto)
 
@@ -165,7 +165,7 @@ func (m *tableSchemaMutator) DeleteTable(namespace, name string) error {
 		return err
 	}
 
-	err = store.NewTransaction().
+	err = kvstore.NewTransaction().
 		AddKeyValue(utils.SchemaListKey(namespace), tableListVersion, &tableListProto).
 		AddKeyValue(utils.SchemaKey(namespace, name), schemaVersion, &schemaProto).
 		WriteTo(m.txnStore)
@@ -269,7 +269,7 @@ func (m *tableSchemaMutator) UpdateTable(namespace string, table metaCom.Table, 
 		return
 	}
 
-	txn := store.NewTransaction().
+	txn := kvstore.NewTransaction().
 		AddKeyValue(utils.SchemaListKey(namespace), tableListVersion, &tableListProto).
 		AddKeyValue(utils.SchemaKey(namespace, table.Name), schemaVersion, &schemaProto)
 
@@ -278,7 +278,7 @@ func (m *tableSchemaMutator) UpdateTable(namespace string, table metaCom.Table, 
 	return txn.WriteTo(m.txnStore)
 }
 
-func preCreateEnumNodes(txn *store.Transaction, namespace string, table *metaCom.Table, startColumnID int, endColumnID int) {
+func preCreateEnumNodes(txn *kvstore.Transaction, namespace string, table *metaCom.Table, startColumnID int, endColumnID int) {
 	for columnID := startColumnID; columnID < endColumnID; columnID++ {
 		if table.Columns[columnID].IsEnumColumn() {
 			// enum node list
