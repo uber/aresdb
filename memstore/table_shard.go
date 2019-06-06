@@ -363,7 +363,7 @@ func (shard *TableShard) createVectorPartyRawDataRequest(
 ) (rawVPDataRequest *rpc.VectorPartyRawDataRequest, vpWriter io.WriteCloser, err error) {
 	if shard.Schema.Schema.IsFactTable {
 		// fact table archive vp writer
-		vpWriter, err = shard.diskStore.OpenVectorPartyFileForAppend(tableMeta.GetTable(),
+		vpWriter, err = shard.diskStore.OpenVectorPartyFileForWrite(tableMeta.GetTable(),
 			int(vpMeta.GetColumnID()),
 			int(tableMeta.GetShard()), int(batchMeta.GetBatchID()),
 			batchMeta.GetArchiveVersion().GetArchiveVersion(),

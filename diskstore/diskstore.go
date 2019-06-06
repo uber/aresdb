@@ -73,9 +73,6 @@ type DiskStore interface {
 	OpenSnapshotVectorPartyFileForRead(table string, shard int,
 		redoLogFile int64, offset uint32, batchID int, columnID int) (io.ReadCloser, error)
 
-	// Create/truncate snapshot vector party file for append
-	OpenSnapshotVectorPartyFileForAppend(table string, shard int,
-		redoLogFile int64, offset uint32, batchID int, columnID int) (io.WriteCloser, error)
 	// Creates/truncates the snapshot column file for write.
 	OpenSnapshotVectorPartyFileForWrite(table string, shard int,
 		redoLogFile int64, offset uint32, batchID int, columnID int) (io.WriteCloser, error)
@@ -89,8 +86,6 @@ type DiskStore interface {
 		seqNum uint32) (io.ReadCloser, error)
 	// Creates/truncates the vector party file at the specified batchVersion for write.
 	OpenVectorPartyFileForWrite(table string, column, shard, batchID int, batchVersion uint32,
-		seqNum uint32) (io.WriteCloser, error)
-	OpenVectorPartyFileForAppend(table string, column, shard, batchID int, batchVersion uint32,
 		seqNum uint32) (io.WriteCloser, error)
 	// Deletes all old batches with the specified batchID that have version lower than or equal to the specified batch
 	// version. All columns of those batches will be deleted.
