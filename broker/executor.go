@@ -15,21 +15,18 @@
 package broker
 
 import (
+	"fmt"
+	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/cluster/topology"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/query"
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
 
-// QueryExecutor defines query executor
-type QueryExecutor interface {
-	// Execute executes query and flush result to connection
-	Execute(namespace, sqlQuery string, w http.ResponseWriter) (err error)
-}
-
 // NewQueryExecutor creates a new QueryExecutor
-func NewQueryExecutor(sm SchemaManager, topo topology.Topology) QueryExecutor {
+func NewQueryExecutor(sm common.SchemaManager, topo topology.Topology) common.QueryExecutor {
 	return &queryExecutorImpl{
 		schemaManager: sm,
 		topo:          topo,
@@ -38,7 +35,7 @@ func NewQueryExecutor(sm SchemaManager, topo topology.Topology) QueryExecutor {
 
 // queryExecutorImpl will be reused across all queries
 type queryExecutorImpl struct {
-	schemaManager SchemaManager
+	schemaManager common.SchemaManager
 	topo          topology.Topology
 }
 
@@ -56,6 +53,8 @@ func (qe *queryExecutorImpl) Execute(namespace, sqlQuery string, w http.Response
 
 	// TODO: add timeout
 	qc := aqlQuery.Compile(schemaReader, false)
+
+	// execute
 	if qc.IsNonAggregationQuery {
 		return qe.executeNonAggQuery(qc, w)
 	}
@@ -71,9 +70,17 @@ func (qe *queryExecutorImpl) executeNonAggQuery(qc *query.AQLQueryContext, w htt
 	return
 }
 func (qe *queryExecutorImpl) executeAggQuery(qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
-	// TODO implement agg query executor
-	//1. calculate fan out plan based on topology and aggregate functions
-	//2. fan out request, wait for all response (retry on failures)
-	//3. merge, then flush to w, logging, metrics
+	plan, err := NewAggQueryPlan(qc, qe.topo)
+	if err != nil {
+		// TODO log metric etc
+		return
+	}
+	var result queryCom.AQLQueryResult
+	result, err = plan.Run()
+	if err != nil {
+		return
+	}
+	fmt.Println(result)
+	w.Write([]byte("todo!"))
 	return
 }
