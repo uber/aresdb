@@ -122,7 +122,6 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			ctrl := gomock.NewController(utils.TestingT)
 			defer ctrl.Finish()
 
-
 			column0MockBuffer := &testingUtils.TestReadWriteCloser{}
 			column1MockBuffer := &testingUtils.TestReadWriteCloser{}
 			column2MockBuffer := &testingUtils.TestReadWriteCloser{}
@@ -206,9 +205,9 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 				Schema: metaCom.Table{
 					Name: table,
 					Config: metaCom.TableConfig{
-						RedoLogRotationInterval:  10800,
-						MaxRedoLogFileSize:       1 << 30,
-						RecordRetentionInDays:    10,
+						RedoLogRotationInterval: 10800,
+						MaxRedoLogFileSize:      1 << 30,
+						RecordRetentionInDays:   10,
 					},
 					IsFactTable:          false,
 					ArchivingSortColumns: []int{1, 2},
@@ -243,10 +242,10 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 				Meta: &rpc.TableShardMetaData_DimensionMeta{
 					DimensionMeta: &rpc.DimensionTableShardMetaData{
 						SnapshotVersion: &rpc.SnapshotVersion{
-							RedoFileID: 123,
+							RedoFileID:     123,
 							RedoFileOffset: 1,
 						},
-						LastBatchID: -213,
+						LastBatchID:   -213,
 						LastBatchSize: 10,
 					},
 				},
