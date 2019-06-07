@@ -37,3 +37,7 @@ func (*TestingTMock) Errorf(format string, args ...interface{}) {
 func (*TestingTMock) FailNow() {
 	GetLogger().Panic("Mockery fail now")
 }
+
+func (*TestingTMock) Fatalf(format string, args ...interface{}) {
+	GetLogger().Fatalf(format, args...)
+}

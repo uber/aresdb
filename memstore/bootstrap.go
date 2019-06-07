@@ -75,6 +75,7 @@ func (shard *TableShard) Bootstrap(
 	borrowErr := peerSource.BorrowConnection(peerNode.ID(), func(nodeClient rpc.PeerDataNodeClient) {
 		dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient)
 	})
+
 	if borrowErr != nil {
 		return borrowErr
 	}
@@ -85,7 +86,7 @@ func (shard *TableShard) Bootstrap(
 	return nil
 }
 
-type retryVPRequest struct {
+type vpRawDataRequest struct {
 	tableShardMeta *rpc.TableShardMetaData
 	batchMeta      *rpc.BatchMetaData
 	vpMeta         *rpc.VectorPartyMetaData
@@ -120,7 +121,7 @@ func (shard *TableShard) fetchDataFromPeer(
 
 	var (
 		mutex           sync.Mutex
-		retryVPRequests []retryVPRequest
+		retryVPRequests []vpRawDataRequest
 		errors          xerrors.MultiError
 		wg              sync.WaitGroup
 	)
@@ -132,14 +133,17 @@ func (shard *TableShard) fetchDataFromPeer(
 		}
 
 		for _, vpMeta := range batchMeta.Vps {
-			// TODO: add checksum to vp file and vpMeta to avoid copying existing data on disk
+			// capture batchMeta and vpMeta
+			batchMeta := batchMeta
+			vpMeta := vpMeta
 			wg.Add(1)
+			// TODO: add checksum to vp file and vpMeta to avoid copying existing data on disk
 			workerPool.Go(func() {
 				defer wg.Done()
 				request, vpWriter, err := shard.createVectorPartyRawDataRequest(tableShardMeta, batchMeta, vpMeta)
 				if err != nil {
 					mutex.Lock()
-					retryVPRequests = append(retryVPRequests, retryVPRequest{tableShardMeta, batchMeta, vpMeta})
+					retryVPRequests = append(retryVPRequests, vpRawDataRequest{tableShardMeta, batchMeta, vpMeta})
 					errors = errors.Add(err)
 					mutex.Unlock()
 				}
@@ -151,7 +155,7 @@ func (shard *TableShard) fetchDataFromPeer(
 						With("peer", peerHost.String(), "table", shard.Schema.Schema.Name, "shard", shard.ShardID, "batch", batchMeta.GetBatchID(), "column", vpMeta.GetColumnID(), "request", request, "error", err.Error()).
 						Errorf("failed fetching data from peer")
 					mutex.Lock()
-					retryVPRequests = append(retryVPRequests, retryVPRequest{tableShardMeta, batchMeta, vpMeta})
+					retryVPRequests = append(retryVPRequests, vpRawDataRequest{tableShardMeta, batchMeta, vpMeta})
 					errors = errors.Add(err)
 					mutex.Unlock()
 				} else {
@@ -259,18 +263,17 @@ func (shard *TableShard) fetchVectorPartyRawDataFromPeer(
 	totalBytes := 0
 	for {
 		data, err := stream.Recv()
-		if err != nil {
-			return totalBytes, err
-		}
 		if err == io.EOF {
 			break
 		}
-
+		if err != nil {
+			return totalBytes, err
+		}
 		bytesWritten, err := vpWriter.Write(data.Chunk)
 		if err != nil {
 			return totalBytes, err
 		}
-		bytesWritten += bytesWritten
+		totalBytes += bytesWritten
 	}
 	return totalBytes, nil
 }

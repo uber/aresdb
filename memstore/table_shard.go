@@ -32,8 +32,6 @@ const (
 
 // TableShard stores the data for one table shard in memory.
 type TableShard struct {
-	bootstrapLock sync.RWMutex
-
 	// Wait group used to prevent the stores from being prematurely deleted.
 	Users sync.WaitGroup `json:"-"`
 
@@ -60,6 +58,8 @@ type TableShard struct {
 	// For convenience.
 	HostMemoryManager common.HostMemoryManager `json:"-"`
 
+	// bootstrapLock protects bootstrapState
+	bootstrapLock sync.RWMutex
 	bootstrapState bootstrap.BootstrapState
 	// conditional variable for recovery readiness
 	readyForRecovery *sync.Cond
@@ -76,6 +76,8 @@ func NewTableShard(schema *common.TableSchema, metaStore metaCom.MetaStore,
 		HostMemoryManager:    hostMemoryManager,
 		redoLogManagerMaster: redoLogManagerMaster,
 	}
+	tableShard.readyForRecovery = sync.NewCond(&tableShard.bootstrapLock)
+
 	archiveStore := NewArchiveStore(tableShard)
 	tableShard.ArchiveStore = archiveStore
 	tableShard.LiveStore = NewLiveStore(schema.Schema.Config.BatchSize, tableShard)
