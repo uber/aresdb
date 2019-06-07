@@ -167,7 +167,11 @@ func (l LocalDiskStore) ListSnapshotVectorPartyFiles(table string, shard int,
 	redoLogFile int64, offset uint32, batchID int) (columnIDs []int, err error) {
 	snapshotBatchDir := GetPathForTableSnapshotBatchDir(l.rootPath, table, shard,
 		redoLogFile, offset, batchID)
-	vpFiles, err := ioutil.ReadDir(snapshotBatchDir)
+	return l.readVectoryPartyFiles(snapshotBatchDir)
+}
+
+func (l LocalDiskStore) readVectoryPartyFiles(dir string) (columnIDs[]int, err error) {
+	vpFiles, err := ioutil.ReadDir(dir)
 
 	if os.IsNotExist(err) {
 		err = nil
@@ -175,7 +179,7 @@ func (l LocalDiskStore) ListSnapshotVectorPartyFiles(table string, shard int,
 	}
 
 	if err != nil {
-		err = utils.StackError(err, "Failed to list vp file for snapshot batch dir: %s", snapshotBatchDir)
+		err = utils.StackError(err, "Failed to list vp file for batch dir: %s", dir)
 		return
 	}
 
@@ -186,14 +190,14 @@ func (l LocalDiskStore) ListSnapshotVectorPartyFiles(table string, shard int,
 			columnID, err = strconv.ParseInt(strings.Split(f.Name(), ".")[0], 10, 32)
 			if err != nil {
 				err = utils.StackError(err, "Failed to parse file name: %s as "+
-					"valid snapshot vector party file name",
+					"valid vector party file name",
 					f.Name())
 				return
 			}
 			columnIDs = append(columnIDs, int(columnID))
 		} else {
 			err = utils.StackError(nil, "Failed to parse file name: %s as "+
-				"valid snapshot vector party file name",
+				"valid vector party file name",
 				f.Name())
 			return
 		}
@@ -283,6 +287,14 @@ func (l LocalDiskStore) DeleteSnapshot(table string, shard int, latestRedoLogFil
 }
 
 // Archived vector party files.
+
+// ListArchiveBatchVectorPartyFiles return all vp for one batch version/seq
+func (l LocalDiskStore) ListArchiveBatchVectorPartyFiles(table string, shard, batchID int,
+	batchVersion uint32, seqNum uint32)([]int, error) {
+	batchIDTimeStr := daysSinceEpochToTimeStr(batchID)
+	tableArchiveBatchDir := GetPathForTableArchiveBatchDir(l.rootPath, table, shard, batchIDTimeStr, batchVersion, seqNum)
+	return l.readVectoryPartyFiles(tableArchiveBatchDir)
+}
 
 // OpenVectorPartyFileForRead : Opens the vector party file at the specified batchVersion for read.
 func (l LocalDiskStore) OpenVectorPartyFileForRead(table string, columnID int, shard, batchID int, batchVersion uint32,

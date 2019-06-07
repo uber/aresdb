@@ -28,6 +28,7 @@ import (
 
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
+	"math"
 )
 
 // meaningful defaults of table configurations.
@@ -816,6 +817,35 @@ func (dm *diskMetaStore) AddArchiveBatchVersion(tableName string, shard, batchID
 	}
 
 	return nil
+}
+
+func (dm *diskMetaStore) GetArchiveBatches(table string, shard int, batchIDStart, batchIDEnd int32) ([]int, error) {
+	dm.RLock()
+	defer dm.RUnlock()
+
+	batchFiles, err := dm.ReadDir(dm.getArchiveBatchDirPath(table, shard))
+	if os.IsNotExist(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("fail to read archive batch directories: %v", err)
+	}
+
+	if batchIDEnd <= 0 {
+		batchIDEnd = math.MaxInt32
+	}
+	batchIDs := []int{}
+	for _, batchFile := range batchFiles {
+		batchID, err := strconv.ParseInt(batchFile.Name(), 10, 32)
+		if err != nil {
+			// we'll skip invalid batchID
+			continue
+		}
+
+		if batchID <= int64(batchIDEnd) && batchID >= int64(batchIDStart) {
+			batchIDs = append(batchIDs, int(batchID))
+		}
+	}
+	return batchIDs, nil
 }
 
 // GetArchiveBatchVersion gets the latest version <= given archiving/live cutoff

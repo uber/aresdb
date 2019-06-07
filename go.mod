@@ -2,6 +2,7 @@ module github.com/uber/aresdb
 
 require (
 	github.com/DataDog/zstd v1.4.0 // indirect
+	github.com/MichaelTJones/pcg v0.0.0-20180122055547-df440c6ed7ed // indirect
 	github.com/Shopify/sarama v1.22.1
 	github.com/abiosoft/ishell v2.0.0+incompatible
 	github.com/abiosoft/readline v0.0.0-20180607040430-155bce2042db // indirect
@@ -40,6 +41,7 @@ require (
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/leanovate/gopter v0.2.4 // indirect
 	github.com/m3db/m3 v0.9.5
+	github.com/m3db/m3x v0.0.0-20190408051622-ebf3c7b94afd
 	github.com/m3db/prometheus_client_golang v0.8.1 // indirect
 	github.com/m3db/prometheus_client_model v0.1.0 // indirect
 	github.com/m3db/prometheus_common v0.1.0 // indirect
@@ -73,6 +75,8 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/uber-go/tally v3.3.9+incompatible
+	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
+	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
 	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/config v0.0.0-20190430173543-773b5421bfe9
@@ -84,6 +88,7 @@ require (
 	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
+	google.golang.org/grpc v1.21.1
 	gopkg.in/validator.v2 v2.0.0-20180514200540-135c24b11c19
 	gopkg.in/yaml.v2 v2.2.2
 )
