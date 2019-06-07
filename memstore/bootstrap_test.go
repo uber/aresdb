@@ -1,6 +1,8 @@
 package memstore
 
 import (
+	"io"
+
 	"github.com/golang/mock/gomock"
 	m3Shard "github.com/m3db/m3/src/cluster/shard"
 	"github.com/onsi/ginkgo"
@@ -18,7 +20,6 @@ import (
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	testingUtils "github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
-	"io"
 )
 
 var _ = ginkgo.Describe("table shard bootstrap", func() {
