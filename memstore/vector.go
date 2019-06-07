@@ -18,12 +18,12 @@ package memstore
 // #include <string.h>
 
 import (
+	"github.com/uber/aresdb/cgoutils"
 	"math"
 	"unsafe"
 
 	"fmt"
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -58,7 +58,7 @@ func NewVector(dataType common.DataType, size int) *Vector {
 	unitBits := common.DataTypeBits(dataType)
 	bytes := CalculateVectorBytes(dataType, size)
 
-	buffer := memutils.HostAlloc(bytes)
+	buffer := cgoutils.HostAlloc(bytes)
 
 	return &Vector{
 		DataType: dataType,
@@ -107,7 +107,7 @@ func CalculateVectorPartyBytes(dataType common.DataType, size int, hasNulls bool
 // SafeDestruct destructs this vector's storage space managed in C.
 func (v *Vector) SafeDestruct() {
 	if v != nil {
-		memutils.HostFree(unsafe.Pointer(v.buffer))
+		cgoutils.HostFree(unsafe.Pointer(v.buffer))
 	}
 }
 

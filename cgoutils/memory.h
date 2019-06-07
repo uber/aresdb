@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MEMUTILS_MEMORY_H_
-#define MEMUTILS_MEMORY_H_
+#ifndef CGOUTILS_MEMORY_H_
+#define CGOUTILS_MEMORY_H_
 
 #include <stddef.h>
 #include <stdint.h>
-#include "../cgoutils/utils.h"
+#include "utils.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,4 +87,4 @@ CGoCallResHandle asyncCopyHostToDevice(void *dst, const void *src,
 }
 #endif
 
-#endif  // MEMUTILS_MEMORY_H_
+#endif  // CGOUTILS_MEMORY_H_

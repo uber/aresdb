@@ -16,7 +16,7 @@ package query
 
 import (
 	"fmt"
-	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/cgoutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"time"
 	"unsafe"
@@ -209,7 +209,7 @@ func (e *BatchExecutorImpl) project() {
 	e.evalMeasures()
 
 	// wait for stream to clean up non used buffer before final aggregation
-	memutils.WaitForCudaStream(e.stream, e.qc.Device)
+	cgoutils.WaitForCudaStream(e.stream, e.qc.Device)
 	e.qc.OOPK.currentBatch.cleanupBeforeAggregation()
 }
 
@@ -242,7 +242,7 @@ func (e *BatchExecutorImpl) reduce() {
 			e.qc.reportTimingForCurrentBatch(e.stream, &e.start, reduceEvalTiming)
 		}, "reduce", e.stream)
 	}
-	memutils.WaitForCudaStream(e.stream, e.qc.Device)
+	cgoutils.WaitForCudaStream(e.stream, e.qc.Device)
 }
 
 func (e *BatchExecutorImpl) preExec(isLastBatch bool, start time.Time) {

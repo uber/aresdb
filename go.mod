@@ -2,6 +2,7 @@ module github.com/uber/aresdb
 
 require (
 	github.com/DataDog/zstd v1.4.0 // indirect
+	github.com/MichaelTJones/pcg v0.0.0-20180122055547-df440c6ed7ed // indirect
 	github.com/Shopify/sarama v1.22.1
 	github.com/abiosoft/ishell v2.0.0+incompatible
 	github.com/abiosoft/readline v0.0.0-20180607040430-155bce2042db // indirect

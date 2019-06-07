@@ -19,8 +19,8 @@ import "C"
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/cgoutils"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
@@ -187,10 +187,10 @@ func (qc *AQLQueryContext) getEnumReverseDict(dimIndex int, expression expr.Expr
 // ReleaseHostResultsBuffers deletes the result buffer from host memory after postprocessing
 func (qc *AQLQueryContext) ReleaseHostResultsBuffers() {
 	ctx := &qc.OOPK
-	memutils.HostFree(ctx.dimensionVectorH)
+	cgoutils.HostFree(ctx.dimensionVectorH)
 	ctx.dimensionVectorH = nil
 	if ctx.measureVectorH != nil {
-		memutils.HostFree(ctx.measureVectorH)
+		cgoutils.HostFree(ctx.measureVectorH)
 		ctx.measureVectorH = nil
 	}
 

@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memutils
+package cgoutils
 
 // #cgo LDFLAGS: -L${SRCDIR}/../lib -lmem
 // #include "memory.h"
 import "C"
 import (
-	"github.com/uber/aresdb/cgoutils"
 	"reflect"
 	"unsafe"
 )
@@ -181,7 +180,7 @@ func GetDeviceMemoryInfo(device int) (int, int) {
 // The reason to have this wrapper is because CGo types are bound to package name, thereby even C.int are different types
 // under different packages.
 func doCGoCall(f func() C.CGoCallResHandle) uintptr {
-	return cgoutils.DoCGoCall(func() (uintptr, unsafe.Pointer) {
+	return DoCGoCall(func() (uintptr, unsafe.Pointer) {
 		ret := f()
 		return uintptr(ret.res), unsafe.Pointer(ret.pStrErr)
 	})
