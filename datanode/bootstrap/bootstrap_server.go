@@ -93,6 +93,10 @@ func (p *PeerDataNodeServerImpl) StartSession(ctx context.Context, req *pb.Start
 		}
 	}()
 
+	if len(req.NodeID) == 0 {
+		err = errNoCallerID
+		return nil, err
+	}
 	if err = p.validateTable(req.Table, req.Shard); err != nil {
 		return nil, err
 	}
@@ -162,7 +166,7 @@ func (p *PeerDataNodeServerImpl) KeepAlive(stream pb.PeerDataNode_KeepAliveServe
 		// update last live time
 		sessionInfo.lastLiveTime = utils.Now()
 
-		if err := stream.Send(&pb.KeepAliveResponse{ID: session.ID, Ttl: sessionInfo.ttl}); err != nil {
+		if err = stream.Send(&pb.KeepAliveResponse{ID: session.ID, Ttl: sessionInfo.ttl}); err != nil {
 			return err
 		}
 	}
@@ -172,9 +176,9 @@ func (p *PeerDataNodeServerImpl) KeepAlive(stream pb.PeerDataNode_KeepAliveServe
 // FetchTableShardMetaData to retrieve all metadata for one table/shard
 func (p *PeerDataNodeServerImpl) FetchTableShardMetaData(ctx context.Context, req *pb.TableShardMetaDataRequest) (*pb.TableShardMetaData, error) {
 	sessionInfo := &sessionInfo{
-		table:        req.Table,
-		shardID:      req.Shard,
-		nodeID:       req.NodeID,
+		table:   req.Table,
+		shardID: req.Shard,
+		nodeID:  req.NodeID,
 	}
 	var err error
 
@@ -316,9 +320,9 @@ func (p *PeerDataNodeServerImpl) FetchTableShardMetaData(ctx context.Context, re
 
 func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawDataRequest, stream pb.PeerDataNode_FetchVectorPartyRawDataServer) error {
 	sessionInfo := &sessionInfo{
-		table:        req.Table,
-		shardID:      req.Shard,
-		nodeID:       req.NodeID,
+		table:   req.Table,
+		shardID: req.Shard,
+		nodeID:  req.NodeID,
 	}
 	var err error
 
@@ -345,9 +349,11 @@ func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawD
 
 	var reader io.ReadCloser
 	if t.IsFactTable {
-		reader, err = p.diskStore.OpenSnapshotVectorPartyFileForRead(req.Table, int(req.Shard), int64(req.GetArchiveVersion().ArchiveVersion), req.GetArchiveVersion().BackfillSeq, int(req.BatchID), int(req.ColumnID))
+		reader, err = p.diskStore.OpenSnapshotVectorPartyFileForRead(req.Table, int(req.Shard), int64(req.GetArchiveVersion().ArchiveVersion),
+			req.GetArchiveVersion().BackfillSeq, int(req.BatchID), int(req.ColumnID))
 	} else {
-		reader, err = p.diskStore.OpenSnapshotVectorPartyFileForRead(req.Table, int(req.Shard), int64(req.GetSnapshotVersion().RedoFileID), req.GetSnapshotVersion().RedoFileOffset, int(req.BatchID), int(req.ColumnID))
+		reader, err = p.diskStore.OpenSnapshotVectorPartyFileForRead(req.Table, int(req.Shard), int64(req.GetSnapshotVersion().RedoFileID),
+			req.GetSnapshotVersion().RedoFileOffset, int(req.BatchID), int(req.ColumnID))
 	}
 	if err != nil {
 		return err
@@ -379,6 +385,12 @@ func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawD
 }
 
 func (p *PeerDataNodeServerImpl) validateSessionSource(sessionID int64, nodeID string) error {
+	if sessionID == 0 {
+		return errNoSessionID
+	}
+	if len(nodeID) == 0 {
+		return errNoCallerID
+	}
 	sessionInfo, err := p.getSession(sessionID)
 	if err != nil {
 		return err
@@ -390,6 +402,12 @@ func (p *PeerDataNodeServerImpl) validateSessionSource(sessionID int64, nodeID s
 }
 
 func (p *PeerDataNodeServerImpl) validateRequest(sessionID int64, nodeID string, table string, shard uint32) error {
+	if sessionID == 0 {
+		return errNoSessionID
+	}
+	if len(nodeID) == 0 {
+		return errNoCallerID
+	}
 	sessionInfo, err := p.getSession(sessionID)
 	if err != nil {
 		return err
