@@ -28,7 +28,7 @@ import (
 )
 
 // NewQueryExecutor creates a new QueryExecutor
-func NewQueryExecutor(sm common.SchemaManager, topo topology.Topology, client dataCli.DataNodeClient) common.QueryExecutor {
+func NewQueryExecutor(sm common.SchemaManager, topo topology.Topology, client dataCli.DataNodeQueryClient) common.QueryExecutor {
 	return &queryExecutorImpl{
 		schemaManager:  sm,
 		topo:           topo,
@@ -40,7 +40,7 @@ func NewQueryExecutor(sm common.SchemaManager, topo topology.Topology, client da
 type queryExecutorImpl struct {
 	schemaManager  common.SchemaManager
 	topo           topology.Topology
-	dataNodeClient dataCli.DataNodeClient
+	dataNodeClient dataCli.DataNodeQueryClient
 }
 
 func (qe *queryExecutorImpl) Execute(ctx context.Context, namespace, sqlQuery string, w http.ResponseWriter) (err error) {

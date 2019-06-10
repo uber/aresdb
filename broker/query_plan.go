@@ -136,7 +136,7 @@ type ScanNode struct {
 	query          query.AQLQuery
 	shardID        uint32
 	topo           topology.Topology
-	dataNodeClient dataCli.DataNodeClient
+	dataNodeClient dataCli.DataNodeQueryClient
 }
 
 func (sn *ScanNode) Run(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
@@ -159,7 +159,7 @@ func (sn *ScanNode) Run(ctx context.Context) (result queryCom.AQLQueryResult, er
 		host := hosts[idx]
 
 		var fetchErr error
-		result, fetchErr = sn.dataNodeClient.Fetch(ctx, host, sn.query)
+		result, fetchErr = sn.dataNodeClient.Query(ctx, host, sn.query)
 		if fetchErr != nil {
 			utils.GetLogger().With(
 				"error", fetchErr,
@@ -187,7 +187,7 @@ type AggQueryPlan struct {
 }
 
 // NewAggQueryPlan creates a new agg query plan
-func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, client dataCli.DataNodeClient) (plan AggQueryPlan) {
+func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan AggQueryPlan) {
 	var root common.MergeNode
 
 	shards := topo.Get().ShardSet().AllIDs()
@@ -250,7 +250,7 @@ func splitAvgQuery(q query.AQLQuery) (sumq query.AQLQuery, countq query.AQLQuery
 	return
 }
 
-func buildSubPlan(agg common.AggType, q query.AQLQuery, shardIDs []uint32, topo topology.Topology, client dataCli.DataNodeClient) common.MergeNode {
+func buildSubPlan(agg common.AggType, q query.AQLQuery, shardIDs []uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
 	for _, shardID := range shardIDs {
 		root.Add(&ScanNode{

@@ -14,7 +14,11 @@
 package client
 
 import (
+	"context"
+	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
+	"github.com/uber/aresdb/query"
+	queryCom "github.com/uber/aresdb/query/common"
 )
 
 // WithConnectionFn defines function with PeerDataNodeClient
@@ -24,4 +28,8 @@ type WithConnectionFn func(rpc.PeerDataNodeClient)
 type PeerSource interface {
 	// BorrowConnection will borrow a connection and execute a user function.
 	BorrowConnection(hostID string, fn WithConnectionFn) error
+}
+
+type DataNodeQueryClient interface {
+	Query(ctx context.Context, host topology.Host, query query.AQLQuery) (queryCom.AQLQueryResult, error)
 }

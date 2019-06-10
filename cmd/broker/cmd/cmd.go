@@ -95,7 +95,7 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 
 	// TODO: init topology, init datanode cli
 	var topo topology.Topology
-	var dataNodeCli dataNodeCli.DataNodeClient
+	var dataNodeCli dataNodeCli.DataNodeQueryClient
 
 	// executor
 	exec := broker.NewQueryExecutor(schemaManager, topo, dataNodeCli)

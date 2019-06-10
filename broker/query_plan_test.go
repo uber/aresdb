@@ -126,7 +126,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		mockShardIds := []uint32{0, 1, 2}
 		mockShardSet.On("AllIDs").Return(mockShardIds)
 
-		mockDatanodeCli := dataCliMock.DataNodeClient{}
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
 		plan := NewAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
 		mn, ok := plan.root.(*mergeNodeImpl)
@@ -156,7 +156,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		mockShardIds := []uint32{0, 1, 2}
 		mockShardSet.On("AllIDs").Return(mockShardIds)
 
-		mockDatanodeCli := dataCliMock.DataNodeClient{}
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
 		plan := NewAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
 		mn, ok := plan.root.(*mergeNodeImpl)
@@ -183,10 +183,10 @@ var _ = ginkgo.Describe("query plan", func() {
 		mockHost2 := topoMock.Host{}
 		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{&mockHost1, &mockHost2}, nil)
 
-		mockDatanodeCli := dataCliMock.DataNodeClient{}
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
 		myResult := common2.AQLQueryResult{"foo": 1}
-		mockDatanodeCli.On("Fetch", mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
 
 		sn := ScanNode{
 			query:          q,
@@ -208,7 +208,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		mockTopo.On("Get").Return(&mockMap)
 		mockMap.On("RouteShard", uint32(0)).Return(nil, errors.New("routing error")).Times(rpcRetries)
 
-		mockDatanodeCli := dataCliMock.DataNodeClient{}
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
 		sn := ScanNode{
 			query:          q,
@@ -231,9 +231,9 @@ var _ = ginkgo.Describe("query plan", func() {
 		mockHost2 := topoMock.Host{}
 		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{&mockHost1, &mockHost2}, nil).Times(rpcRetries)
 
-		mockDatanodeCli := dataCliMock.DataNodeClient{}
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		mockDatanodeCli.On("Fetch", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Times(rpcRetries)
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Times(rpcRetries)
 
 		sn := ScanNode{
 			query:          q,
@@ -256,11 +256,11 @@ var _ = ginkgo.Describe("query plan", func() {
 		mockHost2 := topoMock.Host{}
 		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{&mockHost1, &mockHost2}, nil).Times(rpcRetries)
 
-		mockDatanodeCli := dataCliMock.DataNodeClient{}
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		mockDatanodeCli.On("Fetch", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Once()
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Once()
 		myResult := common2.AQLQueryResult{"foo": 1}
-		mockDatanodeCli.On("Fetch", mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil).Once()
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil).Once()
 
 		sn := ScanNode{
 			query:          q,
