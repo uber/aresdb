@@ -16,6 +16,7 @@ package datanode
 
 import (
 	"errors"
+	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -25,7 +26,8 @@ var (
 
 // options is the implementation of the interface Options
 type options struct {
-	instrumentOpts           utils.Options
+	instrumentOpts utils.Options
+	bootstrapOpts  bootstrap.Options
 }
 
 // NewOptions creates a new set of storage options with defaults
@@ -45,4 +47,13 @@ func (o *options) SetInstrumentOptions(value utils.Options) Options {
 
 func (o *options) InstrumentOptions() utils.Options {
 	return o.instrumentOpts
+}
+
+func (o *options) BootstrapOptions() bootstrap.Options {
+	return o.bootstrapOpts
+}
+
+func (o *options) SetBootstrapOptions(bootstrapOptions bootstrap.Options) Options {
+	o.bootstrapOpts = bootstrapOptions
+	return o
 }

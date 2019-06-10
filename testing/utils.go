@@ -28,12 +28,16 @@ type TestReadWriteCloser struct {
 }
 
 // Close implements io.ReadWriteCloser.Close.
-func (TestReadWriteCloser) Close() error {
+func (t *TestReadWriteCloser) Close() error {
 	return nil
 }
 
+func (t *TestReadWriteCloser) Write(bytes []byte) (n int, err error) {
+	return t.Buffer.Write(bytes)
+}
+
 // Seek implements utils.ReaderSeekerCloser.Seek.
-func (t TestReadWriteCloser) Seek(offset int64, whence int) (int64, error) {
+func (t *TestReadWriteCloser) Seek(offset int64, whence int) (int64, error) {
 	return 0, nil
 }
 

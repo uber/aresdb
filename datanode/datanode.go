@@ -25,13 +25,12 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
+	"github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"math"
-	"runtime"
 	"sync"
 )
 
@@ -40,6 +39,7 @@ type dataNode struct {
 	sync.RWMutex
 
 	host                 topology.Host
+	peers                client.PeerSource
 	namespace            cluster.Namespace
 	metadata             metaCom.MetaStore
 	memdata              memstore.MemStore
@@ -127,7 +127,7 @@ func (d *dataNode) Host() topology.Host {
 }
 
 // Bootstrap bootstraps this datanode.
-func (d *dataNode) Bootstrap(topo topology.Topology) error {
+func (d *dataNode) Bootstrap(topo topology.Topology, options bootstrap.Options) error {
 	callStart := utils.Now()
 
 	d.Lock()
@@ -196,8 +196,7 @@ func (d *dataNode) Bootstrap(topo topology.Topology) error {
 		return nil
 	}
 
-	// Bootstrap shards using at least half the CPUs available
-	workers := xsync.NewWorkerPool(int(math.Ceil(float64(runtime.NumCPU()) / 2)))
+	workers := xsync.NewWorkerPool(options.MaxConcurrentTableShards())
 	workers.Init()
 
 	var (
@@ -208,14 +207,18 @@ func (d *dataNode) Bootstrap(topo topology.Topology) error {
 
 	topoStateSnapshot := d.newInitialTopologyState(topo)
 	for _, tableShard := range d.bootstrapTableShards {
+		// capture table shard
+		tableShard := tableShard
 		wg.Add(1)
 		workers.Go(func() {
-			err := tableShard.Bootstrap(d.host, topo, topoStateSnapshot)
+			err := tableShard.Bootstrap(d.peers, d.host, topo, topoStateSnapshot, options)
 
 			mutex.Lock()
 			multiErr = multiErr.Add(err)
 			mutex.Unlock()
 
+			// unpin table shard after use
+			tableShard.Users.Done()
 			wg.Done()
 		})
 	}

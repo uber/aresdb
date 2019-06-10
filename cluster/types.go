@@ -16,7 +16,7 @@ package cluster
 
 import (
 	m3shard "github.com/m3db/m3/src/cluster/shard"
-	"github.com/m3db/m3x/ident"
+	"github.com/m3db/m3/src/x/ident"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/utils"
 )
