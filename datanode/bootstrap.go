@@ -129,7 +129,7 @@ func (m *bootstrapManagerImpl) Report() {
 
 func (m *bootstrapManagerImpl) bootstrap() error {
 	starDatanodeBootstrap := utils.Now()
-	err := m.datanode.Bootstrap(m.topo)
+	err := m.datanode.Bootstrap(m.topo, m.opts.BootstrapOptions())
 	took := utils.Now().Sub(starDatanodeBootstrap)
 	m.log.Info("bootstrap finished",
 		zap.String("datanode", m.datanode.Host().ID()),

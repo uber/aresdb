@@ -60,3 +60,19 @@ const (
 	// Bootstrapped indicates a bootstrap process has completed.
 	Bootstrapped
 )
+
+// Options defines options for bootstrap
+type Options interface {
+	// MaxConcurrentTableShards returns the max number of concurrent bootstrapping table shards
+	MaxConcurrentTableShards() int
+	// SetMaxConcurrentShards sets the max number of concurrent bootstrapping table shards
+	SetMaxConcurrentShards(numShards int) Options
+	// MaxConcurrentStreamsPerTableShards returns the max number of current data streams per bootstrapping table shard
+	MaxConcurrentStreamsPerTableShards() int
+	// SetMaxConcurrentStreamsPerTableShards sets the max number of current data streams per bootstrapping table shard
+	SetMaxConcurrentStreamsPerTableShards(numStreams int) Options
+	// BootstrapSessionTTL returns the ttl for bootstrap session
+	BootstrapSessionTTL() int64
+	// SetBootstrapSessionTTL sets the session ttl for bootstrap session
+	SetBootstrapSessionTTL(ttl int64) Options
+}

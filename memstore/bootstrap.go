@@ -27,7 +27,6 @@ import (
 	"io"
 	"math"
 	"math/rand"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -61,7 +60,9 @@ func (shard *TableShard) Bootstrap(
 	peerSource client.PeerSource,
 	origin topology.Host,
 	topo topology.Topology,
-	topoState *topology.StateSnapshot) error {
+	topoState *topology.StateSnapshot,
+	options bootstrap.Options,
+) error {
 	shard.bootstrapLock.Lock()
 	// check whether shard is already bootstrapping
 	if shard.bootstrapState > bootstrap.BootstrapNotStarted && shard.bootstrapState < bootstrap.Bootstrapped {
@@ -86,7 +87,7 @@ func (shard *TableShard) Bootstrap(
 	peerNode := shard.findBootstrapSource(origin, topo, topoState)
 	var dataStreamErr error
 	borrowErr := peerSource.BorrowConnection(peerNode.ID(), func(nodeClient rpc.PeerDataNodeClient) {
-		dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient)
+		dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient, options)
 	})
 
 	if borrowErr != nil {
@@ -109,9 +110,10 @@ type vpRawDataRequest struct {
 func (shard *TableShard) fetchDataFromPeer(
 	peerHost topology.Host,
 	client rpc.PeerDataNodeClient,
+	options bootstrap.Options,
 ) error {
 
-	doneFn, err := shard.startStreamSession(peerHost, client)
+	doneFn, err := shard.startStreamSession(peerHost, client, options)
 	if err != nil {
 		return err
 	}
@@ -129,7 +131,7 @@ func (shard *TableShard) fetchDataFromPeer(
 	}
 
 	// 3. fetch raw vps
-	workerPool := xsync.NewWorkerPool(int(math.Ceil(float64(runtime.NumCPU()) / 2)))
+	workerPool := xsync.NewWorkerPool(options.MaxConcurrentStreamsPerTableShards())
 	workerPool.Init()
 
 	var (
@@ -349,9 +351,9 @@ func (shard *TableShard) setTableShardMetadata(tableShardMeta *rpc.TableShardMet
 	return nil
 }
 
-func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.PeerDataNodeClient) (doneFn func(), err error) {
+func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.PeerDataNodeClient, options bootstrap.Options) (doneFn func(), err error) {
 	done := make(chan struct{})
-	ttl := defaultPeerStreamSessionTTL
+	ttl := int64(options.BootstrapSessionTTL())
 	startSessionRequest := &rpc.StartSessionRequest{
 		Table: shard.Schema.Schema.Name,
 		Shard: uint32(shard.ShardID),

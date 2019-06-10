@@ -22,12 +22,6 @@ import (
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"sync"
-	"time"
-)
-
-const (
-	//TODO: move to config options
-	defaultPeerStreamSessionTTL = int64(5 * time.Minute)
 )
 
 // TableShard stores the data for one table shard in memory.
@@ -59,7 +53,7 @@ type TableShard struct {
 	HostMemoryManager common.HostMemoryManager `json:"-"`
 
 	// bootstrapLock protects bootstrapState
-	bootstrapLock sync.RWMutex
+	bootstrapLock  sync.RWMutex
 	bootstrapState bootstrap.BootstrapState
 	// conditional variable for recovery readiness
 	readyForRecovery *sync.Cond

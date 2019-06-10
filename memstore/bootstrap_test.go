@@ -14,8 +14,6 @@
 package memstore
 
 import (
-	"io"
-
 	"github.com/golang/mock/gomock"
 	m3Shard "github.com/m3db/m3/src/cluster/shard"
 	"github.com/onsi/ginkgo"
@@ -23,6 +21,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	aresShard "github.com/uber/aresdb/cluster/shard"
 	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/datanode/client"
 	datanodeMocks "github.com/uber/aresdb/datanode/client/mocks"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
@@ -33,6 +32,7 @@ import (
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	testingUtils "github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
+	"io"
 )
 
 var _ = ginkgo.Describe("table shard bootstrap", func() {
@@ -42,6 +42,8 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 	peerSource := &datanodeMocks.PeerSource{}
 
 	hostMemoryManager := NewHostMemoryManager(memStore, 1<<32)
+
+	options := bootstrap.NewOptions()
 
 	ginkgo.Describe("bootstrap should work", func() {
 		host0 := topology.NewHost("instance0", "http://host0:9374")
@@ -192,7 +194,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			mockPeerDataNodeClient.On("FetchVectorPartyRawData", mock.Anything, mock.Anything).Return(mockFetchRawDataStream1, nil).Once()
 			mockPeerDataNodeClient.On("FetchVectorPartyRawData", mock.Anything, mock.Anything).Return(mockFetchRawDataStream2, nil).Once()
 
-			err := shard.Bootstrap(peerSource, host0, staticTopology, topoState)
+			err := shard.Bootstrap(peerSource, host0, staticTopology, topoState, options)
 			Ω(err).Should(BeNil())
 			Ω(column0MockBuffer.Buffer.Bytes()).Should(Equal([]byte{1, 2}))
 			Ω(column1MockBuffer.Buffer.Bytes()).Should(Equal([]byte{1, 2}))
@@ -289,7 +291,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			mockPeerDataNodeClient.On("FetchVectorPartyRawData", mock.Anything, mock.Anything).Return(mockFetchRawDataStream1, nil).Once()
 			mockPeerDataNodeClient.On("FetchVectorPartyRawData", mock.Anything, mock.Anything).Return(mockFetchRawDataStream2, nil).Once()
 
-			err := shard.Bootstrap(peerSource, host0, staticTopology, topoState)
+			err := shard.Bootstrap(peerSource, host0, staticTopology, topoState, options)
 			Ω(err).Should(BeNil())
 			Ω(column0MockBuffer.Buffer.Bytes()).Should(Equal([]byte{1, 2}))
 			Ω(column1MockBuffer.Buffer.Bytes()).Should(Equal([]byte{1, 2}))
