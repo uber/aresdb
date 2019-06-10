@@ -15,13 +15,13 @@
 #ifndef QUERY_MEMORY_HPP
 #define QUERY_MEMORY_HPP
 
-#include "query/memory.hpp"
+#include "memory.hpp"
 #include <cuda_runtime.h>
 #include <cstdlib>
 #include <cstring>
 #include <string>
 #include "cgoutils/memory.h"
-#include "query/utils.hpp"
+#include "utils.hpp"
 
 // MemoryError represents a memory error.
 class MemoryError : public AlgorithmError{
@@ -52,6 +52,11 @@ void deviceMemset(void *devPtr, int value, size_t count) {
 void asyncCopyHostToDevice(void* dst, const void* src, size_t count,
     cudaStream_t stream) {
   checkMemoryError(::asyncCopyHostToDevice(dst, src, count, stream));
+}
+
+void asyncCopyDeviceToHost(void* dst, const void* src, size_t count,
+    cudaStream_t stream) {
+  checkMemoryError(::asyncCopyDeviceToHost(dst, src, count, stream));
 }
 
 }  // namespace ares

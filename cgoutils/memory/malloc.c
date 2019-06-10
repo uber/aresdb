@@ -22,11 +22,6 @@ DeviceMemoryFlags GetFlags(){
   return 0x0;
 }
 
-CGoCallResHandle Init(){
-  CGoCallResHandle resHandle = {NULL, NULL};
-  return resHandle;
-}
-
 CGoCallResHandle HostAlloc(size_t bytes) {
   CGoCallResHandle resHandle = {NULL, NULL};
   resHandle.res = malloc(bytes);
@@ -141,6 +136,13 @@ CGoCallResHandle deviceMemset(void *devPtr, int value, size_t count) {
 }
 
 CGoCallResHandle asyncCopyHostToDevice(void *dst, const void *src,
+                                       size_t count, void *stream){
+  CGoCallResHandle resHandle = {NULL, NULL};
+  memcpy(dst, src, count);
+  return resHandle;
+}
+
+CGoCallResHandle asyncCopyDeviceToHost(void *dst, const void *src,
                                        size_t count, void *stream){
   CGoCallResHandle resHandle = {NULL, NULL};
   memcpy(dst, src, count);

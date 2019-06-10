@@ -524,8 +524,8 @@ CGoCallResHandle Reduce(DimensionVector inputKeys,
 // HashReduce does the reduction using hash instead of sort and then reduce.
 // Note for HashReduce we will not use hash vector for keys so since
 // hash happens during hash map insertion, therefore we can skip allocation for
-// hash vector. Index vector is still needed for locating corresponding dim
-// values.
+// hash vector. We will not need index vector as well since we no longer sort
+// the rows.
 CGoCallResHandle HashReduce(DimensionVector inputKeys,
                         uint8_t *inputValues,
                         DimensionVector outputKeys,

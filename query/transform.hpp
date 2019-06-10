@@ -54,7 +54,7 @@ class TransformContext {
   }
 
   template<typename InputIterator>
-  int run(uint32_t *indexVector, InputIterator inputIter) {
+  int run(uint32_t *indexVector, InputIterator inputIter) const {
     typedef typename InputIterator::value_type::head_type InputValueType;
     typedef typename OutputIterator::value_type::head_type OutputValueType;
 
@@ -64,7 +64,9 @@ class TransformContext {
   }
 
   template<typename LHSIterator, typename RHSIterator>
-  int run(uint32_t *indexVector, LHSIterator lhsIter, RHSIterator rhsIter) {
+  int run(uint32_t *indexVector,
+          LHSIterator lhsIter,
+          RHSIterator rhsIter) const {
     typedef typename common_type<
         typename LHSIterator::value_type::head_type,
         typename RHSIterator::value_type::head_type>::type InputValueType;
@@ -105,7 +107,7 @@ class OutputVectorBinder {
       functorType(functorType),
       cudaStream(cudaStream) {}
 
-  int bind() {
+  int bind() const {
     switch (output.Type) {
       case ScratchSpaceOutput:
         return transformScratchSpaceOutput(output.Vector.ScratchSpace);
@@ -119,7 +121,7 @@ class OutputVectorBinder {
 
   // Shared by all output iterator;
   template<typename OutputIterator>
-  int transform(OutputIterator outputIter) {
+  int transform(OutputIterator outputIter) const {
     typedef TransformContext<OutputIterator, FunctorType> Context;
     Context ctx(
       outputIter, indexVectorLength, functorType, cudaStream);
@@ -141,9 +143,9 @@ class OutputVectorBinder {
   // Declaration of transform functions for different type of output iterators.
   // Their actual definition is in different cu files so that we can compile
   // them in parallel.
-  int transformDimensionOutput(DimensionOutputVector output);
-  int transformMeasureOutput(MeasureOutputVector output);
-  int transformScratchSpaceOutput(ScratchSpaceVector output);
+  int transformDimensionOutput(DimensionOutputVector output) const;
+  int transformMeasureOutput(MeasureOutputVector output) const;
+  int transformScratchSpaceOutput(ScratchSpaceVector output) const;
 };
 
 }  // namespace ares

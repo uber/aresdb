@@ -39,11 +39,6 @@ DeviceMemoryFlags GetFlags() {
   return DEVICE_MEMORY_IMPLEMENTATION_FLAG;
 }
 
-CGoCallResHandle Init() {
-  CGoCallResHandle resHandle = {NULL, NULL};
-  return resHandle;
-}
-
 CGoCallResHandle HostAlloc(size_t bytes) {
   CGoCallResHandle resHandle = {NULL, NULL};
   // cudaHostAllocPortable makes sure that the allocation is associated with all
@@ -202,5 +197,14 @@ CGoCallResHandle asyncCopyHostToDevice(void* dst, const void* src,
   cudaMemcpyAsync(dst, src, count,
                   cudaMemcpyHostToDevice, (cudaStream_t) stream);
   resHandle.pStrErr = checkCUDAError("asyncCopyHostToDevice");
+  return resHandle;
+}
+
+CGoCallResHandle asyncCopyDeviceToHost(void* dst, const void* src,
+    size_t count, void* stream) {
+  CGoCallResHandle resHandle = {NULL, NULL};
+  cudaMemcpyAsync(dst, src, count,
+                  cudaMemcpyDeviceToHost, (cudaStream_t) stream);
+  resHandle.pStrErr = checkCUDAError("asyncCopyDeviceToHost");
   return resHandle;
 }

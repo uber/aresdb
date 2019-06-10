@@ -73,8 +73,8 @@ void sortCurrentBatch(uint8_t *dimValues, uint64_t *hashValues,
                       int vectorCapacity, uint32_t *curValuesOut,
                       int prevResultSize, int curBatchSize,
                       cudaStream_t cudaStream) {
-  DimensionHashIterator hashIter(dimValues, indexVector, numDimsPerDimWidth,
-                                 vectorCapacity);
+  DimensionHashIterator<> hashIter(
+      dimValues, numDimsPerDimWidth, vectorCapacity, indexVector);
   auto zippedValueIter = thrust::make_zip_iterator(
       thrust::make_tuple(indexVector, curValuesOut));
   thrust::transform(

@@ -39,8 +39,6 @@ typedef uint32_t DeviceMemoryFlags;
 // Change to CGoCallResHandle when future it will throw any.
 DeviceMemoryFlags GetFlags();
 
-CGoCallResHandle Init();
-
 CGoCallResHandle HostAlloc(size_t bytes);
 
 CGoCallResHandle HostFree(void *p);
@@ -81,6 +79,8 @@ CGoCallResHandle deviceMalloc(void **devPtr, size_t size);
 CGoCallResHandle deviceFree(void *devPtr);
 CGoCallResHandle deviceMemset(void *devPtr, int value, size_t count);
 CGoCallResHandle asyncCopyHostToDevice(void *dst, const void *src,
+                                       size_t count, void *stream);
+CGoCallResHandle asyncCopyDeviceToHost(void *dst, const void *src,
                                        size_t count, void *stream);
 
 #ifdef __cplusplus

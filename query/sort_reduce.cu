@@ -19,8 +19,8 @@
 #include <cstring>
 #include <algorithm>
 #include <exception>
-#include "query/algorithm.hpp"
-#include "query/iterator.hpp"
+#include "algorithm.hpp"
+#include "iterator.hpp"
 #include "query/time_series_aggregate.h"
 #include "memory.hpp"
 
@@ -118,10 +118,10 @@ namespace ares {
 void sort(DimensionVector keys,
           int length,
           cudaStream_t cudaStream) {
-  DimensionHashIterator hashIter(keys.DimValues,
-                                 keys.IndexVector,
+  DimensionHashIterator<> hashIter(keys.DimValues,
                                  keys.NumDimsPerDimWidth,
-                                 keys.VectorCapacity);
+                                 keys.VectorCapacity,
+                                 keys.IndexVector);
   thrust::copy(GET_EXECUTION_POLICY(cudaStream),
                hashIter,
                hashIter + length,

@@ -26,7 +26,7 @@
 #include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
 #include "query/transform.hpp"
-#include "query/unittest_utils.hpp"
+#include "unittest_utils.hpp"
 
 namespace ares {
 
@@ -1079,72 +1079,6 @@ TEST(ReduceDimColumnVectorTest, CheckReduce) {
   EXPECT_TRUE(equal(outputDimValues, outputDimValues + 60, expectedDimValues));
 }
 
-// For now this test should only run in device mode.
-// TODO(lucafuji): add host version of concurrent hash map to support host mode
-// mock and test.
-#ifdef RUN_ON_DEVICE
-// cppcheck-suppress *
-TEST(HashReductionTest, CheckReduce) {
-  // test with 3 dimensions (4-byte, 2-byte, 1-byte)
-  // each dimension vector has 6 elements with values assigned as [1,2,3,2,3,1]
-  uint8_t inputDimValuesH[60] = {1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0,
-                                 0, 3, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0, 3, 0,
-                                 2, 0, 3, 0, 1, 0, 1, 2, 3, 2, 3, 1, 1, 1, 1,
-                                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-  uint32_t inputIndexVectorH[6] = {1, 3, 2, 4, 0, 5};
-  uint32_t inputValuesH[6] = {5, 1, 3, 2, 4, 6};
-
-  uint8_t outputDimValuesH[60] = {0};
-  uint32_t outputValuesH[6] = {0};
-
-  uint8_t *inputDimValues = allocate(inputDimValuesH, 60);
-  uint32_t *inputIndexVector = allocate(inputIndexVectorH, 6);
-  uint32_t *inputValues = allocate(inputValuesH, 6);
-
-  uint8_t *outputDimValues = allocate(outputDimValuesH, 60);
-  uint32_t *outputValues = allocate(outputValuesH, 6);
-
-  uint32_t expectedValues[3] = {3, 7, 11};
-  uint32_t expectedIndex[3] = {1, 2, 0};
-  // output dimension values should be [2,3,1] for each dim vector
-  uint8_t expectedDimValues[60] = {
-      2, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 2, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 1, 0,
-      0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0,
-  };
-  int length = 6;
-  int vectorCapacity = 6;
-  DimensionVector inputKeys = {
-      inputDimValues,
-      inputHashValues,
-      inputIndexVector,
-      vectorCapacity,
-      {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
-
-  DimensionVector outputKeys = {
-      outputDimValues,
-      outputHashValues,
-      outputIndexVector,
-      vectorCapacity,
-      {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
-  CGoCallResHandle
-      resHandle = HashReduce(inputKeys,
-                         reinterpret_cast<uint8_t *>(inputValues),
-                         outputKeys,
-                         reinterpret_cast<uint8_t *>(outputValues),
-                         4,
-                         length,
-                         AGGR_SUM_UNSIGNED,
-                         0,
-                         0);
-  EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 3);
-  EXPECT_EQ(resHandle.pStrErr, nullptr);
-
-  EXPECT_TRUE(equal(outputValues, outputValues + 3, expectedValues));
-  EXPECT_TRUE(equal(outputDimValues, outputDimValues + 60, expectedDimValues));
-}
-#endif
-
 TEST(SortAndReduceTest, CheckReduceByAvg) {
   // 6 elements 1 2 3 2 3 1
   uint8_t inputDimValuesH[30] = {1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0,
@@ -2009,5 +1943,68 @@ TEST(ExpandTest, testFillPartial) {
     EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100,
                         expectedDimValues));
 }
+
+// For now this test should only run in device mode and when c++14 is supported.
+// TODO(lucafuji): add host version of concurrent hash map to support host mode
+// mock and test.
+#ifdef SUPPORT_HASH_REDUCTION
+// cppcheck-suppress *
+TEST(HashReductionTest, CheckReduce) {
+  // test with 3 dimensions (4-byte, 2-byte, 1-byte)
+  // each dimension vector has 6 elements with values assigned as [1,2,3,2,3,1]
+  uint8_t inputDimValuesH[60] = {1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0,
+                                 0, 3, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0, 3, 0,
+                                 2, 0, 3, 0, 1, 0, 1, 2, 3, 2, 3, 1, 1, 1, 1,
+                                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+  uint32_t inputValuesH[6] = {5, 1, 3, 2, 4, 6};
+
+  uint8_t outputDimValuesH[60] = {0};
+  uint32_t outputValuesH[6] = {0};
+
+  uint8_t *inputDimValues = allocate(inputDimValuesH, 60);
+  uint32_t *inputValues = allocate(inputValuesH, 6);
+
+  uint8_t *outputDimValues = allocate(outputDimValuesH, 60);
+  uint32_t *outputValues = allocate(outputValuesH, 6);
+
+  uint32_t expectedValues[3] = {3, 11, 7};
+  // output dimension values should be [2,1,3] for each dim vector
+  uint8_t expectedDimValues[60] = {
+      2, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 2, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 2, 1, 3, 0,
+      0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0,
+  };
+  int length = 6;
+  int vectorCapacity = 6;
+  DimensionVector inputKeys = {
+      inputDimValues,
+      nullptr,
+      nullptr,
+      vectorCapacity,
+      {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
+
+  DimensionVector outputKeys = {
+      outputDimValues,
+      nullptr,
+      nullptr,
+      vectorCapacity,
+      {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
+  CGoCallResHandle
+      resHandle = HashReduce(inputKeys,
+                         reinterpret_cast<uint8_t *>(inputValues),
+                         outputKeys,
+                         reinterpret_cast<uint8_t *>(outputValues),
+                         4,
+                         length,
+                         AGGR_SUM_UNSIGNED,
+                         0,
+                         0);
+  EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 3);
+  EXPECT_EQ(resHandle.pStrErr, nullptr);
+
+  EXPECT_TRUE(equal(outputValues, outputValues + 3, expectedValues));
+  EXPECT_TRUE(equal(outputDimValues, outputDimValues + 60, expectedDimValues));
+}
+#endif
 
 }  // namespace ares

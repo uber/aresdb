@@ -62,7 +62,7 @@ void sort(DimensionVector keys, int length, cudaStream_t cudaStream);
 
 // hash_reduction will reduce the measures according to the dim values and
 // aggregate function. Its interface is the same as reduce except it will not
-// use index vector in DimensionVector.
+// use index vector and hash vector in DimensionVector.
 int hash_reduction(DimensionVector inputKeys, uint8_t *inputValues,
            DimensionVector outputKeys, uint8_t *outputValues,
            int valueBytes, int length, AggregateFunction aggFunc,

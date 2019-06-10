@@ -156,8 +156,6 @@ func reportAllocatedMemory(deviceCount int, da deviceAllocator) {
 
 // newDeviceAllocator returns a new device allocator instances.
 func newDeviceAllocator() deviceAllocator {
-	// init may panic and crash the service. This is expected.
-	cgoutils.Init()
 	var da deviceAllocator
 	deviceCount := cgoutils.GetDeviceCount()
 	if cgoutils.IsPooledMemory() {

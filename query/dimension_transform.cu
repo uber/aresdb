@@ -24,9 +24,9 @@ namespace ares {
 
 template <int NInput>
 class OutputVectorBinderHelper {
-    public:
+ public:
     template<typename OutputVectorBinder>
-    int bind(OutputVectorBinder &binder, DimensionOutputVector output) {
+    int bind(const OutputVectorBinder &binder, DimensionOutputVector output) {
         switch (output.DataType) {
             case Bool:
               BIND_DIMENSION_OUTPUT(bool)
@@ -55,10 +55,9 @@ class OutputVectorBinderHelper {
 
 template<>
 class OutputVectorBinderHelper<1>: OutputVectorBinderHelper<2> {
-
     typedef OutputVectorBinderHelper<2> super_t;
 
-    public:
+ public:
     template<typename OutputVectorBinder>
     int bind(OutputVectorBinder binder, DimensionOutputVector output) {
         switch (output.DataType) {
@@ -76,7 +75,7 @@ class OutputVectorBinderHelper<1>: OutputVectorBinderHelper<2> {
 
 template<int NInput, typename FunctorType>
 int OutputVectorBinder<NInput, FunctorType>::transformDimensionOutput(
-    DimensionOutputVector output) {
+    DimensionOutputVector output) const {
     OutputVectorBinderHelper<NInput> helper;
     return helper.bind(*this, output);
 }
@@ -84,10 +83,10 @@ int OutputVectorBinder<NInput, FunctorType>::transformDimensionOutput(
 // explicit instantiations.
 template int OutputVectorBinder<1,
                                 UnaryFunctorType>::transformDimensionOutput(
-    DimensionOutputVector output);
+    DimensionOutputVector output) const;
 
 template int OutputVectorBinder<2,
                                 BinaryFunctorType>::transformDimensionOutput(
-    DimensionOutputVector output);
+    DimensionOutputVector output) const;
 
 }  // namespace ares
