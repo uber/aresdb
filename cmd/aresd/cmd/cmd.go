@@ -20,11 +20,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"github.com/uber/aresdb/api"
+	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/common"
 	controllerCli "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
@@ -91,10 +91,10 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	logger.With("config", cfg).Info("Bootstrapping service")
 
 	// Check whether we have a correct device running environment
-	memutils.DeviceFree(unsafe.Pointer(nil), 0)
+	cgoutils.DeviceFree(unsafe.Pointer(nil), 0)
 
 	// Pause profiler util requested
-	memutils.CudaProfilerStop()
+	cgoutils.CudaProfilerStop()
 
 	scope, closer, err := metricsCfg.NewRootScope()
 	if err != nil {

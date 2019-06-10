@@ -33,7 +33,7 @@ using device_vector = thrust::device_vector<V>;
 using device_vector = thrust::host_vector<V>;
 #endif
 
-// Wrappers over memutils/memory.h but will raise exceptions if error happens.
+// Wrappers over cgoutils/memory.h but will raise exceptions if error happens.
 void deviceMalloc(void **devPtr, size_t size);
 void deviceFree(void *devPtr);
 void deviceMemset(void *devPtr, int value, size_t count);

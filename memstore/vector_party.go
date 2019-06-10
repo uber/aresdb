@@ -15,8 +15,8 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"unsafe"
@@ -470,7 +470,7 @@ func (vp *cVectorParty) Write(writer io.Writer) error {
 	// Write value vector.
 	// Here we directly move data from c allocated memory into writer.
 	if err := dataWriter.Write(
-		memutils.MakeSliceFromCPtr(vp.values.buffer, vp.values.Bytes),
+		cgoutils.MakeSliceFromCPtr(vp.values.buffer, vp.values.Bytes),
 	); err != nil {
 		return err
 	}
@@ -483,7 +483,7 @@ func (vp *cVectorParty) Write(writer io.Writer) error {
 	// Write null vector.
 	// Here we directly move data from c allocated memory into writer.
 	if err := dataWriter.Write(
-		memutils.MakeSliceFromCPtr(vp.nulls.buffer, vp.nulls.Bytes),
+		cgoutils.MakeSliceFromCPtr(vp.nulls.buffer, vp.nulls.Bytes),
 	); err != nil {
 		return err
 	}
@@ -496,7 +496,7 @@ func (vp *cVectorParty) Write(writer io.Writer) error {
 	// Write count vector.
 	// Here we directly move data from c allocated memory into writer.
 	if err := dataWriter.Write(
-		memutils.MakeSliceFromCPtr(vp.counts.buffer, vp.counts.Bytes),
+		cgoutils.MakeSliceFromCPtr(vp.counts.buffer, vp.counts.Bytes),
 	); err != nil {
 		return err
 	}
@@ -576,7 +576,7 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 	valueVector := NewVector(dataType, length)
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(
-		memutils.MakeSliceFromCPtr(valueVector.buffer, valueVector.Bytes),
+		cgoutils.MakeSliceFromCPtr(valueVector.buffer, valueVector.Bytes),
 	); err != nil {
 		valueVector.SafeDestruct()
 		return err
@@ -592,7 +592,7 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 	nullVector := NewVector(common.Bool, length)
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(
-		memutils.MakeSliceFromCPtr(nullVector.buffer, nullVector.Bytes),
+		cgoutils.MakeSliceFromCPtr(nullVector.buffer, nullVector.Bytes),
 	); err != nil {
 		valueVector.SafeDestruct()
 		nullVector.SafeDestruct()
@@ -609,7 +609,7 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 	countVector := NewVector(common.Uint32, length+1)
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(
-		memutils.MakeSliceFromCPtr(countVector.buffer, countVector.Bytes),
+		cgoutils.MakeSliceFromCPtr(countVector.buffer, countVector.Bytes),
 	); err != nil {
 		valueVector.SafeDestruct()
 		nullVector.SafeDestruct()

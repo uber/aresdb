@@ -20,7 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include "memutils/memory.h"
+#include "cgoutils/memory.h"
 #include "query/utils.hpp"
 
 // MemoryError represents a memory error.

@@ -16,8 +16,8 @@ package query
 
 import (
 	"bytes"
+	"github.com/uber/aresdb/cgoutils"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"math"
@@ -114,14 +114,14 @@ func (qc *AQLQueryContext) SerializeHLL(dataTypes []memCom.DataType,
 	dimVectorH := unsafe.Pointer(&builder.buffer[headerSize])
 	asyncCopyDimensionVector(dimVectorH, oopkContext.currentBatch.dimensionVectorD[0].getPointer(),
 		oopkContext.ResultSize, 0, oopkContext.NumDimsPerDimWidth, oopkContext.ResultSize, oopkContext.currentBatch.resultCapacity,
-		memutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
+		cgoutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
 
-	memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&builder.buffer[headerSize+paddedRawDimValuesVectorLength]),
+	cgoutils.AsyncCopyDeviceToHost(unsafe.Pointer(&builder.buffer[headerSize+paddedRawDimValuesVectorLength]),
 		oopkContext.hllDimRegIDCountD.getPointer(), oopkContext.ResultSize*2, qc.cudaStreams[0], qc.Device)
 
-	memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&builder.buffer[headerSize+paddedRawDimValuesVectorLength+paddedCountLength]),
+	cgoutils.AsyncCopyDeviceToHost(unsafe.Pointer(&builder.buffer[headerSize+paddedRawDimValuesVectorLength+paddedCountLength]),
 		oopkContext.hllVectorD.getPointer(), int(qc.OOPK.hllVectorSize), qc.cudaStreams[0], qc.Device)
-	memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
+	cgoutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 
 	// Fix time dimension by substracting the timezone.
 	if len(timeDimensions) > 0 && qc.fixedTimezone.String() != time.UTC.String() {

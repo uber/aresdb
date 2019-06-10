@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memutils
+package cgoutils
 
 import (
 	"github.com/onsi/ginkgo"
@@ -23,8 +23,8 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 )
 
-func TestMemUtils(t *testing.T) {
+func TestCGoUtils(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	junitReporter := reporters.NewJUnitReporter("junit.xml")
-	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Ares Memory Utils Suite", []ginkgo.Reporter{junitReporter})
+	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Ares CGo Utils Suite", []ginkgo.Reporter{junitReporter})
 }
