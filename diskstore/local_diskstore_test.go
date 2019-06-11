@@ -630,6 +630,38 @@ var _ = ginkgo.Describe("DiskStore", func() {
 			}
 		}
 	})
+
+	ginkgo.It("Test ListArchiveBatchVectorPartyFiles", func() {
+		// Setup directory
+		batchID := "1988-06-17"
+		batchIDSinceEpoch := 6742
+		batchVersion := uint32(123)
+		seq := uint32(100)
+		snapshotDirPath := GetPathForTableArchiveBatchDir(prefix, table, shard, batchID, batchVersion, seq)
+		os.MkdirAll(snapshotDirPath, 0755)
+
+		numFiles := 10
+		randomColumns := make([]int, numFiles)
+		for i := 0; i < numFiles; i++ {
+			randomCol := int(rand.Int31())
+			filePath := GetPathForTableArchiveBatchColumnFile(prefix, table, shard, batchID, batchVersion,
+				seq, randomCol)
+			os.MkdirAll(filepath.Dir(filePath), 0755)
+			randomColumns[i] = randomCol
+			ioutil.WriteFile(filePath, []byte{}, os.ModePerm)
+		}
+
+		sort.Ints(randomColumns)
+		l := NewLocalDiskStore(prefix)
+
+		columns, err := l.ListArchiveBatchVectorPartyFiles(table, shard, batchIDSinceEpoch, batchVersion, seq)
+		Ω(err).Should(BeNil())
+		Ω(columns).Should(Equal(randomColumns))
+
+		columns, err = l.ListArchiveBatchVectorPartyFiles(table, shard, batchIDSinceEpoch, batchVersion, seq+1)
+		Ω(err).Should(BeNil())
+		Ω(columns).Should(BeEmpty())
+	})
 })
 
 func getPathForRedologFile(prefix, table string, shardID int, filename string) string {

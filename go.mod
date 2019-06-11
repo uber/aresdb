@@ -42,7 +42,6 @@ require (
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/leanovate/gopter v0.2.4 // indirect
 	github.com/m3db/m3 v0.9.5
-	github.com/m3db/m3x v0.0.0-20190408051622-ebf3c7b94afd
 	github.com/m3db/prometheus_client_golang v0.8.1 // indirect
 	github.com/m3db/prometheus_client_model v0.1.0 // indirect
 	github.com/m3db/prometheus_common v0.1.0 // indirect
