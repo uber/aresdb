@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifdef SUPPORT_HASH_REDUCTION
 #include <hash/concurrent_unordered_map.cuh>
 #include <hash/hash_functions.cuh>
+#endif
 #include <thrust/pair.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <cstring>

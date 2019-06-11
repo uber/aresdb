@@ -61,6 +61,12 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
 link_directories(${CMAKE_BINARY_DIR}/lib)
 
+# HASH_REDUCTION right now is only support in device mode and when CXX standard is C++14.
+if ((${CXX_STANDARD} EQUAL 14) AND (QUERY_MODE STREQUAL "DEVICE"))
+    list(APPEND MARCROS "SUPPORT_HASH_REDUCTION=1")
+    set(SUPPORT_HASH_REDUCTION 1)
+endif()
+
 ################################
 # GTest
 ################################
@@ -99,15 +105,18 @@ endif ()
 # CUDF
 # Need cpp/src/hash/concurrent_unordered_map.cuh only
 ######################################################
-set(CUDF_PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf)
-include_directories(
-        ${CUDF_PROJECT_DIR}/cpp/src
-        ${CUDF_PROJECT_DIR}/cpp/include
-        ${CUDF_PROJECT_DIR}/thirdparty/cub
-        # cudf need to find rmm/thrust_rmm_allocator.h even it's not actually linking
-        # TODO(lucafuji) remove this include directory after RMM is default memory management system
-        ${RMM_SRC_DIR}/include
-)
+if (SUPPORT_HASH_REDUCTION)
+    set(CUDF_PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf)
+    include_directories(
+            ${CUDF_PROJECT_DIR}/cpp/src
+            ${CUDF_PROJECT_DIR}/cpp/include
+            ${CUDF_PROJECT_DIR}/thirdparty/cub
+            # cudf need to find rmm/thrust_rmm_allocator.h even it's not actually linking
+            # TODO(lucafuji) remove this include directory after RMM is default memory management system
+            ${RMM_SRC_DIR}/include
+            ${RMM_SRC_DIR}/thirdparty/cnmem/include
+    )
+endif ()
 ################################
 # Mem
 ################################
@@ -133,10 +142,6 @@ else ()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 endif ()
 
-# HASH_REDUCTION right now is only support in device mode and when CXX standard is C++14.
-if ((${CXX_STANDARD} EQUAL 14) AND (QUERY_MODE STREQUAL "DEVICE"))
-    list(APPEND MARCROS "SUPPORT_HASH_REDUCTION=1")
-endif()
 string(REPLACE " " ";" CUDA_XCOMPILER_FLAGS ${CMAKE_C_FLAGS})
 list(TRANSFORM CUDA_XCOMPILER_FLAGS PREPEND " -Xcompiler ")
 string(REPLACE ";" " " CUDA_XCOMPILER_FLAGS ${CUDA_XCOMPILER_FLAGS})
@@ -178,7 +183,7 @@ include(rdkafka.cmake)
 ################################
 # Unit Tests
 ################################
-file(GLOB QUERY_UNITTEST_FILES query/algorithm_unittest.cu)
+file(GLOB QUERY_UNITTEST_FILES query/%_unittest.cu)
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 add_dependencies(all_unittest googletest)
 # Link test executable against gtest & gtest_main
