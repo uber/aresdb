@@ -280,7 +280,6 @@ CGoCallResHandle asyncCopyDeviceToHost(void* dst, const void* src,
 
 CGoCallResHandle waitForCudaStream(void *stream) {
   CGoCallResHandle resHandle = {NULL, NULL};
-  cudaSetDevice(device);
   cudaStreamSynchronize((cudaStream_t) stream);
   resHandle.pStrErr = checkCUDAError("waitForCudaStream");
   return resHandle;
