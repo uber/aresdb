@@ -45,7 +45,7 @@ type queryExecutorImpl struct {
 
 func (qe *queryExecutorImpl) Execute(ctx context.Context, namespace, sqlQuery string, w http.ResponseWriter) (err error) {
 	// parse
-	var aqlQuery *query.AQLQuery
+	var aqlQuery *queryCom.AQLQuery
 	aqlQuery, err = query.Parse(sqlQuery, utils.GetLogger())
 
 	// compile
@@ -55,8 +55,11 @@ func (qe *queryExecutorImpl) Execute(ctx context.Context, namespace, sqlQuery st
 		return
 	}
 
-	// TODO: add timeout
-	qc := aqlQuery.Compile(schemaReader, false)
+	// TODO: add timeout; hll
+	qc := &query.AQLQueryContext{
+		Query: aqlQuery,
+	}
+	qc.Compile(schemaReader)
 
 	// execute
 	if qc.IsNonAggregationQuery {
@@ -77,7 +80,7 @@ func (qe *queryExecutorImpl) executeNonAggQuery(ctx context.Context, qc *query.A
 func (qe *queryExecutorImpl) executeAggQuery(ctx context.Context, qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
 	plan := NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
 	var result queryCom.AQLQueryResult
-	result, err = plan.Run(ctx)
+	result, err = plan.Execute(ctx)
 	if err != nil {
 		return
 	}

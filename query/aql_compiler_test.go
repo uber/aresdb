@@ -61,7 +61,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 		qc.parseExprs()
 		Ω(qc.Error).Should(BeNil())
-		Ω(q.Measures[0].ExprParsedParsed).Should(Equal(&expr.Call{
+		Ω(q.Measures[0].ExprParsed).Should(Equal(&expr.Call{
 			Name: "count",
 			Args: []expr.Expr{
 				&expr.Wildcard{},
@@ -102,8 +102,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			LHS: &expr.VarRef{Val: "city_id"},
 			RHS: &expr.VarRef{Val: "api_cities.id"},
 		}))
-		Ω(qc.Query.Dimensions[0].ExprParsedParsed).Should(Equal(&expr.VarRef{Val: "status"}))
-		Ω(qc.Query.Measures[0].ExprParsedParsed).Should(Equal(&expr.Call{
+		Ω(qc.Query.Dimensions[0].ExprParsed).Should(Equal(&expr.VarRef{Val: "status"}))
+		Ω(qc.Query.Measures[0].ExprParsed).Should(Equal(&expr.Call{
 			Name: "count",
 			Args: []expr.Expr{
 				&expr.Wildcard{},
