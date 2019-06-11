@@ -57,8 +57,6 @@ type PeerDataNodeServerImpl struct {
 	sessions map[int64]*sessionInfo
 	// tracking of all sessions for each table/shard
 	tableShardSessions map[tableShardPair][]int64
-	// tracking of all outside users of table/shard using token count
-	tableShardTokens map[tableShardPair]int
 }
 
 type tableShardPair struct {
@@ -82,7 +80,6 @@ func NewPeerDataNodeServer(metaStore common.MetaStore, diskStore diskstore.DiskS
 		diskStore:          diskStore,
 		sessions:           make(map[int64]*sessionInfo),
 		tableShardSessions: make(map[tableShardPair][]int64),
-		tableShardTokens:   make(map[tableShardPair]int),
 	}
 }
 
@@ -90,8 +87,8 @@ func NewPeerDataNodeServer(metaStore common.MetaStore, diskStore diskstore.DiskS
 // if no bootstrap session is running on the table/shard, it will increase the token count, and return true
 // the caller need to release the usage by calling ReleaseToken
 func (p *PeerDataNodeServerImpl) AcquireToken(tableName string, shardID uint32) bool {
-	p.RLock()
-	defer p.RUnlock()
+	p.Lock()
+	defer p.Unlock()
 
 	// lazy clean the obsolete orphan sessions
 	now := utils.Now()
@@ -103,8 +100,7 @@ func (p *PeerDataNodeServerImpl) AcquireToken(tableName string, shardID uint32) 
 
 	key := tableShardPair{table: tableName, shardID: shardID}
 	sessionIDs, ok := p.tableShardSessions[key]
-	if !ok || len(sessionIDs) > 0 {
-		p.tableShardTokens[key] = p.tableShardTokens[key] + 1
+	if !ok || len(sessionIDs) == 0 {
 		return true
 	}
 	return false
@@ -112,13 +108,7 @@ func (p *PeerDataNodeServerImpl) AcquireToken(tableName string, shardID uint32) 
 
 // AcquireToken release the token count, must call this when call AcquireToken success
 func (p *PeerDataNodeServerImpl) ReleaseToken(tableName string, shardID uint32) {
-	p.RLock()
-	defer p.RUnlock()
-
-	key := tableShardPair{table: tableName, shardID: shardID}
-	if val, ok := p.tableShardTokens[key]; ok && val > 0 {
-		p.tableShardTokens[key] = p.tableShardTokens[key] - 1
-	}
+	// nothing to do now
 }
 
 // getNextSequence create new session id
@@ -158,11 +148,6 @@ func (p *PeerDataNodeServerImpl) StartSession(ctx context.Context, req *pb.Start
 		return nil, err
 	}
 
-	if !p.checkUsage(sessionInfo.table, sessionInfo.shardID) {
-		err = errUsageOccupied
-		return nil, err
-	}
-
 	p.addSession(sessionInfo)
 
 	return &pb.Session{
@@ -186,18 +171,6 @@ func (p *PeerDataNodeServerImpl) checkReqExist(s *sessionInfo) error {
 		}
 	}
 	return nil
-}
-
-// check if there are purge job running
-func (p *PeerDataNodeServerImpl) checkUsage(tableName string, shardID uint32) bool {
-	p.RLock()
-	defer p.RUnlock()
-
-	key := tableShardPair{table: tableName, shardID: shardID}
-	if count, ok := p.tableShardTokens[key]; ok && count > 0 {
-		return false
-	}
-	return true
 }
 
 // KeepAlive is like client/server ping process, to notify health about each other
@@ -572,8 +545,8 @@ func (p *PeerDataNodeServerImpl) addSession(session *sessionInfo) {
 // closeSession remove session from memory
 func (p* PeerDataNodeServerImpl) cleanSession(sessionID int64, needLock bool) {
 	if needLock {
-		p.RLock()
-		defer p.RUnlock()
+		p.Lock()
+		defer p.Unlock()
 	}
 
 	session := p.sessions[sessionID]
