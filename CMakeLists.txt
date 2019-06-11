@@ -299,5 +299,3 @@ add_custom_command(
         COMMAND mkdir -p .bin && curl -L -o ${ANTLR_BIN} ${ANTLR_URL}
         VERBATIM
 )
-
-message("CMAKE_CUDA_FLAGS" is ${CMAKE_CUDA_FLAGS})
