@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/broker/common"
-	"github.com/uber/aresdb/broker/mocks"
+	"github.com/uber/aresdb/broker/common/mocks"
 	shardMock "github.com/uber/aresdb/cluster/shard/mocks"
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
@@ -52,14 +52,14 @@ var _ = ginkgo.Describe("query plan", func() {
 		mockSumNode := mocks.MergeNode{}
 		mockCountNode := mocks.MergeNode{}
 
-		mockSumNode.On("Run", mock.Anything).Return(common2.AQLQueryResult{
+		mockSumNode.On("Execute", mock.Anything).Return(common2.AQLQueryResult{
 			"1": map[string]interface{}{
 				"dim1": float64(2),
 			},
 		}, nil)
 		mockSumNode.On("AggType").Return(common.Sum)
 
-		mockCountNode.On("Run", mock.Anything).Return(common2.AQLQueryResult{
+		mockCountNode.On("Execute", mock.Anything).Return(common2.AQLQueryResult{
 			"1": map[string]interface{}{
 				"dim1": float64(1),
 			},
@@ -69,7 +69,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		node := NewMergeNode(common.Avg)
 		node.Add(&mockSumNode, &mockCountNode)
 
-		res, err := node.Run(context.TODO())
+		res, err := node.Execute(context.TODO())
 		Ω(err).Should(BeNil())
 		bs, err := json.Marshal(res)
 		Ω(err).Should(BeNil())
@@ -80,32 +80,32 @@ var _ = ginkgo.Describe("query plan", func() {
 		}`))
 	})
 
-	ginkgo.It("MergeNode Run should error", func() {
+	ginkgo.It("MergeNode Execute should error", func() {
 		mockSumNode := mocks.MergeNode{}
 		mockCountNode := mocks.MergeNode{}
 
 		avgNode := NewMergeNode(common.Avg)
 		avgNode.Add(&mockSumNode)
 
-		_, err := avgNode.Run(context.TODO())
+		_, err := avgNode.Execute(context.TODO())
 		Ω(err.Error()).Should(ContainSubstring("Avg MergeNode should have 2 children"))
 
 		mockSumNode.On("AggType").Return(common.Avg).Once()
 		avgNode.Add(&mockCountNode)
-		_, err = avgNode.Run(context.TODO())
+		_, err = avgNode.Execute(context.TODO())
 		Ω(err.Error()).Should(ContainSubstring("LHS of avg node must be sum node"))
 
 		mockSumNode.On("AggType").Return(common.Sum).Once()
 		mockCountNode.On("AggType").Return(common.Sum).Once()
-		_, err = avgNode.Run(context.TODO())
+		_, err = avgNode.Execute(context.TODO())
 		Ω(err.Error()).Should(ContainSubstring("RHS of avg node must be count node"))
 
 		mockBlockingNode := mocks.BlockingPlanNode{}
-		mockBlockingNode.On("Run", mock.Anything).Return(nil, errors.New("some error"))
+		mockBlockingNode.On("Execute", mock.Anything).Return(nil, errors.New("some error"))
 		sumNode := NewMergeNode(common.Sum)
 		sumNode.Add(&mockBlockingNode)
-		_, err = sumNode.Run(context.TODO())
-		Ω(err.Error()).Should(ContainSubstring("errors happend running merge node"))
+		_, err = sumNode.Execute(context.TODO())
+		Ω(err.Error()).Should(ContainSubstring("errors happend Executening merge node"))
 	})
 
 	ginkgo.It("NewAggQueryPlan should work", func() {
@@ -173,7 +173,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		Ω(countn.children).Should(HaveLen(len(mockShardIds)))
 	})
 
-	ginkgo.It("ScanNode run should work happy path", func() {
+	ginkgo.It("ScanNode Execute should work happy path", func() {
 		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
@@ -195,12 +195,12 @@ var _ = ginkgo.Describe("query plan", func() {
 			dataNodeClient: &mockDatanodeCli,
 		}
 
-		res, err := sn.Run(context.TODO())
+		res, err := sn.Execute(context.TODO())
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(myResult))
 	})
 
-	ginkgo.It("ScanNode run should fail routing error", func() {
+	ginkgo.It("ScanNode Execute should fail routing error", func() {
 		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
@@ -217,11 +217,11 @@ var _ = ginkgo.Describe("query plan", func() {
 			dataNodeClient: &mockDatanodeCli,
 		}
 
-		_, err := sn.Run(context.TODO())
+		_, err := sn.Execute(context.TODO())
 		Ω(err.Error()).Should(ContainSubstring("route shard failed"))
 	})
 
-	ginkgo.It("ScanNode run should fail datanode error", func() {
+	ginkgo.It("ScanNode Execute should fail datanode error", func() {
 		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
@@ -242,11 +242,11 @@ var _ = ginkgo.Describe("query plan", func() {
 			dataNodeClient: &mockDatanodeCli,
 		}
 
-		_, err := sn.Run(context.TODO())
+		_, err := sn.Execute(context.TODO())
 		Ω(err.Error()).Should(ContainSubstring("fetch from datanode failed"))
 	})
 
-	ginkgo.It("ScanNode run should work after retry", func() {
+	ginkgo.It("ScanNode Execute should work after retry", func() {
 		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
@@ -269,7 +269,7 @@ var _ = ginkgo.Describe("query plan", func() {
 			dataNodeClient: &mockDatanodeCli,
 		}
 
-		res, err := sn.Run(context.TODO())
+		res, err := sn.Execute(context.TODO())
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(myResult))
 	})

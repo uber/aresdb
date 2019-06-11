@@ -38,8 +38,8 @@ func (_m *BlockingPlanNode) Children() []common.BlockingPlanNode {
 	return r0
 }
 
-// Run provides a mock function with given fields: ctx
-func (_m *BlockingPlanNode) Run(ctx context.Context) (querycommon.AQLQueryResult, error) {
+// Execute provides a mock function with given fields: ctx
+func (_m *BlockingPlanNode) Execute(ctx context.Context) (querycommon.AQLQueryResult, error) {
 	ret := _m.Called(ctx)
 
 	var r0 querycommon.AQLQueryResult

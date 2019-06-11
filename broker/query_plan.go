@@ -61,7 +61,7 @@ func (mn *mergeNodeImpl) AggType() common.AggType {
 	return mn.aggType
 }
 
-func (mn *mergeNodeImpl) Run(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
+func (mn *mergeNodeImpl) Execute(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
 	nChildren := len(mn.children)
 	// checks before fan out
 	if common.Avg == mn.aggType {
@@ -97,7 +97,7 @@ func (mn *mergeNodeImpl) Run(ctx context.Context) (result queryCom.AQLQueryResul
 		go func(i int, n common.BlockingPlanNode) {
 			defer wg.Done()
 			var res queryCom.AQLQueryResult
-			res, err = n.Run(ctx)
+			res, err = n.Execute(ctx)
 			if err != nil {
 				// err means downstream retry failed
 				utils.GetLogger().With(
@@ -109,6 +109,8 @@ func (mn *mergeNodeImpl) Run(ctx context.Context) (result queryCom.AQLQueryResul
 			childrenResult[i] = res
 		}(i, c)
 	}
+
+	// TODO early merge before all results come back
 	wg.Wait()
 
 	if nerrs > 0 {
@@ -138,7 +140,7 @@ type ScanNode struct {
 	dataNodeClient dataCli.DataNodeQueryClient
 }
 
-func (sn *ScanNode) Run(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
+func (sn *ScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
 	trial := 0
 	for trial < rpcRetries {
 		trial++
@@ -210,8 +212,8 @@ func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, client d
 	return
 }
 
-func (ap *AggQueryPlan) Run(ctx context.Context) (results queryCom.AQLQueryResult, err error) {
-	return ap.root.Run(ctx)
+func (ap *AggQueryPlan) Execute(ctx context.Context) (results queryCom.AQLQueryResult, err error) {
+	return ap.root.Execute(ctx)
 }
 
 // NonAggQueryPlan implements QueryPlan

@@ -9,8 +9,8 @@ type StreamingPlanNode struct {
 	mock.Mock
 }
 
-// Run provides a mock function with given fields: writer
-func (_m *StreamingPlanNode) Run(writer io.Writer) error {
+// Execute provides a mock function with given fields: writer
+func (_m *StreamingPlanNode) Execute(writer io.Writer) error {
 	ret := _m.Called(writer)
 
 	var r0 error

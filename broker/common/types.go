@@ -38,7 +38,7 @@ type QueryExecutor interface {
 
 // BlockingPlanNode defines query plan nodes that waits for children to finish
 type BlockingPlanNode interface {
-	Run(ctx context.Context) (queryCom.AQLQueryResult, error)
+	Execute(ctx context.Context) (queryCom.AQLQueryResult, error)
 	Children() []BlockingPlanNode
 	Add(...BlockingPlanNode)
 }
@@ -50,5 +50,5 @@ type MergeNode interface {
 
 // StreamingPlanNode defines query plan nodes that eager flushes to output
 type StreamingPlanNode interface {
-	Run(writer io.Writer) error
+	Execute(writer io.Writer) error
 }
