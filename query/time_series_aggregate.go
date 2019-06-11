@@ -295,9 +295,9 @@ func makeScratchSpaceOutput(values unsafe.Pointer, nulls unsafe.Pointer, dataTyp
 	return vector
 }
 
-func makeDimensionVector(dimensionVector, hashVector, indexVector unsafe.Pointer, numDims common.DimCountsPerDimWidth, vectorCapacity int) C.DimensionVector {
+func makeDimensionVector(valueVector, hashVector, indexVector unsafe.Pointer, numDims common.DimCountsPerDimWidth, vectorCapacity int) C.DimensionVector {
 	var dimensionVector C.DimensionVector
-	dimensionVector.DimValues = (*C.uint8_t)(dimensionVector)
+	dimensionVector.DimValues = (*C.uint8_t)(valueVector)
 	dimensionVector.HashValues = (*C.uint64_t)(hashVector)
 	dimensionVector.IndexVector = (*C.uint32_t)(indexVector)
 
