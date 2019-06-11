@@ -115,6 +115,12 @@ message KeepAliveResponse {
     int64 ttl = 2;
 }
 
+message BenchmarkRequest {
+    string file = 1;
+    int32 chunkSize = 2;
+    int32 bufferSize = 3;
+}
+
 // PeerDataNode service defines the service for data fetching from peer data node
 // A data fetching process will proceed with the following sequence:
 //  1. StartSession to start data fetching session. (as long as any ongoing session is alive, the peer data node will
@@ -135,4 +141,6 @@ service PeerDataNode {
     rpc FetchTableShardMetaData(TableShardMetaDataRequest ) returns (TableShardMetaData ) {}
     // FetchVectorPartyRawData fetches raw data for specified vector party
     rpc FetchVectorPartyRawData(VectorPartyRawDataRequest ) returns (stream VectorPartyRawData) {}
+    // benchmark function to test performance using different config for file transfer
+    rpc BenchmarkFileTransfer(BenchmarkRequest) returns (stream VectorPartyRawData) {}
 }

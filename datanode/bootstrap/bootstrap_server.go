@@ -1,6 +1,21 @@
+//  Copyright (c) 2017-2018 Uber Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package bootstrap
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	pb "github.com/uber/aresdb/datanode/generated/proto/rpc"
@@ -8,13 +23,16 @@ import (
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"io"
-	"math/rand"
+	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 const (
-	chunkSize = 1024
+	chunkSize  = 32 * 1024
+	bufferSize = 32 * 1024
+	recycleInterval = 5 * time.Second
 )
 
 var (
@@ -27,6 +45,9 @@ var (
 
 type PeerDataNodeServerImpl struct {
 	sync.RWMutex
+
+	// session id generator
+	sequenceID int64
 
 	metaStore common.MetaStore
 	diskStore diskstore.DiskStore
@@ -66,11 +87,32 @@ func (p *PeerDataNodeServerImpl) IsBootstrapRunning(tableName string, shardID ui
 	p.RLock()
 	defer p.RUnlock()
 
-	_, ok := p.tableShardSessions[tableShardPair{table: tableName, shardID: shardID}]
+	sessionIDs, ok := p.tableShardSessions[tableShardPair{table: tableName, shardID: shardID}]
 	if !ok {
 		return true
 	}
-	return false
+	return len(sessionIDs) > 0
+}
+
+// go routine to recycle back sessions over ttl
+func (p *PeerDataNodeServerImpl) SessionRecycle() {
+	go func() {
+		c := time.Tick(recycleInterval)
+		for now := range c {
+			p.Lock()
+			for sid, session := range p.sessions {
+				if now.After(session.lastLiveTime.Add(time.Second * time.Duration(session.ttl))) {
+					p.cleanSession(sid, false)
+				}
+			}
+			p.Unlock()
+		}
+	}()
+}
+
+// getNextSequence create new session id
+func (p *PeerDataNodeServerImpl) getNextSequence() int64 {
+	return atomic.AddInt64(&p.sequenceID, 1)
 }
 
 // StartSession create new session for one table/shard/node, only One session can be established on one table/shard from one node
@@ -82,7 +124,7 @@ func (p *PeerDataNodeServerImpl) StartSession(ctx context.Context, req *pb.Start
 		nodeID:       req.NodeID,
 		ttl:          req.Ttl,
 		lastLiveTime: utils.Now(),
-		sessionID:    rand.Int63(),
+		sessionID:    p.getNextSequence(),
 	}
 
 	defer func() {
@@ -149,9 +191,11 @@ func (p *PeerDataNodeServerImpl) KeepAlive(stream pb.PeerDataNode_KeepAliveServe
 	}()
 
 	for {
-		session, err := stream.Recv()
+		var session *pb.Session
+		session, err = stream.Recv()
 		if err == io.EOF {
-			return nil
+			err = nil
+			break
 		}
 		if err != nil {
 			return err
@@ -169,6 +213,9 @@ func (p *PeerDataNodeServerImpl) KeepAlive(stream pb.PeerDataNode_KeepAliveServe
 		if err = stream.Send(&pb.KeepAliveResponse{ID: session.ID, Ttl: sessionInfo.ttl}); err != nil {
 			return err
 		}
+	}
+	if sessionInfo != nil {
+		p.cleanSession(sessionInfo.sessionID, true)
 	}
 	return nil
 }
@@ -225,6 +272,7 @@ func (p *PeerDataNodeServerImpl) FetchTableShardMetaData(ctx context.Context, re
 		if err != nil {
 			return nil, err
 		}
+
 		batchIDs, err := p.diskStore.ListSnapshotBatches(req.Table, int(req.Shard), redoFileID, redoFileOffset)
 		if err != nil {
 			return nil, err
@@ -245,7 +293,7 @@ func (p *PeerDataNodeServerImpl) FetchTableShardMetaData(ctx context.Context, re
 			}
 			batches[i] = &pb.BatchMetaData{
 				BatchID: int32(batchID),
-				Vps:     vps,
+				Vps:     vps[0:],
 			}
 		}
 		m.Batches = batches
@@ -287,6 +335,7 @@ func (p *PeerDataNodeServerImpl) FetchTableShardMetaData(ctx context.Context, re
 		if err != nil {
 			return nil, err
 		}
+
 		vps := make([]*pb.VectorPartyMetaData, len(columns))
 		for j, colID := range columns {
 			vps[j] = &pb.VectorPartyMetaData{
@@ -332,7 +381,7 @@ func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawD
 	logInfoMsg(sessionInfo, "FetchVectorPartyRawData called", "batch", req.BatchID, "col", req.ColumnID)
 	defer func() {
 		if err == nil {
-			logInfoMsg(sessionInfo, "FetchVectorPartyRawData succeed", req.BatchID, "col", req.ColumnID, "timeused", timeElapsed)
+			logInfoMsg(sessionInfo, "FetchVectorPartyRawData succeed", "batch", req.BatchID, "col", req.ColumnID, "timeused", timeElapsed)
 		} else {
 			logErrorMsg(sessionInfo, err, "FetchVectorPartyRawData failed", req.BatchID, "col", req.ColumnID)
 		}
@@ -349,8 +398,8 @@ func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawD
 
 	var reader io.ReadCloser
 	if t.IsFactTable {
-		reader, err = p.diskStore.OpenSnapshotVectorPartyFileForRead(req.Table, int(req.Shard), int64(req.GetArchiveVersion().ArchiveVersion),
-			req.GetArchiveVersion().BackfillSeq, int(req.BatchID), int(req.ColumnID))
+		reader, err = p.diskStore.OpenVectorPartyFileForRead(req.Table, int(req.ColumnID), int(req.Shard), int(req.BatchID),
+			uint32(req.GetArchiveVersion().ArchiveVersion), uint32(req.GetArchiveVersion().BackfillSeq))
 	} else {
 		reader, err = p.diskStore.OpenSnapshotVectorPartyFileForRead(req.Table, int(req.Shard), int64(req.GetSnapshotVersion().RedoFileID),
 			req.GetSnapshotVersion().RedoFileOffset, int(req.BatchID), int(req.ColumnID))
@@ -360,15 +409,12 @@ func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawD
 	}
 	defer reader.Close()
 
+	bufferedReader := bufio.NewReaderSize(reader, bufferSize)
 	vp := &pb.VectorPartyRawData{}
 	buf := make([]byte, chunkSize)
-	done := false
-	for !done {
-		n, err := reader.Read(vp.Chunk)
-		if err != nil {
-			if err == io.EOF {
-				done = true
-			}
+	for {
+		n, err := bufferedReader.Read(buf)
+		if err != nil && err != io.EOF {
 			return err
 		}
 		if n > 0 {
@@ -377,10 +423,67 @@ func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawD
 				return err
 			}
 		}
+		if err != nil {
+			// clean the EOF error
+			err = nil
+			break
+		}
 	}
-	// in milsec
-	timeElapsed = utils.Now().Sub(timeStart).Nanoseconds() / 1000000
+	// in macro second
+	timeElapsed = utils.Now().Sub(timeStart).Nanoseconds() / 1000
 
+	return nil
+}
+
+// BenchmarkFileTransfer is used to benchmark testing, we can remove later TODO
+func (p *PeerDataNodeServerImpl) BenchmarkFileTransfer(req *pb.BenchmarkRequest, stream pb.PeerDataNode_BenchmarkFileTransferServer) error {
+	var err error
+
+	var timeElapsed int64
+	timeStart := utils.Now()
+
+	reader, err := os.OpenFile(req.File, os.O_RDONLY, 0x644)
+	if err != nil {
+		return err
+	}
+	vp := &pb.VectorPartyRawData{}
+	bufSize := req.ChunkSize
+	if bufSize == 0 {
+		bufSize = chunkSize
+	}
+
+	var bufferedReader *bufio.Reader
+	if req.BufferSize > 0 {
+		bufferedReader = bufio.NewReaderSize(reader, int(req.BufferSize))
+	}
+
+	buf := make([]byte, bufSize)
+	for {
+		var n int
+		var err error
+		if bufferedReader == nil {
+			n, err = reader.Read(buf)
+		} else {
+			n, err = bufferedReader.Read(buf)
+		}
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n > 0 {
+			vp.Chunk = buf[:n]
+			if err = stream.Send(vp); err != nil {
+				return err
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+	// in macro second
+	timeElapsed = utils.Now().Sub(timeStart).Nanoseconds() / 1000
+	if err != nil {
+	}
+	utils.GetLogger().With("timeelapsed", timeElapsed).Info("BenchmarkFileTransfer")
 	return nil
 }
 
@@ -438,6 +541,28 @@ func (p *PeerDataNodeServerImpl) addSession(session *sessionInfo) {
 	p.tableShardSessions[tableShard] = append(p.tableShardSessions[tableShard], session.sessionID)
 }
 
+// closeSession remove session from memory
+func (p* PeerDataNodeServerImpl) cleanSession(sessionID int64, needLock bool) {
+	if needLock {
+		p.RLock()
+		defer p.RUnlock()
+	}
+
+	session := p.sessions[sessionID]
+	if session != nil {
+		delete(p.sessions, sessionID)
+		tableShardKey := tableShardPair{table: session.table, shardID: session.shardID}
+		sessionIDs := p.tableShardSessions[tableShardKey]
+		for i, sid := range sessionIDs {
+			if sid == sessionID {
+				sessionIDs = append(sessionIDs[:i], sessionIDs[i+1:]...)
+				p.tableShardSessions[tableShardKey] = sessionIDs
+				break
+			}
+		}
+	}
+}
+
 // retrieve session info using session id
 func (p *PeerDataNodeServerImpl) getSession(sessionID int64) (*sessionInfo, error) {
 	p.RLock()
@@ -462,9 +587,29 @@ func (p *PeerDataNodeServerImpl) validateTable(tableName string, shardID uint32)
 }
 
 func logInfoMsg(s *sessionInfo, msg string, fields ...interface{}) {
-	utils.GetLogger().With("action", "bootstrap", "table", s.table, "shard", s.shardID, fields).Info(msg)
+	f := []interface{}{
+		"action",
+		"bootstrap",
+		"table",
+		s.table,
+		"shard",
+		s.shardID,
+	}
+	f = append(f, fields...)
+	utils.GetLogger().With(f...).Info(msg)
 }
 
 func logErrorMsg(s *sessionInfo, err error, msg string, fields ...interface{}) {
-	utils.GetLogger().With("action", "bootstrap", "table", s.table, "shard", s.shardID, "error", err, fields).Error(msg)
+	f := []interface{}{
+		"action",
+		"bootstrap",
+		"table",
+		s.table,
+		"shard",
+		s.shardID,
+		"error",
+		err,
+	}
+	f = append(f, fields...)
+	utils.GetLogger().With(f...).Error(msg)
 }
