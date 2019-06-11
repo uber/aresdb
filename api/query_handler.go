@@ -148,7 +148,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 	if !returnHLL && canEagerFlush(aqlRequest.Body.Queries) {
 		aqlQuery := aqlRequest.Body.Queries[0]
 		qc := &query.AQLQueryContext{
-			Query: &aqlQuery,
+			Query:         &aqlQuery,
 			ReturnHLLData: false,
 		}
 		qc.Compile(handler.memStore)
@@ -224,7 +224,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 
 func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager, aqlRequest AQLRequest, aqlQuery queryCom.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
 	qc = &query.AQLQueryContext{
-		Query: &aqlQuery,
+		Query:         &aqlQuery,
 		ReturnHLLData: aqlRequest.Accept == ContentTypeHyperLogLog,
 	}
 	qc.Compile(memStore)

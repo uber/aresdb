@@ -15,8 +15,8 @@
 package query
 
 import (
-	"github.com/uber/aresdb/query/expr"
 	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"strconv"
 	"strings"

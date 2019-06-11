@@ -9,7 +9,7 @@ type Dimension struct {
 	// The SQL expression for computing the dimension.
 	// Expr can be empty when TimeBucketizer is specified, which implies the
 	// designated time column from the main table is used as the expresssion.
-	Expr string `json:"sqlExpression"`
+	Expr       string `json:"sqlExpression"`
 	ExprParsed expr.Expr
 
 	// Decides how to bucketize a timestamp Dimension before grouping by.
@@ -54,7 +54,7 @@ type Measure struct {
 
 	// Row level filters to apply for this measure.
 	// The filters are ANDed togther.
-	Filters []string `json:"rowFilters,omitempty"`
+	Filters       []string `json:"rowFilters,omitempty"`
 	FiltersParsed []expr.Expr
 }
 
@@ -67,7 +67,7 @@ type Join struct {
 	Alias string `json:"alias"`
 
 	// Condition expressions to be ANDed together for the join.
-	Conditions []string `json:"conditions"`
+	Conditions       []string `json:"conditions"`
 	ConditionsParsed []expr.Expr
 }
 

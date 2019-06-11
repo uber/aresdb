@@ -24,9 +24,9 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
-	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/memstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 )

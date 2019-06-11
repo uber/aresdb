@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/query/expr"
 	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/expr"
 	"time"
 )
 
