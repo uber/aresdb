@@ -334,7 +334,7 @@ void write_geo_shape_dim(
       geoPredicateIter,
       ares::make_dimension_output_iterator<uint8_t>(dimOut.DimValues,
                                                     dimOut.DimNulls),
-      is_non_negative());
+                                                    is_non_negative());
 }
 
 }  // namespace ares

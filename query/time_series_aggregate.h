@@ -251,8 +251,8 @@ typedef struct {
   enum InputVectorType Type;
 } InputVector;
 
-// DimensionVector stores the dimension vector byte array
-// DimensionVector will be allocated together
+// DimensionVector stores the dimension vector byte array.
+// DimensionVector will be allocated together.
 // The layout will be 4byte vectors followed by 2 byte vectors followed by 1
 // byte vectors and null vector (1 byte) Note: IndexVector is the indexVector of
 // dimension vector, not the index vector of the batch Sort and reduce will be

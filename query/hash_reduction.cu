@@ -91,10 +91,6 @@ struct ExtractGroupByResultFunctor {
            dimWidthPrefixSum, sizeof(uint8_t) * NUM_DIM_WIDTH);
   }
 
-  __host__ __device__
-  ~ExtractGroupByResultFunctor() {
-  }
-
   map_type *map;
   uint8_t *dimInputValues;
   uint32_t *global_write_index;
@@ -112,8 +108,7 @@ struct ExtractGroupByResultFunctor {
 
     // idx in numDimsPerDimWidth;
     int widthIdx = 0;
-    uint8_t
-    totalDims = dimWidthPrefixSum[NUM_DIM_WIDTH - 1];
+    uint8_t totalDims = dimWidthPrefixSum[NUM_DIM_WIDTH - 1];
     // write values
     // pointer address for dim value d on row r is
     // (base_ptr + accumulatedValueBytes * vectorCapacity) + r * dimValueBytes.
@@ -121,7 +116,7 @@ struct ExtractGroupByResultFunctor {
       // find correct widthIdx.
       while (widthIdx < NUM_DIM_WIDTH
           && dimIndex >= dimWidthPrefixSum[widthIdx]) {
-        widthIdx += 1;
+        widthIdx++;
       }
 
       uint16_t dimValueBytes = 1 << (NUM_DIM_WIDTH - widthIdx - 1);

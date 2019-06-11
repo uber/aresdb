@@ -183,7 +183,8 @@ include(rdkafka.cmake)
 ################################
 # Unit Tests
 ################################
-file(GLOB QUERY_UNITTEST_FILES query/%_unittest.cu)
+file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
+message(QUERY_UNITTEST_FILES is ${QUERY_UNITTEST_FILES})
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 add_dependencies(all_unittest googletest)
 # Link test executable against gtest & gtest_main
