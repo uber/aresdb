@@ -18,7 +18,6 @@
 #include <rmm/rmm_api.h>
 #include <cstdio>
 #include <cstring>
-#include <mutex>
 
 #include "../memory.h"
 
@@ -67,7 +66,7 @@ struct init_helper {
     for (size_t device = 0; device < deviceCount; device++) {
       cudaSetDevice(device);
       rmmOptions_t options = {
-          CudaDefaultAllocation, // Use PoolAllocation when RMM has improved
+          CudaDefaultAllocation,  // Use PoolAllocation when RMM has improved
           // their sub allocator.
           0,  // Default to half ot total memory
           false  // Disable logging.

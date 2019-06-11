@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #ifdef SUPPORT_HASH_REDUCTION
+#include <groupby/aggregation_operations.hpp>
 #include <hash/concurrent_unordered_map.cuh>
 #include <hash/hash_functions.cuh>
 #endif
@@ -21,7 +22,6 @@
 #include <cstring>
 #include <algorithm>
 #include <exception>
-#include <groupby/aggregation_operations.hpp>
 #include "algorithm.hpp"
 #include "iterator.hpp"
 #include "memory.hpp"
