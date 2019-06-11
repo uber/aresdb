@@ -60,6 +60,9 @@ type MetaStore interface {
 	// Adds a version and size for the specified archive batch.
 	AddArchiveBatchVersion(table string, shard, batchID int, version uint32, seqNum uint32, batchSize int) error
 
+	// WriteArchiveBatchVersion
+	OverwriteArchiveBatchVersion(table string, shard, batchID int, version uint32, seqNum uint32, batchSize int) error
+
 	// Updates the archiving/live cutoff time for the specified shard. This is used
 	// by the archiving job after each successful run.
 	UpdateArchivingCutoff(table string, shard int, cutoff uint32) error

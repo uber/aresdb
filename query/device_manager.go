@@ -15,6 +15,7 @@
 package query
 
 import (
+	"github.com/uber/aresdb/cgoutils"
 	"sync"
 
 	"math"
@@ -22,7 +23,6 @@ import (
 	"time"
 
 	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/memutils"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -83,7 +83,7 @@ func NewDeviceManager(cfg common.QueryConfig) *DeviceManager {
 	}
 
 	// retrieve device counts
-	deviceCount := memutils.GetDeviceCount()
+	deviceCount := cgoutils.GetDeviceCount()
 	utils.GetLogger().With(
 		"utilization", deviceMemoryUtilization,
 		"timeout", timeout).Info("Initialized device manager")
@@ -119,7 +119,7 @@ func NewDeviceManager(cfg common.QueryConfig) *DeviceManager {
 
 // getDeviceInfo returns the DeviceInfo struct for a given deviceID.
 func getDeviceInfo(device int, deviceMemoryUtilization float32) *DeviceInfo {
-	totalGlobalMem := memutils.GetDeviceGlobalMemoryInMB(device) * mb2bytes
+	totalGlobalMem := cgoutils.GetDeviceGlobalMemoryInMB(device) * mb2bytes
 	totalAvailableMem := int(float32(totalGlobalMem) * deviceMemoryUtilization)
 
 	deviceInfo := DeviceInfo{

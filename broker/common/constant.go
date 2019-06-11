@@ -12,19 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memutils
+package common
 
-import (
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
+type AggType int
 
-	"testing"
-
-	"github.com/onsi/ginkgo/reporters"
+const (
+	Count AggType = iota
+	Sum
+	Max
+	Min
+	Avg
+	Hll //todo
 )
-
-func TestMemUtils(t *testing.T) {
-	gomega.RegisterFailHandler(ginkgo.Fail)
-	junitReporter := reporters.NewJUnitReporter("junit.xml")
-	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Ares Memory Utils Suite", []ginkgo.Reporter{junitReporter})
-}

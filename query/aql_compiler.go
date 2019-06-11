@@ -146,7 +146,7 @@ func (q *AQLQuery) Compile(tableSchemaReader memCom.TableSchemaReader, returnHLL
 func (qc *AQLQueryContext) adjustFilterToTimeFilter() {
 	toBeRemovedFilters := []int{}
 	timeFilter := TimeFilter{}
-	for i, filter := range qc.Query.filters {
+	for i, filter := range qc.Query.FiltersParsed {
 		if e, ok := filter.(*expr.BinaryExpr); ok {
 			lhs, isCol := e.LHS.(*expr.VarRef)
 			if !isCol {
@@ -201,7 +201,7 @@ func (qc *AQLQueryContext) adjustFilterToTimeFilter() {
 		// remove from original query filter
 		for i := len(toBeRemovedFilters) - 1; i >= 0; i-- {
 			index := toBeRemovedFilters[i]
-			qc.Query.filters = append(qc.Query.filters[:index], qc.Query.filters[index+1:]...)
+			qc.Query.FiltersParsed = append(qc.Query.FiltersParsed[:index], qc.Query.FiltersParsed[index+1:]...)
 		}
 	}
 }
@@ -404,9 +404,9 @@ func (qc *AQLQueryContext) parseExprs() {
 	}
 
 	// Filters.
-	qc.Query.filters = make([]expr.Expr, len(qc.Query.Filters))
+	qc.Query.FiltersParsed = make([]expr.Expr, len(qc.Query.Filters))
 	for i, filter := range qc.Query.Filters {
-		qc.Query.filters[i], err = expr.ParseExpr(filter)
+		qc.Query.FiltersParsed[i], err = expr.ParseExpr(filter)
 		if err != nil {
 			qc.Error = utils.StackError(err, "Failed to parse filter %s", filter)
 			return
@@ -460,7 +460,7 @@ func (qc *AQLQueryContext) parseExprs() {
 
 	// Measures.
 	for i, measure := range qc.Query.Measures {
-		measure.expr, err = expr.ParseExpr(measure.Expr)
+		measure.ExprParsed, err = expr.ParseExpr(measure.Expr)
 		if err != nil {
 			qc.Error = utils.StackError(err, "Failed to parse measure: %s", measure.Expr)
 			return
@@ -1149,7 +1149,7 @@ func (qc *AQLQueryContext) resolveTypes() {
 
 	// Measures.
 	for i, measure := range qc.Query.Measures {
-		measure.expr = expr.Rewrite(qc, measure.expr)
+		measure.ExprParsed = expr.Rewrite(qc, measure.ExprParsed)
 		if qc.Error != nil {
 			return
 		}
@@ -1164,13 +1164,13 @@ func (qc *AQLQueryContext) resolveTypes() {
 	}
 
 	// Filters.
-	for i, filter := range qc.Query.filters {
-		qc.Query.filters[i] = expr.Rewrite(qc, filter)
+	for i, filter := range qc.Query.FiltersParsed {
+		qc.Query.FiltersParsed[i] = expr.Rewrite(qc, filter)
 		if qc.Error != nil {
 			return
 		}
 	}
-	qc.Query.filters = normalizeAndFilters(qc.Query.filters)
+	qc.Query.FiltersParsed = normalizeAndFilters(qc.Query.FiltersParsed)
 }
 
 // extractFitler processes the specified query level filter and matches it
@@ -1189,7 +1189,7 @@ func (qc *AQLQueryContext) resolveTypes() {
 // some criterias, this function does not perform full format validation.
 func (qc *AQLQueryContext) extractFilter(filterID int) (
 	value uint32, boundary boundaryType, success bool) {
-	switch f := qc.Query.filters[filterID].(type) {
+	switch f := qc.Query.FiltersParsed[filterID].(type) {
 	case *expr.VarRef:
 		// Match `column` format
 		value = 1
@@ -1237,7 +1237,7 @@ func (qc *AQLQueryContext) matchPrefilters() {
 	}
 
 	// Index candidate filters by table/column
-	for filterID, filter := range qc.Query.filters {
+	for filterID, filter := range qc.Query.FiltersParsed {
 		f, _ := filter.(*expr.BinaryExpr)
 		if f == nil {
 			switch f := filter.(type) {
@@ -1379,7 +1379,7 @@ func (qc *AQLQueryContext) processFilters() {
 	// Categorize common filters and prefilters based on matched prefilters.
 	commonFilters := qc.Query.Measures[0].filters
 	prefilters := qc.Prefilters
-	for index, filter := range qc.Query.filters {
+	for index, filter := range qc.Query.FiltersParsed {
 		if len(prefilters) == 0 || prefilters[0] > index {
 			// common filters
 			commonFilters = append(commonFilters, filter)
@@ -1702,7 +1702,7 @@ func (qc *AQLQueryContext) processMeasure() {
 		return
 	}
 
-	if _, ok := qc.Query.Measures[0].expr.(*expr.NumberLiteral); ok {
+	if _, ok := qc.Query.Measures[0].ExprParsed.(*expr.NumberLiteral); ok {
 		qc.IsNonAggregationQuery = true
 		// in case user forgot to provide limit
 		if qc.Query.Limit == 0 {
@@ -1712,7 +1712,7 @@ func (qc *AQLQueryContext) processMeasure() {
 	}
 
 	// Match and strip the aggregate function.
-	aggregate, ok := qc.Query.Measures[0].expr.(*expr.Call)
+	aggregate, ok := qc.Query.Measures[0].ExprParsed.(*expr.Call)
 	if !ok {
 		qc.Error = utils.StackError(nil, "expect aggregate function, but got %s",
 			qc.Query.Measures[0].Expr)

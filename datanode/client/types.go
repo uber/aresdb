@@ -11,8 +11,17 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+package client
 
-//go:generate protoc -I rpc/ rpc/peer_streaming.proto --go_out=plugins=grpc:rpc
-//go:generate mockery -dir rpc -output rpc/mocks -name PeerDataNode.*Client
+import (
+	"github.com/uber/aresdb/datanode/generated/proto/rpc"
+)
 
-package proto
+// WithConnectionFn defines function with PeerDataNodeClient
+type WithConnectionFn func(rpc.PeerDataNodeClient)
+
+// PeerSource represent a peer source
+type PeerSource interface {
+	// BorrowConnection will borrow a connection and execute a user function.
+	BorrowConnection(hostID string, fn WithConnectionFn) error
+}

@@ -40,7 +40,7 @@ type DataNode interface {
 	Host() topology.Host
 
 	// Bootstrap performs bootstrapping.
-	Bootstrap(topo topology.Topology) error
+	Bootstrap(topo topology.Topology, options bootstrap.Options) error
 
 	// TableShardsBootstrapState captures and returns a snapshot of the datanode's bootstrap state for each table shard.
 	TableShardsBootstrapState() bootstrap.TableShardsBootstrapState
@@ -72,6 +72,12 @@ type Options interface {
 
 	// InstrumentOptions returns the instrumentation options.
 	InstrumentOptions() utils.Options
+
+	// Options returns bootstrap options
+	BootstrapOptions() bootstrap.Options
+
+	// SetBootstrapOptions sets bootstrap options
+	SetBootstrapOptions(options bootstrap.Options) Options
 }
 
 // BootStrapToken used to Acqure/Release token during data purge operations

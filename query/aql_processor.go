@@ -15,6 +15,7 @@
 package query
 
 import (
+	"github.com/uber/aresdb/cgoutils"
 	"math"
 	"unsafe"
 
@@ -22,7 +23,6 @@ import (
 	"encoding/json"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
@@ -62,8 +62,8 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		}
 	}()
 
-	qc.cudaStreams[0] = memutils.CreateCudaStream(qc.Device)
-	qc.cudaStreams[1] = memutils.CreateCudaStream(qc.Device)
+	qc.cudaStreams[0] = cgoutils.CreateCudaStream(qc.Device)
+	qc.cudaStreams[1] = cgoutils.CreateCudaStream(qc.Device)
 	qc.OOPK.currentBatch.device = qc.Device
 	qc.OOPK.LiveBatchStats = oopkQueryStats{
 		Name2Stage: make(map[stageName]*oopkStageSummaryStats),
@@ -141,16 +141,16 @@ func (qc *AQLQueryContext) ProcessQuery(memStore memstore.MemStore) {
 		} else {
 			if !qc.IsNonAggregationQuery {
 				// copy dimensions
-				qc.OOPK.dimensionVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
+				qc.OOPK.dimensionVectorH = cgoutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.DimRowBytes)
 				asyncCopyDimensionVector(qc.OOPK.dimensionVectorH, qc.OOPK.currentBatch.dimensionVectorD[0].getPointer(), qc.OOPK.ResultSize, 0,
 					qc.OOPK.NumDimsPerDimWidth, qc.OOPK.ResultSize, qc.OOPK.currentBatch.resultCapacity,
-					memutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
+					cgoutils.AsyncCopyDeviceToHost, qc.cudaStreams[0], qc.Device)
 				// copy measures
-				qc.OOPK.measureVectorH = memutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.MeasureBytes)
-				memutils.AsyncCopyDeviceToHost(
+				qc.OOPK.measureVectorH = cgoutils.HostAlloc(qc.OOPK.ResultSize * qc.OOPK.MeasureBytes)
+				cgoutils.AsyncCopyDeviceToHost(
 					qc.OOPK.measureVectorH, qc.OOPK.currentBatch.measureVectorD[0].getPointer(),
 					qc.OOPK.ResultSize*qc.OOPK.MeasureBytes, qc.cudaStreams[0], qc.Device)
-				memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
+				cgoutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 			}
 		}
 	}
@@ -276,8 +276,8 @@ func (qc *AQLQueryContext) cleanUpDeviceStatus() {
 	}
 
 	// Destroy streams
-	memutils.DestroyCudaStream(qc.cudaStreams[0], qc.Device)
-	memutils.DestroyCudaStream(qc.cudaStreams[1], qc.Device)
+	cgoutils.DestroyCudaStream(qc.cudaStreams[0], qc.Device)
+	cgoutils.DestroyCudaStream(qc.cudaStreams[1], qc.Device)
 	qc.cudaStreams = [2]unsafe.Pointer{nil, nil}
 
 	// Clean up the device result buffers.
@@ -376,9 +376,9 @@ func (qc *AQLQueryContext) prepareForGeoIntersect(memStore memstore.MemStore) (s
 	longsPtrD := latsPtrD.offset(totalNumPoints * 4)
 	shapeIndexsD := longsPtrD.offset(totalNumPoints * 4)
 
-	memutils.AsyncCopyHostToDevice(latsPtrD.getPointer(), unsafe.Pointer(&shapesLats[0]), totalNumPoints*4, qc.cudaStreams[0], qc.Device)
-	memutils.AsyncCopyHostToDevice(longsPtrD.getPointer(), unsafe.Pointer(&shapesLongs[0]), totalNumPoints*4, qc.cudaStreams[0], qc.Device)
-	memutils.AsyncCopyHostToDevice(shapeIndexsD.getPointer(), unsafe.Pointer(&shapeIndexs[0]), totalNumPoints, qc.cudaStreams[0], qc.Device)
+	cgoutils.AsyncCopyHostToDevice(latsPtrD.getPointer(), unsafe.Pointer(&shapesLats[0]), totalNumPoints*4, qc.cudaStreams[0], qc.Device)
+	cgoutils.AsyncCopyHostToDevice(longsPtrD.getPointer(), unsafe.Pointer(&shapesLongs[0]), totalNumPoints*4, qc.cudaStreams[0], qc.Device)
+	cgoutils.AsyncCopyHostToDevice(shapeIndexsD.getPointer(), unsafe.Pointer(&shapeIndexs[0]), totalNumPoints, qc.cudaStreams[0], qc.Device)
 
 	qc.OOPK.geoIntersection.shapeLatLongs = latsPtrD
 	qc.OOPK.geoIntersection.numShapes = numValidShapes
@@ -410,8 +410,8 @@ func (qc *AQLQueryContext) prepareForeignTable(memStore memstore.MemStore, joinT
 	// transfer primary key
 	hostPrimaryKeyData := shard.LiveStore.PrimaryKey.LockForTransfer()
 	devicePrimaryKeyPtr := deviceAllocate(hostPrimaryKeyData.NumBytes, qc.Device)
-	memutils.AsyncCopyHostToDevice(devicePrimaryKeyPtr.getPointer(), hostPrimaryKeyData.Data, hostPrimaryKeyData.NumBytes, qc.cudaStreams[0], qc.Device)
-	memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
+	cgoutils.AsyncCopyHostToDevice(devicePrimaryKeyPtr.getPointer(), hostPrimaryKeyData.Data, hostPrimaryKeyData.NumBytes, qc.cudaStreams[0], qc.Device)
+	cgoutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 	ft.hostPrimaryKeyData = hostPrimaryKeyData
 	ft.devicePrimaryKeyPtr = devicePrimaryKeyPtr
 	shard.LiveStore.PrimaryKey.UnlockAfterTransfer()
@@ -442,7 +442,7 @@ func (qc *AQLQueryContext) prepareForeignTable(memStore memstore.MemStore, joinT
 				copyHostToDevice(hostVPSlice, deviceBatches[batchIndex][i], qc.cudaStreams[0], qc.Device)
 			}
 		}
-		memutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
+		cgoutils.WaitForCudaStream(qc.cudaStreams[0], qc.Device)
 		batch.RUnlock()
 	}
 	ft.batches = deviceBatches
@@ -489,7 +489,7 @@ func (qc *AQLQueryContext) prepareTimezoneTable(store memstore.MemStore) {
 		}
 		sizeInBytes := binary.Size(lookUp)
 		lookupPtr := deviceAllocate(sizeInBytes, qc.Device)
-		memutils.AsyncCopyHostToDevice(lookupPtr.getPointer(), unsafe.Pointer(&lookUp[0]), sizeInBytes, qc.cudaStreams[0], qc.Device)
+		cgoutils.AsyncCopyHostToDevice(lookupPtr.getPointer(), unsafe.Pointer(&lookUp[0]), sizeInBytes, qc.cudaStreams[0], qc.Device)
 		qc.OOPK.currentBatch.timezoneLookupD = lookupPtr
 		qc.OOPK.currentBatch.timezoneLookupDSize = len(lookUp)
 	} else {
@@ -631,7 +631,7 @@ func (qc *AQLQueryContext) archiveBatchCustomFilterExecutor(isFirstOrLast bool) 
 
 // helper function for copy dimension vector. Returns the total size of dimension vector.
 func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length, offset int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth,
-	toVectorCapacity, fromVectorCapacity int, copyFunc memutils.AsyncMemCopyFunc,
+	toVectorCapacity, fromVectorCapacity int, copyFunc cgoutils.AsyncMemCopyFunc,
 	stream unsafe.Pointer, device int) {
 
 	ptrFrom, ptrTo := fromDimVector, toDimVector
@@ -761,7 +761,7 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 		bc.dimensionVectorD = bc.reallocateResultBuffers(bc.dimensionVectorD, dimRowBytes, stream, func(to, from unsafe.Pointer) {
 			asyncCopyDimensionVector(to, from, bc.resultSize, 0,
 				numDimsPerDimWidth, bc.resultCapacity, oldCapacity,
-				memutils.AsyncCopyDeviceToDevice, stream, bc.device)
+				cgoutils.AsyncCopyDeviceToDevice, stream, bc.device)
 		})
 
 		// uint32_t for index value
@@ -770,14 +770,14 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 		// Note: only when aggregate function is hll, we need to reuse vector[0]
 		if isHLL {
 			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, func(to, from unsafe.Pointer) {
-				memutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*8, stream, bc.device)
+				cgoutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*8, stream, bc.device)
 			})
 		} else {
 			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, nil)
 		}
 
 		bc.measureVectorD = bc.reallocateResultBuffers(bc.measureVectorD, measureBytes, stream, func(to, from unsafe.Pointer) {
-			memutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*measureBytes, stream, bc.device)
+			cgoutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*measureBytes, stream, bc.device)
 		})
 	}
 }
@@ -806,14 +806,14 @@ func (bc *oopkBatchContext) reallocateResultBuffers(
 func (qc *AQLQueryContext) doProfile(action func(), profileName string, stream unsafe.Pointer) {
 	if qc.Profiling == profileName {
 		// explicit waiting for cuda stream to avoid profiling previous actions.
-		memutils.WaitForCudaStream(stream, qc.Device)
+		cgoutils.WaitForCudaStream(stream, qc.Device)
 		utils.GetQueryLogger().Infof("Starting cuda profiler for %s", profileName)
-		memutils.CudaProfilerStart()
+		cgoutils.CudaProfilerStart()
 		defer func() {
 			// explicit waiting for cuda stream to wait for completion of current action.
-			memutils.WaitForCudaStream(stream, qc.Device)
+			cgoutils.WaitForCudaStream(stream, qc.Device)
 			utils.GetQueryLogger().Infof("Stopping cuda profiler for %s", profileName)
-			memutils.CudaProfilerStop()
+			cgoutils.CudaProfilerStop()
 		}()
 	}
 	action()
@@ -878,7 +878,7 @@ func (qc *AQLQueryContext) processBatch(
 	}()
 
 	// Wait for data transfer of the current batch.
-	memutils.WaitForCudaStream(stream, qc.Device)
+	cgoutils.WaitForCudaStream(stream, qc.Device)
 
 	for _, vp := range hostVPs {
 		if vp != nil {
@@ -1328,21 +1328,21 @@ func (qc *AQLQueryContext) runBatchExecutor(e BatchExecutor, isLastBatch bool) {
 // copyHostToDevice copy vector party slice to device vector party slice
 func copyHostToDevice(vps memCom.HostVectorPartySlice, deviceVPSlice deviceVectorPartySlice, stream unsafe.Pointer, device int) (bytesCopied, numTransfers int) {
 	if vps.ValueBytes > 0 {
-		memutils.AsyncCopyHostToDevice(
+		cgoutils.AsyncCopyHostToDevice(
 			deviceVPSlice.values.getPointer(), vps.Values, vps.ValueBytes,
 			stream, device)
 		bytesCopied += vps.ValueBytes
 		numTransfers++
 	}
 	if vps.NullBytes > 0 {
-		memutils.AsyncCopyHostToDevice(
+		cgoutils.AsyncCopyHostToDevice(
 			deviceVPSlice.nulls.getPointer(), vps.Nulls, vps.NullBytes,
 			stream, device)
 		bytesCopied += vps.NullBytes
 		numTransfers++
 	}
 	if vps.CountBytes > 0 {
-		memutils.AsyncCopyHostToDevice(
+		cgoutils.AsyncCopyHostToDevice(
 			deviceVPSlice.counts.getPointer(), vps.Counts, vps.CountBytes,
 			stream, device)
 		bytesCopied += vps.CountBytes

@@ -15,6 +15,7 @@
 package query
 
 import (
+	"github.com/uber/aresdb/cgoutils"
 	"unsafe"
 
 	"encoding/binary"
@@ -35,7 +36,6 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
-	"github.com/uber/aresdb/memutils"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	queryCom "github.com/uber/aresdb/query/common"
@@ -809,7 +809,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		// 3 total elements
 		dimensionVectorH := [9]uint8{2, 0, 1, 0, 2, 0, 1, 1, 1}
 		dimensionVectorD := deviceAllocate(3*3, 0)
-		memutils.AsyncCopyHostToDevice(dimensionVectorD.getPointer(), unsafe.Pointer(&dimensionVectorH), 3*3, stream, 0)
+		cgoutils.AsyncCopyHostToDevice(dimensionVectorD.getPointer(), unsafe.Pointer(&dimensionVectorH), 3*3, stream, 0)
 
 		hashVectorD := deviceAllocate(8*3, 0)
 		dimIndexVectorH := [3]uint32{}
@@ -818,7 +818,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		measureVectorH := [3]uint32{22, 11, 22}
 		measureVectorD := deviceAllocate(4*3, 0)
-		memutils.AsyncCopyHostToDevice(measureVectorD.getPointer(), unsafe.Pointer(&measureVectorH), 4*3, stream, 0)
+		cgoutils.AsyncCopyHostToDevice(measureVectorD.getPointer(), unsafe.Pointer(&measureVectorH), 4*3, stream, 0)
 
 		numDims := queryCom.DimCountsPerDimWidth{0, 0, 0, 1, 0}
 		batchCtx := oopkBatchContext{
@@ -832,8 +832,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 
 		batchCtx.sortByKey(numDims, stream, 0)
-		memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&measureVectorH), measureVectorD.getPointer(), 12, stream, 0)
-		memutils.AsyncCopyDeviceToHost(unsafe.Pointer(&dimIndexVectorH), dimIndexVectorD.getPointer(), 12, stream, 0)
+		cgoutils.AsyncCopyDeviceToHost(unsafe.Pointer(&measureVectorH), measureVectorD.getPointer(), 12, stream, 0)
+		cgoutils.AsyncCopyDeviceToHost(unsafe.Pointer(&dimIndexVectorH), dimIndexVectorD.getPointer(), 12, stream, 0)
 
 		Ω(dimIndexVectorH).Should(Or(Equal([3]uint32{0, 2, 1}), Equal([3]uint32{1, 0, 2}), Equal([3]uint32{1, 2, 0}), Equal([3]uint32{2, 0, 1})))
 
@@ -925,7 +925,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		numDims := queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 1}
 		var stream unsafe.Pointer
 		asyncCopyDimensionVector(dimensionVectorHost, ctx.dimensionVectorD[0].getPointer(), ctx.resultSize, 0,
-			numDims, ctx.resultSize, ctx.resultCapacity, memutils.AsyncCopyDeviceToHost, stream, 0)
+			numDims, ctx.resultSize, ctx.resultCapacity, cgoutils.AsyncCopyDeviceToHost, stream, 0)
 		Ω(dvHost).Should(Equal(dvHostExpected))
 	})
 
@@ -942,7 +942,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		numDims := queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 1}
 		var stream unsafe.Pointer
 		asyncCopyDimensionVector(dimensionVectorHost, ctx.dimensionVectorD[0].getPointer(), ctx.resultSize, 1,
-			numDims, ctx.resultCapacity, ctx.resultCapacity, memutils.AsyncCopyDeviceToHost, stream, 0)
+			numDims, ctx.resultCapacity, ctx.resultCapacity, cgoutils.AsyncCopyDeviceToHost, stream, 0)
 		Ω(dvHost).Should(Equal(dvHostExpected))
 	})
 

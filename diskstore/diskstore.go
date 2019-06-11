@@ -72,8 +72,8 @@ type DiskStore interface {
 	// Opens the snapshot vector party file for read.
 	OpenSnapshotVectorPartyFileForRead(table string, shard int,
 		redoLogFile int64, offset uint32, batchID int, columnID int) (io.ReadCloser, error)
-	// Creates/truncates the snapshot column file for write.
 
+	// Creates/truncates the snapshot column file for write.
 	OpenSnapshotVectorPartyFileForWrite(table string, shard int,
 		redoLogFile int64, offset uint32, batchID int, columnID int) (io.WriteCloser, error)
 	// Deletes snapshot files **older than** the specified version.

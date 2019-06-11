@@ -15,7 +15,7 @@
 package query
 
 import (
-	"github.com/uber/aresdb/memutils"
+	"github.com/uber/aresdb/cgoutils"
 	queryCom "github.com/uber/aresdb/query/common"
 	"time"
 	"unsafe"
@@ -38,7 +38,7 @@ func (e *NonAggrBatchExecutorImpl) project() {
 	// uncompress the result from baseCount
 	e.expandDimensions(e.qc.OOPK.NumDimsPerDimWidth)
 	// wait for stream to clean up non used buffer before final aggregation
-	memutils.WaitForCudaStream(e.stream, e.qc.Device)
+	cgoutils.WaitForCudaStream(e.stream, e.qc.Device)
 	e.qc.OOPK.currentBatch.cleanupBeforeAggregation()
 }
 
@@ -79,11 +79,11 @@ func (e *NonAggrBatchExecutorImpl) postExec(start time.Time) {
 	// TODO: @shz experiment with on demand flush when next batch can not fit in buffer
 	bc := e.qc.OOPK.currentBatch
 	// transfer current batch result from device to host
-	e.qc.OOPK.dimensionVectorH = memutils.HostAlloc(bc.resultSize * e.qc.OOPK.DimRowBytes)
+	e.qc.OOPK.dimensionVectorH = cgoutils.HostAlloc(bc.resultSize * e.qc.OOPK.DimRowBytes)
 	asyncCopyDimensionVector(e.qc.OOPK.dimensionVectorH, bc.dimensionVectorD[0].getPointer(), bc.resultSize, 0,
 		e.qc.OOPK.NumDimsPerDimWidth, bc.resultSize, bc.resultCapacity,
-		memutils.AsyncCopyDeviceToHost, e.qc.cudaStreams[0], e.qc.Device)
-	memutils.WaitForCudaStream(e.qc.cudaStreams[0], e.qc.Device)
+		cgoutils.AsyncCopyDeviceToHost, e.qc.cudaStreams[0], e.qc.Device)
+	cgoutils.WaitForCudaStream(e.qc.cudaStreams[0], e.qc.Device)
 
 	// flush current batches results to result buffer
 	e.qc.OOPK.ResultSize = bc.resultSize

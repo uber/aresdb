@@ -12,7 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate protoc -I rpc/ rpc/peer_streaming.proto --go_out=plugins=grpc:rpc
-//go:generate mockery -dir rpc -output rpc/mocks -name PeerDataNode.*Client
+package broker
 
-package proto
+import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"testing"
+
+	"github.com/onsi/ginkgo/reporters"
+)
+
+func TestDataNode(t *testing.T) {
+	RegisterFailHandler(Fail)
+	junitReporter := reporters.NewJUnitReporter("junit.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Ares Broker Suite", []Reporter{junitReporter})
+}

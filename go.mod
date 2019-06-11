@@ -12,6 +12,7 @@ require (
 	github.com/bkaradzic/go-lz4 v0.0.0-20160924222819-7224d8d8f27e // indirect
 	github.com/chzyer/logex v1.1.10 // indirect
 	github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1 // indirect
+	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
 	github.com/confluentinc/confluent-kafka-go v0.0.0-20190207113419-213e7cd9dd31
 	github.com/coreos/bbolt v1.3.1-coreos.5 // indirect
 	github.com/coreos/etcd v3.3.13+incompatible // indirect
@@ -53,7 +54,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
-	github.com/opentracing/opentracing-go v1.0.2 // indirect
+	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pierrec/lz4 v0.0.0-20190501090746-d705d4371bfc // indirect
 	github.com/pkg/errors v0.0.0-20190227000051-27936f6d90f9
@@ -74,6 +75,7 @@ require (
 	github.com/spf13/viper v1.0.1-0.20181205161347-3535c75fa87d
 	github.com/stretchr/testify v1.3.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
+	github.com/uber-go/atomic v1.4.0 // indirect
 	github.com/uber-go/tally v3.3.9+incompatible
 	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect

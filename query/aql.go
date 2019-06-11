@@ -69,8 +69,8 @@ type Measure struct {
 	// Alias/name of the measure, to be referenced by other (derived) measures.
 	Alias string `json:"alias,omitempty"`
 	// The SQL expression for computing the measure.
-	Expr string `json:"sqlExpression"`
-	expr expr.Expr
+	Expr       string `json:"sqlExpression"`
+	ExprParsed expr.Expr
 
 	// Row level filters to apply for this measure.
 	// The filters are ANDed togther.
@@ -126,9 +126,9 @@ type AQLQuery struct {
 	// Measures/metrics to report.
 	Measures []Measure `json:"measures"`
 
-	// Row level filters to apply for all measures. The filters are ANDed togther.
-	Filters []string `json:"rowFilters,omitempty"`
-	filters []expr.Expr
+	// Row level filters to apply for all measures. The filters are ANDed together.
+	Filters       []string `json:"rowFilters,omitempty"`
+	FiltersParsed []expr.Expr
 
 	// Syntax sugar for specifying a time based range filter.
 	TimeFilter TimeFilter `json:"timeFilter,omitempty"`

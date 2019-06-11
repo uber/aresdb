@@ -15,13 +15,13 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/cgoutils"
 	"math"
 	"math/rand"
 	"unsafe"
 
-	"github.com/uber/aresdb/memutils"
-	"github.com/uber/aresdb/utils"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/utils"
 	"sync"
 	"time"
 )
@@ -536,7 +536,7 @@ func (c *CuckooIndex) resize(resizeFactor float32) (ok bool) {
 	}
 
 	// copy to current index. note transferLock is reused.
-	memutils.HostFree(c.buckets)
+	cgoutils.HostFree(c.buckets)
 	newIndex.hostMemoryManager.ReportUnmanagedSpaceUsageChange(int64(-c.allocatedBytes()))
 
 	c.numBuckets = newIndex.numBuckets
@@ -561,7 +561,7 @@ func (c *CuckooIndex) allocatedBytes() uint {
 func (c *CuckooIndex) allocate() {
 	totalBucketBytes := int(c.allocatedBytes())
 	// allocate buckets plus stash
-	c.buckets = memutils.HostAlloc(totalBucketBytes + c.bucketBytes)
+	c.buckets = cgoutils.HostAlloc(totalBucketBytes + c.bucketBytes)
 	c.stash = utils.MemAccess(c.buckets, totalBucketBytes)
 }
 
@@ -602,7 +602,7 @@ func (c *CuckooIndex) Destruct() {
 	c.transferLock.Lock()
 	defer c.transferLock.Unlock()
 	bytes := c.allocatedBytes()
-	memutils.HostFree(c.buckets)
+	cgoutils.HostFree(c.buckets)
 	c.buckets = nil
 	c.hostMemoryManager.ReportUnmanagedSpaceUsageChange(-int64(bytes))
 }

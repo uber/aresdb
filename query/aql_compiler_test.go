@@ -60,7 +60,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 		qc.parseExprs()
 		Ω(qc.Error).Should(BeNil())
-		Ω(q.Measures[0].expr).Should(Equal(&expr.Call{
+		Ω(q.Measures[0].ExprParsed).Should(Equal(&expr.Call{
 			Name: "count",
 			Args: []expr.Expr{
 				&expr.Wildcard{},
@@ -102,7 +102,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			RHS: &expr.VarRef{Val: "api_cities.id"},
 		}))
 		Ω(qc.Query.Dimensions[0].expr).Should(Equal(&expr.VarRef{Val: "status"}))
-		Ω(qc.Query.Measures[0].expr).Should(Equal(&expr.Call{
+		Ω(qc.Query.Measures[0].ExprParsed).Should(Equal(&expr.Call{
 			Name: "count",
 			Args: []expr.Expr{
 				&expr.Wildcard{},
@@ -112,7 +112,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Op:   expr.NOT,
 			Expr: &expr.VarRef{Val: "is_faresplit"},
 		}))
-		Ω(qc.Query.filters[0]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
 			Op:  expr.EQ,
 			LHS: &expr.VarRef{Val: "marketplace"},
 			RHS: &expr.StringLiteral{Val: "personal_transport"},
@@ -437,8 +437,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}))
 
-		Ω(qc.Query.Measures[0].expr.Type()).Should(Equal(expr.Unsigned))
-		Ω(qc.Query.Measures[1].expr).Should(Equal(&expr.Call{
+		Ω(qc.Query.Measures[0].ExprParsed.Type()).Should(Equal(expr.Unsigned))
+		Ω(qc.Query.Measures[1].ExprParsed).Should(Equal(&expr.Call{
 			Name:     "sum",
 			ExprType: expr.Float,
 			Args: []expr.Expr{
@@ -460,7 +460,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}))
 
-		Ω(qc.Query.filters[0]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.EQ,
 			ExprType: expr.Boolean,
 			LHS: &expr.VarRef{
@@ -472,16 +472,16 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 			RHS: &expr.NumberLiteral{Int: 3, ExprType: expr.Unsigned},
 		}))
-		Ω(qc.Query.filters[1].Type()).Should(Equal(expr.Boolean))
-		Ω(qc.Query.filters[1].(*expr.UnaryExpr).Op).Should(Equal(expr.NOT))
-		Ω(qc.Query.filters[2].Type()).Should(Equal(expr.Boolean))
-		Ω(qc.Query.filters[3]).Should(Equal(&expr.VarRef{
+		Ω(qc.Query.FiltersParsed[1].Type()).Should(Equal(expr.Boolean))
+		Ω(qc.Query.FiltersParsed[1].(*expr.UnaryExpr).Op).Should(Equal(expr.NOT))
+		Ω(qc.Query.FiltersParsed[2].Type()).Should(Equal(expr.Boolean))
+		Ω(qc.Query.FiltersParsed[3]).Should(Equal(&expr.VarRef{
 			Val:      "is_first",
 			ColumnID: 3,
 			ExprType: expr.Boolean,
 			DataType: memCom.Bool,
 		}))
-		Ω(qc.Query.filters[4]).Should(Equal(&expr.UnaryExpr{
+		Ω(qc.Query.FiltersParsed[4]).Should(Equal(&expr.UnaryExpr{
 			Op:       expr.NOT,
 			ExprType: expr.Boolean,
 			Expr: &expr.UnaryExpr{
@@ -495,7 +495,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				},
 			},
 		}))
-		Ω(qc.Query.filters[5]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[5]).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.OR,
 			ExprType: expr.Boolean,
 			LHS: &expr.NumberLiteral{
@@ -511,7 +511,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				ExprType: expr.Boolean,
 			},
 		}))
-		Ω(qc.Query.filters[6]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[6]).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.LT,
 			ExprType: expr.Boolean,
 			LHS: &expr.NumberLiteral{
@@ -527,7 +527,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				ExprType: expr.Float,
 			},
 		}))
-		Ω(qc.Query.filters[7]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[7]).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.EQ,
 			ExprType: expr.Boolean,
 			LHS: &expr.VarRef{
@@ -539,7 +539,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 			RHS: &expr.NumberLiteral{Int: -1, ExprType: expr.Unsigned},
 		}))
-		Ω(qc.Query.filters[8]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[8]).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.NEQ,
 			ExprType: expr.Boolean,
 			LHS: &expr.NumberLiteral{
@@ -555,7 +555,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				ExprType: expr.Float,
 			},
 		}))
-		Ω(qc.Query.filters[9]).Should(Equal(&expr.UnaryExpr{
+		Ω(qc.Query.FiltersParsed[9]).Should(Equal(&expr.UnaryExpr{
 			Op: expr.NOT,
 			Expr: &expr.VarRef{Val: "is_first",
 				ColumnID: 3,
@@ -951,7 +951,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}))
 	})
 
-	ginkgo.It("processes common filters and prefilters", func() {
+	ginkgo.It("processes common FiltersParsed and prefilters", func() {
 		schema := &memCom.TableSchema{
 			ValueTypeByColumn: []memCom.DataType{
 				memCom.Uint8,
@@ -1895,7 +1895,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.Measures[0].expr.String()).Should(Equal("hll(GET_HLL_VALUE(request_at))"))
+		Ω(qc.Query.Measures[0].ExprParsed.String()).Should(Equal("hll(GET_HLL_VALUE(request_at))"))
 
 		qc.Query = &AQLQuery{
 			Table: "trips",
@@ -1912,7 +1912,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.Measures[0].expr.String()).Should(Equal("hll(client_uuid_hll)"))
+		Ω(qc.Query.Measures[0].ExprParsed.String()).Should(Equal("hll(client_uuid_hll)"))
 
 		qc.Query = &AQLQuery{
 			Table: "trips",
@@ -1929,7 +1929,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.Measures[0].expr.String()).Should(Equal("hll(client_uuid_hll)"))
+		Ω(qc.Query.Measures[0].ExprParsed.String()).Should(Equal("hll(client_uuid_hll)"))
 	})
 
 	ginkgo.It("process geo intersection in foreign table", func() {
@@ -3116,8 +3116,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.filters).Should(HaveLen(1))
-		Ω(qc.Query.filters[0].String()).Should(Equal("id = 1 OR id = 2"))
+		Ω(qc.Query.FiltersParsed).Should(HaveLen(1))
+		Ω(qc.Query.FiltersParsed[0].String()).Should(Equal("id = 1 OR id = 2"))
 
 		qc.Query.Filters[0] = "id in ()"
 		qc.parseExprs()
@@ -3129,28 +3129,28 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.filters[0].String()).Should(Equal("id = 1"))
+		Ω(qc.Query.FiltersParsed[0].String()).Should(Equal("id = 1"))
 
 		qc.Error = nil
 		qc.Query.Filters[0] = "id in ('1')"
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.filters[0].String()).Should(Equal("id = '1'"))
+		Ω(qc.Query.FiltersParsed[0].String()).Should(Equal("id = '1'"))
 
 		qc.Error = nil
 		qc.Query.Filters[0] = "id in (1,2,3)"
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.filters[0].String()).Should(Equal("id = 1 OR id = 2 OR id = 3"))
+		Ω(qc.Query.FiltersParsed[0].String()).Should(Equal("id = 1 OR id = 2 OR id = 3"))
 
 		qc.Error = nil
 		qc.Query.Filters[0] = "id not in (1,2,3)"
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.filters[0].String()).Should(Equal("NOT(id = 1 OR id = 2 OR id = 3)"))
+		Ω(qc.Query.FiltersParsed[0].String()).Should(Equal("NOT(id = 1 OR id = 2 OR id = 3)"))
 	})
 
 	ginkgo.It("dayofweek and hour should work", func() {
@@ -3192,9 +3192,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.filters).Should(HaveLen(2))
-		Ω(qc.Query.filters[0].String()).Should(Equal("table1.time_col / 86400 + 4 % 7 + 1 = 2"))
-		Ω(qc.Query.filters[1].String()).Should(Equal("table1.time_col % 86400 / 3600 = 21"))
+		Ω(qc.Query.FiltersParsed).Should(HaveLen(2))
+		Ω(qc.Query.FiltersParsed[0].String()).Should(Equal("table1.time_col / 86400 + 4 % 7 + 1 = 2"))
+		Ω(qc.Query.FiltersParsed[1].String()).Should(Equal("table1.time_col % 86400 / 3600 = 21"))
 	})
 
 	ginkgo.It("convert_tz should work", func() {
@@ -3240,9 +3240,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.filters).Should(HaveLen(2))
-		Ω(qc.Query.filters[0].String()).Should(Equal("table1.time_col + -25200 = 2"))
-		Ω(qc.Query.filters[1].String()).Should(Equal("table1.time_col + -25200 = 2"))
+		Ω(qc.Query.FiltersParsed).Should(HaveLen(2))
+		Ω(qc.Query.FiltersParsed[0].String()).Should(Equal("table1.time_col + -25200 = 2"))
+		Ω(qc.Query.FiltersParsed[1].String()).Should(Equal("table1.time_col + -25200 = 2"))
 
 		qc.Query.Filters = []string{"convert_tz(from_unixtime(table1.time_col), 'GMT', 'America/Phoenix') = 2"}
 		qc.parseExprs()
@@ -3289,7 +3289,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.Query = q
 		qc.parseExprs()
 		Ω(qc.Error).Should(BeNil())
-		Ω(q.Measures[0].expr).Should(Equal(&expr.Call{
+		Ω(q.Measures[0].ExprParsed).Should(Equal(&expr.Call{
 			Name: "count",
 			Args: []expr.Expr{
 				&expr.Wildcard{},
@@ -3309,13 +3309,13 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 		qc.parseExprs()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.Measures[0].expr).Should(Equal(&expr.Call{
+		Ω(qc.Query.Measures[0].ExprParsed).Should(Equal(&expr.Call{
 			Name: "count",
 			Args: []expr.Expr{
 				&expr.Wildcard{},
 			},
 		}))
-		Ω(qc.Query.filters[0]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
 			Op:  expr.EQ,
 			LHS: &expr.VarRef{Val: "request_point"},
 			RHS: &expr.StringLiteral{Val: "point(-122.386177 37.617994)"},
@@ -3323,7 +3323,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		qc.resolveTypes()
 
-		Ω(qc.Query.filters[0]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.EQ,
 			LHS:      &expr.VarRef{Val: "request_point", ColumnID: 1, TableID: 0, ExprType: expr.GeoPoint, DataType: memCom.GeoPoint},
 			RHS:      &expr.GeopointLiteral{Val: [2]float32{37.617994, -122.386177}},
@@ -3343,13 +3343,13 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 		qc.parseExprs()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.Measures[0].expr).Should(Equal(&expr.Call{
+		Ω(qc.Query.Measures[0].ExprParsed).Should(Equal(&expr.Call{
 			Name: "count",
 			Args: []expr.Expr{
 				&expr.Wildcard{},
 			},
 		}))
-		Ω(qc.Query.filters[0]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
 			Op:  expr.IN,
 			LHS: &expr.VarRef{Val: "request_point"},
 			RHS: &expr.Call{
@@ -3365,7 +3365,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		qc.resolveTypes()
 
-		Ω(qc.Query.filters[0]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
 			Op: expr.OR,
 			LHS: &expr.BinaryExpr{
 				Op: expr.OR,
