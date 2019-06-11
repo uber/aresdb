@@ -56,40 +56,38 @@ const (
 	nonAggregationQueryLimit  = 1000
 )
 
-// Compile returns the compiled AQLQueryContext for data feeding and query
+// Compile compiles AQLQueryContext for data feeding and query
 // execution. Caller should check for AQLQueryContext.Error.
-func (q *AQLQuery) Compile(tableSchemaReader memCom.TableSchemaReader, returnHLL bool) *AQLQueryContext {
-	qc := &AQLQueryContext{Query: q, ReturnHLLData: returnHLL}
-
+func (qc *AQLQueryContext) Compile(tableSchemaReader memCom.TableSchemaReader) {
 	// processTimezone might append additional joins
 	qc.processTimezone()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Read schema for every table used.
 	qc.readSchema(tableSchemaReader)
 	defer qc.releaseSchema()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Parse all other SQL expressions to ASTs.
 	qc.parseExprs()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Resolve data types in the ASTs against schema, also translate enum values.
 	qc.resolveTypes()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Process join conditions first to collect information about geo join.
 	qc.processJoinConditions()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Identify prefilters.
@@ -98,34 +96,33 @@ func (q *AQLQuery) Compile(tableSchemaReader memCom.TableSchemaReader, returnHLL
 	// Process filters.
 	qc.processFilters()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Process measure and dimensions.
 	qc.processMeasure()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 	qc.processDimensions()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	qc.sortUsedColumns()
 
 	qc.sortDimensionColumns()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// TODO: VM instruction generation
-	return qc
 }
 
 // adjustFilterToTimeFilter try to find one rowfilter to be time filter if there is no timefilter for fact table query
 func (qc *AQLQueryContext) adjustFilterToTimeFilter() {
 	toBeRemovedFilters := []int{}
-	timeFilter := TimeFilter{}
+	timeFilter := common.TimeFilter{}
 	for i, filter := range qc.Query.FiltersParsed {
 		if e, ok := filter.(*expr.BinaryExpr); ok {
 			lhs, isCol := e.LHS.(*expr.VarRef)
@@ -201,7 +198,7 @@ func (qc *AQLQueryContext) processJoinConditions() {
 				qc.Error = utils.StackError(nil, "At most one geo join allowed")
 				return
 			}
-			qc.matchGeoJoin(joinTableID, mainTableSchema, joinSchema, join.conditions)
+			qc.matchGeoJoin(joinTableID, mainTableSchema, joinSchema, join.ConditionsParsed)
 			if qc.Error != nil {
 				return
 			}
@@ -209,7 +206,7 @@ func (qc *AQLQueryContext) processJoinConditions() {
 			// we will extract the geo join out of the join conditions since we are going to handle geo intersects
 			// as filter instead of an equal join.
 			qc.OOPK.foreignTables[joinTableID] = &foreignTable{}
-			qc.matchEqualJoin(joinTableID, joinSchema, join.conditions)
+			qc.matchEqualJoin(joinTableID, joinSchema, join.ConditionsParsed)
 			if qc.Error != nil {
 				return
 			}
@@ -275,9 +272,9 @@ func (qc *AQLQueryContext) matchGeoJoin(joinTableID int, mainTableSchema *memCom
 	}, point)
 }
 
-func isGeoJoin(j Join) bool {
-	if len(j.conditions) >= 1 {
-		c, ok := j.conditions[0].(*expr.Call)
+func isGeoJoin(j common.Join) bool {
+	if len(j.ConditionsParsed) >= 1 {
+		c, ok := j.ConditionsParsed[0].(*expr.Call)
 		if !ok {
 			return false
 		}
@@ -367,9 +364,9 @@ func (qc *AQLQueryContext) parseExprs() {
 
 	// Join conditions.
 	for i, join := range qc.Query.Joins {
-		join.conditions = make([]expr.Expr, len(join.Conditions))
+		join.ConditionsParsed = make([]expr.Expr, len(join.Conditions))
 		for j, cond := range join.Conditions {
-			join.conditions[j], err = expr.ParseExpr(cond)
+			join.ConditionsParsed[j], err = expr.ParseExpr(cond)
 			if err != nil {
 				qc.Error = utils.StackError(err, "Failed to parse join condition: %s", cond)
 				return
@@ -401,7 +398,7 @@ func (qc *AQLQueryContext) parseExprs() {
 
 	// Dimensions.
 	rawDimensions := qc.Query.Dimensions
-	qc.Query.Dimensions = []Dimension{}
+	qc.Query.Dimensions = []common.Dimension{}
 	for _, dim := range rawDimensions {
 		dim.TimeBucketizer = strings.Trim(dim.TimeBucketizer, " ")
 		if dim.TimeBucketizer != "" {
@@ -417,7 +414,7 @@ func (qc *AQLQueryContext) parseExprs() {
 				return
 			}
 
-			dim.expr, err = qc.buildTimeDimensionExpr(dim.TimeBucketizer, timeColumnExpr)
+			dim.ExprParsed, err = qc.buildTimeDimensionExpr(dim.TimeBucketizer, timeColumnExpr)
 			if err != nil {
 				qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.TimeBucketizer)
 				return
@@ -425,12 +422,12 @@ func (qc *AQLQueryContext) parseExprs() {
 			qc.Query.Dimensions = append(qc.Query.Dimensions, dim)
 		} else {
 			// dimension is defined as sqlExpression
-			dim.expr, err = expr.ParseExpr(dim.Expr)
+			dim.ExprParsed, err = expr.ParseExpr(dim.Expr)
 			if err != nil {
 				qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.Expr)
 				return
 			}
-			if _, ok := dim.expr.(*expr.Wildcard); ok {
+			if _, ok := dim.ExprParsed.(*expr.Wildcard); ok {
 				qc.Query.Dimensions = append(qc.Query.Dimensions, qc.getAllColumnsDimension()...)
 			} else {
 				qc.Query.Dimensions = append(qc.Query.Dimensions, dim)
@@ -445,9 +442,9 @@ func (qc *AQLQueryContext) parseExprs() {
 			qc.Error = utils.StackError(err, "Failed to parse measure: %s", measure.Expr)
 			return
 		}
-		measure.filters = make([]expr.Expr, len(measure.Filters))
+		measure.FiltersParsed = make([]expr.Expr, len(measure.Filters))
 		for j, filter := range measure.Filters {
-			measure.filters[j], err = expr.ParseExpr(filter)
+			measure.FiltersParsed[j], err = expr.ParseExpr(filter)
 			if err != nil {
 				qc.Error = utils.StackError(err, "Failed to parse measure filter %s", filter)
 				return
@@ -469,7 +466,7 @@ func (qc *AQLQueryContext) processTimezone() {
 		// append timezone table to joins
 		if qc.timezoneTable.tableAlias == "" {
 			qc.timezoneTable.tableAlias = defaultTimezoneTableAlias
-			qc.Query.Joins = append(qc.Query.Joins, Join{
+			qc.Query.Joins = append(qc.Query.Joins, common.Join{
 				Table:      timezoneTable,
 				Alias:      defaultTimezoneTableAlias,
 				Conditions: []string{fmt.Sprintf("%s=%s.id", joinKey, defaultTimezoneTableAlias)},
@@ -1109,8 +1106,8 @@ func normalizeAndFilters(filters []expr.Expr) []expr.Expr {
 func (qc *AQLQueryContext) resolveTypes() {
 	// Join conditions.
 	for i, join := range qc.Query.Joins {
-		for j, cond := range join.conditions {
-			join.conditions[j] = expr.Rewrite(qc, cond)
+		for j, cond := range join.ConditionsParsed {
+			join.ConditionsParsed[j] = expr.Rewrite(qc, cond)
 			if qc.Error != nil {
 				return
 			}
@@ -1120,7 +1117,7 @@ func (qc *AQLQueryContext) resolveTypes() {
 
 	// Dimensions.
 	for i, dim := range qc.Query.Dimensions {
-		dim.expr = expr.Rewrite(qc, dim.expr)
+		dim.ExprParsed = expr.Rewrite(qc, dim.ExprParsed)
 		if qc.Error != nil {
 			return
 		}
@@ -1133,13 +1130,13 @@ func (qc *AQLQueryContext) resolveTypes() {
 		if qc.Error != nil {
 			return
 		}
-		for j, filter := range measure.filters {
-			measure.filters[j] = expr.Rewrite(qc, filter)
+		for j, filter := range measure.FiltersParsed {
+			measure.FiltersParsed[j] = expr.Rewrite(qc, filter)
 			if qc.Error != nil {
 				return
 			}
 		}
-		measure.filters = normalizeAndFilters(measure.filters)
+		measure.FiltersParsed = normalizeAndFilters(measure.FiltersParsed)
 		qc.Query.Measures[i] = measure
 	}
 
@@ -1357,7 +1354,7 @@ func (qc *AQLQueryContext) processFilters() {
 	}
 
 	// Categorize common filters and prefilters based on matched prefilters.
-	commonFilters := qc.Query.Measures[0].filters
+	commonFilters := qc.Query.Measures[0].FiltersParsed
 	prefilters := qc.Prefilters
 	for index, filter := range qc.Query.FiltersParsed {
 		if len(prefilters) == 0 || prefilters[0] > index {
@@ -1777,13 +1774,13 @@ func (qc *AQLQueryContext) processMeasure() {
 	}
 }
 
-func (qc *AQLQueryContext) getAllColumnsDimension() (columns []Dimension) {
+func (qc *AQLQueryContext) getAllColumnsDimension() (columns []common.Dimension) {
 	// only main table columns wildcard match supported
 	for _, column := range qc.TableScanners[0].Schema.Schema.Columns {
 		if !column.Deleted && column.Type != metaCom.GeoShape {
-			columns = append(columns, Dimension{
-				expr: &expr.VarRef{Val: column.Name},
-				Expr: column.Name,
+			columns = append(columns, common.Dimension{
+				ExprParsed: &expr.VarRef{Val: column.Name},
+				Expr:       column.Name,
 			})
 		}
 	}
@@ -1795,8 +1792,8 @@ func (qc *AQLQueryContext) processDimensions() {
 	qc.OOPK.Dimensions = make([]expr.Expr, len(qc.Query.Dimensions))
 	for i, dim := range qc.Query.Dimensions {
 		// TODO: support numeric bucketizer.
-		qc.OOPK.Dimensions[i] = dim.expr
-		if dim.expr.Type() == expr.GeoShape {
+		qc.OOPK.Dimensions[i] = dim.ExprParsed
+		if dim.ExprParsed.Type() == expr.GeoShape {
 			qc.Error = utils.StackError(nil,
 				"GeoShape can not be used for dimension: %s", dim.Expr)
 			return

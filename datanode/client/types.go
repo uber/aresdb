@@ -17,7 +17,6 @@ import (
 	"context"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
-	"github.com/uber/aresdb/query"
 	queryCom "github.com/uber/aresdb/query/common"
 )
 
@@ -31,5 +30,5 @@ type PeerSource interface {
 }
 
 type DataNodeQueryClient interface {
-	Query(ctx context.Context, host topology.Host, query query.AQLQuery) (queryCom.AQLQueryResult, error)
+	Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (queryCom.AQLQueryResult, error)
 }

@@ -94,13 +94,13 @@ func (qc *AQLQueryContext) flushResultBuffer() {
 			valueOffset, nullOffset := offsets[0], offsets[1]
 			valuePtr, nullPtr := utils.MemAccess(oopkContext.dimensionVectorH, valueOffset), utils.MemAccess(oopkContext.dimensionVectorH, nullOffset)
 
-			if qc.Query.Dimensions[dimIndex].isTimeDimension() && dpc.dimensionValueCache[dimIndex] == nil {
+			if qc.Query.Dimensions[dimIndex].IsTimeDimension() && dpc.dimensionValueCache[dimIndex] == nil {
 				dpc.dimensionValueCache[dimIndex] = make(map[queryCom.TimeDimensionMeta]map[int64]string)
 			}
 
 			var timeDimensionMeta *queryCom.TimeDimensionMeta
 
-			if qc.Query.Dimensions[dimIndex].isTimeDimension() {
+			if qc.Query.Dimensions[dimIndex].IsTimeDimension() {
 				timeDimensionMeta = &queryCom.TimeDimensionMeta{
 					TimeBucketizer:  qc.Query.Dimensions[dimIndex].TimeBucketizer,
 					TimeUnit:        qc.Query.Dimensions[dimIndex].TimeUnit,
@@ -160,7 +160,7 @@ func (qc *AQLQueryContext) PostprocessAsHLLData() ([]byte, error) {
 	var timeDimensions []int
 	for dimIndex, ast := range oopkContext.Dimensions {
 		dataTypes[dimIndex], reverseDicts[dimIndex] = getDimensionDataType(ast), qc.getEnumReverseDict(dimIndex, ast)
-		if qc.Query.Dimensions[dimIndex].isTimeDimension() {
+		if qc.Query.Dimensions[dimIndex].IsTimeDimension() {
 			timeDimensions = append(timeDimensions, dimIndex)
 		}
 	}

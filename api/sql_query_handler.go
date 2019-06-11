@@ -16,6 +16,7 @@ package api
 
 import (
 	"github.com/uber/aresdb/query"
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
@@ -46,9 +47,9 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var aqlQueries []query.AQLQuery
+	var aqlQueries []queryCom.AQLQuery
 	if sqlRequest.Body.Queries != nil {
-		aqlQueries = make([]query.AQLQuery, len(sqlRequest.Body.Queries))
+		aqlQueries = make([]queryCom.AQLQuery, len(sqlRequest.Body.Queries))
 		startTs := utils.Now()
 		for i, sqlQuery := range sqlRequest.Body.Queries {
 			parsedAQLQuery, err := query.Parse(sqlQuery, utils.GetLogger())

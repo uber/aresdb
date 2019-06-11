@@ -17,6 +17,7 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"github.com/uber/aresdb/query"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -31,7 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/query"
+	queryCom "github.com/uber/aresdb/query/common"
 )
 
 var _ = ginkgo.Describe("QueryHandler", func() {
@@ -244,7 +245,7 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 	})
 
 	ginkgo.It("Report hll result in JsonResponseWriter should work", func() {
-		q := &query.AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: "trips",
 		}
 

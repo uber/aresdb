@@ -343,7 +343,7 @@ type geoIntersection struct {
 // AQLQueryContext stores all contextual data for handling an AQL query.
 type AQLQueryContext struct {
 	// The query input.
-	Query *AQLQuery `json:"query"`
+	Query *queryCom.AQLQuery `json:"query"`
 
 	// Context for one-operator-per-kernel execution.
 	OOPK OOPKContext `json:"oopk"`

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	HTTPContentTypeHeaderKey = "content-type"
+	HTTPContentTypeHeaderKey       = "content-type"
 	HTTPContentTypeApplicationJson = "application/json"
 )
 

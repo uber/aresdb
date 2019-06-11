@@ -35,8 +35,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 	ginkgo.It("works on one dimension and one row", func() {
 		ctx := &AQLQueryContext{
-			Query: &AQLQuery{
-				Dimensions: []Dimension{
+			Query: &queryCom.AQLQuery{
+				Dimensions: []queryCom.Dimension{
 					{Expr: ""},
 				},
 			},
@@ -70,8 +70,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 	ginkgo.It("works on two dimensions and two rows", func() {
 		ctx := &AQLQueryContext{
-			Query: &AQLQuery{
-				Dimensions: []Dimension{
+			Query: &queryCom.AQLQuery{
+				Dimensions: []queryCom.Dimension{
 					{Expr: ""},
 					{Expr: ""},
 				},
@@ -116,8 +116,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 	ginkgo.It("works on float dimension and nil measure", func() {
 		ctx := &AQLQueryContext{
-			Query: &AQLQuery{
-				Dimensions: []Dimension{
+			Query: &queryCom.AQLQuery{
+				Dimensions: []queryCom.Dimension{
 					{Expr: ""},
 				},
 			},
@@ -155,8 +155,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 	ginkgo.It("works for non agg queries", func() {
 		ctx := &AQLQueryContext{
-			Query: &AQLQuery{
-				Dimensions: []Dimension{
+			Query: &queryCom.AQLQuery{
+				Dimensions: []queryCom.Dimension{
 					{Expr: "someField"},
 				},
 			},
@@ -192,8 +192,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 	})
 
 	ginkgo.It("time Unit formatting works", func() {
-		query := &AQLQuery{
-			Dimensions: []Dimension{
+		query := &queryCom.AQLQuery{
+			Dimensions: []queryCom.Dimension{
 				{
 					TimeBucketizer: "h",
 				},
@@ -321,8 +321,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 	})
 
 	ginkgo.It("time dimension remedy should work", func() {
-		query := &AQLQuery{
-			Dimensions: []Dimension{
+		query := &queryCom.AQLQuery{
+			Dimensions: []queryCom.Dimension{
 				{
 					Expr:           "reqeust_at",
 					TimeBucketizer: "d",
@@ -332,7 +332,7 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 					Expr: "1",
 				},
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 				To:     "0d",
@@ -463,8 +463,8 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 	ginkgo.It("works for eager flushing non agg queries", func() {
 		w := httptest.NewRecorder()
 		ctx := &AQLQueryContext{
-			Query: &AQLQuery{
-				Dimensions: []Dimension{
+			Query: &queryCom.AQLQuery{
+				Dimensions: []queryCom.Dimension{
 					{Expr: "someField"},
 				},
 			},

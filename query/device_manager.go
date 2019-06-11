@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/uber/aresdb/common"
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -45,7 +46,7 @@ type DeviceInfo struct {
 	// total free memory
 	FreeMemory int `json:"totalFreeMemory"`
 	// query to memory map
-	QueryMemoryUsageMap map[*AQLQuery]int `json:"-"`
+	QueryMemoryUsageMap map[*queryCom.AQLQuery]int `json:"-"`
 }
 
 // DeviceManager has the following functionalities:
@@ -128,7 +129,7 @@ func getDeviceInfo(device int, deviceMemoryUtilization float32) *DeviceInfo {
 		TotalMemory:          totalGlobalMem,
 		TotalAvailableMemory: totalAvailableMem,
 		FreeMemory:           totalAvailableMem,
-		QueryMemoryUsageMap:  make(map[*AQLQuery]int, 0),
+		QueryMemoryUsageMap:  make(map[*queryCom.AQLQuery]int, 0),
 	}
 	utils.GetLogger().Infof("DeviceInfo[%d]=%+v\n", device, deviceInfo)
 	return &deviceInfo
@@ -136,7 +137,7 @@ func getDeviceInfo(device int, deviceMemoryUtilization float32) *DeviceInfo {
 
 // FindDevice finds a device to run a given query. If a device is not found, it will wait until
 // the DeviceChoosingTimeout seconds elapse.
-func (d *DeviceManager) FindDevice(query *AQLQuery, requiredMem int, preferredDevice int, timeout int) int {
+func (d *DeviceManager) FindDevice(query *queryCom.AQLQuery, requiredMem int, preferredDevice int, timeout int) int {
 	if requiredMem > d.MaxAvailableMemory {
 		utils.GetQueryLogger().With(
 			"query", query,
@@ -181,7 +182,7 @@ func (d *DeviceManager) FindDevice(query *AQLQuery, requiredMem int, preferredDe
 
 // findDevice finds a device to run a given query according to certain strategy.If no such device can't
 // be found, return -1. Caller needs to hold the write lock.
-func (d *DeviceManager) findDevice(query *AQLQuery, requiredMem int, preferredDevice int) int {
+func (d *DeviceManager) findDevice(query *queryCom.AQLQuery, requiredMem int, preferredDevice int) int {
 	utils.GetQueryLogger().With(
 		"query", query,
 		"requiredMem", requiredMem,
@@ -217,7 +218,7 @@ func (d *DeviceManager) findDevice(query *AQLQuery, requiredMem int, preferredDe
 }
 
 // ReleaseReservedMemory adjust total free global memory for a given device after a query is complete
-func (d *DeviceManager) ReleaseReservedMemory(device int, query *AQLQuery) {
+func (d *DeviceManager) ReleaseReservedMemory(device int, query *queryCom.AQLQuery) {
 	// Don't even need the lock,
 	if device < 0 || device >= len(d.DeviceInfos) {
 		return

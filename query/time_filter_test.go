@@ -19,6 +19,7 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/query/expr"
+	queryCom "github.com/uber/aresdb/query/common"
 	"time"
 )
 
@@ -34,7 +35,7 @@ var _ = ginkgo.Describe("Test", func() {
 	now := time.Date(2016, time.March, 15, 21, 24, 26, 0, location)
 
 	ginkgo.It("Works on empty input", func() {
-		from, to, err := parseTimeFilter(TimeFilter{}, time.UTC, now)
+		from, to, err := parseTimeFilter(queryCom.TimeFilter{}, time.UTC, now)
 		Ω(err).Should(BeNil())
 		Ω(from).Should(BeNil())
 		Ω(to).Should(BeNil())
@@ -106,7 +107,7 @@ var _ = ginkgo.Describe("Test", func() {
 
 		for _, testCase := range testCases {
 			loc, _ := time.LoadLocation("America/New_York")
-			from, to, err := parseTimeFilter(TimeFilter{
+			from, to, err := parseTimeFilter(queryCom.TimeFilter{
 				Column: "request_at",
 				From:   testCase.expression,
 				To:     testCase.expression,
@@ -133,7 +134,7 @@ var _ = ginkgo.Describe("Test", func() {
 
 	ginkgo.It("Works on fixed timezone", func() {
 		loc := time.FixedZone("fixed", -(7*60*60 + 30*60))
-		from, to, err := parseTimeFilter(TimeFilter{
+		from, to, err := parseTimeFilter(queryCom.TimeFilter{
 			Column: "request_at",
 			From:   "this year",
 			To:     "",
@@ -142,7 +143,7 @@ var _ = ginkgo.Describe("Test", func() {
 		fromExpr, toExpr := createTimeFilterExpr(&expr.VarRef{Val: "request_at"}, from, to)
 		Ω(fromExpr.String() + " AND " + toExpr.String()).Should(Equal("request_at >= 1451633400 AND request_at < 1458102266"))
 
-		from, to, err = parseTimeFilter(TimeFilter{
+		from, to, err = parseTimeFilter(queryCom.TimeFilter{
 			Column: "request_at",
 			From:   "",
 			To:     "last year",
@@ -163,7 +164,7 @@ var _ = ginkgo.Describe("Test", func() {
 	})
 
 	ginkgo.It("Fails on error", func() {
-		testCases := []TimeFilter{
+		testCases := []queryCom.TimeFilter{
 			{Column: "request_at", From: "future", To: ""},
 			{Column: "request_at", From: "", To: "future"},
 			{Column: "request_at", From: "this", To: ""},

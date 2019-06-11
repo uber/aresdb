@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	aresdbCommon "github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/memstore"
-	"github.com/uber/aresdb/query/common"
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"sync"
@@ -42,7 +42,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 				QueryCount:           queryCounts[device],
 				TotalAvailableMemory: 3000,
 				FreeMemory:           freeMemory[device],
-				QueryMemoryUsageMap:  make(map[*AQLQuery]int, 0),
+				QueryMemoryUsageMap:  make(map[*queryCom.AQLQuery]int, 0),
 			}
 			deviceInfoArray[device] = &deviceInfo
 		}
@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 
 	ginkgo.It("leastMemStrategy should work", func() {
 		deviceManager.strategy = leastMemStrategy
-		queries := [5]*AQLQuery{{}, {}, {}, {}}
+		queries := [5]*queryCom.AQLQuery{{}, {}, {}, {}}
 		devices := [5]int{}
 		// case 1: w/o device hint, return the device w/ least query count.
 		devices[0] = deviceManager.findDevice(queries[0], 1000, -1)
@@ -126,7 +126,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 					QueryCount:           0,
 					TotalAvailableMemory: 1000,
 					FreeMemory:           500,
-					QueryMemoryUsageMap:  make(map[*AQLQuery]int, 0),
+					QueryMemoryUsageMap:  make(map[*queryCom.AQLQuery]int, 0),
 				},
 			},
 			Timeout:            5,
@@ -140,7 +140,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 		deviceManager.strategy = leastQueryCountAndMemStrategy
 		deviceManager.deviceAvailable = sync.NewCond(deviceManager)
 
-		queries := [3]*AQLQuery{{}, {}, {}}
+		queries := [3]*queryCom.AQLQuery{{}, {}, {}}
 		devices := [4]int{}
 		timeout := 3
 
@@ -217,7 +217,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 		}
 
 		qc := AQLQueryContext{
-			Query: &AQLQuery{
+			Query: &queryCom.AQLQuery{
 				Limit: 1000000,
 			},
 			TableScanners: []*TableScanner{
@@ -232,7 +232,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 				},
 			},
 			OOPK: OOPKContext{
-				NumDimsPerDimWidth: common.DimCountsPerDimWidth{0, 0, 1, 0, 0},
+				NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0},
 				DimRowBytes:        5,
 				MeasureBytes:       4,
 				foreignTables:      []*foreignTable{{}},

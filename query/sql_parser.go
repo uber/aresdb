@@ -25,6 +25,7 @@ import (
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"github.com/uber/aresdb/common"
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/sql/antlrgen"
 	"github.com/uber/aresdb/query/sql/tree"
 	"github.com/uber/aresdb/query/sql/util"
@@ -78,20 +79,20 @@ type SQL2AqlContext struct {
 	// Identifier can be namedQuery identifier or aliasedRelation identifier
 	MapQueryIdentifier map[int]string
 	// MapMeasures is a mapping table. key=generateKey(...) value=arrayOfMeasure
-	MapMeasures map[int][]Measure
+	MapMeasures map[int][]queryCom.Measure
 	// MapDimensions is a mapping table. key=generateKey(...) value=arrayOfDimension
-	MapDimensions map[int][]Dimension
+	MapDimensions map[int][]queryCom.Dimension
 	// MapJoinTables is a mapping table. key=generateKey(...) value=arrayOfJoin
-	MapJoinTables map[int][]Join
+	MapJoinTables map[int][]queryCom.Join
 	// MapRowFilters is a mapping table. key=generateKey(...) value=arrayOfRowFilter
 	MapRowFilters map[int][]string
 	// MapOrderBy is a mapping table. key=generateKey(...) value=arrayOfSortField
-	MapOrderBy map[int][]SortField
+	MapOrderBy map[int][]queryCom.SortField
 	// MapLimit is a mapping table. key=generateKey(...) value=arrayOfLimit
 	MapLimit           map[int]int
 	mapKey             int
 	timeNow            int64
-	timeFilter         TimeFilter
+	timeFilter         queryCom.TimeFilter
 	timezone           string
 	exprOrigin         ExprOrigin
 	fromJSON           []byte
@@ -113,7 +114,7 @@ type ASTBuilder struct {
 	ParameterPosition int
 	// SQL2AqlContext is the context of construncting AQL
 	SQL2AqlCtx *SQL2AqlContext
-	aql        *AQLQuery
+	aql        *queryCom.AQLQuery
 
 	// Flag that indicates whether aggregate function is seen
 	aggFuncExists bool
@@ -274,11 +275,11 @@ func (v *ASTBuilder) VisitWith(ctx *antlrgen.WithContext) interface{} {
 	for i, c := range ctxArr {
 		v.setCtxLevels(v.SQL2AqlCtx, level, levelWith, levelQuery)
 		v.SQL2AqlCtx.mapKey = v.generateKey(levelQuery, typeWithQuery, i)
-		v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey] = make([]Measure, 0, defaultSliceCap)
-		v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = make([]Dimension, 0, defaultSliceCap)
-		v.SQL2AqlCtx.MapJoinTables[v.SQL2AqlCtx.mapKey] = make([]Join, 0, defaultSliceCap)
+		v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey] = make([]queryCom.Measure, 0, defaultSliceCap)
+		v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = make([]queryCom.Dimension, 0, defaultSliceCap)
+		v.SQL2AqlCtx.MapJoinTables[v.SQL2AqlCtx.mapKey] = make([]queryCom.Join, 0, defaultSliceCap)
 		v.SQL2AqlCtx.MapRowFilters[v.SQL2AqlCtx.mapKey] = make([]string, 0, defaultSliceCap)
-		v.SQL2AqlCtx.MapOrderBy[v.SQL2AqlCtx.mapKey] = make([]SortField, 0, defaultSliceCap)
+		v.SQL2AqlCtx.MapOrderBy[v.SQL2AqlCtx.mapKey] = make([]queryCom.SortField, 0, defaultSliceCap)
 
 		arrWithQuery[i], _ = v.VisitNamedQuery(c.(*antlrgen.NamedQueryContext)).(*tree.WithQuery)
 	}
@@ -314,7 +315,7 @@ func (v *ASTBuilder) VisitNamedQuery(ctx *antlrgen.NamedQueryContext) interface{
 		for i, c := range ctxArr {
 			v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey] =
 				append(v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey],
-					Measure{
+					queryCom.Measure{
 						Alias: v.getText(c),
 					})
 			columnAliases[i], _ = v.Visit(c).(*tree.Identifier)
@@ -454,13 +455,13 @@ func (v *ASTBuilder) VisitQuerySpecification(ctx *antlrgen.QuerySpecificationCon
 					alias = util.GetSubstring(item.Alias.GetValue())
 				}
 				v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey] = append(v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey],
-					Measure{
+					queryCom.Measure{
 						Alias: alias,
 						Expr:  util.GetSubstring(item.Expression.GetValue()),
 					})
 			case *tree.AllColumns:
 				v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey] = append(v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey],
-					Measure{
+					queryCom.Measure{
 						Expr: v.getText(c),
 					})
 			}
@@ -590,7 +591,7 @@ func (v *ASTBuilder) VisitSingleGroupingSet(ctx *antlrgen.SingleGroupingSetConte
 			// v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] via visitFunctionCall
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] =
 				append(v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
-					Dimension{
+					queryCom.Dimension{
 						Alias: alias,
 						Expr:  expr,
 					})
@@ -633,7 +634,7 @@ func (v *ASTBuilder) VisitSortItem(ctx *antlrgen.SortItemContext) interface{} {
 	_, name := v.lookupSQLExpr(v.SQL2AqlCtx, v.SQL2AqlCtx.mapKey, util.GetSubstring(expr.GetValue()))
 	v.SQL2AqlCtx.MapOrderBy[v.SQL2AqlCtx.mapKey] =
 		append(v.SQL2AqlCtx.MapOrderBy[v.SQL2AqlCtx.mapKey],
-			SortField{
+			queryCom.SortField{
 				Name:  name,
 				Order: tree.OrderTypes[ordering],
 			})
@@ -843,12 +844,12 @@ func (v *ASTBuilder) VisitAliasedRelation(ctx *antlrgen.AliasedRelationContext) 
 	// handle identifier
 	if ctx.Identifier() != nil {
 		v.SQL2AqlCtx.MapJoinTables[v.SQL2AqlCtx.mapKey] = append(v.SQL2AqlCtx.MapJoinTables[v.SQL2AqlCtx.mapKey],
-			Join{
+			queryCom.Join{
 				Alias: v.getText(ctx.Identifier()),
 			})
 	} else {
 		v.SQL2AqlCtx.MapJoinTables[v.SQL2AqlCtx.mapKey] = append(v.SQL2AqlCtx.MapJoinTables[v.SQL2AqlCtx.mapKey],
-			Join{})
+			queryCom.Join{})
 	}
 
 	// handle relationPrimary
@@ -876,7 +877,7 @@ func (v *ASTBuilder) VisitAliasedRelation(ctx *antlrgen.AliasedRelationContext) 
 			} else {
 				v.SQL2AqlCtx.MapMeasures[subqueryKey] =
 					append(v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey],
-						Measure{
+						queryCom.Measure{
 							Alias: v.getText(c),
 						})
 			}
@@ -936,11 +937,11 @@ func (v *ASTBuilder) VisitSubqueryRelation(ctx *antlrgen.SubqueryRelationContext
 	v.SQL2AqlCtx.mapKey = v.generateKey(levelQuery+1, typeSubQuery, last)
 	v.SQL2AqlCtx.MapQueryIdentifier[v.SQL2AqlCtx.mapKey] = v.SQL2AqlCtx.MapJoinTables[mapKey][last].Alias
 	v.addQIdentifier(v.SQL2AqlCtx, v.SQL2AqlCtx.MapJoinTables[mapKey][last].Alias, v.SQL2AqlCtx.mapKey)
-	v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey] = make([]Measure, 0, defaultSliceCap)
-	v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = make([]Dimension, 0, defaultSliceCap)
-	v.SQL2AqlCtx.MapJoinTables[v.SQL2AqlCtx.mapKey] = make([]Join, 0, defaultSliceCap)
+	v.SQL2AqlCtx.MapMeasures[v.SQL2AqlCtx.mapKey] = make([]queryCom.Measure, 0, defaultSliceCap)
+	v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = make([]queryCom.Dimension, 0, defaultSliceCap)
+	v.SQL2AqlCtx.MapJoinTables[v.SQL2AqlCtx.mapKey] = make([]queryCom.Join, 0, defaultSliceCap)
 	v.SQL2AqlCtx.MapRowFilters[v.SQL2AqlCtx.mapKey] = make([]string, 0, defaultSliceCap)
-	v.SQL2AqlCtx.MapOrderBy[v.SQL2AqlCtx.mapKey] = make([]SortField, 0, defaultSliceCap)
+	v.SQL2AqlCtx.MapOrderBy[v.SQL2AqlCtx.mapKey] = make([]queryCom.SortField, 0, defaultSliceCap)
 
 	query, _ := v.VisitQuery(ctx.Query().(*antlrgen.QueryContext)).(*tree.Query)
 	tableSubquery := tree.NewTableSubquery(v.getLocation(ctx), query)
@@ -990,7 +991,7 @@ func (v *ASTBuilder) VisitFunctionCall(ctx *antlrgen.FunctionCallContext) interf
 		case util.Timebucket:
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = append(
 				v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
-				Dimension{
+				queryCom.Dimension{
 					Expr:           util.TrimQuote(v.getText(ctx.Expression(0))),
 					TimeBucketizer: util.TrimQuote(udfDef.Definition),
 					TimeUnit:       util.TrimQuote(v.getText(ctx.Expression(1))),
@@ -1440,7 +1441,7 @@ func (v *ASTBuilder) setTimefilter(ctx []antlrgen.IExpressionContext) {
 	to := util.TrimQuote(v.getText(ctx[2]))
 	timezone := util.TrimQuote(v.getText(ctx[3]))
 
-	if v.SQL2AqlCtx.timeFilter != (TimeFilter{}) {
+	if v.SQL2AqlCtx.timeFilter != (queryCom.TimeFilter{}) {
 		if v.SQL2AqlCtx.timeFilter.Column != column {
 			location := v.getLocation(ctx[0])
 			panic(fmt.Errorf("different timefilter on %s at (line:%d, col:%d)",
@@ -1463,7 +1464,7 @@ func (v *ASTBuilder) setTimefilter(ctx []antlrgen.IExpressionContext) {
 		}
 		return
 	}
-	v.SQL2AqlCtx.timeFilter = TimeFilter{
+	v.SQL2AqlCtx.timeFilter = queryCom.TimeFilter{
 		Column: column,
 		From:   from,
 		To:     to,
@@ -1500,9 +1501,9 @@ func (v *ASTBuilder) setNumericBucketizer(ctx []antlrgen.IExpressionContext, def
 		}
 		v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = append(
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
-			Dimension{
+			queryCom.Dimension{
 				Expr:              util.TrimQuote(v.getText(ctx[0])),
-				NumericBucketizer: NumericBucketizerDef{BucketWidth: value},
+				NumericBucketizer: queryCom.NumericBucketizerDef{BucketWidth: value},
 			})
 	case util.NumericBucketTypeLogBase:
 		location := v.getLocation(ctx[1])
@@ -1513,9 +1514,9 @@ func (v *ASTBuilder) setNumericBucketizer(ctx []antlrgen.IExpressionContext, def
 		}
 		v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = append(
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
-			Dimension{
+			queryCom.Dimension{
 				Expr:              util.TrimQuote(v.getText(ctx[0])),
-				NumericBucketizer: NumericBucketizerDef{LogBase: value},
+				NumericBucketizer: queryCom.NumericBucketizerDef{LogBase: value},
 			})
 	case util.NumericBucketTypeManualPartitions:
 		location := v.getLocation(ctx[1])
@@ -1531,9 +1532,9 @@ func (v *ASTBuilder) setNumericBucketizer(ctx []antlrgen.IExpressionContext, def
 		}
 		v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey] = append(
 			v.SQL2AqlCtx.MapDimensions[v.SQL2AqlCtx.mapKey],
-			Dimension{
+			queryCom.Dimension{
 				Expr:              util.TrimQuote(v.getText(ctx[0])),
-				NumericBucketizer: NumericBucketizerDef{ManualPartitions: partitions},
+				NumericBucketizer: queryCom.NumericBucketizerDef{ManualPartitions: partitions},
 			})
 	}
 }
@@ -1611,10 +1612,10 @@ func (v *ASTBuilder) isMeasureInMain(key, index int) int {
 }
 
 // GetAQL construct AQLQuery via read through SQL2AqlCtx
-func (v *ASTBuilder) GetAQL() *AQLQuery {
+func (v *ASTBuilder) GetAQL() *queryCom.AQLQuery {
 	var (
 		table string
-		joins []Join
+		joins []queryCom.Join
 	)
 
 	if len(v.SQL2AqlCtx.MapQueryIdentifier) == 0 {
@@ -1625,7 +1626,7 @@ func (v *ASTBuilder) GetAQL() *AQLQuery {
 			joins = v.SQL2AqlCtx.MapJoinTables[0][1:]
 		}
 
-		v.aql = &AQLQuery{
+		v.aql = &queryCom.AQLQuery{
 			Table:      table,
 			Joins:      joins,
 			Measures:   v.SQL2AqlCtx.MapMeasures[0],
@@ -1638,9 +1639,9 @@ func (v *ASTBuilder) GetAQL() *AQLQuery {
 			Sorts:      v.SQL2AqlCtx.MapOrderBy[0],
 		}
 	} else {
-		v.aql = &AQLQuery{
-			SupportingMeasures:   make([]Measure, 0, defaultSliceCap),
-			SupportingDimensions: make([]Dimension, 0, defaultSliceCap),
+		v.aql = &queryCom.AQLQuery{
+			SupportingMeasures:   make([]queryCom.Measure, 0, defaultSliceCap),
+			SupportingDimensions: make([]queryCom.Dimension, 0, defaultSliceCap),
 		}
 		v.mergeWithOrSubQueries()
 	}
@@ -1949,7 +1950,7 @@ func (v *ASTBuilder) hasORInPath(node *antlr.BaseParserRuleContext) tree.Logical
 }
 
 // Parse parses input sql
-func Parse(sql string, logger common.Logger) (aql *AQLQuery, err error) {
+func Parse(sql string, logger common.Logger) (aql *queryCom.AQLQuery, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -1985,11 +1986,11 @@ func Parse(sql string, logger common.Logger) (aql *AQLQuery, err error) {
 		ParameterPosition: 0,
 		SQL2AqlCtx: &SQL2AqlContext{
 			MapQueryIdentifier: make(map[int]string),
-			MapMeasures:        make(map[int][]Measure),
-			MapDimensions:      make(map[int][]Dimension),
-			MapJoinTables:      make(map[int][]Join),
+			MapMeasures:        make(map[int][]queryCom.Measure),
+			MapDimensions:      make(map[int][]queryCom.Dimension),
+			MapJoinTables:      make(map[int][]queryCom.Join),
 			MapRowFilters:      make(map[int][]string),
-			MapOrderBy:         make(map[int][]SortField),
+			MapOrderBy:         make(map[int][]queryCom.SortField),
 			MapLimit:           make(map[int]int),
 		},
 	}
@@ -2013,11 +2014,11 @@ func Parse(sql string, logger common.Logger) (aql *AQLQuery, err error) {
 			return
 		}
 		for _, measure := range aql.Measures {
-			aql.Dimensions = append(aql.Dimensions, Dimension{
+			aql.Dimensions = append(aql.Dimensions, queryCom.Dimension{
 				Expr: measure.Expr,
 			})
 		}
-		aql.Measures = []Measure{{
+		aql.Measures = []queryCom.Measure{{
 			Expr: "1",
 		}}
 	}
