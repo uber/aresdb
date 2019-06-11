@@ -83,6 +83,7 @@ CGoCallResHandle asyncCopyHostToDevice(void *dst, const void *src,
 CGoCallResHandle asyncCopyDeviceToHost(void *dst, const void *src,
                                        size_t count, void *stream);
 
+CGoCallResHandle waitForCudaStream(void *stream);
 #ifdef __cplusplus
 }
 #endif

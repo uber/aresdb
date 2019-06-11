@@ -59,5 +59,9 @@ void asyncCopyDeviceToHost(void* dst, const void* src, size_t count,
   checkMemoryError(::asyncCopyDeviceToHost(dst, src, count, stream));
 }
 
+void waitForCudaStream(void *stream) {
+  checkMemoryError(::waitForCudaStream(stream));
+}
+
 }  // namespace ares
 #endif  // QUERY_MEMORY_HPP

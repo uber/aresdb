@@ -40,6 +40,7 @@ CGoCallResHandle CreateCudaStream(int device) {
   CGoCallResHandle resHandle = {NULL, NULL};
   return resHandle;
 }
+
 CGoCallResHandle WaitForCudaStream(void *s, int device) {
   CGoCallResHandle resHandle = {NULL, NULL};
   return resHandle;
@@ -146,5 +147,10 @@ CGoCallResHandle asyncCopyDeviceToHost(void *dst, const void *src,
                                        size_t count, void *stream){
   CGoCallResHandle resHandle = {NULL, NULL};
   memcpy(dst, src, count);
+  return resHandle;
+}
+
+CGoCallResHandle waitForCudaStream(void *stream) {
+  CGoCallResHandle resHandle = {NULL, NULL};
   return resHandle;
 }

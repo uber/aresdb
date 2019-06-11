@@ -287,6 +287,7 @@ class HashReductionContext {
         reinterpret_cast<void *>(&globalWriteIndexHost),
         reinterpret_cast<void *>(globalWriteIndexDevice.get()),
         sizeof(uint32_t), cudaStream);
+    ares::waitForCudaStream(cudaStream);
     return globalWriteIndexHost;
   }
 

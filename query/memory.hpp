@@ -44,6 +44,7 @@ void asyncCopyHostToDevice(void* dst, const void* src, size_t count,
     cudaStream_t stream);
 void asyncCopyDeviceToHost(void* dst, const void* src, size_t count,
     cudaStream_t stream);
+void waitForCudaStream(void *stream);
 
 // deleter called from unique_ptr.
 template <typename T>
