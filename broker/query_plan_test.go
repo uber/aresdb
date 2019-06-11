@@ -20,29 +20,29 @@ import (
 
 var _ = ginkgo.Describe("query plan", func() {
 	ginkgo.It("splitAvgQuery should work", func() {
-		q := query.AQLQuery{
+		q := common2.AQLQuery{
 			Table: "foo",
-			Measures: []query.Measure{
+			Measures: []common2.Measure{
 				{Expr: "avg(fare)"},
 			},
 		}
 
 		q1, q2 := splitAvgQuery(q)
-		Ω(q1).Should(Equal(query.AQLQuery{
+		Ω(q1).Should(Equal(common2.AQLQuery{
 			Table: "foo",
-			Measures: []query.Measure{
+			Measures: []common2.Measure{
 				{Expr: "sum(fare)"},
 			},
 		}))
-		Ω(q2).Should(Equal(query.AQLQuery{
+		Ω(q2).Should(Equal(common2.AQLQuery{
 			Table: "foo",
-			Measures: []query.Measure{
+			Measures: []common2.Measure{
 				{Expr: "count(*)"},
 			},
 		}))
-		Ω(q).Should(Equal(query.AQLQuery{
+		Ω(q).Should(Equal(common2.AQLQuery{
 			Table: "foo",
-			Measures: []query.Measure{
+			Measures: []common2.Measure{
 				{Expr: "avg(fare)"},
 			},
 		}))
@@ -109,9 +109,9 @@ var _ = ginkgo.Describe("query plan", func() {
 	})
 
 	ginkgo.It("NewAggQueryPlan should work", func() {
-		q := query.AQLQuery{
+		q := common2.AQLQuery{
 			Table: "table1",
-			Measures: []query.Measure{
+			Measures: []common2.Measure{
 				{Expr: "count(*)", ExprParsed: &expr.Call{Name: "count"}},
 			},
 		}
@@ -139,9 +139,9 @@ var _ = ginkgo.Describe("query plan", func() {
 	})
 
 	ginkgo.It("NewAggQueryPlan should work for avg query", func() {
-		q := query.AQLQuery{
+		q := common2.AQLQuery{
 			Table: "table1",
-			Measures: []query.Measure{
+			Measures: []common2.Measure{
 				{Expr: "avg(*)", ExprParsed: &expr.Call{Name: "avg"}},
 			},
 		}
@@ -174,7 +174,7 @@ var _ = ginkgo.Describe("query plan", func() {
 	})
 
 	ginkgo.It("ScanNode run should work happy path", func() {
-		q := query.AQLQuery{}
+		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
@@ -201,7 +201,7 @@ var _ = ginkgo.Describe("query plan", func() {
 	})
 
 	ginkgo.It("ScanNode run should fail routing error", func() {
-		q := query.AQLQuery{}
+		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
@@ -222,7 +222,7 @@ var _ = ginkgo.Describe("query plan", func() {
 	})
 
 	ginkgo.It("ScanNode run should fail datanode error", func() {
-		q := query.AQLQuery{}
+		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
@@ -247,7 +247,7 @@ var _ = ginkgo.Describe("query plan", func() {
 	})
 
 	ginkgo.It("ScanNode run should work after retry", func() {
-		q := query.AQLQuery{}
+		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}

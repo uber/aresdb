@@ -27,7 +27,6 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
-	"time"
 )
 
 const (
@@ -91,7 +90,7 @@ func (mn *mergeNodeImpl) Run(ctx context.Context) (result queryCom.AQLQueryResul
 	}
 
 	childrenResult := make([]queryCom.AQLQueryResult, nChildren)
-	errs := 0
+	nerrs := 0
 	wg := &sync.WaitGroup{}
 	for i, c := range mn.children {
 		wg.Add(1)
@@ -104,7 +103,7 @@ func (mn *mergeNodeImpl) Run(ctx context.Context) (result queryCom.AQLQueryResul
 				utils.GetLogger().With(
 					"error", err,
 				).Error("child node failed")
-				errs++
+				nerrs++
 				return
 			}
 			childrenResult[i] = res
@@ -112,8 +111,8 @@ func (mn *mergeNodeImpl) Run(ctx context.Context) (result queryCom.AQLQueryResul
 	}
 	wg.Wait()
 
-	if errs > 0 {
-		err = utils.StackError(nil, fmt.Sprintf("%d errors happend running merge node", errs))
+	if nerrs > 0 {
+		err = utils.StackError(nil, fmt.Sprintf("%d errors happend running merge node", nerrs))
 		return
 	}
 
@@ -133,7 +132,7 @@ func (mn *mergeNodeImpl) Run(ctx context.Context) (result queryCom.AQLQueryResul
 type ScanNode struct {
 	blockingPlanNodeImpl
 
-	query          query.AQLQuery
+	query          queryCom.AQLQuery
 	shardID        uint32
 	topo           topology.Topology
 	dataNodeClient dataCli.DataNodeQueryClient
@@ -149,12 +148,11 @@ func (sn *ScanNode) Run(ctx context.Context) (result queryCom.AQLQueryResult, er
 			utils.GetLogger().With(
 				"error", routeErr,
 				"shard", sn.shardID,
-				"trial", trial).Error("failed to route shard")
+				"trial", trial).Error("route shard failed")
 			err = utils.StackError(routeErr, "route shard failed")
 			continue
 		}
 		// pick random routable host
-		rand.Seed(time.Now().UTC().UnixNano())
 		idx := rand.Intn(len(hosts))
 		host := hosts[idx]
 
@@ -166,7 +164,7 @@ func (sn *ScanNode) Run(ctx context.Context) (result queryCom.AQLQueryResult, er
 				"shard", sn.shardID,
 				"host", host,
 				"query", sn.query,
-				"trial", trial).Error("failed to fetch from datanode")
+				"trial", trial).Error("fetch from datanode failed")
 			err = utils.StackError(fetchErr, "fetch from datanode failed")
 			continue
 		}
@@ -225,11 +223,11 @@ func (ap *AggQueryPlan) Run(ctx context.Context) (results queryCom.AQLQueryResul
 type NonAggQueryPlan struct{}
 
 // splitAvgQuery to sum and count queries
-func splitAvgQuery(q query.AQLQuery) (sumq query.AQLQuery, countq query.AQLQuery) {
+func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom.AQLQuery) {
 	measure := q.Measures[0]
 
 	sumq = q
-	sumq.Measures = []query.Measure{
+	sumq.Measures = []queryCom.Measure{
 		{
 			Alias:   measure.Alias,
 			Expr:    measure.Expr,
@@ -239,7 +237,7 @@ func splitAvgQuery(q query.AQLQuery) (sumq query.AQLQuery, countq query.AQLQuery
 	sumq.Measures[0].Expr = strings.Replace(strings.ToLower(sumq.Measures[0].Expr), "avg", "sum", 1)
 
 	countq = q
-	countq.Measures = []query.Measure{
+	countq.Measures = []queryCom.Measure{
 		{
 			Alias:   measure.Alias,
 			Expr:    measure.Expr,
@@ -250,7 +248,7 @@ func splitAvgQuery(q query.AQLQuery) (sumq query.AQLQuery, countq query.AQLQuery
 	return
 }
 
-func buildSubPlan(agg common.AggType, q query.AQLQuery, shardIDs []uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
+func buildSubPlan(agg common.AggType, q queryCom.AQLQuery, shardIDs []uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
 	for _, shardID := range shardIDs {
 		root.Add(&ScanNode{
