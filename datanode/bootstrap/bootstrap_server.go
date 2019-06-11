@@ -41,7 +41,7 @@ var (
 	errInvalidSessionID = errors.New("invalid session id")
 	errInvalidRequset   = errors.New("invalid request, table/shard not match")
 	errSessionExisting  = errors.New("The request table/shard already have session running from the same node")
-	errUsageOccupied    = errors.New("Can not acquire table/shard usage, retry after a while")
+	errUsageOccupied    = errors.New("Can not acquire table/shard token, retry after a while")
 )
 
 type PeerDataNodeServerImpl struct {
@@ -57,8 +57,8 @@ type PeerDataNodeServerImpl struct {
 	sessions map[int64]*sessionInfo
 	// tracking of all sessions for each table/shard
 	tableShardSessions map[tableShardPair][]int64
-	// tracking of all outside users of table/shard
-	tableShardUsers map[tableShardPair]int
+	// tracking of all outside users of table/shard using token count
+	tableShardTokens map[tableShardPair]int
 }
 
 type tableShardPair struct {
@@ -82,14 +82,14 @@ func NewPeerDataNodeServer(metaStore common.MetaStore, diskStore diskstore.DiskS
 		diskStore:          diskStore,
 		sessions:           make(map[int64]*sessionInfo),
 		tableShardSessions: make(map[tableShardPair][]int64),
-		tableShardUsers:    make(map[tableShardPair]int),
+		tableShardTokens:   make(map[tableShardPair]int),
 	}
 }
 
-// AcquireUsage is to check if any bootstrap is running in the table/shard
-// if no bootstrap session is running on the table/shard, it will increase the usage, and return true
-// the caller need to release the usage by calling ReleaseUsage
-func (p *PeerDataNodeServerImpl) AcquireUsage(tableName string, shardID uint32) bool {
+// AcquireToken is to check if any bootstrap is running in the table/shard
+// if no bootstrap session is running on the table/shard, it will increase the token count, and return true
+// the caller need to release the usage by calling ReleaseToken
+func (p *PeerDataNodeServerImpl) AcquireToken(tableName string, shardID uint32) bool {
 	p.RLock()
 	defer p.RUnlock()
 
@@ -104,20 +104,20 @@ func (p *PeerDataNodeServerImpl) AcquireUsage(tableName string, shardID uint32) 
 	key := tableShardPair{table: tableName, shardID: shardID}
 	sessionIDs, ok := p.tableShardSessions[key]
 	if !ok || len(sessionIDs) > 0 {
-		p.tableShardUsers[key] = p.tableShardUsers[key] + 1
+		p.tableShardTokens[key] = p.tableShardTokens[key] + 1
 		return true
 	}
 	return false
 }
 
-// Release the usage count, must call this when call AcquireUsage success
-func (p *PeerDataNodeServerImpl) ReleaseUsage(tableName string, shardID uint32) {
+// AcquireToken release the token count, must call this when call AcquireToken success
+func (p *PeerDataNodeServerImpl) ReleaseToken(tableName string, shardID uint32) {
 	p.RLock()
 	defer p.RUnlock()
 
 	key := tableShardPair{table: tableName, shardID: shardID}
-	if val, ok := p.tableShardUsers[key]; ok && val > 0 {
-		p.tableShardUsers[key] = p.tableShardUsers[key] - 1
+	if val, ok := p.tableShardTokens[key]; ok && val > 0 {
+		p.tableShardTokens[key] = p.tableShardTokens[key] - 1
 	}
 }
 
@@ -140,7 +140,7 @@ func (p *PeerDataNodeServerImpl) StartSession(ctx context.Context, req *pb.Start
 
 	defer func() {
 		if err == nil {
-			logInfoMsg(sessionInfo, "started bootstrap session")
+			logInfoMsg(sessionInfo, "started bootstrap session successfully")
 		} else {
 			logErrorMsg(sessionInfo, err, "start bootstrap session failed")
 		}
@@ -159,7 +159,8 @@ func (p *PeerDataNodeServerImpl) StartSession(ctx context.Context, req *pb.Start
 	}
 
 	if !p.checkUsage(sessionInfo.table, sessionInfo.shardID) {
-		return nil, errUsageOccupied
+		err = errUsageOccupied
+		return nil, err
 	}
 
 	p.addSession(sessionInfo)
@@ -193,7 +194,7 @@ func (p *PeerDataNodeServerImpl) checkUsage(tableName string, shardID uint32) bo
 	defer p.RUnlock()
 
 	key := tableShardPair{table: tableName, shardID: shardID}
-	if count, ok := p.tableShardUsers[key]; ok && count > 0 {
+	if count, ok := p.tableShardTokens[key]; ok && count > 0 {
 		return false
 	}
 	return true

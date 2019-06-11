@@ -30,12 +30,72 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-var (
-	testFile = "/tmp/file32m"
-)
 
-func BenchmarkHello(b *testing.B) {
-	bigBuff := make([]byte, 32*1024*1024)
+func TestFileTransfer(t *testing.T) {
+	testFile := "/tmp/file32k"
+	bigBuff := make([]byte, 32*1024)
+	ioutil.WriteFile(testFile, bigBuff, 0666)
+
+	metaStore := &metaMocks.MetaStore{}
+	diskStore := &diskMocks.DiskStore{}
+	grpcServer := grpc.NewServer()
+	peerServer := NewPeerDataNodeServer(metaStore, diskStore)
+	pb.RegisterPeerDataNodeServer(grpcServer, peerServer)
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 0))
+	if err != nil {
+		t.Error(err)
+	}
+	go grpcServer.Serve(lis)
+	defer grpcServer.Stop()
+
+	err = fileTransfer("testFileTransfer", lis.Addr().String(), testFile, 0, 0, 32*1024)
+	if err != nil {
+		t.Error(err)
+	}
+
+	os.Remove(testFile)
+}
+
+func fileTransfer(testName string, addr string, fileName string, chunkSize, bufferSize int32, expectedSize int) error {
+	conn, err := grpc.Dial(addr, grpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	timeStart := utils.Now()
+	client := pb.NewPeerDataNodeClient(conn)
+	req := &pb.BenchmarkRequest{
+		File:       fileName,
+		ChunkSize:  chunkSize,
+		BufferSize: bufferSize,
+	}
+	txClient, err := client.BenchmarkFileTransfer(context.Background(), req)
+	if err != nil {
+		return err
+	}
+	var size int
+	for {
+		d, err := txClient.Recv()
+		if err != nil {
+			break
+		}
+		size += len(d.Chunk)
+	}
+	timeUsed := utils.Now().Sub(timeStart)
+	fmt.Printf("%s, time used: %d ns\n", testName, timeUsed)
+	if size != expectedSize {
+		return fmt.Errorf("file transfer failed, size not match, size=%d, expected:%d", size, expectedSize)
+	}
+	return nil
+}
+
+func BenchmarkFileTransfer(b *testing.B) {
+	testFile := "/tmp/file2m"
+	fileSize := 2*1024*1024
+
+	bigBuff := make([]byte, fileSize)
 	ioutil.WriteFile(testFile, bigBuff, 0666)
 
 	metaStore := &metaMocks.MetaStore{}
@@ -87,31 +147,7 @@ func BenchmarkHello(b *testing.B) {
 
 	for _, tc := range testCases {
 		b.Run("test1", func(t *testing.B) {
-			conn, err := grpc.Dial(lis.Addr().String(), grpc.WithInsecure())
-			if err != nil {
-				b.Error(err)
-			}
-			defer conn.Close()
-
-			timeStart := utils.Now()
-			client := pb.NewPeerDataNodeClient(conn)
-			req := &pb.BenchmarkRequest{
-				File:       testFile,
-				ChunkSize:  tc.chunkSize,
-				BufferSize: tc.bufferSize,
-			}
-			txClient, err := client.BenchmarkFileTransfer(context.Background(), req)
-			if err != nil {
-				b.Error(err)
-			}
-			for {
-				_, err := txClient.Recv()
-				if err != nil {
-					break
-				}
-			}
-			timeUsed := utils.Now().Sub(timeStart)
-			fmt.Printf("%s, time used: %d ns\n", tc.name, timeUsed)
+			fileTransfer(tc.name, lis.Addr().String(), testFile, tc.chunkSize, tc.bufferSize, fileSize)
 		})
 	}
 
