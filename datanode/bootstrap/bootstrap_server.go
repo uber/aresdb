@@ -41,6 +41,7 @@ var (
 	errInvalidSessionID = errors.New("invalid session id")
 	errInvalidRequset   = errors.New("invalid request, table/shard not match")
 	errSessionExisting  = errors.New("The request table/shard already have session running from the same node")
+	errUsageOccupied    = errors.New("Can not acquire table/shard usage, retry after a while")
 )
 
 type PeerDataNodeServerImpl struct {
@@ -56,6 +57,8 @@ type PeerDataNodeServerImpl struct {
 	sessions map[int64]*sessionInfo
 	// tracking of all sessions for each table/shard
 	tableShardSessions map[tableShardPair][]int64
+	// tracking of all outside users of table/shard
+	tableShardUsers map[tableShardPair]int
 }
 
 type tableShardPair struct {
@@ -79,35 +82,43 @@ func NewPeerDataNodeServer(metaStore common.MetaStore, diskStore diskstore.DiskS
 		diskStore:          diskStore,
 		sessions:           make(map[int64]*sessionInfo),
 		tableShardSessions: make(map[tableShardPair][]int64),
+		tableShardUsers:    make(map[tableShardPair]int),
 	}
 }
 
-// IsBootstrapRunning is to check if any bootstrap is running in the table/shard
-func (p *PeerDataNodeServerImpl) IsBootstrapRunning(tableName string, shardID uint32) bool {
+// AcquireUsage is to check if any bootstrap is running in the table/shard
+// if no bootstrap session is running on the table/shard, it will increase the usage, and return true
+// the caller need to release the usage by calling ReleaseUsage
+func (p *PeerDataNodeServerImpl) AcquireUsage(tableName string, shardID uint32) bool {
 	p.RLock()
 	defer p.RUnlock()
 
-	sessionIDs, ok := p.tableShardSessions[tableShardPair{table: tableName, shardID: shardID}]
-	if !ok {
+	// lazy clean the obsolete orphan sessions
+	now := utils.Now()
+	for sid, session := range p.sessions {
+		if now.After(session.lastLiveTime.Add(time.Second * time.Duration(session.ttl))) {
+			p.cleanSession(sid, false)
+		}
+	}
+
+	key := tableShardPair{table: tableName, shardID: shardID}
+	sessionIDs, ok := p.tableShardSessions[key]
+	if !ok || len(sessionIDs) > 0 {
+		p.tableShardUsers[key] = p.tableShardUsers[key] + 1
 		return true
 	}
-	return len(sessionIDs) > 0
+	return false
 }
 
-// go routine to recycle back sessions over ttl
-func (p *PeerDataNodeServerImpl) SessionRecycle() {
-	go func() {
-		c := time.Tick(recycleInterval)
-		for now := range c {
-			p.Lock()
-			for sid, session := range p.sessions {
-				if now.After(session.lastLiveTime.Add(time.Second * time.Duration(session.ttl))) {
-					p.cleanSession(sid, false)
-				}
-			}
-			p.Unlock()
-		}
-	}()
+// Release the usage count, must call this when call AcquireUsage success
+func (p *PeerDataNodeServerImpl) ReleaseUsage(tableName string, shardID uint32) {
+	p.RLock()
+	defer p.RUnlock()
+
+	key := tableShardPair{table: tableName, shardID: shardID}
+	if val, ok := p.tableShardUsers[key]; ok && val > 0 {
+		p.tableShardUsers[key] = p.tableShardUsers[key] - 1
+	}
 }
 
 // getNextSequence create new session id
@@ -147,6 +158,10 @@ func (p *PeerDataNodeServerImpl) StartSession(ctx context.Context, req *pb.Start
 		return nil, err
 	}
 
+	if !p.checkUsage(sessionInfo.table, sessionInfo.shardID) {
+		return nil, errUsageOccupied
+	}
+
 	p.addSession(sessionInfo)
 
 	return &pb.Session{
@@ -170,6 +185,18 @@ func (p *PeerDataNodeServerImpl) checkReqExist(s *sessionInfo) error {
 		}
 	}
 	return nil
+}
+
+// check if there are purge job running
+func (p *PeerDataNodeServerImpl) checkUsage(tableName string, shardID uint32) bool {
+	p.RLock()
+	defer p.RUnlock()
+
+	key := tableShardPair{table: tableName, shardID: shardID}
+	if count, ok := p.tableShardUsers[key]; ok && count > 0 {
+		return false
+	}
+	return true
 }
 
 // KeepAlive is like client/server ping process, to notify health about each other

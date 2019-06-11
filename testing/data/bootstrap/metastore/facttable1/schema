@@ -1,0 +1,59 @@
+{
+  "name": "facttable1",
+  "columns": [
+    {
+      "name": "end",
+      "type": "Uint32",
+      "config": {
+        "preloadingDays": 7
+      },
+      "hllConfig": {}
+    },
+    {
+      "name": "uuid1",
+      "type": "UUID",
+      "config": {},
+      "hllConfig": {}
+    },
+    {
+      "name": "uuid2",
+      "type": "UUID",
+      "config": {
+        "preloadingDays": 7
+      },
+      "hllConfig": {}
+    },
+    {
+      "name": "rid",
+      "type": "Int16",
+      "config": {
+        "preloadingDays": 7
+      },
+      "hllConfig": {}
+    },
+    {
+      "name": "vid",
+      "type": "Int32",
+      "config": {
+        "preloadingDays": 7
+      },
+      "hllConfig": {}
+    },
+    {
+      "name": "cid",
+      "type": "Int32",
+      "config": {},
+      "hllConfig": {}
+    }
+  ],
+  "primaryKeyColumns": [
+    0,
+    1
+  ],
+  "isFactTable": true,
+  "archivingSortColumns": [
+    3,
+    4
+  ],
+  "version": 2
+}

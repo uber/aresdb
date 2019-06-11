@@ -31,4 +31,3 @@ googletest-prefix/
 include/
 rdkafka-prefix/
 rmm-prefix/
-testing/data/
