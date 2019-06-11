@@ -27,7 +27,7 @@
 #include <cmath>
 #include <tuple>
 #include "query/time_series_aggregate.h"
-#include "query/utils.hpp"
+#include "utils.hpp"
 
 namespace ares {
 
@@ -844,21 +844,32 @@ class RecordIDJoinIterator
   }
 };
 
-// DimensionHashIterator reads DimensionColumnVector and produce hashed values
+// DimensionHashIterator reads DimensionVector and produce hashed values
+template<int hash_bytes = 64, typename IndexVectorType = uint32_t *>
 class DimensionHashIterator
     : public thrust::iterator_adaptor<
-        DimensionHashIterator, uint32_t *, uint64_t, thrust::use_default,
-        thrust::use_default, uint64_t, thrust::use_default> {
+        DimensionHashIterator<hash_bytes, IndexVectorType>,
+        IndexVectorType,
+        typename hash_output_type<hash_bytes>::type,
+        thrust::use_default,
+        thrust::use_default,
+        typename hash_output_type<hash_bytes>::type,
+        thrust::use_default> {
  public:
   friend class thrust::iterator_core_access;
-  typedef thrust::iterator_adaptor<DimensionHashIterator, uint32_t *, uint64_t,
-                                   thrust::use_default, thrust::use_default,
-                                   uint64_t, thrust::use_default>
-      super_t;
+  typedef thrust::iterator_adaptor<
+      DimensionHashIterator<hash_bytes, IndexVectorType>,
+      IndexVectorType,
+      typename hash_output_type<hash_bytes>::type,
+      thrust::use_default,
+      thrust::use_default,
+      typename hash_output_type<hash_bytes>::type,
+      thrust::use_default> super_t;
 
   __host__ __device__
-  DimensionHashIterator(uint8_t *dimValues, uint32_t *indexVector,
-                        uint8_t _numDimsPerDimWidth[NUM_DIM_WIDTH], int length)
+  DimensionHashIterator(uint8_t *dimValues,
+                        uint8_t _numDimsPerDimWidth[NUM_DIM_WIDTH], int length,
+                        IndexVectorType indexVector = IndexVectorType(0))
       : super_t(indexVector), dimValues(dimValues), length(length) {
     totalNumDims = 0;
     rowBytes = 0;
@@ -884,7 +895,6 @@ class DimensionHashIterator
   __host__ __device__ typename super_t::reference dereference() const {
     uint32_t index = *this->base_reference();
     uint8_t dimRow[MAX_DIMENSION_BYTES] = {0};
-    uint64_t hashedOutput[2];
     // read from
     uint8_t *inputValueStart = dimValues;
     uint8_t *inputNullStart = nullValues;
@@ -924,38 +934,23 @@ class DimensionHashIterator
       }
       numDims += numDimsPerDimWidth[i];
     }
-    murmur3sum128(dimRow, rowBytes, 0, hashedOutput);
-    // only use the first 64bit of the 128bit hash
-    return hashedOutput[0];
+    return murmur3sum<hash_bytes>(dimRow, rowBytes, 0);
   }
 };
 
 class DimValueProxy {
  public:
   __host__ __device__ DimValueProxy(uint8_t *ptr, int dimBytes)
-      : ptr(ptr), dimBytes(dimBytes) {}
+      : ptr(ptr), dimBytes(static_cast<uint16_t >(dimBytes)) {}
 
   __host__ __device__ DimValueProxy operator=(DimValueProxy t) {
-    switch (dimBytes) {
-      case 16:
-        *reinterpret_cast<UUIDT *>(ptr) = *reinterpret_cast<UUIDT *>(t.ptr);
-      case 8:
-        *reinterpret_cast<uint64_t *>(ptr) =
-            *reinterpret_cast<uint64_t *>(t.ptr);
-      case 4:
-        *reinterpret_cast<uint32_t *>(ptr) =
-            *reinterpret_cast<uint32_t *>(t.ptr);
-      case 2:
-        *reinterpret_cast<uint16_t *>(ptr) =
-            *reinterpret_cast<uint16_t *>(t.ptr);
-      case 1:*ptr = *t.ptr;
-    }
+    setDimValue(ptr, t.ptr, dimBytes);
     return *this;
   }
 
  private:
   uint8_t *ptr;
-  int dimBytes;
+  uint16_t dimBytes;
 };
 
 class DimensionColumnPermutateIterator
@@ -1003,8 +998,8 @@ class DimensionColumnPermutateIterator
     for (; i < NUM_DIM_WIDTH; i++) {
       dimBytes = 1 << (NUM_DIM_WIDTH - i - 1);
       if (dimIndex < numDims + numDimsPerDimWidth[i]) {
-        bytes +=
-            ((dimIndex - numDims) * dimInputLength + localIndex) * dimBytes;
+        bytes += ((dimIndex - numDims) * dimInputLength +
+            localIndex) * dimBytes;
         break;
       } else {
         bytes += numDimsPerDimWidth[i] * dimInputLength * dimBytes;

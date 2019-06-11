@@ -35,7 +35,8 @@ uint16_t DAYS_BEFORE_MONTH_HOST[13] = {
     31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 31,
 };
 
-__constant__ uint16_t DAYS_BEFORE_MONTH_DEVICE[13];
+__constant__ uint16_t
+DAYS_BEFORE_MONTH_DEVICE[13];
 
 // CheckCUDAError implementation. Notes for host we don't throw the exception
 // on purpose since we will always receive error messages like "insufficient
@@ -83,8 +84,8 @@ CGoCallResHandle BootstrapDevice() {
   return resHandle;
 }
 
-const char * AlgorithmError::what() const throw() {
-    return message_.c_str();
+const char *AlgorithmError::what() const throw() {
+  return message_.c_str();
 }
 
 AlgorithmError::AlgorithmError(const std::string &message) {
@@ -93,11 +94,13 @@ AlgorithmError::AlgorithmError(const std::string &message) {
 
 namespace ares {
 
-__host__ __device__ uint64_t rotl64(uint64_t x, int8_t r) {
+__host__ __device__
+uint64_t rotl64(uint64_t x, int8_t r) {
   return (x << r) | (x >> (64 - r));
 }
 
-__host__ __device__ uint64_t fmix64(uint64_t k) {
+__host__ __device__
+uint64_t fmix64(uint64_t k) {
   k ^= k >> 33;
   k *= 0xff51afd7ed558ccdLLU;
   k ^= k >> 33;
@@ -107,8 +110,9 @@ __host__ __device__ uint64_t fmix64(uint64_t k) {
 }
 
 // Murmur3Sum32 implements Murmur3Sum32 hash algorithm.
-__host__ __device__ uint32_t murmur3sum32(const uint8_t *key, int bytes,
-                                          uint32_t seed) {
+__host__ __device__
+uint32_t murmur3sum32(const uint8_t *key, int bytes,
+                      uint32_t seed) {
   uint32_t h1 = seed;
   int nBlocks = bytes / 4;
   const uint8_t *p = key;
@@ -150,8 +154,9 @@ __host__ __device__ uint32_t murmur3sum32(const uint8_t *key, int bytes,
   return h1;
 }
 
-__host__ __device__ void murmur3sum128(const uint8_t *key, int len,
-                                       uint32_t seed, uint64_t *out) {
+__host__ __device__
+void murmur3sum128(const uint8_t *key, int len,
+                   uint32_t seed, uint64_t *out) {
   const uint8_t *data = key;
   const int nblocks = len / 16;
   int i;
@@ -193,26 +198,26 @@ __host__ __device__ void murmur3sum128(const uint8_t *key, int len,
   uint64_t k2 = 0;
 
   switch (len & 15) {
-    case 15:k2 ^= (uint64_t) (tail[14]) << 48;
-    case 14:k2 ^= (uint64_t) (tail[13]) << 40;
-    case 13:k2 ^= (uint64_t) (tail[12]) << 32;
-    case 12:k2 ^= (uint64_t) (tail[11]) << 24;
-    case 11:k2 ^= (uint64_t) (tail[10]) << 16;
-    case 10:k2 ^= (uint64_t) (tail[9]) << 8;
-    case 9:k2 ^= (uint64_t) (tail[8]) << 0;
+    case 15:k2 ^= (uint64_t)(tail[14]) << 48;
+    case 14:k2 ^= (uint64_t)(tail[13]) << 40;
+    case 13:k2 ^= (uint64_t)(tail[12]) << 32;
+    case 12:k2 ^= (uint64_t)(tail[11]) << 24;
+    case 11:k2 ^= (uint64_t)(tail[10]) << 16;
+    case 10:k2 ^= (uint64_t)(tail[9]) << 8;
+    case 9:k2 ^= (uint64_t)(tail[8]) << 0;
       k2 *= c2;
       k2 = rotl64(k2, 33);
       k2 *= c1;
       h2 ^= k2;
 
-    case 8:k1 ^= (uint64_t) (tail[7]) << 56;
-    case 7:k1 ^= (uint64_t) (tail[6]) << 48;
-    case 6:k1 ^= (uint64_t) (tail[5]) << 40;
-    case 5:k1 ^= (uint64_t) (tail[4]) << 32;
-    case 4:k1 ^= (uint64_t) (tail[3]) << 24;
-    case 3:k1 ^= (uint64_t) (tail[2]) << 16;
-    case 2:k1 ^= (uint64_t) (tail[1]) << 8;
-    case 1:k1 ^= (uint64_t) (tail[0]) << 0;
+    case 8:k1 ^= (uint64_t)(tail[7]) << 56;
+    case 7:k1 ^= (uint64_t)(tail[6]) << 48;
+    case 6:k1 ^= (uint64_t)(tail[5]) << 40;
+    case 5:k1 ^= (uint64_t)(tail[4]) << 32;
+    case 4:k1 ^= (uint64_t)(tail[3]) << 24;
+    case 3:k1 ^= (uint64_t)(tail[2]) << 16;
+    case 2:k1 ^= (uint64_t)(tail[1]) << 8;
+    case 1:k1 ^= (uint64_t)(tail[0]) << 0;
       k1 *= c1;
       k1 = rotl64(k1, 31);
       k1 *= c2;

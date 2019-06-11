@@ -19,7 +19,7 @@ namespace ares {
 
 template<int NInput, typename FunctorType>
 int OutputVectorBinder<NInput, FunctorType>::transformScratchSpaceOutput(
-    ScratchSpaceVector output) {
+    ScratchSpaceVector output) const {
   switch (output.DataType) {
     #define BIND_SCRATCH__SPACE_OUTPUT(dataType) \
     return transform(ares::make_scratch_space_output_iterator( \
@@ -38,10 +38,10 @@ int OutputVectorBinder<NInput, FunctorType>::transformScratchSpaceOutput(
 // explicit instantiations.
 template int OutputVectorBinder<1,
                                 UnaryFunctorType>::transformScratchSpaceOutput(
-    ScratchSpaceVector output);
+    ScratchSpaceVector output) const;
 
 template int OutputVectorBinder<2,
                                 BinaryFunctorType>::transformScratchSpaceOutput(
-    ScratchSpaceVector output);
+    ScratchSpaceVector output) const;
 
 }  // namespace ares

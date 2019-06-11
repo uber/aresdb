@@ -34,9 +34,19 @@ endif ()
 ################################
 # Compiler and linker flags
 ################################
-set(CMAKE_CUDA_STANDARD 11)
+set(CXX_STANDARD 11)
+message("Detecting whether compiler support C++14")
+foreach (FEATURE ${CMAKE_CXX_COMPILE_FEATURES})
+    if (FEATURE STREQUAL "cxx_std_14")
+        message("C++14 is supported")
+        set(CXX_STANDARD 14)
+    endif ()
+endforeach ()
+
+set(CMAKE_CUDA_STANDARD ${CXX_STANDARD})
+set(CMAKE_CXX_STANDARD ${CXX_STANDARD})
+
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
@@ -45,11 +55,17 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 set(CMAKE_C_FLAGS -fPIC)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_C .so)
 set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX .so)
-set(CMAKE_CUDA_FLAGS "-lineinfo -I. $ENV{NVCCFLAGS} ${CMAKE_CUDA_FLAGS}")
+set(CMAKE_CUDA_FLAGS " -lineinfo -I. $ENV{NVCCFLAGS} ${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr")
 set(GENCODE_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,code=compute_60")
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
 link_directories(${CMAKE_BINARY_DIR}/lib)
+
+# HASH_REDUCTION right now is only support in device mode and when CXX standard is C++14.
+if ((${CXX_STANDARD} EQUAL 14) AND (QUERY_MODE STREQUAL "DEVICE"))
+    list(APPEND MARCROS "SUPPORT_HASH_REDUCTION=1")
+    set(SUPPORT_HASH_REDUCTION 1)
+endif()
 
 ################################
 # GTest
@@ -89,15 +105,21 @@ endif ()
 # CUDF
 # Need cpp/src/hash/concurrent_unordered_map.cuh only
 ######################################################
-set(CUDF_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf/cpp/src)
-set(CUDF_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf/cpp/include)
-if (QUERY_MODE STREQUAL "DEVICE")
-    include_directories(${CUDF_INCLUDE_DIR} ${CUDF_SRC_DIR})
+if (SUPPORT_HASH_REDUCTION)
+    set(CUDF_PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR}/thirdparty/cudf)
+    include_directories(
+            ${CUDF_PROJECT_DIR}/cpp/src
+            ${CUDF_PROJECT_DIR}/cpp/include
+            ${CUDF_PROJECT_DIR}/thirdparty/cub
+            # cudf need to find rmm/thrust_rmm_allocator.h even it's not actually linking
+            # TODO(lucafuji) remove this include directory after RMM is default memory management system
+            ${RMM_SRC_DIR}/include
+            ${RMM_SRC_DIR}/thirdparty/cnmem/include
+    )
 endif ()
 ################################
 # Mem
 ################################
-
 if (QUERY_MODE STREQUAL "DEVICE")
     list(APPEND MARCROS "RUN_ON_DEVICE=1")
     if (USE_RMM)
@@ -139,6 +161,7 @@ add_library(algorithm SHARED
         query/functor.cu
         query/geo_intersects.cu
         query/hash_lookup.cu
+        query/hash_reduction.cu
         query/hll.cu
         query/iterator.hpp
         query/memory.cu
@@ -146,7 +169,7 @@ add_library(algorithm SHARED
         query/measure_transform.cu
         query/scratch_space_transform.cu
         query/sort_reduce.cu
-        query/thrust_rmm_allocator.hpp
+        query/time_series_aggregate.h
         query/transform.cu
         query/transform.hpp
         query/utils.cu
@@ -161,6 +184,7 @@ include(rdkafka.cmake)
 # Unit Tests
 ################################
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
+message(QUERY_UNITTEST_FILES is ${QUERY_UNITTEST_FILES})
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 add_dependencies(all_unittest googletest)
 # Link test executable against gtest & gtest_main
@@ -269,7 +293,8 @@ set(ANTLR_BIN "${CMAKE_SOURCE_DIR}/.bin/antlr-4.7.1-complete.jar")
 set(ANTLR_URL "http://www.antlr.org/download/antlr-4.7.1-complete.jar")
 add_custom_target(antlr DEPENDS ANTLR_BIN
         COMMAND java -jar ${ANTLR_BIN} -Dlanguage=Go -package antlrgen -Xexact-output-dir -o query/sql/antlrgen -visitor -no-listener query/sql/SqlBase.g4
-)
+        )
+
 add_custom_command(
         OUTPUT ANTLR_BIN
         COMMAND mkdir -p .bin && curl -L -o ${ANTLR_BIN} ${ANTLR_URL}

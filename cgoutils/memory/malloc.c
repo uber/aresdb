@@ -22,11 +22,6 @@ DeviceMemoryFlags GetFlags(){
   return 0x0;
 }
 
-CGoCallResHandle Init(){
-  CGoCallResHandle resHandle = {NULL, NULL};
-  return resHandle;
-}
-
 CGoCallResHandle HostAlloc(size_t bytes) {
   CGoCallResHandle resHandle = {NULL, NULL};
   resHandle.res = malloc(bytes);
@@ -45,6 +40,7 @@ CGoCallResHandle CreateCudaStream(int device) {
   CGoCallResHandle resHandle = {NULL, NULL};
   return resHandle;
 }
+
 CGoCallResHandle WaitForCudaStream(void *s, int device) {
   CGoCallResHandle resHandle = {NULL, NULL};
   return resHandle;
@@ -144,5 +140,17 @@ CGoCallResHandle asyncCopyHostToDevice(void *dst, const void *src,
                                        size_t count, void *stream){
   CGoCallResHandle resHandle = {NULL, NULL};
   memcpy(dst, src, count);
+  return resHandle;
+}
+
+CGoCallResHandle asyncCopyDeviceToHost(void *dst, const void *src,
+                                       size_t count, void *stream){
+  CGoCallResHandle resHandle = {NULL, NULL};
+  memcpy(dst, src, count);
+  return resHandle;
+}
+
+CGoCallResHandle waitForCudaStream(void *stream) {
+  CGoCallResHandle resHandle = {NULL, NULL};
   return resHandle;
 }

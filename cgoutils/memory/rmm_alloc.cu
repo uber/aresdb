@@ -49,30 +49,42 @@ char *checkRMMError(rmmError_t rmmError, const char* message) {
   return NULL;
 }
 
+// init_helper is purely for running some initializing code before main
+// is running. If this logic is required in multiple place, we may consider
+// wrap it with a macro.
+struct init_helper {
+  static int init_flag;
+
+  // init rmm manager with rmmOptions.
+  static int init() {
+    CGoCallResHandle resHandle = GetDeviceCount();
+    if (resHandle.pStrErr != nullptr) {
+      throw std::runtime_error(const_cast<char *>(resHandle.pStrErr));
+    }
+
+    size_t deviceCount = reinterpret_cast<size_t>(resHandle.res);
+    for (size_t device = 0; device < deviceCount; device++) {
+      cudaSetDevice(device);
+      rmmOptions_t options = {
+          CudaDefaultAllocation,  // Use PoolAllocation when RMM has improved
+          // their sub allocator.
+          0,  // Default to half ot total memory
+          false  // Disable logging.
+      };
+      resHandle.pStrErr =
+          checkRMMError(rmmInitialize(&options), "rmmInitialize");
+      if (resHandle.pStrErr != nullptr) {
+        throw std::runtime_error(const_cast<char *>(resHandle.pStrErr));
+      }
+    }
+    return 0;
+  }
+};
+
+int init_helper::init_flag = init();
+
 DeviceMemoryFlags GetFlags() {
   return DEVICE_MEMORY_IMPLEMENTATION_FLAG | POOLED_MEMORY_FLAG;
-}
-
-CGoCallResHandle Init() {
-  CGoCallResHandle resHandle = GetDeviceCount();
-  if (resHandle.pStrErr != nullptr) {
-    return resHandle;
-  }
-
-  size_t deviceCount = reinterpret_cast<size_t>(resHandle.res);
-  for (size_t device = 0; device < deviceCount; device++) {
-    cudaSetDevice(device);
-    rmmOptions_t options = {
-        PoolAllocation,
-        0,  // Default to half ot total memory
-        false  // Disable logging.
-    };
-    resHandle.pStrErr = checkRMMError(rmmInitialize(&options), "rmmInitialize");
-    if (resHandle.pStrErr != nullptr) {
-      return resHandle;
-    }
-  }
-  return resHandle;
 }
 
 CGoCallResHandle DeviceAllocate(size_t bytes, int device) {
@@ -254,5 +266,21 @@ CGoCallResHandle asyncCopyHostToDevice(void* dst, const void* src,
   cudaMemcpyAsync(dst, src, count,
                   cudaMemcpyHostToDevice, (cudaStream_t) stream);
   resHandle.pStrErr = checkCUDAError("asyncCopyHostToDevice");
+  return resHandle;
+}
+
+CGoCallResHandle asyncCopyDeviceToHost(void* dst, const void* src,
+    size_t count, void* stream) {
+  CGoCallResHandle resHandle = {NULL, NULL};
+  cudaMemcpyAsync(dst, src, count,
+                  cudaMemcpyDeviceToHost, (cudaStream_t) stream);
+  resHandle.pStrErr = checkCUDAError("asyncCopyDeviceToHost");
+  return resHandle;
+}
+
+CGoCallResHandle waitForCudaStream(void *stream) {
+  CGoCallResHandle resHandle = {NULL, NULL};
+  cudaStreamSynchronize((cudaStream_t) stream);
+  resHandle.pStrErr = checkCUDAError("waitForCudaStream");
   return resHandle;
 }

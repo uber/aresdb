@@ -18,8 +18,8 @@
 #include "query/algorithm.hpp"
 #include "query/memory.hpp"
 
-CGoCallResHandle HyperLogLog(DimensionColumnVector prevDimOut,
-                             DimensionColumnVector curDimOut,
+CGoCallResHandle HyperLogLog(DimensionVector prevDimOut,
+                             DimensionVector curDimOut,
                              uint32_t *prevValuesOut,
                              uint32_t *curValuesOut,
                              int prevResultSize,
@@ -73,8 +73,8 @@ void sortCurrentBatch(uint8_t *dimValues, uint64_t *hashValues,
                       int vectorCapacity, uint32_t *curValuesOut,
                       int prevResultSize, int curBatchSize,
                       cudaStream_t cudaStream) {
-  DimensionHashIterator hashIter(dimValues, indexVector, numDimsPerDimWidth,
-                                 vectorCapacity);
+  DimensionHashIterator<> hashIter(
+      dimValues, numDimsPerDimWidth, vectorCapacity, indexVector);
   auto zippedValueIter = thrust::make_zip_iterator(
       thrust::make_tuple(indexVector, curValuesOut));
   thrust::transform(
@@ -166,8 +166,8 @@ void createAndCopyHLLVector(uint64_t *hashVector,
 }
 
 // copyDim is the same as regular dimension copy in regular reduce operations
-void copyDim(DimensionColumnVector inputKeys,
-             DimensionColumnVector outputKeys, int outputLength,
+void copyDim(DimensionVector inputKeys,
+             DimensionVector outputKeys, int outputLength,
              cudaStream_t cudaStream) {
   DimensionColumnPermutateIterator iterIn(
       inputKeys.DimValues, outputKeys.IndexVector, inputKeys.VectorCapacity,
@@ -259,8 +259,8 @@ int makeHLLVector(uint64_t *hashValues, uint32_t *indexVector,
 // 3. merge current batch result with result from previous batches
 // 4. (last batch only) create dense hll vector
 // 5. copy dimension values
-int hyperloglog(DimensionColumnVector prevDimOut,
-                DimensionColumnVector curDimOut, uint32_t *prevValuesOut,
+int hyperloglog(DimensionVector prevDimOut,
+                DimensionVector curDimOut, uint32_t *prevValuesOut,
                 uint32_t *curValuesOut, int prevResultSize, int curBatchSize,
                 bool isLastBatch, uint8_t **hllVectorPtr,
                 size_t *hllVectorSizePtr, uint16_t **hllRegIDCountPerDimPtr,

@@ -26,7 +26,7 @@
 #include "query/iterator.hpp"
 #include "query/time_series_aggregate.h"
 #include "query/transform.hpp"
-#include "query/unittest_utils.hpp"
+#include "unittest_utils.hpp"
 
 namespace ares {
 
@@ -997,7 +997,7 @@ TEST(SortDimColumnVectorTest, CheckSort) {
 
   const int vectorCapacity = 3;
   const int length = 3;
-  DimensionColumnVector keyColVector = {
+  DimensionVector keyColVector = {
       keys,
       hashValues,
       index,
@@ -1048,14 +1048,14 @@ TEST(ReduceDimColumnVectorTest, CheckReduce) {
   };
   int length = 6;
   int vectorCapacity = 6;
-  DimensionColumnVector inputKeys = {
+  DimensionVector inputKeys = {
       inputDimValues,
       inputHashValues,
       inputIndexVector,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
 
-  DimensionColumnVector outputKeys = {
+  DimensionVector outputKeys = {
       outputDimValues,
       outputHashValues,
       outputIndexVector,
@@ -1122,14 +1122,14 @@ TEST(SortAndReduceTest, CheckReduceByAvg) {
 
   int length = 6;
   int vectorCapacity = 6;
-  DimensionColumnVector inputKeys = {
+  DimensionVector inputKeys = {
       inputDimValues,
       inputHashValues,
       inputIndexVector,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)0, (uint8_t)0}};
 
-  DimensionColumnVector outputKeys = {
+  DimensionVector outputKeys = {
       outputDimValues,
       outputHashValues,
       outputIndexVector,
@@ -1179,14 +1179,14 @@ TEST(SortAndReduceTest, CheckHash) {
 
   const int length = 8;
   const int vectorCapacity = 8;
-  DimensionColumnVector inputKeyColVector = {
+  DimensionVector inputKeyColVector = {
       dimValues,
       hashValues,
       indexValues,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)1}};
 
-  DimensionColumnVector outputKeyColVector = {
+  DimensionVector outputKeyColVector = {
       dimValuesOut,
       hashValuesOut,
       indexValuesOut,
@@ -1247,14 +1247,14 @@ TEST(HyperLogLogTest, CheckSparseMode) {
   uint64_t *curHash = allocate(curHashH, 8);
   uint32_t *curIndex = allocate(curIndexH, 8);
 
-  DimensionColumnVector prevDimOut = {
+  DimensionVector prevDimOut = {
       prevDim,
       prevHash,
       prevIndex,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)1}};
 
-  DimensionColumnVector curDimOut = {
+  DimensionVector curDimOut = {
       curDim,
       curHash,
       curIndex,
@@ -1341,14 +1341,14 @@ TEST(HyperLogLogTest, CheckDenseMode) {
   uint64_t *curHash = allocate(curHashH, 5000);
   uint32_t *curIndex = allocate(curIndexH, 5000);
 
-  DimensionColumnVector prevDimOut = {
+  DimensionVector prevDimOut = {
       prevDim,
       prevHash,
       prevIndex,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)0, (uint8_t)1}};
 
-  DimensionColumnVector curDimOut = {
+  DimensionVector curDimOut = {
       curDim,
       curHash,
       curIndex,
@@ -1778,7 +1778,7 @@ TEST(ExpandTest, testOverFill) {
 
     int length = 6;
     int vectorCapacity = 6;
-    DimensionColumnVector inputKeys = {
+    DimensionVector inputKeys = {
         inputDimValues,
         NULL,
         NULL,
@@ -1786,7 +1786,7 @@ TEST(ExpandTest, testOverFill) {
         {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
     int outCapacity =  10;
 
-    DimensionColumnVector outputKeys = {
+    DimensionVector outputKeys = {
         outputDimValues,
         NULL,
         NULL,
@@ -1848,14 +1848,14 @@ TEST(ExpandTest, testAppend) {
     int vectorCapacity = 6;
     int outCapacity =  10;
 
-    DimensionColumnVector inputKeys = {
+    DimensionVector inputKeys = {
         inputDimValues,
         NULL,
         NULL,
         vectorCapacity,
         {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
 
-    DimensionColumnVector outputKeys = {
+    DimensionVector outputKeys = {
         outputDimValues,
         NULL,
         NULL,
@@ -1915,7 +1915,7 @@ TEST(ExpandTest, testFillPartial) {
 
     int length = 3;
     int vectorCapacity = 6;
-    DimensionColumnVector inputKeys = {
+    DimensionVector inputKeys = {
         inputDimValues,
         NULL,
         NULL,
@@ -1923,7 +1923,7 @@ TEST(ExpandTest, testFillPartial) {
         {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
     int outCapacity =  10;
 
-    DimensionColumnVector outputKeys = {
+    DimensionVector outputKeys = {
         outputDimValues,
         NULL,
         NULL,
@@ -1943,5 +1943,68 @@ TEST(ExpandTest, testFillPartial) {
     EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100,
                         expectedDimValues));
 }
+
+// For now this test should only run in device mode and when c++14 is supported.
+// TODO(lucafuji): add host version of concurrent hash map to support host mode
+// mock and test.
+#ifdef SUPPORT_HASH_REDUCTION
+// cppcheck-suppress *
+TEST(HashReductionTest, CheckReduce) {
+  // test with 3 dimensions (4-byte, 2-byte, 1-byte)
+  // each dimension vector has 6 elements with values assigned as [1,2,3,2,3,1]
+  uint8_t inputDimValuesH[60] = {1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0,
+                                 0, 3, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0, 3, 0,
+                                 2, 0, 3, 0, 1, 0, 1, 2, 3, 2, 3, 1, 1, 1, 1,
+                                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+  uint32_t inputValuesH[6] = {5, 1, 3, 2, 4, 6};
+
+  uint8_t outputDimValuesH[60] = {0};
+  uint32_t outputValuesH[6] = {0};
+
+  uint8_t *inputDimValues = allocate(inputDimValuesH, 60);
+  uint32_t *inputValues = allocate(inputValuesH, 6);
+
+  uint8_t *outputDimValues = allocate(outputDimValuesH, 60);
+  uint32_t *outputValues = allocate(outputValuesH, 6);
+
+  uint32_t expectedValues[3] = {3, 11, 7};
+  // output dimension values should be [2,1,3] for each dim vector
+  uint8_t expectedDimValues[60] = {
+      2, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 2, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 2, 1, 3, 0,
+      0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0,
+  };
+  int length = 6;
+  int vectorCapacity = 6;
+  DimensionVector inputKeys = {
+      inputDimValues,
+      nullptr,
+      nullptr,
+      vectorCapacity,
+      {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
+
+  DimensionVector outputKeys = {
+      outputDimValues,
+      nullptr,
+      nullptr,
+      vectorCapacity,
+      {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
+  CGoCallResHandle
+      resHandle = HashReduce(inputKeys,
+                         reinterpret_cast<uint8_t *>(inputValues),
+                         outputKeys,
+                         reinterpret_cast<uint8_t *>(outputValues),
+                         4,
+                         length,
+                         AGGR_SUM_UNSIGNED,
+                         0,
+                         0);
+  EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 3);
+  EXPECT_EQ(resHandle.pStrErr, nullptr);
+
+  EXPECT_TRUE(equal(outputValues, outputValues + 3, expectedValues));
+  EXPECT_TRUE(equal(outputDimValues, outputDimValues + 60, expectedDimValues));
+}
+#endif
 
 }  // namespace ares

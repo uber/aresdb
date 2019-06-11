@@ -35,13 +35,6 @@ func IsPooledMemory() bool {
 	return (GetFlags() & C.POOLED_MEMORY_FLAG) != 0
 }
 
-// Init will initialize the memory management.
-func Init() {
-	doCGoCall(func() C.CGoCallResHandle {
-		return C.Init()
-	})
-}
-
 // HostAlloc allocates memory in C.
 func HostAlloc(bytes int) unsafe.Pointer {
 	return unsafe.Pointer(doCGoCall(func() C.CGoCallResHandle {

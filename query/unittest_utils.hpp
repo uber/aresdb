@@ -24,8 +24,8 @@
 #include <cmath>
 #include <functional>
 #include <tuple>
-#include "query/memory.hpp"
-#include "query/utils.hpp"
+#include "memory.hpp"
+#include "utils.hpp"
 
 typedef typename thrust::host_vector<unsigned char>::iterator charIter;
 typedef typename thrust::host_vector<uint32_t>::iterator UInt32Iter;
@@ -188,6 +188,15 @@ inline bool equal_print(V *resBegin, V *resEnd, V *expectedBegin, CmpFunc f) {
 #ifdef RUN_ON_DEVICE
   thrust::host_vector<V> expectedH(expectedBegin, expectedBegin + size);
   thrust::device_vector<V> expectedV = expectedH;
+  thrust::device_vector<V> actualD(resBegin, resEnd);
+  thrust::device_vector<V> actualH = actualD;
+  std::cout << "result:" << std::endl;
+  std::ostream_iterator<int > out_it(std::cout, ", ");
+  std::copy(actualH.begin(), actualH.end(), out_it);
+  std::cout << std::endl;
+  std::cout << "expected:" << std::endl;
+  std::copy(expectedH.begin(), expectedH.end(), out_it);
+  std::cout << std::endl;
   return thrust::equal(thrust::device, resBegin, resEnd, expectedV.begin(), f);
 #else
   std::cout << "result:" << std::endl;

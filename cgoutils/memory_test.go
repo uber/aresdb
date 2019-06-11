@@ -88,10 +88,6 @@ var _ = ginkgo.Describe("memory utils", func() {
 		Ω(func() { IsPooledMemory() }).ShouldNot(Panic())
 	})
 
-	ginkgo.It("Init should work", func() {
-		Ω(func() { Init() }).ShouldNot(Panic())
-	})
-
 	ginkgo.It("CudaMemCopies should work", func() {
 		srcHost := [10]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 		dstHost := [10]byte{}

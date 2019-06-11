@@ -19,7 +19,7 @@ namespace ares {
 
 template<int NInput, typename FunctorType>
 int OutputVectorBinder<NInput, FunctorType>::transformMeasureOutput(
-    MeasureOutputVector output) {
+    MeasureOutputVector output) const {
   switch (output.DataType) {
     #define BIND_MEASURE_OUTPUT(dataType) \
     return transform( \
@@ -42,10 +42,10 @@ int OutputVectorBinder<NInput, FunctorType>::transformMeasureOutput(
 // explicit instantiations.
 template int OutputVectorBinder<1,
                                 UnaryFunctorType>::transformMeasureOutput(
-    MeasureOutputVector output);
+    MeasureOutputVector output) const;
 
 template int OutputVectorBinder<2,
                                 BinaryFunctorType>::transformMeasureOutput(
-    MeasureOutputVector output);
+    MeasureOutputVector output) const;
 
 }  // namespace ares
