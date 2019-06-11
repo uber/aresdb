@@ -562,7 +562,7 @@ TEST(DimensionHashIterator, CheckIterator) {
   (dimValues + 12)[5] = 1;
   (dimValues + 12)[6] = 1;
   (dimValues + 12)[7] = 1;
-  DimensionHashIterator iter(dimValues, numDimsPerDimWidth, 2, indexVector);
+  DimensionHashIterator<> iter(dimValues, numDimsPerDimWidth, 2, indexVector);
   EXPECT_EQ(iter[0], iter[1]);
 }
 
