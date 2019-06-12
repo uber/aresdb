@@ -114,7 +114,7 @@ func (mn *mergeNodeImpl) Execute(ctx context.Context) (result queryCom.AQLQueryR
 	wg.Wait()
 
 	if nerrs > 0 {
-		err = utils.StackError(nil, fmt.Sprintf("%d errors happend running merge node", nerrs))
+		err = utils.StackError(nil, fmt.Sprintf("%d errors happened executing merge node", nerrs))
 		return
 	}
 
@@ -195,6 +195,7 @@ func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, client d
 	// compiler already checked that only 1 measure exists, which is a expr.Call
 	measure := qc.Query.Measures[0].ExprParsed.(*expr.Call)
 	agg := common.CallNameToAggType[measure.Name]
+	// TODO revisit how to implement AVG. maybe add rollingAvg to datanode so only 1 call per shard needed
 	if agg == common.Avg {
 		root = NewMergeNode(common.Avg)
 		sumQuery, countQuery := splitAvgQuery(*qc.Query)

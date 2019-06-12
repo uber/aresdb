@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		}, nil)
 		mockCountNode.On("AggType").Return(common.Count)
 
-		node := NewMergeNode(common.Avg)
+		node := NewMergeNode(common.Avg, )
 		node.Add(&mockSumNode, &mockCountNode)
 
 		res, err := node.Execute(context.TODO())
@@ -105,7 +105,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		sumNode := NewMergeNode(common.Sum)
 		sumNode.Add(&mockBlockingNode)
 		_, err = sumNode.Execute(context.TODO())
-		Ω(err.Error()).Should(ContainSubstring("errors happend Executening merge node"))
+		Ω(err.Error()).Should(ContainSubstring("errors happened executing merge node"))
 	})
 
 	ginkgo.It("NewAggQueryPlan should work", func() {
