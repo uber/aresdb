@@ -88,6 +88,9 @@ func (c *ControllerHTTPClient) buildRequest(method, path string, body io.Reader)
 
 func (c *ControllerHTTPClient) getResponse(request *http.Request) (respBytes []byte, err error) {
 	resp, err := c.c.Do(request)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 	if err != nil {
 		return
 	}
