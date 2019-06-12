@@ -39,7 +39,7 @@ type dataNode struct {
 	sync.RWMutex
 
 	host                 topology.Host
-	peers                client.PeerSource
+	peerSource           client.PeerSource
 	namespace            cluster.Namespace
 	metadata             metaCom.MetaStore
 	memdata              memstore.MemStore
@@ -211,7 +211,7 @@ func (d *dataNode) Bootstrap(topo topology.Topology, options bootstrap.Options) 
 		tableShard := tableShard
 		wg.Add(1)
 		workers.Go(func() {
-			err := tableShard.Bootstrap(d.peers, d.host, topo, topoStateSnapshot, options)
+			err := tableShard.Bootstrap(d.peerSource, d.host, topo, topoStateSnapshot, options)
 
 			mutex.Lock()
 			multiErr = multiErr.Add(err)
