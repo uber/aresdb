@@ -62,6 +62,9 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host
 	req = req.WithContext(ctx)
 	var res *http.Response
 	res, err = dc.client.Do(req)
+	if res != nil {
+		defer res.Body.Close()
+	}
 	if err != nil {
 		return
 	}
