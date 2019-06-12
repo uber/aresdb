@@ -184,7 +184,7 @@ func (c *ControllerHTTPClient) GetAssignment(jobNamespace, instance string) (ass
 		return
 	}
 
-	request.Header.Add("content-type", "application/json")
+	request.Header.Add(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeApplicationJson)
 	assignment = &models.IngestionAssignment{}
 	err = c.getJSONResponse(request, assignment)
 	return assignment, err

@@ -15,6 +15,7 @@
 package query
 
 import (
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"strconv"
@@ -336,7 +337,7 @@ func parseTimeFilterExpression(expression string, now time.Time) (start, end tim
 	return
 }
 
-func parseTimeFilter(filter TimeFilter, loc *time.Location, now time.Time) (from, to *alignedTime, err error) {
+func parseTimeFilter(filter queryCom.TimeFilter, loc *time.Location, now time.Time) (from, to *alignedTime, err error) {
 	if loc == nil {
 		loc = time.UTC
 	}

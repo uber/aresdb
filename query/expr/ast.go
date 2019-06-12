@@ -53,6 +53,26 @@ var typeNames = map[Type]string{
 	GeoShape:    "GeoShape",
 }
 
+// constants for call names.
+const (
+	ConvertTzCallName           = "convert_tz"
+	CountCallName               = "count"
+	DayOfWeekCallName           = "dayofweek"
+	FromUnixTimeCallName        = "from_unixtime"
+	GeographyIntersectsCallName = "geography_intersects"
+	HexCallName                 = "hex"
+	// hll aggregation function applies to hll columns
+	HllCallName = "hll"
+	// countdistincthll aggregation function applies to all columns, hll value is computed on the fly
+	CountDistinctHllCallName = "countdistincthll"
+	HourCallName             = "hour"
+	ListCallName             = ""
+	MaxCallName              = "max"
+	MinCallName              = "min"
+	SumCallName              = "sum"
+	AvgCallName              = "avg"
+)
+
 func (t Type) String() string {
 	return typeNames[t]
 }

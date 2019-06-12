@@ -443,7 +443,6 @@ var _ = ginkgo.Describe("resultMerge", func() {
 			},
 		})
 	})
-
 })
 
 type resultMergeTestCase struct {

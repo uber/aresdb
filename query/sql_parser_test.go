@@ -18,13 +18,14 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/common"
+	queryCom "github.com/uber/aresdb/query/common"
 )
 
 var _ = ginkgo.Describe("SQL Parser", func() {
 
 	logger := &common.NoopLogger{}
 
-	runTest := func(sqls []string, aql AQLQuery, log common.Logger) {
+	runTest := func(sqls []string, aql queryCom.AQLQuery, log common.Logger) {
 		for _, sql := range sqls {
 			actual, err := Parse(sql, logger)
 			expected := aql
@@ -41,11 +42,30 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			WHERE status='completed' AND NOT status = 'cancelled' OR marketplace='agora'
 			GROUP BY status`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table:      "trips",
-			Measures:   []Measure{{Alias: "completed_trips", Expr: "count(*)"}, {Expr: "sum(fare)"}},
+			Measures:   []queryCom.Measure{{Alias: "completed_trips", Expr: "count(*)"}, {Expr: "sum(fare)"}},
 			Filters:    []string{"status='completed' AND NOT status = 'cancelled' OR marketplace='agora'"},
-			Dimensions: []Dimension{{Expr: "status"}},
+			Dimensions: []queryCom.Dimension{{Expr: "status"}},
+		}
+		runTest(sqls, res, logger)
+	})
+
+	ginkgo.It("geography_intersects should work", func() {
+		sqls := []string{
+			`SELECT count(*) AS completed_trips
+			FROM trips LEFT JOIN geo_table g ON geography_intersects(g.shape, request_location)
+			WHERE status='completed' AND NOT status = 'cancelled' OR marketplace='agora' AND g.geofence_uuid IN (0x9EAE9256C1F547449E9BD3A2B64826B9)
+			GROUP BY status, hex(g.geofence_uuid)`,
+		}
+		res := queryCom.AQLQuery{
+			Table:      "trips",
+			Measures:   []queryCom.Measure{{Alias: "completed_trips", Expr: "count(*)"}},
+			Filters:    []string{"status='completed' AND NOT status = 'cancelled' OR marketplace='agora' AND g.geofence_uuid IN (0x9EAE9256C1F547449E9BD3A2B64826B9)"},
+			Dimensions: []queryCom.Dimension{{Expr: "status"}, {Expr: "hex(g.geofence_uuid)"}},
+			Joins: []queryCom.Join{
+				{Table: "geo_table", Alias: "g", Conditions: []string{"geography_intersects(g.shape, request_location)"}},
+			},
 		}
 		runTest(sqls, res, logger)
 	})
@@ -56,24 +76,24 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			FROM trips 
 			GROUP BY trip_status;`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table:      "trips",
-			Measures:   []Measure{{Alias: "trip_status", Expr: "status"}, {Expr: "count(*)"}},
-			Dimensions: []Dimension{{Alias: "trip_status", Expr: "status"}},
+			Measures:   []queryCom.Measure{{Alias: "trip_status", Expr: "status"}, {Expr: "count(*)"}},
+			Dimensions: []queryCom.Dimension{{Alias: "trip_status", Expr: "status"}},
 		}
 		runTest(sqls, res, logger)
 	})
 
-	ginkgo.It("parse non agg AQLQuery should work", func() {
+	ginkgo.It("parse non agg queryCom.AQLQuery should work", func() {
 		sqls := []string{
 			`SELECT field1, *
 			FROM trips LIMIT 10;`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table:      "trips",
-			Measures:   []Measure{{Expr: "1"}},
-			Dimensions: []Dimension{{Expr: "field1"}, {Expr: "*"}},
-			Limit: 10,
+			Measures:   []queryCom.Measure{{Expr: "1"}},
+			Dimensions: []queryCom.Dimension{{Expr: "field1"}, {Expr: "*"}},
+			Limit:      10,
 		}
 		runTest(sqls, res, logger)
 	})
@@ -84,11 +104,11 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			FROM trips
 			ORDER BY field1;`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table:      "trips",
-			Measures:   []Measure{{Expr: "1"}},
-			Dimensions: []Dimension{{Expr: "field1"}},
-			Sorts: []SortField{
+			Measures:   []queryCom.Measure{{Expr: "1"}},
+			Dimensions: []queryCom.Dimension{{Expr: "field1"}},
+			Sorts: []queryCom.SortField{
 				{Name: "field1", Order: "ASC"},
 			},
 		}
@@ -134,14 +154,14 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			GROUP BY aql_time_bucket_quarter_of_year("request_at", "minute", "America/New_York");`,
 		}
 
-		td := Dimension{Expr: "request_at", TimeUnit: "minute"}
+		td := queryCom.Dimension{Expr: "request_at", TimeUnit: "minute"}
 		tbs := []string{"minute", "hour", "day", "week", "month", "quarter", "year",
 			"time of day", "minutes of day", "hour of day", "hour of week",
 			"day of week", "day of month", "day of year", "month of year", "quarter of year"}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table:      "trips",
-			Measures:   []Measure{{Expr: "count(*)"}},
-			Dimensions: make([]Dimension, 1),
+			Measures:   []queryCom.Measure{{Expr: "count(*)"}},
+			Dimensions: make([]queryCom.Dimension, 1),
 			Timezone:   "America/New_York",
 		}
 		for i, sql := range sqls {
@@ -162,11 +182,11 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			WHERE aql_time_filter(request_at, "96 quarter-hours ago", "1 quarter-hours ago", America/New_York)
 			GROUP BY aql_time_bucket_minute(request_at, "minute", America/New_York);`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table:      "trips",
-			Measures:   []Measure{{Expr: "count(*)"}},
-			TimeFilter: TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "minute", TimeUnit: "minute"}},
+			Measures:   []queryCom.Measure{{Expr: "count(*)"}},
+			TimeFilter: queryCom.TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "minute", TimeUnit: "minute"}},
 			Timezone:   "America/New_York",
 		}
 		runTest(sqls, res, logger)
@@ -179,11 +199,11 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			WHERE aql_time_filter(request_at, "96 quarter-hours ago", "1 quarter-hours ago", America/New_York) AND marketplace="agora"
 			GROUP BY aql_time_bucket_minutes(request_at, "minute", America/New_York);`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table:      "trips",
-			Measures:   []Measure{{Expr: "count(*)"}},
-			TimeFilter: TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "minutes", TimeUnit: "minute"}},
+			Measures:   []queryCom.Measure{{Expr: "count(*)"}},
+			TimeFilter: queryCom.TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "minutes", TimeUnit: "minute"}},
 			Filters:    []string{`marketplace="agora"`},
 			Timezone:   "America/New_York",
 		}
@@ -197,11 +217,11 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			WHERE aql_time_filter(request_at, "96 quarter-hours ago", "1 quarter-hours ago", America/New_York) AND marketplace="agora"
 			GROUP BY aql_time_bucket_hour(request_at, "minute", America/New_York), aql_numeric_bucket_logbase(pop, 2);`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table:      "trips",
-			Measures:   []Measure{{Alias: "pop", Expr: "population"}, {Expr: "count(*)"}},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "hour", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: NumericBucketizerDef{LogBase: 2}}},
-			TimeFilter: TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
+			Measures:   []queryCom.Measure{{Alias: "pop", Expr: "population"}, {Expr: "count(*)"}},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "hour", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: queryCom.NumericBucketizerDef{LogBase: 2}}},
+			TimeFilter: queryCom.TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
 			Filters:    []string{`marketplace="agora"`},
 			Timezone:   "America/New_York",
 		}
@@ -219,15 +239,15 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			WHERE aql_time_filter(request_at, "96 quarter-hours ago", "1 quarter-hours ago", America/New_York) AND marketplace="agora"
 			GROUP BY aql_time_bucket_hours(request_at, "minute", America/New_York), aql_numeric_bucket_logbase(pop, 2);`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table: "trips",
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{Table: "trips", Alias: "rush_leg", Conditions: []string{"trips.workflow_uuid=rush_leg.workflow_uuid", "status='completed'"}},
 				{Table: "api_cities", Alias: "cities", Conditions: []string{"cities.id=city_id"}},
 			},
-			Measures:   []Measure{{Alias: "pop", Expr: "population"}, {Expr: "count(*)"}},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "hours", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: NumericBucketizerDef{LogBase: 2}}},
-			TimeFilter: TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
+			Measures:   []queryCom.Measure{{Alias: "pop", Expr: "population"}, {Expr: "count(*)"}},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "hours", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: queryCom.NumericBucketizerDef{LogBase: 2}}},
+			TimeFilter: queryCom.TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
 			Filters:    []string{`marketplace="agora"`},
 			Timezone:   "America/New_York",
 		}
@@ -277,21 +297,21 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			SELECT Completed, Requested, Completed/Requested
 			FROM m1 NATURAL LEFT JOIN m2;`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table: "trips",
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{Table: "trips", Alias: "rush_leg", Conditions: []string{"trips.workflow_uuid=rush_leg.workflow_uuid", "status='completed'"}},
 				{Table: "api_cities", Alias: "cities", Conditions: []string{"cities.id=city_id"}},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Alias: "Completed", Expr: "count(*)", Filters: []string{"marketplace=\"agora\"", "status='completed'"}},
 				{Alias: "Requested", Expr: "count(*)", Filters: []string{"marketplace=\"agora\""}},
 				{Expr: "Completed/Requested"},
 			},
-			Dimensions:           []Dimension{{Expr: "request_at", TimeBucketizer: "day", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: NumericBucketizerDef{LogBase: 2}}},
-			SupportingDimensions: []Dimension{},
-			SupportingMeasures:   []Measure{},
-			TimeFilter:           TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
+			Dimensions:           []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "day", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: queryCom.NumericBucketizerDef{LogBase: 2}}},
+			SupportingDimensions: []queryCom.Dimension{},
+			SupportingMeasures:   []queryCom.Measure{},
+			TimeFilter:           queryCom.TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
 			Timezone:             "America/New_York",
 		}
 		runTest(sqls, res, logger)
@@ -340,17 +360,17 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			SELECT Completed/Requested
 			FROM m1 NATURAL LEFT JOIN m2;`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table: "trips",
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{Table: "trips", Alias: "rush_leg", Conditions: []string{"trips.workflow_uuid=rush_leg.workflow_uuid", "status='completed'"}},
 				{Table: "api_cities", Alias: "cities", Conditions: []string{"cities.id=city_id"}},
 			},
-			Measures:             []Measure{{Expr: "Completed/Requested"}},
-			TimeFilter:           TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
-			Dimensions:           []Dimension{{Expr: "request_at", TimeBucketizer: "day", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: NumericBucketizerDef{LogBase: 2}}},
-			SupportingDimensions: []Dimension{},
-			SupportingMeasures: []Measure{
+			Measures:             []queryCom.Measure{{Expr: "Completed/Requested"}},
+			TimeFilter:           queryCom.TimeFilter{Column: "request_at", From: "96 quarter-hours ago", To: "1 quarter-hours ago"},
+			Dimensions:           []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "day", TimeUnit: "minute"}, {Expr: "pop", NumericBucketizer: queryCom.NumericBucketizerDef{LogBase: 2}}},
+			SupportingDimensions: []queryCom.Dimension{},
+			SupportingMeasures: []queryCom.Measure{
 				{Alias: "Requested", Expr: "count(*)", Filters: []string{"marketplace=\"agora\""}},
 				{Alias: "Completed", Expr: "count(*)", Filters: []string{"marketplace=\"agora\"", "status='completed'"}},
 			},
@@ -510,14 +530,14 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 			`SELECT fare FROM trips 
 			WHERE city_id in (1,2,3) fare > m1.avg_fare;`,
 		}
-		res := AQLQuery{
+		res := queryCom.AQLQuery{
 			Table: "trips",
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{
 					Expr: "fare",
 				},
 			},
-			Measures: []Measure{{Expr: "1"}},
+			Measures: []queryCom.Measure{{Expr: "1"}},
 			Filters:  []string{"city_id in (1,2,3)"},
 		}
 

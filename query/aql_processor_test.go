@@ -971,15 +971,15 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 	ginkgo.It("ProcessQuery should work", func() {
 		qc := &AQLQueryContext{}
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: table,
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "c0", TimeBucketizer: "m", TimeUnit: "millisecond"},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(c1)"},
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "c0",
 				From:   "1970-01-01",
 				To:     "1970-01-02",
@@ -987,7 +987,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.Query = q
 
-		qc = q.Compile(memStore, false)
+		qc.Compile(memStore)
 		Ω(qc.Error).Should(BeNil())
 		qc.FindDeviceForQuery(memStore, -1, NewDeviceManager(common.QueryConfig{
 			DeviceMemoryUtilization: 1.0,
@@ -1178,15 +1178,15 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}}}, common.NewLoggerFactory().GetDefaultLogger(), common.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
 
 		qc := &AQLQueryContext{}
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: table,
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "c0", TimeBucketizer: "3m", TimeUnit: "second"},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(*)"},
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "c0",
 				From:   "1970-01-01",
 				To:     "1970-01-02",
@@ -1195,7 +1195,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.Query = q
 
-		qc = q.Compile(memStore, false)
+		qc.Compile(memStore)
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.TableScanners).Should(HaveLen(2))
 		qc.ProcessQuery(memStore)
@@ -1418,15 +1418,15 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		mockMemStore.On("RUnlock").Return()
 
 		qc := AQLQueryContext{
-			Query: &AQLQuery{
+			Query: &queryCom.AQLQuery{
 				Table: "trips",
-				Dimensions: []Dimension{
+				Dimensions: []queryCom.Dimension{
 					{Expr: "request_at"},
 				},
-				Measures: []Measure{
+				Measures: []queryCom.Measure{
 					{Expr: "count(1)"},
 				},
-				TimeFilter: TimeFilter{
+				TimeFilter: queryCom.TimeFilter{
 					Column: "request_at",
 					From:   "0",
 					To:     "86400",
@@ -1684,16 +1684,16 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		mockMemStore.On("RUnlock").Return()
 
 		qc := AQLQueryContext{
-			Query: &AQLQuery{
+			Query: &queryCom.AQLQuery{
 				Table: "trips",
-				Dimensions: []Dimension{
+				Dimensions: []queryCom.Dimension{
 					{Expr: "request_at"},
 					{Expr: "geo_uuid"},
 				},
-				Measures: []Measure{
+				Measures: []queryCom.Measure{
 					{Expr: "count(1)"},
 				},
-				TimeFilter: TimeFilter{
+				TimeFilter: queryCom.TimeFilter{
 					Column: "request_at",
 					From:   "0",
 					To:     "86400",
@@ -1994,12 +1994,12 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		mockMemStore.On("RUnlock").Return()
 
 		qc := AQLQueryContext{
-			Query: &AQLQuery{
+			Query: &queryCom.AQLQuery{
 				Table: "trips",
-				Dimensions: []Dimension{
+				Dimensions: []queryCom.Dimension{
 					{Expr: "request_at"},
 				},
-				Measures: []Measure{
+				Measures: []queryCom.Measure{
 					{Expr: "count(1)"},
 				},
 			},
@@ -2071,17 +2071,17 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	ginkgo.It("ProcessQuery for non-aggregation query should work", func() {
 		shard.ArchiveStore.CurrentVersion.Batches[0] = archiveBatch1
 		qc := &AQLQueryContext{}
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: table,
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "c0"},
 				{Expr: "c1"},
 				{Expr: "c2"},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "1"},
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "c0",
 				From:   "1970-01-01",
 				To:     "1970-01-02",
@@ -2090,7 +2090,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}
 		qc.Query = q
 
-		qc = q.Compile(memStore, false)
+		qc.Compile(memStore)
 		Ω(qc.Error).Should(BeNil())
 		qc.calculateMemoryRequirement(memStore)
 		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
@@ -2163,22 +2163,22 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	ginkgo.It("ProcessQuery should work for query without regular filters", func() {
 		shard.ArchiveStore.CurrentVersion.Batches[0] = archiveBatch1
 		qc := &AQLQueryContext{}
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: table,
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "0"},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(*)"},
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "c0",
 				From:   "1970-01-01",
 				To:     "1970-01-02",
 			},
 		}
 		qc.Query = q
-		qc = q.Compile(memStore, false)
+		qc.Compile(memStore)
 		Ω(qc.Error).Should(BeNil())
 		qc.ProcessQuery(memStore)
 		Ω(qc.Error).Should(BeNil())
@@ -2195,8 +2195,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 	ginkgo.It("initializeNonAggResponse should work", func() {
 		qc := &AQLQueryContext{
-			Query: &AQLQuery{
-				Dimensions: []Dimension{
+			Query: &queryCom.AQLQuery{
+				Dimensions: []queryCom.Dimension{
 					{Expr: "foo"},
 				},
 			},

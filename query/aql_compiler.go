@@ -56,60 +56,38 @@ const (
 	nonAggregationQueryLimit  = 1000
 )
 
-// constants for call names.
-const (
-	convertTzCallName           = "convert_tz"
-	countCallName               = "count"
-	dayOfWeekCallName           = "dayofweek"
-	fromUnixTimeCallName        = "from_unixtime"
-	geographyIntersectsCallName = "geography_intersects"
-	hexCallName                 = "hex"
-	// hll aggregation function applies to hll columns
-	hllCallName = "hll"
-	// countdistincthll aggregation function applies to all columns, hll value is computed on the fly
-	countDistinctHllCallName = "countdistincthll"
-	hourCallName             = "hour"
-	listCallName             = ""
-	maxCallName              = "max"
-	minCallName              = "min"
-	sumCallName              = "sum"
-	avgCallName              = "avg"
-)
-
-// Compile returns the compiled AQLQueryContext for data feeding and query
+// Compile compiles AQLQueryContext for data feeding and query
 // execution. Caller should check for AQLQueryContext.Error.
-func (q *AQLQuery) Compile(tableSchemaReader memCom.TableSchemaReader, returnHLL bool) *AQLQueryContext {
-	qc := &AQLQueryContext{Query: q, ReturnHLLData: returnHLL}
-
+func (qc *AQLQueryContext) Compile(tableSchemaReader memCom.TableSchemaReader) {
 	// processTimezone might append additional joins
 	qc.processTimezone()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Read schema for every table used.
 	qc.readSchema(tableSchemaReader)
 	defer qc.releaseSchema()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Parse all other SQL expressions to ASTs.
 	qc.parseExprs()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Resolve data types in the ASTs against schema, also translate enum values.
 	qc.resolveTypes()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Process join conditions first to collect information about geo join.
 	qc.processJoinConditions()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Identify prefilters.
@@ -118,34 +96,33 @@ func (q *AQLQuery) Compile(tableSchemaReader memCom.TableSchemaReader, returnHLL
 	// Process filters.
 	qc.processFilters()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// Process measure and dimensions.
 	qc.processMeasure()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 	qc.processDimensions()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	qc.sortUsedColumns()
 
 	qc.sortDimensionColumns()
 	if qc.Error != nil {
-		return qc
+		return
 	}
 
 	// TODO: VM instruction generation
-	return qc
 }
 
 // adjustFilterToTimeFilter try to find one rowfilter to be time filter if there is no timefilter for fact table query
 func (qc *AQLQueryContext) adjustFilterToTimeFilter() {
 	toBeRemovedFilters := []int{}
-	timeFilter := TimeFilter{}
+	timeFilter := common.TimeFilter{}
 	for i, filter := range qc.Query.FiltersParsed {
 		if e, ok := filter.(*expr.BinaryExpr); ok {
 			lhs, isCol := e.LHS.(*expr.VarRef)
@@ -221,7 +198,7 @@ func (qc *AQLQueryContext) processJoinConditions() {
 				qc.Error = utils.StackError(nil, "At most one geo join allowed")
 				return
 			}
-			qc.matchGeoJoin(joinTableID, mainTableSchema, joinSchema, join.conditions)
+			qc.matchGeoJoin(joinTableID, mainTableSchema, joinSchema, join.ConditionsParsed)
 			if qc.Error != nil {
 				return
 			}
@@ -229,7 +206,7 @@ func (qc *AQLQueryContext) processJoinConditions() {
 			// we will extract the geo join out of the join conditions since we are going to handle geo intersects
 			// as filter instead of an equal join.
 			qc.OOPK.foreignTables[joinTableID] = &foreignTable{}
-			qc.matchEqualJoin(joinTableID, joinSchema, join.conditions)
+			qc.matchEqualJoin(joinTableID, joinSchema, join.ConditionsParsed)
 			if qc.Error != nil {
 				return
 			}
@@ -295,13 +272,13 @@ func (qc *AQLQueryContext) matchGeoJoin(joinTableID int, mainTableSchema *memCom
 	}, point)
 }
 
-func isGeoJoin(j Join) bool {
-	if len(j.conditions) >= 1 {
-		c, ok := j.conditions[0].(*expr.Call)
+func isGeoJoin(j common.Join) bool {
+	if len(j.ConditionsParsed) >= 1 {
+		c, ok := j.ConditionsParsed[0].(*expr.Call)
 		if !ok {
 			return false
 		}
-		return c.Name == geographyIntersectsCallName
+		return c.Name == expr.GeographyIntersectsCallName
 	}
 	return false
 }
@@ -387,9 +364,9 @@ func (qc *AQLQueryContext) parseExprs() {
 
 	// Join conditions.
 	for i, join := range qc.Query.Joins {
-		join.conditions = make([]expr.Expr, len(join.Conditions))
+		join.ConditionsParsed = make([]expr.Expr, len(join.Conditions))
 		for j, cond := range join.Conditions {
-			join.conditions[j], err = expr.ParseExpr(cond)
+			join.ConditionsParsed[j], err = expr.ParseExpr(cond)
 			if err != nil {
 				qc.Error = utils.StackError(err, "Failed to parse join condition: %s", cond)
 				return
@@ -421,7 +398,7 @@ func (qc *AQLQueryContext) parseExprs() {
 
 	// Dimensions.
 	rawDimensions := qc.Query.Dimensions
-	qc.Query.Dimensions = []Dimension{}
+	qc.Query.Dimensions = []common.Dimension{}
 	for _, dim := range rawDimensions {
 		dim.TimeBucketizer = strings.Trim(dim.TimeBucketizer, " ")
 		if dim.TimeBucketizer != "" {
@@ -437,7 +414,7 @@ func (qc *AQLQueryContext) parseExprs() {
 				return
 			}
 
-			dim.expr, err = qc.buildTimeDimensionExpr(dim.TimeBucketizer, timeColumnExpr)
+			dim.ExprParsed, err = qc.buildTimeDimensionExpr(dim.TimeBucketizer, timeColumnExpr)
 			if err != nil {
 				qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.TimeBucketizer)
 				return
@@ -445,12 +422,12 @@ func (qc *AQLQueryContext) parseExprs() {
 			qc.Query.Dimensions = append(qc.Query.Dimensions, dim)
 		} else {
 			// dimension is defined as sqlExpression
-			dim.expr, err = expr.ParseExpr(dim.Expr)
+			dim.ExprParsed, err = expr.ParseExpr(dim.Expr)
 			if err != nil {
 				qc.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.Expr)
 				return
 			}
-			if _, ok := dim.expr.(*expr.Wildcard); ok {
+			if _, ok := dim.ExprParsed.(*expr.Wildcard); ok {
 				qc.Query.Dimensions = append(qc.Query.Dimensions, qc.getAllColumnsDimension()...)
 			} else {
 				qc.Query.Dimensions = append(qc.Query.Dimensions, dim)
@@ -465,9 +442,9 @@ func (qc *AQLQueryContext) parseExprs() {
 			qc.Error = utils.StackError(err, "Failed to parse measure: %s", measure.Expr)
 			return
 		}
-		measure.filters = make([]expr.Expr, len(measure.Filters))
+		measure.FiltersParsed = make([]expr.Expr, len(measure.Filters))
 		for j, filter := range measure.Filters {
-			measure.filters[j], err = expr.ParseExpr(filter)
+			measure.FiltersParsed[j], err = expr.ParseExpr(filter)
 			if err != nil {
 				qc.Error = utils.StackError(err, "Failed to parse measure filter %s", filter)
 				return
@@ -489,7 +466,7 @@ func (qc *AQLQueryContext) processTimezone() {
 		// append timezone table to joins
 		if qc.timezoneTable.tableAlias == "" {
 			qc.timezoneTable.tableAlias = defaultTimezoneTableAlias
-			qc.Query.Joins = append(qc.Query.Joins, Join{
+			qc.Query.Joins = append(qc.Query.Joins, common.Join{
 				Table:      timezoneTable,
 				Alias:      defaultTimezoneTableAlias,
 				Conditions: []string{fmt.Sprintf("%s=%s.id", joinKey, defaultTimezoneTableAlias)},
@@ -688,8 +665,8 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			e.Expr = cast(e.Expr, expr.Boolean)
 			childExpr := e.Expr
 			callRef, isCallRef := childExpr.(*expr.Call)
-			if isCallRef && callRef.Name == geographyIntersectsCallName {
-				qc.Error = utils.StackError(nil, "Not %s condition is not allowed", geographyIntersectsCallName)
+			if isCallRef && callRef.Name == expr.GeographyIntersectsCallName {
+				qc.Error = utils.StackError(nil, "Not %s condition is not allowed", expr.GeographyIntersectsCallName)
 				break
 			}
 		case expr.UNARY_MINUS:
@@ -845,7 +822,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 	case *expr.Call:
 		e.Name = strings.ToLower(e.Name)
 		switch e.Name {
-		case convertTzCallName:
+		case expr.ConvertTzCallName:
 			if len(e.Args) != 3 {
 				qc.Error = utils.StackError(
 					nil, "convert_tz must have 3 arguments",
@@ -885,9 +862,9 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				},
 				ExprType: expr.Unsigned,
 			}
-		case countCallName:
+		case expr.CountCallName:
 			e.ExprType = expr.Unsigned
-		case dayOfWeekCallName:
+		case expr.DayOfWeekCallName:
 			// dayofweek from ts: (ts / secondsInDay + 4) % 7 + 1
 			// ref: https://dev.mysql.com/doc/refman/5.5/en/date-and-time-functions.html#function_dayofweek
 			if len(e.Args) != 1 {
@@ -934,7 +911,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				},
 			}
 			// no-op, this will be over written
-		case fromUnixTimeCallName:
+		case expr.FromUnixTimeCallName:
 			// for now, only the following format is allowed for backward compatibility
 			// from_unixtime(time_col / 1000)
 			timeColumnDivideErrMsg := "from_unixtime must be time column / 1000"
@@ -957,7 +934,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				break
 			}
 			return timeColExpr
-		case hourCallName:
+		case expr.HourCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(nil, "hour takes exactly 1 argument")
 				break
@@ -982,8 +959,8 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				},
 			}
 			// list of literals, no need to cast it for now.
-		case listCallName:
-		case geographyIntersectsCallName:
+		case expr.ListCallName:
+		case expr.GeographyIntersectsCallName:
 			if len(e.Args) != 2 {
 				qc.Error = utils.StackError(
 					nil, "expect 2 argument for %s, but got %s", e.Name, e.String())
@@ -1023,7 +1000,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			}
 
 			e.ExprType = expr.Boolean
-		case hexCallName:
+		case expr.HexCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
 					nil, "expect 1 argument for %s, but got %s", e.Name, e.String())
@@ -1037,7 +1014,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				break
 			}
 			e.ExprType = e.Args[0].Type()
-		case countDistinctHllCallName:
+		case expr.CountDistinctHllCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
 					nil, "expect 1 argument for %s, but got %s", e.Name, e.String())
@@ -1050,7 +1027,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				break
 			}
 
-			e.Name = hllCallName
+			e.Name = expr.HllCallName
 			// 1. noop when column itself is hll column
 			// 2. compute hll on the fly when column is not hll column
 			if !colRef.IsHLLColumn {
@@ -1061,7 +1038,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				}
 			}
 			e.ExprType = expr.Unsigned
-		case hllCallName:
+		case expr.HllCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
 					nil, "expect 1 argument for %s, but got %s", e.Name, e.String())
@@ -1075,14 +1052,14 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				break
 			}
 			e.ExprType = e.Args[0].Type()
-		case sumCallName, minCallName, maxCallName, avgCallName:
+		case expr.SumCallName, expr.MinCallName, expr.MaxCallName, expr.AvgCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
 					nil, "expect 1 argument for %s, but got %s", e.Name, e.String())
 				break
 			}
 			// For avg, the expression type should always be float.
-			if e.Name == avgCallName {
+			if e.Name == expr.AvgCallName {
 				e.Args[0] = cast(e.Args[0], expr.Float)
 			}
 			e.ExprType = e.Args[0].Type()
@@ -1129,8 +1106,8 @@ func normalizeAndFilters(filters []expr.Expr) []expr.Expr {
 func (qc *AQLQueryContext) resolveTypes() {
 	// Join conditions.
 	for i, join := range qc.Query.Joins {
-		for j, cond := range join.conditions {
-			join.conditions[j] = expr.Rewrite(qc, cond)
+		for j, cond := range join.ConditionsParsed {
+			join.ConditionsParsed[j] = expr.Rewrite(qc, cond)
 			if qc.Error != nil {
 				return
 			}
@@ -1140,7 +1117,7 @@ func (qc *AQLQueryContext) resolveTypes() {
 
 	// Dimensions.
 	for i, dim := range qc.Query.Dimensions {
-		dim.expr = expr.Rewrite(qc, dim.expr)
+		dim.ExprParsed = expr.Rewrite(qc, dim.ExprParsed)
 		if qc.Error != nil {
 			return
 		}
@@ -1153,13 +1130,13 @@ func (qc *AQLQueryContext) resolveTypes() {
 		if qc.Error != nil {
 			return
 		}
-		for j, filter := range measure.filters {
-			measure.filters[j] = expr.Rewrite(qc, filter)
+		for j, filter := range measure.FiltersParsed {
+			measure.FiltersParsed[j] = expr.Rewrite(qc, filter)
 			if qc.Error != nil {
 				return
 			}
 		}
-		measure.filters = normalizeAndFilters(measure.filters)
+		measure.FiltersParsed = normalizeAndFilters(measure.FiltersParsed)
 		qc.Query.Measures[i] = measure
 	}
 
@@ -1377,7 +1354,7 @@ func (qc *AQLQueryContext) processFilters() {
 	}
 
 	// Categorize common filters and prefilters based on matched prefilters.
-	commonFilters := qc.Query.Measures[0].filters
+	commonFilters := qc.Query.Measures[0].FiltersParsed
 	prefilters := qc.Prefilters
 	for index, filter := range qc.Query.FiltersParsed {
 		if len(prefilters) == 0 || prefilters[0] > index {
@@ -1652,7 +1629,7 @@ func (qc *AQLQueryContext) matchAndRewriteGeoDimension(dimExpr expr.Expr) (expr.
 	}
 
 	if callExpr, ok := dimExpr.(*expr.Call); ok {
-		if callExpr.Name != hexCallName {
+		if callExpr.Name != expr.HexCallName {
 			return nil, utils.StackError(nil,
 				"Only hex function is supported on UUID type, but got %s", callExpr.Name)
 		}
@@ -1719,7 +1696,7 @@ func (qc *AQLQueryContext) processMeasure() {
 		return
 	}
 
-	if qc.ReturnHLLData && aggregate.Name != hllCallName {
+	if qc.ReturnHLLData && aggregate.Name != expr.HllCallName {
 		qc.Error = utils.StackError(nil, "expect hll aggregate function as client specify 'Accept' as "+
 			"'application/hll', but got %s",
 			qc.Query.Measures[0].Expr)
@@ -1736,14 +1713,14 @@ func (qc *AQLQueryContext) processMeasure() {
 	// default is 4 bytes
 	qc.OOPK.MeasureBytes = 4
 	switch strings.ToLower(aggregate.Name) {
-	case countCallName:
+	case expr.CountCallName:
 		qc.OOPK.Measure = &expr.NumberLiteral{
 			Int:      1,
 			Expr:     "1",
 			ExprType: expr.Unsigned,
 		}
 		qc.OOPK.AggregateType = C.AGGR_SUM_UNSIGNED
-	case sumCallName:
+	case expr.SumCallName:
 		qc.OOPK.MeasureBytes = 8
 		switch qc.OOPK.Measure.Type() {
 		case expr.Float:
@@ -1754,15 +1731,15 @@ func (qc *AQLQueryContext) processMeasure() {
 			qc.OOPK.AggregateType = C.AGGR_SUM_UNSIGNED
 		default:
 			qc.Error = utils.StackError(nil,
-				unsupportedInputType, sumCallName, qc.OOPK.Measure.String())
+				unsupportedInputType, expr.SumCallName, qc.OOPK.Measure.String())
 			return
 		}
-	case avgCallName:
+	case expr.AvgCallName:
 		// 4 bytes for storing average result and another 4 byte for count
 		qc.OOPK.MeasureBytes = 8
 		// for average, we should always use float type as the agg type.
 		qc.OOPK.AggregateType = C.AGGR_AVG_FLOAT
-	case minCallName:
+	case expr.MinCallName:
 		switch qc.OOPK.Measure.Type() {
 		case expr.Float:
 			qc.OOPK.AggregateType = C.AGGR_MIN_FLOAT
@@ -1772,10 +1749,10 @@ func (qc *AQLQueryContext) processMeasure() {
 			qc.OOPK.AggregateType = C.AGGR_MIN_UNSIGNED
 		default:
 			qc.Error = utils.StackError(nil,
-				unsupportedInputType, minCallName, qc.OOPK.Measure.String())
+				unsupportedInputType, expr.MinCallName, qc.OOPK.Measure.String())
 			return
 		}
-	case maxCallName:
+	case expr.MaxCallName:
 		switch qc.OOPK.Measure.Type() {
 		case expr.Float:
 			qc.OOPK.AggregateType = C.AGGR_MAX_FLOAT
@@ -1785,10 +1762,10 @@ func (qc *AQLQueryContext) processMeasure() {
 			qc.OOPK.AggregateType = C.AGGR_MAX_UNSIGNED
 		default:
 			qc.Error = utils.StackError(nil,
-				unsupportedInputType, maxCallName, qc.OOPK.Measure.String())
+				unsupportedInputType, expr.MaxCallName, qc.OOPK.Measure.String())
 			return
 		}
-	case hllCallName:
+	case expr.HllCallName:
 		qc.OOPK.AggregateType = C.AGGR_HLL
 	default:
 		qc.Error = utils.StackError(nil,
@@ -1797,13 +1774,13 @@ func (qc *AQLQueryContext) processMeasure() {
 	}
 }
 
-func (qc *AQLQueryContext) getAllColumnsDimension() (columns []Dimension) {
+func (qc *AQLQueryContext) getAllColumnsDimension() (columns []common.Dimension) {
 	// only main table columns wildcard match supported
 	for _, column := range qc.TableScanners[0].Schema.Schema.Columns {
 		if !column.Deleted && column.Type != metaCom.GeoShape {
-			columns = append(columns, Dimension{
-				expr: &expr.VarRef{Val: column.Name},
-				Expr: column.Name,
+			columns = append(columns, common.Dimension{
+				ExprParsed: &expr.VarRef{Val: column.Name},
+				Expr:       column.Name,
 			})
 		}
 	}
@@ -1815,8 +1792,8 @@ func (qc *AQLQueryContext) processDimensions() {
 	qc.OOPK.Dimensions = make([]expr.Expr, len(qc.Query.Dimensions))
 	for i, dim := range qc.Query.Dimensions {
 		// TODO: support numeric bucketizer.
-		qc.OOPK.Dimensions[i] = dim.expr
-		if dim.expr.Type() == expr.GeoShape {
+		qc.OOPK.Dimensions[i] = dim.ExprParsed
+		if dim.ExprParsed.Type() == expr.GeoShape {
 			qc.Error = utils.StackError(nil,
 				"GeoShape can not be used for dimension: %s", dim.Expr)
 			return

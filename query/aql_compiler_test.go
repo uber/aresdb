@@ -26,6 +26,7 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 )
@@ -33,7 +34,7 @@ import (
 var _ = ginkgo.Describe("AQL compiler", func() {
 	ginkgo.It("parses timezone", func() {
 		qc := &AQLQueryContext{
-			Query: &AQLQuery{Timezone: "timezone(city_id)"},
+			Query: &queryCom.AQLQuery{Timezone: "timezone(city_id)"},
 		}
 		utils.Init(common.AresServerConfig{Query: common.QueryConfig{TimezoneTable: common.TimezoneConfig{
 			TableName: "api_cities",
@@ -47,9 +48,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("parses expressions", func() {
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{
 					Expr: "count(*)",
 				},
@@ -67,9 +68,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}))
 
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Conditions: []string{
@@ -77,12 +78,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{
 					Expr: "status",
 				},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{
 					Expr: "count(*)",
 					Filters: []string{
@@ -96,19 +97,19 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 		qc.parseExprs()
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.Query.Joins[0].conditions[0]).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.Joins[0].ConditionsParsed[0]).Should(Equal(&expr.BinaryExpr{
 			Op:  expr.EQ,
 			LHS: &expr.VarRef{Val: "city_id"},
 			RHS: &expr.VarRef{Val: "api_cities.id"},
 		}))
-		Ω(qc.Query.Dimensions[0].expr).Should(Equal(&expr.VarRef{Val: "status"}))
+		Ω(qc.Query.Dimensions[0].ExprParsed).Should(Equal(&expr.VarRef{Val: "status"}))
 		Ω(qc.Query.Measures[0].ExprParsed).Should(Equal(&expr.Call{
 			Name: "count",
 			Args: []expr.Expr{
 				&expr.Wildcard{},
 			},
 		}))
-		Ω(qc.Query.Measures[0].filters[0]).Should(Equal(&expr.UnaryExpr{
+		Ω(qc.Query.Measures[0].FiltersParsed[0]).Should(Equal(&expr.UnaryExpr{
 			Op:   expr.NOT,
 			Expr: &expr.VarRef{Val: "is_faresplit"},
 		}))
@@ -118,9 +119,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			RHS: &expr.StringLiteral{Val: "personal_transport"},
 		}))
 
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{
 					Expr: "count(",
 				},
@@ -143,9 +144,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			"api_cities": apiCitiesSchema,
 		})
 		qc := &AQLQueryContext{
-			Query: &AQLQuery{
+			Query: &queryCom.AQLQuery{
 				Table: "trips",
-				Joins: []Join{
+				Joins: []queryCom.Join{
 					{Table: "api_cities", Alias: "cts"},
 					{Table: "trips", Alias: "tx"},
 				},
@@ -182,7 +183,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.releaseSchema()
 
 		qc = &AQLQueryContext{
-			Query: &AQLQuery{
+			Query: &queryCom.AQLQuery{
 				Table: "tripsy",
 			},
 		}
@@ -191,9 +192,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.releaseSchema()
 
 		qc = &AQLQueryContext{
-			Query: &AQLQuery{
+			Query: &queryCom.AQLQuery{
 				Table: "trips",
-				Joins: []Join{
+				Joins: []queryCom.Join{
 					{Table: "trips"},
 				},
 			},
@@ -226,12 +227,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "hex_id"},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(*)"},
 			},
 		}
@@ -241,12 +242,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
 
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "hex_id+1"},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(*)"},
 			},
 		}
@@ -298,9 +299,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "-city_id"},
 				{Expr: "~fare"},
 				{Expr: "city_id-city_id"},
@@ -309,7 +310,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Expr: "1.2|2.3"},
 				{Expr: "case when 1.3 then 2 else 3.2 end"},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(*)"},
 				{Expr: "Sum(fare+1)"},
 			},
@@ -332,8 +333,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
 
-		Ω(qc.Query.Dimensions[0].expr.Type()).Should(Equal(expr.Signed))
-		Ω(qc.Query.Dimensions[1].expr).Should(Equal(&expr.UnaryExpr{
+		Ω(qc.Query.Dimensions[0].ExprParsed.Type()).Should(Equal(expr.Signed))
+		Ω(qc.Query.Dimensions[1].ExprParsed).Should(Equal(&expr.UnaryExpr{
 			Op:       expr.BITWISE_NOT,
 			ExprType: expr.Unsigned,
 			Expr: &expr.ParenExpr{ // explicit type casting
@@ -345,7 +346,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				},
 			},
 		}))
-		Ω(qc.Query.Dimensions[2].expr).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.Dimensions[2].ExprParsed).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.SUB,
 			ExprType: expr.Signed,
 			LHS: &expr.VarRef{
@@ -361,7 +362,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				DataType: memCom.Uint16,
 			},
 		}))
-		Ω(qc.Query.Dimensions[3].expr).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.Dimensions[3].ExprParsed).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.MUL,
 			ExprType: expr.Float,
 			LHS: &expr.ParenExpr{ // explicit type casting
@@ -379,7 +380,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				DataType: memCom.Float32,
 			},
 		}))
-		Ω(qc.Query.Dimensions[4].expr).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.Dimensions[4].ExprParsed).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.DIV,
 			ExprType: expr.Float,
 			LHS: &expr.NumberLiteral{
@@ -395,7 +396,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				ExprType: expr.Float,
 			},
 		}))
-		Ω(qc.Query.Dimensions[5].expr).Should(Equal(&expr.BinaryExpr{
+		Ω(qc.Query.Dimensions[5].ExprParsed).Should(Equal(&expr.BinaryExpr{
 			Op:       expr.BITWISE_OR,
 			ExprType: expr.Unsigned,
 			LHS: &expr.NumberLiteral{
@@ -411,7 +412,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				ExprType: expr.Unsigned,
 			},
 		}))
-		Ω(qc.Query.Dimensions[6].expr).Should(Equal(&expr.Case{
+		Ω(qc.Query.Dimensions[6].ExprParsed).Should(Equal(&expr.Case{
 			ExprType: expr.Float,
 			Else: &expr.NumberLiteral{
 				Val:      3.2,
@@ -574,9 +575,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 		// column not found for main table
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "sum(columnx)"},
 			},
 		}
@@ -587,9 +588,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// table not found
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "sum(tablex.columnx)"},
 			},
 		}
@@ -601,9 +602,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// column not found for the specified table
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "sum(trips.columnx)"},
 			},
 		}
@@ -623,9 +624,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// column has been deleted
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "sum(columnx)"},
 			},
 		}
@@ -651,9 +652,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// too many arguments for sum
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "sum(columnx, columnx)"},
 			},
 		}
@@ -679,9 +680,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// unknown function call
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "exit()"},
 			},
 		}
@@ -733,9 +734,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 
 		// Unmatched
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -761,9 +762,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -791,9 +792,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -825,9 +826,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -856,9 +857,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -888,9 +889,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -984,9 +985,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()", Filters: []string{"status"}},
 			},
 			Filters: []string{
@@ -1030,9 +1031,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			2: columnUsedByAllBatches,
 		}))
 
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()", Filters: []string{"status"}},
 			},
 			Filters: []string{
@@ -1056,13 +1057,13 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		schema := memCom.NewTableSchema(&table)
 
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Dimensions: []Dimension{Dimension{Expr: "request_at", TimeBucketizer: "week"}},
-			TimeFilter: TimeFilter{
+			Dimensions: []queryCom.Dimension{queryCom.Dimension{Expr: "request_at", TimeBucketizer: "week"}},
+			TimeFilter: queryCom.TimeFilter{
 				From: "-1d",
 				To:   "0d",
 			},
@@ -1118,13 +1119,13 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.TableScanners[0].ArchiveBatchIDEnd).Should(Equal(17430))
 
 		// filter with {table}.{column} format
-		q = &AQLQuery{
+		q = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Dimensions: []Dimension{Dimension{Expr: "request_at", TimeBucketizer: "week"}},
-			TimeFilter: TimeFilter{
+			Dimensions: []queryCom.Dimension{queryCom.Dimension{Expr: "request_at", TimeBucketizer: "week"}},
+			TimeFilter: queryCom.TimeFilter{
 				Column: "trips.request_at",
 				From:   "-1d",
 				To:     "0d",
@@ -1188,13 +1189,13 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			IsFactTable: false,
 		}
 		schema := memCom.NewTableSchema(&table)
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Dimensions: []Dimension{Dimension{Expr: "request_at", TimeBucketizer: "week"}},
-			TimeFilter: TimeFilter{
+			Dimensions: []queryCom.Dimension{queryCom.Dimension{Expr: "request_at", TimeBucketizer: "week"}},
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 				To:     "0d",
@@ -1252,13 +1253,13 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.TableScanners[0].ArchiveBatchIDEnd).Should(Equal(17430))
 
 		// filter with {table}.{column} format
-		q = &AQLQuery{
+		q = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Dimensions: []Dimension{Dimension{Expr: "request_at", TimeBucketizer: "week"}},
-			TimeFilter: TimeFilter{
+			Dimensions: []queryCom.Dimension{queryCom.Dimension{Expr: "request_at", TimeBucketizer: "week"}},
+			TimeFilter: queryCom.TimeFilter{
 				Column: "trips.request_at",
 				From:   "-1d",
 				To:     "0d",
@@ -1325,13 +1326,13 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				},
 			},
 		}
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Dimensions: []Dimension{Dimension{Expr: "request_at", TimeBucketizer: "week"}},
-			TimeFilter: TimeFilter{
+			Dimensions: []queryCom.Dimension{queryCom.Dimension{Expr: "request_at", TimeBucketizer: "week"}},
+			TimeFilter: queryCom.TimeFilter{
 				To: "now",
 			},
 		}
@@ -1371,12 +1372,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "sum(fare)"},
 			},
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "city_id"},
 				{Expr: "request_at", TimeBucketizer: "m"},
 			},
@@ -1445,12 +1446,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "1"},
 			},
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "city_id"},
 				{Expr: "request_at"},
 				{Expr: "*"},
@@ -1573,12 +1574,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}
 
 		qc := &AQLQueryContext{}
-		goodQuery := &AQLQuery{
+		goodQuery := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "",
@@ -1617,12 +1618,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.TableScanners[0].ColumnUsages[1]).Should(Equal(columnUsedByAllBatches))
 
 		// non dimension table join
-		badQuery := &AQLQuery{
+		badQuery := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "bad_table",
 					Alias: "",
@@ -1640,12 +1641,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// not equal join
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "",
@@ -1662,12 +1663,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// more than one join condition specified
-		badQuery = &AQLQuery{
+		badQuery = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "",
@@ -1686,12 +1687,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// only column ref should be specified in join condition
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "",
@@ -1708,12 +1709,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// main table column not specified in join condition
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "",
@@ -1787,9 +1788,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				{Schema: apiCitiesSchema, ColumnUsages: map[int]columnUsage{}},
 			},
 		}
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Conditions: []string{
@@ -1797,12 +1798,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
 			Filters:    []string{"api_cities.name = 'paris'", "city_id=1"},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 				To:     "0d",
@@ -1879,12 +1880,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "countDistinctHll(request_at)"},
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 				To:     "0d",
@@ -1897,12 +1898,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.Query.Measures[0].ExprParsed.String()).Should(Equal("hll(GET_HLL_VALUE(request_at))"))
 
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "hll(client_uuid_hll)"},
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 				To:     "0d",
@@ -1914,12 +1915,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.Query.Measures[0].ExprParsed.String()).Should(Equal("hll(client_uuid_hll)"))
 
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "countDistinctHLL(client_uuid_hll)"},
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 				To:     "0d",
@@ -2007,12 +2008,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		})
 
 		qc := AQLQueryContext{}
-		query := &AQLQuery{
+		query := &queryCom.AQLQuery{
 			Table: "orders",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(*)"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "merchant_info",
 					Alias: "m",
@@ -2028,11 +2029,11 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
 			Filters: []string{
 				"g.geofence_uuid = 0x00000192F23D460DBE60400C32EA0667",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2154,12 +2155,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		})
 
 		qc := AQLQueryContext{}
-		query := &AQLQuery{
+		query := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2175,12 +2176,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
 			Filters: []string{
 				"g.geofence_uuid = 0x00000192F23D460DBE60400C32EA0667",
 				"c.id>1",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2228,12 +2229,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection.shapeUUIDs).Should(Equal([]string{"00000192F23D460DBE60400C32EA0667"}))
 
 		// Geo point on the left.
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2249,12 +2250,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
 			Filters: []string{
 				"g.geofence_uuid = 0x00000192F23D460DBE60400C32EA0667",
 				"c.id>1",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2301,12 +2302,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.geoIntersection.shapeUUIDs).Should(Equal([]string{"00000192F23D460DBE60400C32EA0667"}))
 
 		// Two geo points in the argument of geography_intersects.
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2322,12 +2323,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
 			Filters: []string{
 				"g.geofence_uuid = 0x00000192F23D460DBE60400C32EA0667",
 				"c.id>1",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2342,12 +2343,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"geography_intersects, got geography_intersects"))
 
 		// Two geo shapes in the argument of geography_intersects.
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2363,12 +2364,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
+			Dimensions: []queryCom.Dimension{{Expr: "request_at", TimeBucketizer: "m"}},
 			Filters: []string{
 				"g.geofence_uuid = 0x00000192F23D460DBE60400C32EA0667",
 				"c.id>1",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2383,12 +2384,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"geography_intersects, got geography_intersects"))
 
 		// Match geofence_uuid in predicate.
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2408,7 +2409,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"g.geofence_uuid in (0x4c3226b27b1b11e8adc0fa7ae01bbebc,0x4c32295a7b1b11e8adc0fa7ae01bbebc)",
 				"c.id>1",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2435,12 +2436,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		// Return error if two geo filters
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2461,7 +2462,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"g.geofence_uuid in (0x4c3226b27b1b11e8adc0fa7ae01bbebc,0x4c32295a7b1b11e8adc0fa7ae01bbebc)",
 				"c.id>1",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2485,12 +2486,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		// Return error if no geo filter
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2509,7 +2510,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Filters: []string{
 				"c.id>1",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2533,12 +2534,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		// At most one join condition allowed per geo join.
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2559,7 +2560,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid in (0x4c3226b27b1b11e8adc0fa7ae01bbebc,0x4c32295a7b1b11e8adc0fa7ae01bbebc)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2578,12 +2579,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		// Only dimension table is allowed in geo join
 		geoSchema.Schema.IsFactTable = true
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2603,7 +2604,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid in (0x4c3226b27b1b11e8adc0fa7ae01bbebc,0x4c32295a7b1b11e8adc0fa7ae01bbebc)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2651,12 +2652,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		geoSchema.Schema.PrimaryKeyColumns = []int{0}
 
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2676,7 +2677,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid not in (trips.city_id)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2691,12 +2692,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("Unable to extract uuid from expression "))
 
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2716,7 +2717,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid not in (0x4c3226b27b1b11e8adc0fa7ae01bbebc)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2733,12 +2734,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		// Geo table column is not allowed to be used in measure.
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "sum(g.count)"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2758,7 +2759,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid not in (trips.city_id)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2782,12 +2783,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		// Only one geo dimension allowed.
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(1)"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2803,7 +2804,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{
 					Expr: "g.geofence_uuid",
 				},
@@ -2815,7 +2816,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid not in (trips.city_id)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2839,12 +2840,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		// Only one geo uuid dimension allowed.
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(1)"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2860,7 +2861,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{
 					Expr: "g.count",
 				},
@@ -2869,7 +2870,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid not in (trips.city_id)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2893,12 +2894,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		// Only hex(uuid) or uuid supported.
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(1)"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2914,7 +2915,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{
 					Expr: "g.geofence_uuid+1",
 				},
@@ -2923,7 +2924,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid in (0x4c3226b27b1b11e8adc0fa7ae01bbebc,0x4c32295a7b1b11e8adc0fa7ae01bbebc)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2940,12 +2941,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		// only hex function is supported on UUID type, but got count.
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(1)"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -2961,7 +2962,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{
 					Expr: "count(g.geofence_uuid)",
 				},
@@ -2970,7 +2971,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid in (0x4c3226b27b1b11e8adc0fa7ae01bbebc,0x4c32295a7b1b11e8adc0fa7ae01bbebc)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -2994,12 +2995,12 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		// Correct geo join query.
 		qc = AQLQueryContext{}
-		query = &AQLQuery{
+		query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count(1)"},
 			},
-			Joins: []Join{
+			Joins: []queryCom.Join{
 				{
 					Table: "api_cities",
 					Alias: "c",
@@ -3015,7 +3016,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					},
 				},
 			},
-			Dimensions: []Dimension{
+			Dimensions: []queryCom.Dimension{
 				{
 					Expr: "hex(g.geofence_uuid)",
 				},
@@ -3024,7 +3025,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"c.id>1",
 				"g.geofence_uuid in (0x4c3226b27b1b11e8adc0fa7ae01bbebc,0x4c32295a7b1b11e8adc0fa7ae01bbebc)",
 			},
-			TimeFilter: TimeFilter{
+			TimeFilter: queryCom.TimeFilter{
 				Column: "request_at",
 				From:   "-1d",
 			},
@@ -3078,7 +3079,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("expandINOp should work", func() {
-		query := &AQLQuery{
+		query := &queryCom.AQLQuery{
 			Table:   "table1",
 			Filters: []string{"id in (1, 2)"},
 		}
@@ -3154,7 +3155,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("dayofweek and hour should work", func() {
-		query := &AQLQuery{
+		query := &queryCom.AQLQuery{
 			Table:   "table1",
 			Filters: []string{"dayofweek(table1.time_col) = 2", "hour(table1.time_col) = 21"},
 		}
@@ -3198,7 +3199,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("convert_tz should work", func() {
-		query := &AQLQuery{
+		query := &queryCom.AQLQuery{
 			Table: "table1",
 			Filters: []string{
 				"convert_tz(table1.time_col, 'GMT', 'America/Phoenix') = 2",
@@ -3252,9 +3253,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 	})
 
 	ginkgo.It("parses point expressions", func() {
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{
 					Expr: "count(*)",
 				},
@@ -3296,9 +3297,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}))
 
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{
 					Expr: "count(*)",
 				},
@@ -3330,9 +3331,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			ExprType: expr.Boolean,
 		}))
 
-		qc.Query = &AQLQuery{
+		qc.Query = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{
 					Expr: "count(*)",
 				},
@@ -3409,9 +3410,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				},
 			},
 		}
-		q := &AQLQuery{
+		q := &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -3484,9 +3485,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		}))
 
 		// case has no from filter
-		q = &AQLQuery{
+		q = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -3511,9 +3512,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// case has multiple from filter
-		q = &AQLQuery{
+		q = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -3538,9 +3539,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 
 		// case has timezone
-		q = &AQLQuery{
+		q = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{
@@ -3567,9 +3568,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 
 		// case using stringliteral in filter
-		q = &AQLQuery{
+		q = &queryCom.AQLQuery{
 			Table: "trips",
-			Measures: []Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "count()"},
 			},
 			Filters: []string{

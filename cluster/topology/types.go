@@ -18,7 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-
 package topology
 
 import (
@@ -73,7 +72,7 @@ type Map interface {
 	ShardSet() shard.ShardSet
 
 	// RouteShard will route a given shard to a set of hosts
-	RouteShard(shard int) ([]Host, error)
+	RouteShard(shard uint32) ([]Host, error)
 
 	// Replicas returns the number of replicas in the topology
 	Replicas() int

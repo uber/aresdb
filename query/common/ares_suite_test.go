@@ -15,7 +15,7 @@
 package common
 
 import (
-	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"testing"
@@ -24,7 +24,7 @@ import (
 )
 
 func TestQueryCommon(t *testing.T) {
-	RegisterFailHandler(Fail)
+	RegisterFailHandler(ginkgo.Fail)
 	junitReporter := reporters.NewJUnitReporter("junit.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Ares Query Common Suite", []Reporter{junitReporter})
+	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Ares Query Common Suite", []ginkgo.Reporter{junitReporter})
 }

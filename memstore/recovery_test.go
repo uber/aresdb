@@ -215,7 +215,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		}
 
 		shard.PlayRedoLog()
-		time.Sleep(time.Millisecond * 10)
+		time.Sleep(time.Millisecond * 100)
 
 		Ω(shard.LiveStore.RedoLogManager.GetBatchRecovered()).Should(Equal(1))
 		Ω(shard.LiveStore.RedoLogManager.GetBatchReceived()).Should(Equal(10))

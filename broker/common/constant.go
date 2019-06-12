@@ -14,6 +14,8 @@
 
 package common
 
+import "github.com/uber/aresdb/query/expr"
+
 type AggType int
 
 const (
@@ -22,5 +24,14 @@ const (
 	Max
 	Min
 	Avg
-	Hll //todo
+	Hll
 )
+
+var CallNameToAggType = map[string]AggType{
+	expr.CountCallName: Count,
+	expr.SumCallName:   Sum,
+	expr.AvgCallName:   Avg,
+	expr.MaxCallName:   Max,
+	expr.MinCallName:   Min,
+	expr.HllCallName:   Hll,
+}

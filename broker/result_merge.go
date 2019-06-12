@@ -129,6 +129,6 @@ func (c *resultMergeContext) mergeResultsRecursive(lhs, rhs interface{}) {
 		}
 	default:
 		// should not happen
-		utils.GetLogger().Panic("unknown type", reflect.TypeOf(lhs))
+		utils.GetLogger().Panic("unknown type ", reflect.TypeOf(lhs))
 	}
 }

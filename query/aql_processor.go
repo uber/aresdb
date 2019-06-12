@@ -387,7 +387,7 @@ func (qc *AQLQueryContext) prepareForGeoIntersect(memStore memstore.MemStore) (s
 }
 
 // prepare foreign table (allocate and transfer memory) before processing
-func (qc *AQLQueryContext) prepareForeignTable(memStore memstore.MemStore, joinTableID int, join Join) {
+func (qc *AQLQueryContext) prepareForeignTable(memStore memstore.MemStore, joinTableID int, join queryCom.Join) {
 	ft := qc.OOPK.foreignTables[joinTableID]
 	if ft == nil {
 		return

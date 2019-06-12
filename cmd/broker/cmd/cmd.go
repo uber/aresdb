@@ -25,6 +25,7 @@ import (
 	"github.com/uber/aresdb/cmd/aresd/cmd"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/controller/client"
+	dataNodeCli "github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/utils"
 	"time"
 )
@@ -92,12 +93,12 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	schemaManager := broker.NewSchemaManager(controllerClient)
 	schemaManager.Run()
 
-	// init topology
-	// TODO
+	// TODO: init topology, init datanode cli
 	var topo topology.Topology
+	var dataNodeCli dataNodeCli.DataNodeQueryClient
 
 	// executor
-	exec := broker.NewQueryExecutor(schemaManager, topo)
+	exec := broker.NewQueryExecutor(schemaManager, topo, dataNodeCli)
 
 	// init handlers
 	queryHandler := broker.NewQueryHandler(exec)

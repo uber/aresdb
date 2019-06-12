@@ -147,7 +147,11 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 
 	if !returnHLL && canEagerFlush(aqlRequest.Body.Queries) {
 		aqlQuery := aqlRequest.Body.Queries[0]
-		qc := aqlQuery.Compile(handler.memStore, false)
+		qc := &query.AQLQueryContext{
+			Query:         &aqlQuery,
+			ReturnHLLData: false,
+		}
+		qc.Compile(handler.memStore)
 		qc.ResponseWriter = w
 		if qc.Error != nil {
 			err = qc.Error
@@ -218,8 +222,12 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 	return
 }
 
-func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager, aqlRequest AQLRequest, aqlQuery query.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
-	qc = aqlQuery.Compile(memStore, aqlRequest.Accept == ContentTypeHyperLogLog)
+func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager, aqlRequest AQLRequest, aqlQuery queryCom.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
+	qc = &query.AQLQueryContext{
+		Query:         &aqlQuery,
+		ReturnHLLData: aqlRequest.Accept == ContentTypeHyperLogLog,
+	}
+	qc.Compile(memStore)
 
 	for tableName := range qc.TableSchemaByName {
 		utils.GetRootReporter().GetChildCounter(map[string]string{
@@ -387,7 +395,7 @@ func (w *HLLQueryResponseWriter) GetStatusCode() int {
 // for now we only eager flush when
 //    1. there's only 1 query in the request
 //    2. the query is non aggregate query
-func canEagerFlush(queries []query.AQLQuery) bool {
+func canEagerFlush(queries []queryCom.AQLQuery) bool {
 	if len(queries) != 1 {
 		return false
 	}

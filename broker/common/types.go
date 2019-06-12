@@ -15,6 +15,7 @@
 package common
 
 import (
+	"context"
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"io"
@@ -32,17 +33,22 @@ type SchemaManager interface {
 // QueryExecutor defines query executor
 type QueryExecutor interface {
 	// Execute executes query and flush result to connection
-	Execute(namespace, sqlQuery string, w http.ResponseWriter) (err error)
+	Execute(ctx context.Context, namespace, sqlQuery string, w http.ResponseWriter) (err error)
 }
 
 // BlockingPlanNode defines query plan nodes that waits for children to finish
 type BlockingPlanNode interface {
-	Run() (queryCom.AQLQueryResult, error)
+	Execute(ctx context.Context) (queryCom.AQLQueryResult, error)
 	Children() []BlockingPlanNode
 	Add(...BlockingPlanNode)
 }
 
+type MergeNode interface {
+	BlockingPlanNode
+	AggType() AggType
+}
+
 // StreamingPlanNode defines query plan nodes that eager flushes to output
 type StreamingPlanNode interface {
-	Run(writer io.Writer) error
+	Execute(writer io.Writer) error
 }
