@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		}, nil)
 		mockCountNode.On("AggType").Return(common.Count)
 
-		node := NewMergeNode(common.Avg, )
+		node := NewMergeNode(common.Avg)
 		node.Add(&mockSumNode, &mockCountNode)
 
 		res, err := node.Execute(context.TODO())

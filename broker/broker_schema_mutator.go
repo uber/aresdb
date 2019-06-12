@@ -15,6 +15,8 @@
 package broker
 
 import (
+	"errors"
+	"fmt"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/metastore/common"
@@ -31,12 +33,19 @@ type BrokerSchemaMutator struct {
 }
 
 func NewBrokerSchemaMutator() *BrokerSchemaMutator {
-	return &BrokerSchemaMutator{}
+	return &BrokerSchemaMutator{
+		tables: map[string]*memCom.TableSchema{},
+	}
 }
 
 // ====  metastore/common.TableSchemaMutator ====
-// TODO: implement. TableSchemaMutator should update b.tables
 func (b *BrokerSchemaMutator) ListTables() (tables []string, err error) {
+	tables = make([]string, len(b.tables))
+	i := 0
+	for _, table := range b.tables {
+		tables[i] = table.Schema.Name
+		i++
+	}
 	return
 }
 
@@ -50,34 +59,73 @@ func (b *BrokerSchemaMutator) GetTable(name string) (table *common.Table, err er
 }
 
 func (b *BrokerSchemaMutator) CreateTable(table *common.Table) (err error) {
+	b.tables[table.Name] = memCom.NewTableSchema(table)
 	return
 }
 func (b *BrokerSchemaMutator) DeleteTable(name string) (err error) {
+	delete(b.tables, name)
 	return
 }
 func (b *BrokerSchemaMutator) UpdateTableConfig(table string, config common.TableConfig) (err error) {
+	b.tables[table].Schema.Config = config
 	return
 }
 func (b *BrokerSchemaMutator) UpdateTable(table common.Table) (err error) {
+	b.tables[table.Name] = memCom.NewTableSchema(&table)
 	return
 }
 func (b *BrokerSchemaMutator) AddColumn(table string, column common.Column, appendToArchivingSortOrder bool) (err error) {
+	oldSchema := b.tables[table].Schema
+	oldSchema.Columns = append(oldSchema.Columns, column)
+	if appendToArchivingSortOrder {
+		oldSchema.ArchivingSortColumns = append(oldSchema.ArchivingSortColumns, len(oldSchema.Columns)-1)
+	}
+	b.tables[table] = memCom.NewTableSchema(&oldSchema)
 	return
 }
 func (b *BrokerSchemaMutator) UpdateColumn(table string, column string, config common.ColumnConfig) (err error) {
+	oldSchema := b.tables[table].Schema
+	target := -1
+	for i, col := range oldSchema.Columns {
+		if col.Name == column {
+			target = i
+			break
+		}
+	}
+	if target == -1 {
+		err = errors.New(fmt.Sprintf("column %s not found", column))
+		return
+	}
+	oldSchema.Columns[target].Config = config
+	b.tables[table] = memCom.NewTableSchema(&oldSchema)
 	return
 }
 
 func (b *BrokerSchemaMutator) DeleteColumn(table string, column string) (err error) {
+	oldSchema := b.tables[table].Schema
+	target := -1
+	for i, col := range oldSchema.Columns {
+		if col.Name == column {
+			target = i
+			break
+		}
+	}
+	if target == -1 {
+		err = errors.New(fmt.Sprintf("column %s not found", column))
+		return
+	}
+	oldSchema.Columns[target].Deleted = true
+	b.tables[table] = memCom.NewTableSchema(&oldSchema)
 	return
 }
 
 // ====  memstore/common.TableSchemaReader ====
-// TODO: implement. these are used by compiler
 func (b *BrokerSchemaMutator) GetSchema(table string) (tableSchema *memCom.TableSchema, err error) {
+	tableSchema = b.tables[table]
 	return
 }
 
 func (b *BrokerSchemaMutator) GetSchemas() (schemas map[string]*memCom.TableSchema) {
+	schemas = b.tables
 	return
 }

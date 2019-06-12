@@ -34,7 +34,7 @@ func NewQueryHandler(executor common.QueryExecutor) QueryHandler {
 }
 
 func (handler *QueryHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
-	router.HandleFunc("/query", utils.ApplyHTTPWrappers(handler.HandleQuery, wrappers)).Methods(http.MethodPost)
+	router.HandleFunc("/", utils.ApplyHTTPWrappers(handler.HandleQuery, wrappers)).Methods(http.MethodPost)
 }
 
 func (handler *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +45,11 @@ func (handler *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	handler.exec.Execute(context.TODO(), queryReqeust.Body.Namespace, queryReqeust.Body.Query, w)
+	err = handler.exec.Execute(context.TODO(), queryReqeust.Body.Query, w)
+	if err != nil {
+		api.RespondWithError(w, err)
+		return
+	}
 	// TODO: logging and metrics
 	return
 }
@@ -65,7 +69,6 @@ type BrokerQueryRequest struct {
 	Origin string `header:"Rpc-Caller,optional" json:"origin"`
 	// in: body
 	Body struct {
-		Namespace string `json:"namespace"`
-		Query     string `json:"query"`
+		Query string `json:"query"`
 	} `body:""`
 }

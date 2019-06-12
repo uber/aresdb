@@ -11,20 +11,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package config
+package client
 
 import (
-	"github.com/m3db/m3/src/cluster/client/etcd"
-	"github.com/uber/aresdb/common"
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-type BrokerConfig struct {
-	// HTTP port for serving.
-	Port int `yaml:"port"`
-
-	ControllerConfig *common.ControllerConfig `yaml:"controller,omitempty"`
-	HTTP             common.HTTPConfig        `yaml:"http"`
-	Etcd etcd.Configuration `yaml:"etcd"`
-	Cluster common.ClusterConfig  `yaml:"cluster"`
+func TestControllerClient(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Datanode Client Suite")
 }

@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package client
 
 import (
@@ -88,6 +89,9 @@ func (c *ControllerHTTPClient) buildRequest(method, path string, body io.Reader)
 
 func (c *ControllerHTTPClient) getResponse(request *http.Request) (respBytes []byte, err error) {
 	resp, err := c.c.Do(request)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 	if err != nil {
 		return
 	}

@@ -15,10 +15,15 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/m3db/m3/src/cluster/services"
+	"github.com/m3db/m3/src/x/instrument"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"github.com/uber/aresdb/broker"
 	"github.com/uber/aresdb/broker/config"
 	"github.com/uber/aresdb/cluster/topology"
@@ -26,7 +31,9 @@ import (
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/controller/client"
 	dataNodeCli "github.com/uber/aresdb/datanode/client"
+	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -46,7 +53,7 @@ func Execute(setters ...cmd.Option) {
 		Use:     "aresbrokerd",
 		Short:   "AresDB broker",
 		Long:    `AresDB broker is the gateway to send queries to AresDB`,
-		Example: `./aresbrokerd --config config/ares-broker.yaml --port 9374`,
+		Example: `./aresbrokerd --config config/ares-broker.yaml --port 9474`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cfg, err := ReadConfig(options.DefaultCfg, cmd.Flags())
@@ -89,16 +96,36 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 		logger.Fatal("Missing controller client config", err)
 	}
 
+	clusterName := cfg.Cluster.ClusterName
 	controllerClient := client.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
-	schemaManager := broker.NewSchemaManager(controllerClient)
-	schemaManager.Run()
+	schemaMutator := broker.NewBrokerSchemaMutator()
+	schemaFetchJob := metastore.NewSchemaFetchJob(10, schemaMutator, metastore.NewTableSchameValidator(), controllerClient, clusterName, "")
+	schemaFetchJob.FetchSchema()
+	go schemaFetchJob.Run()
 
-	// TODO: init topology, init datanode cli
 	var topo topology.Topology
-	var dataNodeCli dataNodeCli.DataNodeQueryClient
+
+	serviceName := utils.DataNodeServiceName(clusterName)
+
+	cfg.Etcd.Service = serviceName
+	configServiceCli, err := cfg.Etcd.NewClient(
+		instrument.NewOptions().SetLogger(zap.NewExample()))
+	//configServiceCli, err := etcd.NewConfigServiceClient(
+	//	etcd.NewOptions().
+	//	SetEnv("dev").
+	//	SetZone("local").SetService(serviceName).
+	//	SetClusters([]etcd.Cluster{etcd.NewCluster().SetZone("local").SetEndpoints([]string{"localhost:2379"})}))
+	if err != nil {
+		logger.Fatal("Failed to create config service client,", err)
+	}
+	dynamicOptions := topology.NewDynamicOptions().SetConfigServiceClient(configServiceCli).SetServiceID(services.NewServiceID().SetZone(cfg.Etcd.Zone).SetName(serviceName).SetEnvironment(cfg.Etcd.Env))
+	topo, err = topology.NewDynamicInitializer(dynamicOptions).Init()
+	if err != nil {
+		logger.Fatal("Failed to initialize dynamic topology,", err)
+	}
 
 	// executor
-	exec := broker.NewQueryExecutor(schemaManager, topo, dataNodeCli)
+	exec := broker.NewQueryExecutor(schemaMutator, topo, dataNodeCli.NewDataNodeQueryClient())
 
 	// init handlers
 	queryHandler := broker.NewQueryHandler(exec)
@@ -123,7 +150,32 @@ func AddFlags(cmd *cobra.Command) {
 	cmd.Flags().IntP("port", "p", 0, "Ares broker service port")
 }
 
-// ReadConfig populates BrokerConfig TODO
-func ReadConfig(defaultConfig map[string]interface{}, flags *pflag.FlagSet) (cfg config.BrokerConfig, err error) {
+// ReadConfig populates BrokerConfig
+func ReadConfig(defaultCfg map[string]interface{}, flags *pflag.FlagSet) (cfg config.BrokerConfig, err error) {
+	v := viper.New()
+	v.SetConfigType("yaml")
+	// bind command flags
+	v.BindPFlags(flags)
+
+	utils.BindEnvironments(v)
+
+	// set defaults
+	v.MergeConfigMap(defaultCfg)
+
+	// merge in config file
+	if cfgFile, err := flags.GetString("config"); err == nil && cfgFile != "" {
+		v.SetConfigFile(cfgFile)
+	} else {
+		v.SetConfigName("ares-broker")
+		v.AddConfigPath("./config")
+	}
+
+	if err := v.MergeInConfig(); err == nil {
+		fmt.Println("Using config file: ", v.ConfigFileUsed())
+	}
+
+	err = v.Unmarshal(&cfg, func(config *mapstructure.DecoderConfig) {
+		config.TagName = "yaml"
+	})
 	return
 }

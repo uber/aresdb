@@ -29,7 +29,6 @@ import (
 	aresShard "github.com/uber/aresdb/cluster/shard"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/utils"
-	"go.uber.org/zap"
 	"sync"
 )
 
@@ -103,7 +102,7 @@ func newDynamicTopology(opts DynamicOptions) (DynamicTopology, error) {
 
 	m, err := getMapFromUpdate(watch.Get())
 	if err != nil {
-		logger.Error("dynamic topology received invalid initial value", zap.Error(err))
+		logger.With("err", err).Error("dynamic topology received invalid initial value")
 		return nil, err
 	}
 
@@ -137,7 +136,7 @@ func (t *dynamicTopology) run() {
 
 		m, err := getMapFromUpdate(t.watch.Get())
 		if err != nil {
-			t.logger.Warn("dynamic topology received invalid update", zap.Error(err))
+			t.logger.With("err", err).Warn("dynamic topology received invalid update")
 			continue
 		}
 		t.watchable.Update(m)
@@ -183,11 +182,7 @@ func (t *dynamicTopology) MarkShardsAvailable(
 	return err
 }
 
-func getMapFromUpdate(data interface{}) (Map, error) {
-	service, ok := data.(services.Service)
-	if !ok {
-		return nil, errInvalidTopology
-	}
+func getMapFromUpdate(service services.Service) (Map, error) {
 	to, err := getStaticOptions(service)
 	if err != nil {
 		return nil, err

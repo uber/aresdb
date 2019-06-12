@@ -10,7 +10,7 @@ type Dimension struct {
 	// Expr can be empty when TimeBucketizer is specified, which implies the
 	// designated time column from the main table is used as the expresssion.
 	Expr       string `json:"sqlExpression"`
-	ExprParsed expr.Expr
+	ExprParsed expr.Expr `json:"-"`
 
 	// Decides how to bucketize a timestamp Dimension before grouping by.
 	// See https://github.com/uber/aresdb/wiki/aql#time_bucketizer
@@ -50,12 +50,12 @@ type Measure struct {
 	Alias string `json:"alias,omitempty"`
 	// The SQL expression for computing the measure.
 	Expr       string `json:"sqlExpression"`
-	ExprParsed expr.Expr
+	ExprParsed expr.Expr `json:"-"`
 
 	// Row level filters to apply for this measure.
 	// The filters are ANDed togther.
 	Filters       []string `json:"rowFilters,omitempty"`
-	FiltersParsed []expr.Expr
+	FiltersParsed []expr.Expr `json:"-"`
 }
 
 // Join specifies a secondary table to be explicitly joined in the query.
@@ -68,7 +68,7 @@ type Join struct {
 
 	// Condition expressions to be ANDed together for the join.
 	Conditions       []string `json:"conditions"`
-	ConditionsParsed []expr.Expr
+	ConditionsParsed []expr.Expr `json:"-"`
 }
 
 // TimeFilter is a syntax sugar for specifying time range.
@@ -108,7 +108,7 @@ type AQLQuery struct {
 
 	// Row level filters to apply for all measures. The filters are ANDed together.
 	Filters       []string `json:"rowFilters,omitempty"`
-	FiltersParsed []expr.Expr
+	FiltersParsed []expr.Expr `json:"-"`
 
 	// Syntax sugar for specifying a time based range filter.
 	TimeFilter TimeFilter `json:"timeFilter,omitempty"`
