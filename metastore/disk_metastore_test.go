@@ -231,7 +231,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 			writeLock:        sync.Mutex{},
 			basePath:         basepath,
 			enumDictWatchers: make(map[string]map[string]chan<- string),
-			enumDictDone:     make(map[string]map[string]<-chan struct{}),
+			enumDictDone: make(map[string]map[string]<-chan struct{}),
 		}
 		return diskMetaStore
 	}
@@ -854,5 +854,20 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 		diskMetaStore, err = NewDiskMetaStore("/etc/testdir")
 		Ω(err).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("Test GetArchiveBatches", func() {
+		diskMetaStore := createDiskMetastore("base")
+		mockBatch1 := &mocks.FileInfo{}
+		mockBatch2 := &mocks.FileInfo{}
+		mockBatch1.On("Name").Return("1")
+		mockBatch2.On("Name").Return("2")
+		mockFileSystem.On("ReadDir", "base/c/shards/0/batches").Return([]os.FileInfo{mockBatch1, mockBatch2}, nil).Once()
+
+		batches, err :=diskMetaStore.GetArchiveBatches("c", 0, 0, 0)
+		Ω(err).Should(BeNil())
+		Ω(len(batches)).Should(Equal(2))
+		Ω(batches[0]).Should(Equal(1))
+		Ω(batches[1]).Should(Equal(2))
 	})
 })

@@ -76,6 +76,8 @@ message TableShardMetaDataRequest {
 
     int32 startBatchID = 4; // first batch id to fetch, fact only
     int32 endBatchID = 5; // last batch id to fetch, fact only
+    int64 sessionID = 6; // established session id
+    string nodeID = 7; // caller node id
 }
 
 message VectorPartyRawDataRequest {
@@ -88,6 +90,8 @@ message VectorPartyRawDataRequest {
         SnapshotVersion snapshotVersion = 6;
     }
     uint32 columnID = 7;
+    int64 sessionID = 8; // established session id
+    string nodeID = 9; // caller node id
 }
 
 message VectorPartyRawData {
@@ -98,15 +102,23 @@ message StartSessionRequest {
     string table = 1;
     uint32 shard = 2;
     int64 ttl = 3;
+    string nodeID = 4; // caller node id
 }
 
 message Session {
-    int64 ID = 1;
+    int64 ID = 1; // established session id
+    string nodeID = 2; // caller node id
 }
 
 message KeepAliveResponse {
     int64 ID = 1;
     int64 ttl = 2;
+}
+
+message BenchmarkRequest {
+    string file = 1;
+    int32 chunkSize = 2;
+    int32 bufferSize = 3;
 }
 
 // PeerDataNode service defines the service for data fetching from peer data node
@@ -129,4 +141,6 @@ service PeerDataNode {
     rpc FetchTableShardMetaData(TableShardMetaDataRequest ) returns (TableShardMetaData ) {}
     // FetchVectorPartyRawData fetches raw data for specified vector party
     rpc FetchVectorPartyRawData(VectorPartyRawDataRequest ) returns (stream VectorPartyRawData) {}
+    // benchmark function to test performance using different config for file transfer
+    rpc BenchmarkFileTransfer(BenchmarkRequest) returns (stream VectorPartyRawData) {}
 }

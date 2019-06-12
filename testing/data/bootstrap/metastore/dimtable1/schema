@@ -1,0 +1,35 @@
+{
+  "name": "dimtable1",
+  "columns": [
+    {
+      "name": "uuid",
+      "type": "UUID",
+      "config": {}
+    },
+    {
+      "name": "cid",
+      "type": "Uint16",
+      "config": {}
+    },
+    {
+      "name": "ctime",
+      "type": "Uint32",
+      "config": {}
+    },
+    {
+      "name": "location",
+      "type": "GeoPoint",
+      "config": {}
+    },
+    {
+      "name": "puuid",
+      "type": "UUID",
+      "config": {}
+    }
+  ],
+  "primaryKeyColumns": [
+    0
+  ],
+  "isFactTable": false,
+  "version": 0
+}

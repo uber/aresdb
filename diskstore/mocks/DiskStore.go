@@ -102,6 +102,29 @@ func (_m *DiskStore) DeleteTableShard(table string, shard int) error {
 	return r0
 }
 
+// ListArchiveBatchVectorPartyFiles provides a mock function with given fields: table, shard, batchID, batchVersion, seqNum
+func (_m *DiskStore) ListArchiveBatchVectorPartyFiles(table string, shard int, batchID int, batchVersion uint32, seqNum uint32) ([]int, error) {
+	ret := _m.Called(table, shard, batchID, batchVersion, seqNum)
+
+	var r0 []int
+	if rf, ok := ret.Get(0).(func(string, int, int, uint32, uint32) []int); ok {
+		r0 = rf(table, shard, batchID, batchVersion, seqNum)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, int, int, uint32, uint32) error); ok {
+		r1 = rf(table, shard, batchID, batchVersion, seqNum)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListLogFiles provides a mock function with given fields: table, shard
 func (_m *DiskStore) ListLogFiles(table string, shard int) ([]int64, error) {
 	ret := _m.Called(table, shard)

@@ -54,6 +54,9 @@ type MetaStore interface {
 	// Returns the assigned case IDs for each case string.
 	ExtendEnumDict(table, column string, enumCases []string) ([]int, error)
 
+	// List available archive batches
+	GetArchiveBatches(table string, shard int, start, end int32) ([]int, error)
+
 	// Adds a version and size for the specified archive batch.
 	AddArchiveBatchVersion(table string, shard, batchID int, version uint32, seqNum uint32, batchSize int) error
 
