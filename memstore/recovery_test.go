@@ -29,6 +29,8 @@ import (
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+
 	"time"
 )
 
@@ -127,6 +129,21 @@ var _ = ginkgo.Describe("recovery", func() {
 		shard.cleanOldSnapshotAndLogs(0, 0)
 
 		diskStore.AssertCalled(utils.TestingT, "DeleteSnapshot", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	ginkgo.It("cleanOldSnapshotAndLogs should be blocked for DeleteSnapshot", func() {
+		diskStore := &diskMocks.DiskStore{}
+		metaStore := &metaMocks.MetaStore{}
+
+		// no mock on DeleteSnapshot will be fine as it wont be called
+		m := createMemStore(tableName, 0, []memCom.DataType{memCom.Uint16, memCom.SmallEnum, memCom.UUID, memCom.Uint32},
+			[]int{0}, batchSize, false, false, metaStore, diskStore)
+
+		shard, _ := m.GetTableShard(tableName, 0)
+		shard.options.bootstrapToken = new(memComMocks.BootStrapToken)
+		shard.options.bootstrapToken.(*memComMocks.BootStrapToken).On("AcquireToken", mock.Anything, mock.Anything).Return(false)
+		shard.options.bootstrapToken.(*memComMocks.BootStrapToken).On("ReleaseToken", mock.Anything, mock.Anything).Return()
+		shard.cleanOldSnapshotAndLogs(0, 0)
 	})
 
 	ginkgo.It("PlayRedoLog should work for file redolog", func() {

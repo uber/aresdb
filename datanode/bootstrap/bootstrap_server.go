@@ -41,7 +41,6 @@ var (
 	errInvalidSessionID = errors.New("invalid session id")
 	errInvalidRequset   = errors.New("invalid request, table/shard not match")
 	errSessionExisting  = errors.New("The request table/shard already have session running from the same node")
-	errUsageOccupied    = errors.New("Can not acquire table/shard token, retry after a while")
 )
 
 type PeerDataNodeServerImpl struct {
@@ -57,9 +56,6 @@ type PeerDataNodeServerImpl struct {
 	sessions map[int64]*sessionInfo
 	// tracking of all sessions for each table/shard
 	tableShardSessions map[tableShardPair][]int64
-	// tracking of all outside users of table/shard using token count
-	// the main purpose of this token is to avoid start bootstrap session when file purging happening
-	tableShardTokens map[tableShardPair]int
 }
 
 type tableShardPair struct {
@@ -83,7 +79,6 @@ func NewPeerDataNodeServer(metaStore common.MetaStore, diskStore diskstore.DiskS
 		diskStore:          diskStore,
 		sessions:           make(map[int64]*sessionInfo),
 		tableShardSessions: make(map[tableShardPair][]int64),
-		tableShardTokens:   make(map[tableShardPair]int),
 	}
 }
 
@@ -104,8 +99,7 @@ func (p *PeerDataNodeServerImpl) AcquireToken(tableName string, shardID uint32) 
 
 	key := tableShardPair{table: tableName, shardID: shardID}
 	sessionIDs, ok := p.tableShardSessions[key]
-	if !ok || len(sessionIDs) > 0 {
-		p.tableShardTokens[key] = p.tableShardTokens[key] + 1
+	if !ok || len(sessionIDs) == 0 {
 		return true
 	}
 	return false
@@ -113,13 +107,7 @@ func (p *PeerDataNodeServerImpl) AcquireToken(tableName string, shardID uint32) 
 
 // AcquireToken release the token count, must call this when call AcquireToken success
 func (p *PeerDataNodeServerImpl) ReleaseToken(tableName string, shardID uint32) {
-	p.Lock()
-	defer p.Unlock()
-
-	key := tableShardPair{table: tableName, shardID: shardID}
-	if val, ok := p.tableShardTokens[key]; ok && val > 0 {
-		p.tableShardTokens[key] = p.tableShardTokens[key] - 1
-	}
+	// nothing to do for now
 }
 
 // getNextSequence create new session id
@@ -159,11 +147,6 @@ func (p *PeerDataNodeServerImpl) StartSession(ctx context.Context, req *pb.Start
 		return nil, err
 	}
 
-	if !p.checkUsage(sessionInfo.table, sessionInfo.shardID) {
-		err = errUsageOccupied
-		return nil, err
-	}
-
 	p.addSession(sessionInfo)
 
 	return &pb.Session{
@@ -187,18 +170,6 @@ func (p *PeerDataNodeServerImpl) checkReqExist(s *sessionInfo) error {
 		}
 	}
 	return nil
-}
-
-// check if there are purge job running
-func (p *PeerDataNodeServerImpl) checkUsage(tableName string, shardID uint32) bool {
-	p.RLock()
-	defer p.RUnlock()
-
-	key := tableShardPair{table: tableName, shardID: shardID}
-	if count, ok := p.tableShardTokens[key]; ok && count > 0 {
-		return false
-	}
-	return true
 }
 
 // KeepAlive is like client/server ping process, to notify health about each other
@@ -349,7 +320,21 @@ func (p *PeerDataNodeServerImpl) FetchTableShardMetaData(ctx context.Context, re
 		return nil, err
 	}
 
-	batchIDs, err := p.metaStore.GetArchiveBatches(req.Table, int(req.Shard), req.StartBatchID, req.EndBatchID)
+	// adjust start/end batchID according to local retention setting and request
+	// we'll take the intersection batches
+	startBatchID := int32(0)
+	endBatchID := int32(utils.Now().Unix() / 86400)
+	if t.Config.RecordRetentionInDays > 0 {
+		startBatchID = endBatchID - int32(t.Config.RecordRetentionInDays) + 1
+	}
+	if req.StartBatchID > startBatchID {
+		startBatchID = req.StartBatchID
+	}
+	if req.EndBatchID > 0 && req.EndBatchID < endBatchID {
+		endBatchID = req.EndBatchID
+	}
+
+	batchIDs, err := p.metaStore.GetArchiveBatches(req.Table, int(req.Shard), startBatchID, endBatchID)
 	if err != nil {
 		return nil, err
 	}
@@ -435,6 +420,9 @@ func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawD
 	}
 	if err != nil {
 		return err
+	}
+	if reader == nil {
+		return os.ErrNotExist
 	}
 	defer reader.Close()
 

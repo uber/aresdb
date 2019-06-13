@@ -289,38 +289,29 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 		Ω(err.Error()).Should(ContainSubstring("EOF"))
 	})
 
-	ginkgo.It("AcquireUsage/ReleaseUseage test", func() {
+	ginkgo.It("AcquireToken/ReleaseToken test", func() {
 		s := peerServer.(*PeerDataNodeServerImpl)
 		ok := s.AcquireToken(factTable, 0)
 		Ω(ok).Should(BeTrue())
-		ok = s.AcquireToken(factTable, 0)
-		Ω(ok).Should(BeTrue())
-		key := tableShardPair{table: factTable, shardID: 0,}
-		count, _ := s.tableShardTokens[key]
-		Ω(count).Should(Equal(2))
-		s.ReleaseToken(factTable, 0)
-		count, _ = s.tableShardTokens[key]
-		Ω(count).Should(Equal(1))
 
-		// someone hold the token, start session should fail
 		conn := connFunc()
 		defer conn.Close()
 
 		client := pb.NewPeerDataNodeClient(conn)
-		// no nodeid will fail
 		req.Table = factTable
 		req.NodeID = nodeID
 		session, err := client.StartSession(context.Background(), &req)
-		Ω(err).ShouldNot(BeNil())
-
-		s.ReleaseToken(factTable, 0)
-		count, _ = s.tableShardTokens[key]
-		Ω(count).Should(Equal(0))
-
-		// no one hold token, start session should success
-		session, err = client.StartSession(context.Background(), &req)
 		Ω(err).Should(BeNil())
-		Ω(session).ShouldNot(BeNil())
-		Ω(session.ID > 0).Should(BeTrue())
+		Ω(len(s.sessions)).Should(Equal(1))
+		Ω(len(s.tableShardSessions)).Should(Equal(1))
+
+		// some session running, acquire token shall fail
+		ok = s.AcquireToken(factTable, 0)
+		Ω(ok).Should(BeFalse())
+
+		s.cleanSession(session.ID, true)
+		// no more sessions, acquire token shall success
+		ok = s.AcquireToken(factTable, 0)
+		Ω(ok).Should(BeTrue())
 	})
 })

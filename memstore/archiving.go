@@ -291,20 +291,24 @@ func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporte
 	}
 
 	// delete obsolete batch versions if there are no peer bootstraping job running
+	canDeleteData := false
 	if m.options.bootstrapToken.AcquireToken(table, uint32(shardID)) {
+		canDeleteData = true
 		defer m.options.bootstrapToken.ReleaseToken(table, uint32(shardID))
-		// Delete obsolete (merged base batch) vector parties in oldArchivedStore. We don't need any lock since all queries
-		// should already finish processing the old version.
-		for day := range patchByDay {
-			// We don't need to check existence again since it should be already created if missing in merge stage.
-			batch := oldVersion.Batches[day]
-			// Purge archive batch on disk.
+	}
+	// Delete obsolete (merged base batch) vector parties in oldArchivedStore. We don't need any lock since all queries
+	// should already finish processing the old version.
+	for day := range patchByDay {
+		// We don't need to check existence again since it should be already created if missing in merge stage.
+		batch := oldVersion.Batches[day]
+		// Purge archive batch on disk.
+		if canDeleteData {
 			if err := m.diskStore.DeleteBatchVersions(table, shardID, int(day), batch.Version, batch.SeqNum); err != nil {
 				return err
 			}
-			// Purge archive batch in memory.
-			batch.SafeDestruct()
 		}
+		// Purge archive batch in memory.
+		batch.SafeDestruct()
 	}
 
 	// Report memory usage.

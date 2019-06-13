@@ -38,6 +38,7 @@ var _ = ginkgo.Describe("Purge", func() {
 
 	testTable := "test"
 	testShardID := 0
+	bootstrapToken := new(memComMocks.BootStrapToken)
 
 	ginkgo.BeforeEach(func() {
 		tableSchema := memCom.NewTableSchema(&metaCom.Table{
@@ -64,9 +65,7 @@ var _ = ginkgo.Describe("Purge", func() {
 		diskStore = &diskStoreMocks.DiskStore{}
 		metaStore = &metaStoreMocks.MetaStore{}
 		redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
-		bootstrapToken := new(memComMocks.BootStrapToken)
-		bootstrapToken.On("AcquireToken",  mock.Anything, mock.Anything).Return(true)
-		bootstrapToken.On("ReleaseToken",  mock.Anything, mock.Anything).Return()
+
 		options := NewOptions(bootstrapToken, redologManagerMaster)
 
 		memStore = &memStoreImpl{
@@ -121,6 +120,8 @@ var _ = ginkgo.Describe("Purge", func() {
 
 		diskStore.On("DeleteBatches", testTable, testShardID, 0, 2).
 			Return(1, nil).Once()
+		bootstrapToken.On("AcquireToken",  mock.Anything, mock.Anything).Return(true).Once()
+		bootstrapToken.On("ReleaseToken",  mock.Anything, mock.Anything).Return().Once()
 
 		err := memStore.Purge(testTable, testShardID, 0, 2, mockReporter)
 		Ω(err).Should(BeNil())
@@ -133,4 +134,19 @@ var _ = ginkgo.Describe("Purge", func() {
 		Ω(jobDetail.Stage).Should(BeEquivalentTo("complete"))
 	})
 
+	ginkgo.It("purge should be blocked", func() {
+		jobDetail := &PurgeJobDetail{}
+
+		mockReporter := func(key string, mutator PurgeJobDetailMutator) {
+			mutator(jobDetail)
+		}
+		Ω(tableShard.ArchiveStore.CurrentVersion.Batches).Should(HaveKey(int32(1)))
+		Ω(tableShard.ArchiveStore.CurrentVersion.Batches).Should(HaveKey(int32(2)))
+
+		bootstrapToken.On("AcquireToken",  mock.Anything, mock.Anything).Return(false).Once()
+		bootstrapToken.On("ReleaseToken",  mock.Anything, mock.Anything).Return().Once()
+
+		err := memStore.Purge(testTable, testShardID, 0, 2, mockReporter)
+		Ω(err).ShouldNot(BeNil())
+	})
 })
