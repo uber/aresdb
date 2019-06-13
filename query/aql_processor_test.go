@@ -71,6 +71,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	var hostMemoryManager memCom.HostMemoryManager
 	var shard *memstore.TableShard
 	var options memstore.Options
+	var redologManagerMaster *redolog.RedoLogManagerMaster
 	table := "table1"
 	shardID := 0
 
@@ -108,7 +109,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		diskStore.(*diskMocks.DiskStore).On(
 			"OpenVectorPartyFileForRead", table, mock.Anything, shardID, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
-		redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+		redologManagerMaster, _ = redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
 		bootstrapToken := new(memComMocks.BootStrapToken)
 		options = memstore.NewOptions(bootstrapToken, redologManagerMaster)
 		shard = memstore.NewTableShard(&memCom.TableSchema{
@@ -211,6 +212,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		batch99.SafeDestruct()
 		da := getDeviceAllocator()
 		Ω(da.(*memoryTrackingDeviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(0))
+		redologManagerMaster.Stop()
 	})
 
 	ginkgo.It("prefilterSlice", func() {
@@ -1052,6 +1054,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	ginkgo.It("ProcessQuery should work for timezone column queries", func() {
 		timezoneTable := "table2"
 		memStore := new(memMocks.MemStore)
+		redologManagerMaster.Stop()
 
 		mainTableSchema := metaCom.Table{
 			Name: table,
