@@ -60,7 +60,7 @@ var _ = ginkgo.Describe("table Shard", func() {
 
 		m := getFactory().NewMockMemStore()
 		shard := NewTableShard(schema, nil, diskStore,
-			NewHostMemoryManager(m, 1<<32), 0, m.redologManagerMaster)
+			NewHostMemoryManager(m, 1<<32), 0, m.options)
 
 		// Prepare live store
 		shard.LiveStore.AdvanceNextWriteRecord()

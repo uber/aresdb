@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		memstore := createMemStore("abc", 0, []memCom.DataType{memCom.Uint32}, []int{0}, 10, true, false, metaStore, diskStore)
 		memstore.TableShards["abc"] = nil
-		memstore.redologManagerMaster.Stop()
+		memstore.options.redoLogMaster.Stop()
 		memstore.InitShards(false)
 		shard := memstore.TableShards["abc"][0]
 		Ω(len(shard.LiveStore.Batches)).Should(Equal(1))
@@ -199,12 +199,12 @@ var _ = ginkgo.Describe("recovery", func() {
 		m := createMemStore(tableName, 0, []memCom.DataType{memCom.Uint32},
 			[]int{0}, batchSize, true, false, metaStore, diskStore)
 		// close the default one
-		m.redologManagerMaster.Stop()
+		m.options.redoLogMaster.Stop()
 		//reassign
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
-		m.redologManagerMaster, _ = redolog.NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
+		m.options.redoLogMaster, _ = redolog.NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
 		schema, _ := m.GetSchema(tableName)
-		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, m.redologManagerMaster)
+		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, m.options)
 
 		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		for i := 0; i < 10; i++ {

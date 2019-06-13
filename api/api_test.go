@@ -61,7 +61,8 @@ func CreateMockHostMemoryManger() *memComMocks.HostMemoryManager {
 func CreateMemStore(schema *memCom.TableSchema, shardID int, metaStore metaCom.MetaStore,
 	diskStore diskstore.DiskStore) *memMocks.MemStore {
 	redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
-	shard := memstore.NewTableShard(schema, metaStore, diskStore, CreateMockHostMemoryManger(), shardID, redoManagerFactory)
+	options := memstore.NewOptions(new(memComMocks.BootStrapToken), redoManagerFactory)
+	shard := memstore.NewTableShard(schema, metaStore, diskStore, CreateMockHostMemoryManger(), shardID, options)
 
 	memStore := new(memMocks.MemStore)
 	memStore.On("GetTableShard", schema.Schema.Name, shardID).Return(shard, nil).

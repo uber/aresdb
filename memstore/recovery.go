@@ -95,12 +95,17 @@ func (shard *TableShard) cleanOldSnapshotAndLogs(redoLogFile int64, offset uint3
 			"table", tableName).Errorf(
 			"Purge redologs failed, shard: %d, error: %v", shard.ShardID, err)
 	}
-	// delete old snapshots
-	if err := shard.diskStore.DeleteSnapshot(shard.Schema.Schema.Name, shard.ShardID, redoLogFile, offset); err != nil {
-		utils.GetLogger().With(
-			"job", "snapshot_cleanup",
-			"table", tableName).Errorf(
-			"Delete snapshots failed, shard: %d, error: %v", shard.ShardID, err)
+
+	if shard.options.bootstrapToken.AcquireToken(tableName, uint32(shard.ShardID)) {
+		defer shard.options.bootstrapToken.ReleaseToken(tableName, uint32(shard.ShardID))
+
+		// delete old snapshots
+		if err := shard.diskStore.DeleteSnapshot(shard.Schema.Schema.Name, shard.ShardID, redoLogFile, offset); err != nil {
+			utils.GetLogger().With(
+				"job", "snapshot_cleanup",
+				"table", tableName).Errorf(
+				"Delete snapshots failed, shard: %d, error: %v", shard.ShardID, err)
+		}
 	}
 }
 
@@ -298,7 +303,7 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 // LoadShard loads/recovers the specified Shard and attaches it to memStoreImpl for serving. If will load the metadata
 // first and then replay redologs only if replayRedologs is true.
 func (m *memStoreImpl) LoadShard(schema *memcom.TableSchema, shard int, replayRedologs bool) error {
-	tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shard, m.redologManagerMaster)
+	tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shard, m.options)
 	tableShard.LoadMetaData()
 	if replayRedologs {
 		tableShard.PlayRedoLog()

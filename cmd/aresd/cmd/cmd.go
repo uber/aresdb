@@ -25,6 +25,7 @@ import (
 	controllerCli "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
@@ -33,6 +34,11 @@ import (
 	"path/filepath"
 	"time"
 	"unsafe"
+	"google.golang.org/grpc"
+	"strings"
+	pb "github.com/uber/aresdb/datanode/generated/proto/rpc"
+	"google.golang.org/grpc/reflection"
+	"github.com/uber/aresdb/datanode/bootstrap"
 )
 
 // Options represents options for executing command
@@ -118,6 +124,9 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 		logger.Panic(err)
 	}
 
+	// Create DiskStore.
+	diskStore := diskstore.NewLocalDiskStore(cfg.RootPath)
+
 	// fetch schema from controller and start periodical job
 	if cfg.Cluster.Enable {
 		if cfg.Cluster.ClusterName == "" {
@@ -136,10 +145,11 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 		// immediate initial fetch
 		schemaFetchJob.FetchSchema()
 		go schemaFetchJob.Run()
+
 	}
 
-	// Create DiskStore.
-	diskStore := diskstore.NewLocalDiskStore(cfg.RootPath)
+	bootstrapServer := bootstrap.NewPeerDataNodeServer(metaStore, diskStore)
+	bootstrapToken := bootstrapServer.(memCom.BootStrapToken)
 
 	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(&cfg.RedoLogConfig, diskStore, metaStore)
 	if err != nil {
@@ -147,7 +157,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	}
 
 	// Create MemStore.
-	memStore := memstore.NewMemStore(metaStore, diskStore, redoLogManagerMaster)
+	memStore := memstore.NewMemStore(metaStore, diskStore, memstore.NewOptions(bootstrapToken, redoLogManagerMaster))
 
 	// Read schema.
 	utils.GetLogger().Infof("Reading schema from local MetaStore %s", metaStorePath)
@@ -230,8 +240,25 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, metaStore)
 	go batchStatsReporter.Run()
 
+	// create grpc server
+	// TODO tls certificate setup?
+	grpcServer := grpc.NewServer()
+	pb.RegisterPeerDataNodeServer(grpcServer, bootstrapServer)
+	reflection.Register(grpcServer)
+
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
-	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
+	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(mixedHandler(grpcServer, router)), cfg.HTTP)
 	batchStatsReporter.Stop()
 	redoLogManagerMaster.Stop()
+}
+
+// mixed handler for both grpc and traditional http
+func mixedHandler(grpcServer *grpc.Server, httpHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if grpcServer != nil && r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+			grpcServer.ServeHTTP(w, r)
+		} else {
+			httpHandler.ServeHTTP(w, r)
+		}
+	})
 }

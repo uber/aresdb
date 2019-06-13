@@ -32,7 +32,7 @@ var _ = ginkgo.Describe("live store", func() {
 			},
 			diskStore:            mockDiskStore,
 			HostMemoryManager:    hostMemoryManager,
-			redoLogManagerMaster: m.redologManagerMaster,
+			options: 			  m.options,
 		}
 		vs := NewLiveStore(0, shard)
 
@@ -62,9 +62,9 @@ var _ = ginkgo.Describe("live store", func() {
 			},
 			diskStore:            mockDiskStore,
 			HostMemoryManager:    hostMemoryManager,
-			redoLogManagerMaster: m.redologManagerMaster,
+			options:              m.options,
 		}
-		m.redologManagerMaster.Stop()
+		m.options.redoLogMaster.Stop()
 		vs := NewLiveStore(16, shard)
 
 		vs.appendBatch(BaseBatchID)
@@ -109,9 +109,9 @@ var _ = ginkgo.Describe("live store", func() {
 			},
 			diskStore:            mockDiskStore,
 			HostMemoryManager:    hostMemoryManager,
-			redoLogManagerMaster: m.redologManagerMaster,
+			options:              m.options,
 		}
-		m.redologManagerMaster.Stop()
+		m.options.redoLogMaster.Stop()
 		vs := NewLiveStore(0, shard)
 
 		vs.appendBatch(BaseBatchID)
@@ -153,9 +153,9 @@ var _ = ginkgo.Describe("live store", func() {
 			},
 			diskStore:            mockDiskStore,
 			HostMemoryManager:    hostMemoryManager,
-			redoLogManagerMaster: m.redologManagerMaster,
+			options:              m.options,
 		}
-		m.redologManagerMaster.Stop()
+		m.options.redoLogMaster.Stop()
 		vs := NewLiveStore(16, shard)
 
 		vs.appendBatch(BaseBatchID)
@@ -190,9 +190,9 @@ var _ = ginkgo.Describe("live store", func() {
 			},
 			diskStore:            mockDiskStore,
 			HostMemoryManager:    hostMemoryManager,
-			redoLogManagerMaster: m.redologManagerMaster,
+			options: 			  m.options,
 		}
-		m.redologManagerMaster.Stop()
+		m.options.redoLogMaster.Stop()
 		vs := NewLiveStore(0, shard)
 		vs.PrimaryKey = pk
 
@@ -215,9 +215,9 @@ var _ = ginkgo.Describe("live store", func() {
 			},
 			diskStore:            mockDiskStore,
 			HostMemoryManager:    hostMemoryManager,
-			redoLogManagerMaster: m.redologManagerMaster,
+			options:              m.options,
 		}
-		m.redologManagerMaster.Stop()
+		m.options.redoLogMaster.Stop()
 		vs := NewLiveStore(0, shard)
 		liveBatch1 := vs.getOrCreateBatch(-1)
 		Ω(liveBatch1).ShouldNot(BeNil())

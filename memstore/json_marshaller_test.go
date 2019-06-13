@@ -43,7 +43,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 		RedoLogRotationInterval:  10800,
 		MaxRedoLogFileSize:       1 << 30,
 	}
-	redologManager, _ := m.redologManagerMaster.NewRedologManager("test", 1, tableConfig)
+	redologManager, _ := m.options.redoLogMaster.NewRedologManager("test", 1, tableConfig)
 
 	liveStore := LiveStore{
 		Batches: map[int32]*LiveBatch{

@@ -22,6 +22,7 @@ import (
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
+	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/testing"
@@ -60,11 +61,16 @@ func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType
 		schema.SetDefaultValue(i)
 	}
 
-	redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
-	memStore := NewMemStore(metaStore, diskStore, redoManagerFactory).(*memStoreImpl)
+	redoManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+	bootstrapToken := new(memComMocks.BootStrapToken)
+	bootstrapToken.On("AcquireToken",  mock.Anything, mock.Anything).Return(true)
+	bootstrapToken.On("ReleaseToken",  mock.Anything, mock.Anything).Return()
+
+	options := NewOptions(bootstrapToken, redoManagerMaster)
+	memStore := NewMemStore(metaStore, diskStore, options).(*memStoreImpl)
 	// Create shards.
 	shards := map[int]*TableShard{
-		shardID: NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(memStore, 1<<32), shardID, redoManagerFactory),
+		shardID: NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(memStore, 1<<32), shardID, options),
 	}
 	memStore.TableShards[tableName] = shards
 	memStore.TableSchemas[tableName] = schema

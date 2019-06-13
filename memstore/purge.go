@@ -17,10 +17,18 @@ package memstore
 import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
+	"github.com/pkg/errors"
 )
 
 // Purge purges out of retention data for table shard
 func (m *memStoreImpl) Purge(tableName string, shardID, batchIDStart, batchIDEnd int, reporter PurgeJobDetailReporter) error {
+	// check if there is peer bootstraping job running, skip this purge if we can not acquire the token
+	if m.options.bootstrapToken.AcquireToken(tableName, uint32(shardID)) {
+		defer m.options.bootstrapToken.ReleaseToken(tableName, uint32(shardID))
+	} else {
+		return errors.New("unable to acquire bootstrap token, retry later")
+	}
+
 	start := utils.Now()
 	jobKey := getIdentifier(tableName, shardID, memCom.PurgeJobType)
 	purgeTimer := utils.GetReporter(tableName, shardID).GetTimer(utils.PurgeTimingTotal)
