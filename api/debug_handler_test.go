@@ -441,7 +441,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		hostPort := testServer.Listener.Addr().String()
 		resp, err := http.Get(
 			fmt.Sprintf("http://%s/debug/%s/%d/redologs/%d/upsertbatches/%d"+
-				"?draw=%d&start=%d&length=%d",
+				"?draw=%d&start=%d&capacity=%d",
 				hostPort, redoLogTableName, redoLogShardID, redoLogFile, 4, 0, 0, 2))
 		Ω(err).Should(BeNil())
 		bs, err := ioutil.ReadAll(resp.Body)
@@ -462,7 +462,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		// shard does not exist
 		resp, err = http.Get(
 			fmt.Sprintf("http://%s/debug/%s/%d/redologs/%d/upsertbatches/%d"+
-				"?draw=%d&start=%d&length=%d",
+				"?draw=%d&start=%d&capacity=%d",
 				hostPort, redoLogTableName, testTableShardID, redoLogFile, 4, 0, 0, 2))
 		Ω(err).Should(BeNil())
 		bs, err = ioutil.ReadAll(resp.Body)
@@ -473,7 +473,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		// Invalid offset.
 		resp, err = http.Get(
 			fmt.Sprintf("http://%s/debug/%s/%d/redologs/%d/upsertbatches/%d"+
-				"?draw=%d&start=%d&length=%d",
+				"?draw=%d&start=%d&capacity=%d",
 				hostPort, redoLogTableName, redoLogShardID, redoLogFile, 5, 0, 0, 2))
 		Ω(err).Should(BeNil())
 		bs, err = ioutil.ReadAll(resp.Body)
@@ -483,13 +483,13 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		// Upsert batch row out of bound.
 		resp, err = http.Get(
 			fmt.Sprintf("http://%s/debug/%s/%d/redologs/%d/upsertbatches/%d"+
-				"?draw=%d&start=%d&length=%d",
+				"?draw=%d&start=%d&capacity=%d",
 				hostPort, redoLogTableName, redoLogShardID, redoLogFile, 4, 0, 2, 2))
 		Ω(err).Should(BeNil())
 		bs, err = ioutil.ReadAll(resp.Body)
 		Ω(err).Should(BeNil())
 		Ω(resp.StatusCode).Should(Equal(http.StatusInternalServerError))
-		Ω(string(bs)).Should(ContainSubstring("Invalid start or length"))
+		Ω(string(bs)).Should(ContainSubstring("Invalid start or capacity"))
 	})
 
 	ginkgo.It("ShowShardMeta request should work", func() {
@@ -854,7 +854,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		hostPort := testServer.Listener.Addr().String()
 		resp, err := http.Get(
 			fmt.Sprintf("http://%s/debug/%s/%d/backfill-manager/upsertbatches/%d"+
-				"?draw=%d&start=%d&length=%d",
+				"?draw=%d&start=%d&capacity=%d",
 				hostPort, testTableName, testTableShardID, 0, 0, 0, 2))
 		Ω(err).Should(BeNil())
 		bs, err := ioutil.ReadAll(resp.Body)
@@ -875,7 +875,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		// shard does not exist
 		resp, err = http.Get(
 			fmt.Sprintf("http://%s/debug/%s/%d/backfill-manager/upsertbatches/%d"+
-				"?draw=%d&start=%d&length=%d",
+				"?draw=%d&start=%d&capacity=%d",
 				hostPort, redoLogTableName, testTableShardID, 0, 0, 0, 2))
 		Ω(err).Should(BeNil())
 		bs, err = ioutil.ReadAll(resp.Body)

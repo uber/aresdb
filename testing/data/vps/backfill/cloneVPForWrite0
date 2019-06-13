@@ -1,6 +1,6 @@
 # time column, all values valid.
 data_type: Uint32
-length: 3
+capacity: 3
 has_counts: false
 values:
   - 0

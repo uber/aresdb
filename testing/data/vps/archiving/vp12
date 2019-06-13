@@ -1,5 +1,5 @@
 data_type: Float32
-length: 6
+capacity: 6
 values:
     - null
     - 1.0

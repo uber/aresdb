@@ -340,13 +340,13 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					{
 						values:    devicePointer{pointer: unsafe.Pointer(&values[0])},
 						nulls:     devicePointer{pointer: unsafe.Pointer(&nulls[0])},
-						length:    10,
+						capacity:    10,
 						valueType: memCom.Uint16,
 					},
 					{
 						values:    devicePointer{pointer: unsafe.Pointer(&values[0])},
 						nulls:     devicePointer{pointer: unsafe.Pointer(&nulls[0])},
-						length:    10,
+						capacity:    10,
 						valueType: memCom.Uint8,
 					},
 				},
@@ -354,13 +354,13 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					{
 						values:    devicePointer{pointer: unsafe.Pointer(&values[0])},
 						nulls:     devicePointer{pointer: unsafe.Pointer(&nulls[0])},
-						length:    10,
+						capacity:    10,
 						valueType: memCom.Uint16,
 					},
 					{
 						values:    devicePointer{pointer: unsafe.Pointer(&values[0])},
 						nulls:     devicePointer{pointer: unsafe.Pointer(&nulls[0])},
-						length:    10,
+						capacity:    10,
 						valueType: memCom.Uint8,
 					},
 				},
@@ -380,7 +380,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			values:          devicePointer{pointer: unsafe.Pointer(&values[0])},
 			nulls:           devicePointer{pointer: unsafe.Pointer(&nulls[0])},
 			counts:          devicePointer{pointer: unsafe.Pointer(&counts[0])},
-			length:          10,
+			capacity:          10,
 			valueType:       memCom.Uint16,
 			valueStartIndex: 1,
 			nullStartIndex:  0,
@@ -872,6 +872,41 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		batchCtx.reduceByKey(numDims, 4, uint32(1), stream, 0)
 		Ω(dimensionOutputVector).Should(Equal([5]uint32{1, 2, 0, 0, 0x0101}))
 		Ω(measureOutputVector).Should(Equal([4]uint32{6, 4, 0, 0}))
+	})
+
+	ginkgo.It("hash_reduce", func() {
+		// one 4 byte dim
+		numDims := queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0}
+		var stream unsafe.Pointer
+
+		dimensionInputVector := [5]uint32{1, 1, 1, 2, 0x01010101}
+		measureInputVector := [4]uint32{1, 2, 3, 4}
+
+		var dimensionOutputVector [5]uint32
+		var measureOutputVector [4]uint32
+
+		batchCtx := oopkBatchContext{
+			dimensionVectorD: [2]devicePointer{{pointer: unsafe.Pointer(&dimensionInputVector)}, {pointer: unsafe.Pointer(&dimensionOutputVector)}},
+			hashVectorD:      [2]devicePointer{{pointer: unsafe.Pointer(nil)}, {pointer: unsafe.Pointer(nil)}},
+			dimIndexVectorD:  [2]devicePointer{{pointer: unsafe.Pointer(nil)}, {pointer: unsafe.Pointer(nil)}},
+			measureVectorD:   [2]devicePointer{{pointer: unsafe.Pointer(&measureInputVector)}, {pointer: unsafe.Pointer(&measureOutputVector)}},
+			size:             4,
+			resultSize:       0,
+			resultCapacity:   4,
+		}
+
+		// 1 is AGGR_SUM_UNSIGNED
+		batchCtx.hashReduce(numDims, 4, uint32(1), stream, 0)
+		Ω(batchCtx.resultSize).Should(Equal(2))
+		Ω(dimensionOutputVector[4]).Should(BeEquivalentTo(0x0101))
+
+		resMap := make(map[uint32]uint32)
+		for i := 0; i < batchCtx.resultSize; i++ {
+			resMap[dimensionOutputVector[i]] = measureOutputVector[i]
+		}
+
+		Ω(resMap[1]).Should(BeEquivalentTo(6))
+		Ω(resMap[2]).Should(BeEquivalentTo(4))
 	})
 
 	ginkgo.It("estimateScratchSpaceMemUsage should work", func() {

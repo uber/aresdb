@@ -630,7 +630,7 @@ func (qc *AQLQueryContext) archiveBatchCustomFilterExecutor(isFirstOrLast bool) 
 }
 
 // helper function for copy dimension vector. Returns the total size of dimension vector.
-func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length, offset int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth,
+func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, capacity, offset int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth,
 	toVectorCapacity, fromVectorCapacity int, copyFunc cgoutils.AsyncMemCopyFunc,
 	stream unsafe.Pointer, device int) {
 
@@ -641,7 +641,7 @@ func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length,
 	}
 
 	dimBytes := 1 << uint(len(numDimsPerDimWidth)-1)
-	bytesToCopy := length * dimBytes
+	bytesToCopy := capacity * dimBytes
 	for _, numDim := range numDimsPerDimWidth {
 		for i := 0; i < int(numDim); i++ {
 			ptrTemp := utils.MemAccess(ptrTo, dimBytes*offset)
@@ -650,13 +650,13 @@ func asyncCopyDimensionVector(toDimVector, fromDimVector unsafe.Pointer, length,
 			ptrFrom = utils.MemAccess(ptrFrom, dimBytes*fromVectorCapacity)
 		}
 		dimBytes >>= 1
-		bytesToCopy = length * dimBytes
+		bytesToCopy = capacity * dimBytes
 	}
 
 	// copy null bytes
 	for i := 0; i < numNullVectors; i++ {
 		ptrTemp := utils.MemAccess(ptrTo, offset)
-		copyFunc(ptrTemp, ptrFrom, length, stream, device)
+		copyFunc(ptrTemp, ptrFrom, capacity, stream, device)
 		ptrTo = utils.MemAccess(ptrTo, toVectorCapacity)
 		ptrFrom = utils.MemAccess(ptrFrom, fromVectorCapacity)
 	}
@@ -685,6 +685,7 @@ func (bc *oopkBatchContext) cleanupDeviceResultBuffers() {
 	deviceFreeAndSetNil(&bc.dimensionVectorD[0])
 	deviceFreeAndSetNil(&bc.dimensionVectorD[1])
 
+	// ok to free nil vectors even if it's not unallocated.
 	deviceFreeAndSetNil(&bc.dimIndexVectorD[0])
 	deviceFreeAndSetNil(&bc.dimIndexVectorD[1])
 
@@ -738,7 +739,7 @@ func (bc *oopkBatchContext) prepareForFiltering(
 	bc.startRow = startRow
 
 	if firstColumn >= 0 {
-		bc.size = columns[firstColumn].length
+		bc.size = columns[firstColumn].capacity
 		// Allocate twice of the size to save number of allocations of temporary index vector.
 		bc.indexVectorD = deviceAllocate(bc.size*4, bc.device)
 		bc.predicateVectorD = deviceAllocate(bc.size, bc.device)
@@ -765,14 +766,16 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 		})
 
 		// uint32_t for index value
-		bc.dimIndexVectorD = bc.reallocateResultBuffers(bc.dimIndexVectorD, 4, stream, nil)
+		if isHLL || !UseHashReduction() {
+			bc.dimIndexVectorD = bc.reallocateResultBuffers(bc.dimIndexVectorD, 4, stream, nil)
+		}
 		// uint64_t for hash value
 		// Note: only when aggregate function is hll, we need to reuse vector[0]
 		if isHLL {
 			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, func(to, from unsafe.Pointer) {
 				cgoutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*8, stream, bc.device)
 			})
-		} else {
+		} else if !UseHashReduction() {
 			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, nil)
 		}
 
@@ -1159,6 +1162,11 @@ func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize, columnMemUs
 		}
 		memUsage += maxRowsPerBatch * qc.OOPK.DimRowBytes * 2
 	} else {
+		// For sort based reduction, need to allocate space for hash vectors (8bytes each)  and
+		// dim index vectors (4 bytes each).
+		if !UseHashReduction() {
+			memUsage += firstColumnSize * (4 + 8) * 2
+		}
 		memUsage += firstColumnSize * qc.OOPK.DimRowBytes * 2
 	}
 
@@ -1353,7 +1361,7 @@ func copyHostToDevice(vps memCom.HostVectorPartySlice, deviceVPSlice deviceVecto
 
 func hostToDeviceColumn(hostColumn memCom.HostVectorPartySlice, device int) deviceVectorPartySlice {
 	deviceColumn := deviceVectorPartySlice{
-		length:          hostColumn.Length,
+		capacity:          hostColumn.Length,
 		valueType:       hostColumn.ValueType,
 		defaultValue:    hostColumn.DefaultValue,
 		valueStartIndex: hostColumn.ValueStartIndex,

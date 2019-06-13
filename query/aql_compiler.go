@@ -626,7 +626,7 @@ func blockNumericOpsForColumnOverFourBytes(token expr.Token, expressions ...expr
 		(token >= expr.ADD && token <= expr.BITWISE_LEFT_SHIFT) {
 		for _, expression := range expressions {
 			if varRef, isVarRef := expression.(*expr.VarRef); isVarRef && memCom.DataTypeBytes(varRef.DataType) > 4 {
-				return utils.StackError(nil, "numeric operations not supported for column over 4 bytes length, got %s", expression.String())
+				return utils.StackError(nil, "numeric operations not supported for column over 4 bytes capacity, got %s", expression.String())
 			}
 		}
 	}
@@ -1897,7 +1897,7 @@ func getDimensionDataBytes(expression expr.Expr) int {
 // dimension columns in OOPK will not be reordered, but a mapping
 // from original id to ordered offsets (value and validity) in
 // dimension vector will be stored.
-// GeoUUID dimension will be 1 bytes. VarRef expression will use column data length,
+// GeoUUID dimension will be 1 bytes. VarRef expression will use column data capacity,
 // others will be default to 4 bytes.
 func (qc *AQLQueryContext) sortDimensionColumns() {
 	orderedIndex := 0

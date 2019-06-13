@@ -123,7 +123,7 @@ func (mp *Parser) IsMessageValid(msg map[string]interface{}, destination sink.De
 
 	if len(destination.AresUpdateModes) != len(destination.ColumnNames) {
 		return utils.StackError(nil,
-			"length of column update modes %d does not equal to number of columns %d",
+			"capacity of column update modes %d does not equal to number of columns %d",
 			len(destination.AresUpdateModes), len(destination.ColumnNames))
 	}
 

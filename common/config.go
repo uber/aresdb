@@ -31,6 +31,7 @@ type QueryConfig struct {
 	// timeout in seconds for choosing device
 	DeviceChoosingTimeout int            `yaml:"device_choosing_timeout"`
 	TimezoneTable         TimezoneConfig `yaml:"timezone_table"`
+	UseHashReduction      bool           `yaml:"use_hash_reduction"`
 }
 
 // DiskStoreConfig is the static configuration for disk store.

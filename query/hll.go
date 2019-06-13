@@ -125,7 +125,7 @@ func (qc *AQLQueryContext) SerializeHLL(dataTypes []memCom.DataType,
 
 	// Fix time dimension by substracting the timezone.
 	if len(timeDimensions) > 0 && qc.fixedTimezone.String() != time.UTC.String() {
-		// length is equal to length of timeDimensions
+		// capacity is equal to capacity of timeDimensions
 		dimPtrs := make([][2]unsafe.Pointer, len(timeDimensions))
 
 		for i := 0; i < len(timeDimensions); i++ {

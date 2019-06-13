@@ -35,6 +35,10 @@ func IsPooledMemory() bool {
 	return (GetFlags() & C.POOLED_MEMORY_FLAG) != 0
 }
 
+func SupportHashReduction() bool {
+	return (GetFlags() & C.HASH_REDUCTION_SUPPORT) != 0
+}
+
 // HostAlloc allocates memory in C.
 func HostAlloc(bytes int) unsafe.Pointer {
 	return unsafe.Pointer(doCGoCall(func() C.CGoCallResHandle {
@@ -52,11 +56,11 @@ func HostFree(p unsafe.Pointer) {
 // MakeSliceFromCPtr make a slice that points to data that cptr points to.
 // cptr must be a c-allocated pointer as the garbage collector will not update
 // that uintptr's value if the golang object movee.
-func MakeSliceFromCPtr(cptr uintptr, length int) []byte {
+func MakeSliceFromCPtr(cptr uintptr, capacity int) []byte {
 	h := reflect.SliceHeader{
 		Data: cptr,
-		Len:  length,
-		Cap:  length,
+		Len:  capacity,
+		Cap:  capacity,
 	}
 	return *(*[]byte)(unsafe.Pointer(&h))
 }

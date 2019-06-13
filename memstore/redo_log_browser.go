@@ -28,7 +28,7 @@ import (
 type RedoLogBrowser interface {
 	ListLogFiles() ([]int64, error)
 	ListUpsertBatch(creationTime int64) ([]int64, error)
-	ReadData(creationTime int64, upsertBatchOffset int64, start int, length int) (
+	ReadData(creationTime int64, upsertBatchOffset int64, start int, capacity int) (
 		[][]interface{}, []string, int, error)
 }
 
@@ -101,9 +101,9 @@ func (rb *redoLogBrowser) ListUpsertBatch(creationTime int64) ([]int64, error) {
 }
 
 // ReadData first locates the upsert batch using creationTime and upsertBatchOffset. It then returns data
-// starting from given start and has length rows along with number of total rows and column names in this
+// starting from given start and has capacity rows along with number of total rows and column names in this
 // upsert batch.
-func (rb *redoLogBrowser) ReadData(creationTime int64, upsertBatchOffset int64, start int, length int) (
+func (rb *redoLogBrowser) ReadData(creationTime int64, upsertBatchOffset int64, start int, capacity int) (
 	data [][]interface{}, columnNames []string, numRows int, err error) {
 	var f utils.ReaderSeekerCloser
 	if f, err = rb.diskStore.OpenLogFileForReplay(rb.tableName, rb.shardID, creationTime); err != nil {
@@ -133,7 +133,7 @@ func (rb *redoLogBrowser) ReadData(creationTime int64, upsertBatchOffset int64, 
 		return
 	}
 
-	data, err = upsertBatch.ReadData(start, length)
+	data, err = upsertBatch.ReadData(start, capacity)
 	if err != nil {
 		return
 	}

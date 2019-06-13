@@ -35,7 +35,7 @@ type columnReader struct {
 	valueVector []byte
 	// The null vector. can be empty depending on column mode.
 	nullVector []byte
-	// The offset vector. Only used for variable length values. Not used yet.
+	// The offset vector. Only used for variable capacity values. Not used yet.
 	offsetVector []byte
 	// Compare function if any.
 	cmpFunc CompareFunc
@@ -406,20 +406,20 @@ func (u *UpsertBatch) GetColumnNames(schema *TableSchema) ([]string, error) {
 }
 
 // ReadData reads data from upsert batch and convert values to meaningful representations given data type.
-func (u *UpsertBatch) ReadData(start int, length int) ([][]interface{}, error) {
+func (u *UpsertBatch) ReadData(start int, capacity int) ([][]interface{}, error) {
 	// Only read the column names.
-	if length == 0 {
+	if capacity == 0 {
 		return nil, nil
 	}
 
-	length = int(math.Min(float64(length), float64(u.NumRows-start)))
+	capacity = int(math.Min(float64(capacity), float64(u.NumRows-start)))
 
-	if length <= 0 {
-		return nil, utils.StackError(nil, "Invalid start or length")
+	if capacity <= 0 {
+		return nil, utils.StackError(nil, "Invalid start or capacity")
 	}
 
-	rows := make([][]interface{}, length)
-	for row := start; row < start+length; row++ {
+	rows := make([][]interface{}, capacity)
+	for row := start; row < start+capacity; row++ {
 		idx := row - start
 		rows[idx] = make([]interface{}, u.NumColumns)
 		for col := 0; col < u.NumColumns; col++ {

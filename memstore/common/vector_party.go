@@ -44,7 +44,7 @@ const (
 type HostVectorPartySlice struct {
 	Values unsafe.Pointer
 	Nulls  unsafe.Pointer
-	// The length of the count vector is Length+1
+	// The capacity of the count vector is Length+1
 	Counts       unsafe.Pointer
 	Length       int
 	ValueType    DataType

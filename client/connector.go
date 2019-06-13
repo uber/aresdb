@@ -156,7 +156,7 @@ func (c *connector) Insert(tableName string, columnNames []string, rows []Row, u
 	}
 
 	if len(updateModes) != len(columnNames) {
-		return 0, utils.StackError(nil, "length of column update modes %d does not equal to number of columns %d", len(updateModes), len(columnNames))
+		return 0, utils.StackError(nil, "capacity of column update modes %d does not equal to number of columns %d", len(updateModes), len(columnNames))
 	}
 
 	if len(rows) == 0 {
@@ -167,7 +167,7 @@ func (c *connector) Insert(tableName string, columnNames []string, rows []Row, u
 	for _, row := range rows {
 		if len(row) != len(columnNames) {
 			return 0, utils.StackError(nil,
-				"Length of column names should match length of a single row, length of column names :%d, length of row: %d",
+				"Length of column names should match capacity of a single row, capacity of column names :%d, capacity of row: %d",
 				len(columnNames),
 				len(row),
 			)

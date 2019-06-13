@@ -114,17 +114,17 @@ func formatWithDataValue(valuePtr unsafe.Pointer, dataType memCom.DataType) *str
 
 // GetDimensionStartOffsets calculates the value and null starting position for given dimension inside dimension vector
 // dimIndex is the ordered index of given dimension inside the dimension vector
-func GetDimensionStartOffsets(numDimsPerDimWidth DimCountsPerDimWidth, dimIndex int, length int) (valueOffset, nullOffset int) {
+func GetDimensionStartOffsets(numDimsPerDimWidth DimCountsPerDimWidth, dimIndex int, capacity int) (valueOffset, nullOffset int) {
 	startDim := 0
 	dimBytes := 1 << uint(len(numDimsPerDimWidth)-1)
 	for _, numDim := range numDimsPerDimWidth {
 		// found which range this dimension vector belongs to
 		if startDim+int(numDim) > dimIndex {
-			valueOffset += (dimIndex - startDim) * length * dimBytes
+			valueOffset += (dimIndex - startDim) * capacity * dimBytes
 			break
 		}
 		startDim += int(numDim)
-		valueOffset += int(numDim) * length * dimBytes
+		valueOffset += int(numDim) * capacity * dimBytes
 		// dimBytes /= 2
 		dimBytes >>= 1
 	}
@@ -134,7 +134,7 @@ func GetDimensionStartOffsets(numDimsPerDimWidth DimCountsPerDimWidth, dimIndex 
 		valueBytes += (1 << uint(len(numDimsPerDimWidth)-index-1)) * int(numDim)
 	}
 
-	nullOffset = (valueBytes + dimIndex) * length
+	nullOffset = (valueBytes + dimIndex) * capacity
 	return valueOffset, nullOffset
 }
 

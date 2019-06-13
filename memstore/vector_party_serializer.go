@@ -45,7 +45,7 @@ func (s *vectorPartyBaseSerializer) CheckVectorPartySerializable(vp common.Vecto
 		}
 		if !passed {
 			return utils.StackError(nil,
-				"NonDefaultValueCount %d is not valid for mode %d vector with length %d",
+				"NonDefaultValueCount %d is not valid for mode %d vector with capacity %d",
 				vp.GetNonDefaultValueCount(), cvp.GetMode(), vp.GetLength())
 		}
 	}

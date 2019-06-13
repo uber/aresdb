@@ -470,7 +470,7 @@ func (ctx *backfillContext) backfill(reporter BackfillJobDetailReporter, jobKey 
 			ctx.backfillStore.AdvanceNextWriteRecord()
 		}
 
-		// changedPatchRow converts patch values in upsert batch to a slice of data values. The length is the number
+		// changedPatchRow converts patch values in upsert batch to a slice of data values. The capacity is the number
 		// of columns in base batch. If the corresponding column does not exist in the upsert batch or the column is
 		// deleted, it will be nil. This changed row is used in several places:
 		//  1. when this patch row is a new row or an update on existing row in temp live store, we apply the row to

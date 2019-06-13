@@ -12,22 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef SUPPORT_HASH_REDUCTION
-#include <hash/concurrent_unordered_map.cuh>
-#include <hash/hash_functions.cuh>
-#endif
-#include <thrust/pair.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <cstring>
 #include <algorithm>
 #include <exception>
-#ifdef SUPPORT_HASH_REDUCTION
-#include <groupby/aggregation_operations.hpp>
-#endif
 #include "algorithm.hpp"
 #include "iterator.hpp"
 #include "memory.hpp"
 #include "query/time_series_aggregate.h"
+#include "host_concurrent_unordered_map.hpp"
 #include "utils.hpp"
 
 CGoCallResHandle HashReduce(DimensionVector inputKeys,
@@ -41,10 +34,14 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
                             int device) {
   CGoCallResHandle resHandle = {nullptr, nullptr};
   try {
-#ifdef SUPPORT_HASH_REDUCTION
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
+#ifndef SUPPORT_HASH_REDUCTION
+    // if in device mode hash reduction is not supported, simply return 0;
+    resHandle.res = reinterpret_cast<void *>(0);
+    return resHandle;
 #endif
+#else
     cudaStream_t cudaStream = reinterpret_cast<cudaStream_t>(stream);
     resHandle.res = reinterpret_cast<void *>(ares::hash_reduction(inputKeys,
                                                                   inputValues,
@@ -54,11 +51,8 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
                                                                   length,
                                                                   aggFunc,
                                                                   cudaStream));
-#else
-    resHandle.res = reinterpret_cast<void *>(0);
-#endif
     CheckCUDAError("HashReduce");
-    return resHandle;
+#endif
   }
   catch (std::exception &e) {
     std::cerr << "Exception happend when doing Reduce:" << e.what()
@@ -68,14 +62,13 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
   return resHandle;
 }
 
-#ifdef SUPPORT_HASH_REDUCTION
+#ifndef SUPPORT_HASH_REDUCTION
 namespace ares {
 
 template<typename map_type>
 struct ExtractGroupByResultFunctor {
   typedef typename map_type::key_type key_type;
   typedef typename map_type::mapped_type element_type;
-  typedef thrust::pair<key_type, element_type> *key_value_ptr_type;
 
   explicit ExtractGroupByResultFunctor(
       map_type *const __restrict__ map,
@@ -104,7 +97,7 @@ struct ExtractGroupByResultFunctor {
 
   // copy_dim_values moves the inputDimValues at inputIdx to curDimOutput
   // at outputIdx.
-  __host__ __device__
+  __host_or_device__
   void copy_dim_values(uint32_t inputIdx, size_t outputIdx) {
     uint8_t * curDimInput = dimInputValues;
     uint8_t * curDimOutput = dimOutputValues;
@@ -147,17 +140,17 @@ struct ExtractGroupByResultFunctor {
     }
   }
 
-  __host__ __device__
+  __host_or_device__
   void operator()(const int i) {
-    key_type unusedKey = map->get_unused_key();
-    key_value_ptr_type mapValues = map->data();
-    size_t mapSize = map->capacity();
-    if (i < mapSize) {
-      key_type current_key = mapValues[i].first;
+    printf("%d %d\n", i, map->capacity());
+    if (i < map->capacity()) {
+      key_type unusedKey = map->get_unused_key();
+      auto iter = std::next(map->begin(), i);
+      key_type current_key = iter->first;
       if (current_key != unusedKey) {
         uint32_t outputIdx = ares::atomicAdd(global_write_index, (uint32_t)1);
         copy_dim_values(static_cast<uint32_t>(current_key), outputIdx);
-        element_type value = mapValues[i].second;
+        element_type value = iter->second;
         reinterpret_cast<element_type *>(measureValues)[outputIdx] = value;
       }
     }
@@ -172,7 +165,7 @@ struct Higher32BitsHasher {
   using result_type = uint32_t;
   using key_type = int64_t;
 
-  __host__ __device__
+  __host_or_device__
   result_type operator()(key_type key) const {
     return static_cast<result_type>(key >> 32);
   }
@@ -193,14 +186,21 @@ class HashReductionContext {
   using key_type = int64_t;
 
  private:
+  // A reasonably large enough capacity of different dimension values for
+  // aggregation query. We also use this as the capacity for the hash map.
+  // Note we cannot make this assumption if we are going to use this map
+  // for join.
+  constexpr static uint32_t max_dim_values_capacity = 5E6;
   agg_func f;
+  uint32_t capacity;
   uint32_t length;
   value_type identity;
 
  public:
   explicit HashReductionContext(uint32_t length,
                                 value_type identity)
-      : length(length), identity(identity) {
+      : capacity(std::min(length, max_dim_values_capacity)), length(length),
+        identity(identity) {
     f = agg_func();
   }
 
@@ -278,10 +278,10 @@ class HashReductionContext {
         map, inputKeys.DimValues, inputKeys.VectorCapacity,
         outputKeys.DimValues, dimWidthPrefixSum,
         outputValue, globalWriteIndexDevice.get());
-
+    printf("extract");
     thrust::for_each_n(GET_EXECUTION_POLICY(cudaStream),
                        thrust::counting_iterator<uint32_t>(0),
-                       length, extractorFunc);
+                       capacity, extractorFunc);
     // copy the reduced count back from GPU.
     uint32_t
     globalWriteIndexHost;
@@ -303,12 +303,14 @@ class HashReductionContext {
       return (lhs >> 32) == (rhs >> 32);
     };
 
-    typedef concurrent_unordered_map<key_type, value_type, Higher32BitsHasher,
-        decltype(equality)>
+    typedef hash_map<key_type,
+                     value_type,
+                     Higher32BitsHasher,
+                     decltype(equality)>
         map_type;
 
     host_unique_ptr<map_type>
-        mapHost = make_host_unique<map_type>(length, identity, 0,
+        mapHost = make_host_unique<map_type>(capacity, identity, 0,
                                              Higher32BitsHasher(), equality);
 
     device_unique_ptr<map_type>
@@ -362,7 +364,7 @@ int hash_reduction(DimensionVector inputKeys, uint8_t *inputValues,
             cudaStream); break;
     case AGGR_SUM_UNSIGNED:
       if (valueBytes == 4) {
-        REDUCE_INTERNAL(uint32_t, sum_op <uint32_t>)
+        REDUCE_INTERNAL(uint32_t, sum_op < uint32_t >)
       } else {
         REDUCE_INTERNAL(uint64_t, sum_op < uint64_t >)
       }

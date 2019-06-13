@@ -66,7 +66,7 @@ type Map interface {
 	// LookupHostShardSet returns a HostShardSet for a host in the map
 	LookupHostShardSet(hostID string) (HostShardSet, bool)
 
-	// HostsLen returns the length of all hosts in the map
+	// HostsLen returns the capacity of all hosts in the map
 	HostsLen() int
 
 	// ShardSet returns the shard set for the topology

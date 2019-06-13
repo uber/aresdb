@@ -328,7 +328,7 @@ func isHexChar(ch rune) bool {
 func isIdentFirstChar(ch rune) bool { return isLetter(ch) || ch == '_' }
 
 // bufScanner represents a wrapper for scanner to add a buffer.
-// It provides a fixed-length circular buffer that can be unread.
+// It provides a fixed-capacity circular buffer that can be unread.
 type bufScanner struct {
 	s   *Scanner
 	i   int // buffer index
@@ -376,7 +376,7 @@ func (s *bufScanner) curr() (tok Token, pos Pos, lit string) {
 }
 
 // reader represents a buffered rune reader used by the scanner.
-// It provides a fixed-length circular buffer that can be unread.
+// It provides a fixed-capacity circular buffer that can be unread.
 type reader struct {
 	r   io.RuneScanner
 	i   int // buffer index

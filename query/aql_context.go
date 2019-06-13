@@ -19,9 +19,11 @@ import "C"
 
 import (
 	"bytes"
+	"github.com/uber/aresdb/cgoutils"
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 	"net/http"
 	"strings"
 	"time"
@@ -122,13 +124,13 @@ type foreignTable struct {
 type deviceVectorPartySlice struct {
 	values devicePointer
 	nulls  devicePointer
-	// The length of the count vector is Length+1, similar to memstore.VectorParty
+	// The capacity of the count vector is Length+1, similar to memstore.VectorParty
 	counts devicePointer
 	// Used only by device column. We allocate device memory deviceManagerOnce for counts, nulls
 	// and values vector and when free we free only the base pointer. The memory layout
 	// is counts,nulls,values and for counts vector, we will not copy the 64 bytes padding.
 	basePtr   devicePointer
-	length    int
+	capacity    int
 	valueType memCom.DataType
 	// pointer to default value from schema
 	defaultValue    memCom.DataValue
@@ -179,7 +181,7 @@ type oopkBatchContext struct {
 	// The data width of each validity (NULL) is always 1 byte.
 	// Values and validities of each stack frame are allocated together,
 	// with the validity array following the value array.
-	// The length of each vector is size (same as indexVectorD).
+	// The capacity of each vector is size (same as indexVectorD).
 	exprStackD [][2]devicePointer
 
 	// Input and output storage in device memory before and after sort-reduce-by-key.
@@ -205,7 +207,7 @@ type oopkBatchContext struct {
 	hashVectorD [2]devicePointer
 	// dimIndexVectorD is different from index vector,
 	// it is the index of dimension vector
-	// its length is the resultSize from previous batches + size of current batch
+	// its capacity is the resultSize from previous batches + size of current batch
 	dimIndexVectorD [2]devicePointer
 
 	// Each element stores a 4 byte measure value.
@@ -404,4 +406,8 @@ type AQLQueryContext struct {
 // IsHLL return if the aggregation function is HLL
 func (ctx *OOPKContext) IsHLL() bool {
 	return ctx.AggregateType == C.AGGR_HLL
+}
+
+func UseHashReduction() bool {
+	return utils.GetConfig().Query.UseHashReduction && cgoutils.SupportHashReduction()
 }

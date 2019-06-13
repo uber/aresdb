@@ -1,5 +1,5 @@
 data_type: Int8
-length: 4
+capacity: 4
 has_counts: false
 values:
   - null

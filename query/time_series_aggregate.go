@@ -196,7 +196,7 @@ func makeVectorPartySlice(column deviceVectorPartySlice) C.VectorPartySlice {
 	vpSlice.ValuesOffset = (C.uint32_t)(valuesOffset)
 	vpSlice.StartingIndex = (C.uint8_t)(startingIndex)
 
-	vpSlice.Length = (C.uint32_t)(column.length)
+	vpSlice.Length = (C.uint32_t)(column.capacity)
 	vpSlice.DataType = DataTypeToCDataType[column.valueType]
 	vpSlice.DefaultValue = makeDefaultValue(column.defaultValue)
 	return vpSlice
@@ -667,6 +667,19 @@ func (bc *oopkBatchContext) reduceByKey(numDims common.DimCountsPerDimWidth, val
 	inputValues, outputValues := (*C.uint8_t)(bc.measureVectorD[0].getPointer()), (*C.uint8_t)(bc.measureVectorD[1].getPointer())
 	bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {
 		return C.Reduce(inputKeys, inputValues, outputKeys, outputValues, (C.int)(valueWidth), (C.int)(bc.resultSize+bc.size), aggFunc,
+			stream, C.int(device))
+	}))
+}
+
+func (bc *oopkBatchContext) hashReduce(numDims common.DimCountsPerDimWidth, valueWidth int, aggFunc C.enum_AggregateFunction, stream unsafe.Pointer,
+	device int) {
+	inputKeys := makeDimensionVector(
+		bc.dimensionVectorD[0].getPointer(), bc.hashVectorD[0].getPointer(), bc.dimIndexVectorD[0].getPointer(), numDims, bc.resultCapacity)
+	outputKeys := makeDimensionVector(
+		bc.dimensionVectorD[1].getPointer(), bc.hashVectorD[1].getPointer(), bc.dimIndexVectorD[1].getPointer(), numDims, bc.resultCapacity)
+	inputValues, outputValues := (*C.uint8_t)(bc.measureVectorD[0].getPointer()), (*C.uint8_t)(bc.measureVectorD[1].getPointer())
+	bc.resultSize = int(doCGoCall(func() C.CGoCallResHandle {
+		return C.HashReduce(inputKeys, inputValues, outputKeys, outputValues, (C.int)(valueWidth), (C.int)(bc.resultSize+bc.size), aggFunc,
 			stream, C.int(device))
 	}))
 }

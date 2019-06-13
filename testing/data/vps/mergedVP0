@@ -1,5 +1,5 @@
 data_type: Uint32
-length: 13
+capacity: 13
 has_counts: false
 values:
   - 100

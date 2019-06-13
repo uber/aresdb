@@ -68,13 +68,13 @@ func (_m *RedoLogBrowser) ListUpsertBatch(creationTime int64) ([]int64, error) {
 	return r0, r1
 }
 
-// ReadData provides a mock function with given fields: creationTime, upsertBatchOffset, start, length
-func (_m *RedoLogBrowser) ReadData(creationTime int64, upsertBatchOffset int64, start int, length int) ([][]interface{}, []string, int, error) {
-	ret := _m.Called(creationTime, upsertBatchOffset, start, length)
+// ReadData provides a mock function with given fields: creationTime, upsertBatchOffset, start, capacity
+func (_m *RedoLogBrowser) ReadData(creationTime int64, upsertBatchOffset int64, start int, capacity int) ([][]interface{}, []string, int, error) {
+	ret := _m.Called(creationTime, upsertBatchOffset, start, capacity)
 
 	var r0 [][]interface{}
 	if rf, ok := ret.Get(0).(func(int64, int64, int, int) [][]interface{}); ok {
-		r0 = rf(creationTime, upsertBatchOffset, start, length)
+		r0 = rf(creationTime, upsertBatchOffset, start, capacity)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([][]interface{})
@@ -83,7 +83,7 @@ func (_m *RedoLogBrowser) ReadData(creationTime int64, upsertBatchOffset int64, 
 
 	var r1 []string
 	if rf, ok := ret.Get(1).(func(int64, int64, int, int) []string); ok {
-		r1 = rf(creationTime, upsertBatchOffset, start, length)
+		r1 = rf(creationTime, upsertBatchOffset, start, capacity)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]string)
@@ -92,14 +92,14 @@ func (_m *RedoLogBrowser) ReadData(creationTime int64, upsertBatchOffset int64, 
 
 	var r2 int
 	if rf, ok := ret.Get(2).(func(int64, int64, int, int) int); ok {
-		r2 = rf(creationTime, upsertBatchOffset, start, length)
+		r2 = rf(creationTime, upsertBatchOffset, start, capacity)
 	} else {
 		r2 = ret.Get(2).(int)
 	}
 
 	var r3 error
 	if rf, ok := ret.Get(3).(func(int64, int64, int, int) error); ok {
-		r3 = rf(creationTime, upsertBatchOffset, start, length)
+		r3 = rf(creationTime, upsertBatchOffset, start, capacity)
 	} else {
 		r3 = ret.Error(3)
 	}

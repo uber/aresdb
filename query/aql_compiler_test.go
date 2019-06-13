@@ -255,7 +255,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		qc.resolveTypes()
 		Ω(qc.Error).ShouldNot(BeNil())
-		Ω(qc.Error.Error()).Should(ContainSubstring("numeric operations not supported for column over 4 bytes length"))
+		Ω(qc.Error.Error()).Should(ContainSubstring("numeric operations not supported for column over 4 bytes capacity"))
 	})
 
 	ginkgo.It("resolves data types", func() {
@@ -2936,7 +2936,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.resolveTypes()
 		qc.processJoinConditions()
 		Ω(qc.Error).ShouldNot(BeNil())
-		Ω(qc.Error.Error()).Should(ContainSubstring("numeric operations not supported for column over 4 bytes length"))
+		Ω(qc.Error.Error()).Should(ContainSubstring("numeric operations not supported for column over 4 bytes capacity"))
 
 		// only hex function is supported on UUID type, but got count.
 		qc = AQLQueryContext{}

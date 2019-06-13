@@ -82,7 +82,7 @@ var _ = ginkgo.Describe("test factory", func() {
 		Ω(*(*uint32)(vp.counts.GetValue(2))).Should(BeEquivalentTo(4))
 		Ω(*(*uint32)(vp.counts.GetValue(3))).Should(BeEquivalentTo(5))
 
-		// invalid value length (counts length is not equal to values length+1)
+		// invalid value capacity (counts capacity is not equal to values capacity+1)
 		_, err = getFactory().ReadArchiveVectorParty("invalid_value_length", locker)
 		Ω(err).ShouldNot(BeNil())
 	})
@@ -91,11 +91,11 @@ var _ = ginkgo.Describe("test factory", func() {
 		batch, err := getFactory().ReadArchiveBatch("archiveBatch")
 		Ω(err).Should(BeNil())
 		Ω(len(batch.Columns)).Should(BeEquivalentTo(6))
-		Ω(batch.Columns[0].(*archiveVectorParty).length).Should(BeEquivalentTo(5))
+		Ω(batch.Columns[0].(*archiveVectorParty).capacity).Should(BeEquivalentTo(5))
 		Ω(batch.Columns[0].(*archiveVectorParty).counts).Should(BeNil())
-		Ω(batch.Columns[1].(*archiveVectorParty).length).Should(BeEquivalentTo(3))
+		Ω(batch.Columns[1].(*archiveVectorParty).capacity).Should(BeEquivalentTo(3))
 		Ω(batch.Columns[1].(*archiveVectorParty).counts).ShouldNot(BeNil())
-		Ω(batch.Columns[2].(*archiveVectorParty).length).Should(BeEquivalentTo(5))
+		Ω(batch.Columns[2].(*archiveVectorParty).capacity).Should(BeEquivalentTo(5))
 		Ω(batch.Columns[2].(*archiveVectorParty).counts).ShouldNot(BeNil())
 	})
 

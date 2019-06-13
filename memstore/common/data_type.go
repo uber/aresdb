@@ -35,7 +35,7 @@ type DataType uint32
 // The list of supported DataTypes.
 // DataType & 0x0000FFFF: The width of the data type in bits.
 // DataType & 0x00FF0000 >> 16: The base type of the enum.
-// DataType & 0xFF000000 >> 24: Reserved for supporting variable length values (array).
+// DataType & 0xFF000000 >> 24: Reserved for supporting variable capacity values (array).
 // See https://github.com/uber/aresdb/wiki/redologs for more details.
 const (
 	Unknown   DataType = 0x00000000

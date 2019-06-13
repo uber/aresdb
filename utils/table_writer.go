@@ -20,7 +20,7 @@ import (
 )
 
 // TableDataSource defines the interface a data source need to implement so that we can render
-// a tabular representation from the data source. We get number of columns from the length of
+// a tabular representation from the data source. We get number of columns from the capacity of
 // column header. the data source itself should ensure that for each get value call with row and
 // col within [0,numRows) and [0, numCols), it should return valid value and should not panic.
 type TableDataSource interface {
@@ -72,7 +72,7 @@ func WriteTable(dataSource TableDataSource) string {
 	// Compute column widths.
 	columnWidths := make([]int, numCols)
 
-	// Then compare with the length of each value.
+	// Then compare with the capacity of each value.
 	numRows := dataSource.NumRows()
 	for c := 0; c < numCols; c++ {
 		header := columnHeaders[c]

@@ -163,6 +163,7 @@ add_library(algorithm SHARED
         query/hash_lookup.cu
         query/hash_reduction.cu
         query/hll.cu
+        query/host_concurrent_unordered_map.hpp
         query/iterator.hpp
         query/memory.cu
         query/memory.hpp
@@ -173,7 +174,7 @@ add_library(algorithm SHARED
         query/transform.cu
         query/transform.hpp
         query/utils.cu
-        query/utils.hpp)
+        query/utils.hpp query/host_concurrent_unordered_map.hpp)
 
 target_link_libraries(algorithm mem)
 ################################
@@ -184,7 +185,6 @@ include(rdkafka.cmake)
 # Unit Tests
 ################################
 file(GLOB QUERY_UNITTEST_FILES query/*_unittest.cu)
-message(QUERY_UNITTEST_FILES is ${QUERY_UNITTEST_FILES})
 add_executable(all_unittest ${QUERY_UNITTEST_FILES} query/unittest_utils.hpp)
 add_dependencies(all_unittest googletest)
 # Link test executable against gtest & gtest_main

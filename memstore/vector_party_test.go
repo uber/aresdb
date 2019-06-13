@@ -29,7 +29,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 		locker := &sync.RWMutex{}
 		vp, err := testFactory.ReadArchiveVectorParty("sortedVP4", locker)
 		Ω(err).Should(BeNil())
-		hostVPSlice := vp.GetHostVectorPartySlice(0, vp.length)
+		hostVPSlice := vp.GetHostVectorPartySlice(0, vp.capacity)
 		Ω(hostVPSlice).Should(Equal(common.HostVectorPartySlice{
 			Values:          unsafe.Pointer(vp.values.buffer),
 			Nulls:           unsafe.Pointer(vp.nulls.buffer),

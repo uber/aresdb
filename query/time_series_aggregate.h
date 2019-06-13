@@ -542,8 +542,8 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
 // @outputKeys output DimensionVector
 // @baseCounts count vector for first column
 // @indexVector index vector of the dimension keys
-// @indexVectorLen length of index vector will be used for the output, it should
-// be less or equal to length of keys in inputKeys
+// @indexVectorLen capacity of index vector will be used for the output, it should
+// be less or equal to capacity of keys in inputKeys
 // outputOccupiedLen number of rows already in the outputKeys, as this will
 // be append operation
 CGoCallResHandle Expand(DimensionVector inputKeys,
@@ -589,7 +589,7 @@ CGoCallResHandle GeoBatchIntersects(
 
 // WriteGeoShapeDim is the interface to write the shape index to the dimension
 // output. This method should be called after GeoBatchIntersects removes all
-// non-intersecting rows. Note we need pass in the index vector length before
+// non-intersecting rows. Note we need pass in the index vector capacity before
 // geo since outputPredicate has not done compaction yet.
 // Note:
 //   1. we assume that the geo join will be many-to-one join

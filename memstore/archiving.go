@@ -226,7 +226,7 @@ func (ap *archivingPatch) GetDataValueWithDefault(row, columnID int, defaultValu
 }
 
 // Archive is the process of periodically moving stable records in fact tables from live batches to archive batches,
-// and converting them to a compressed format (run-length encoding). This is a blocking call so caller need to wait
+// and converting them to a compressed format (run-capacity encoding). This is a blocking call so caller need to wait
 // for archiving process to finish.
 func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporter ArchiveJobDetailReporter) error {
 	archivingTimer := utils.GetReporter(table, shardID).GetTimer(utils.ArchivingTimingTotal)

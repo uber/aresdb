@@ -399,11 +399,11 @@ var _ = ginkgo.Describe("merge", func() {
 		Ω(ctx.merged.Columns[3].(*archiveVectorParty).values).Should(BeNil())
 		Ω(ctx.merged.Columns[3].(*archiveVectorParty).nulls).Should(BeNil())
 		Ω(ctx.merged.Columns[3].(*archiveVectorParty).counts).Should(BeNil())
-		Ω(ctx.merged.Columns[3].(*archiveVectorParty).length).Should(BeEquivalentTo(8))
+		Ω(ctx.merged.Columns[3].(*archiveVectorParty).capacity).Should(BeEquivalentTo(8))
 		Ω(ctx.merged.Columns[5].(*archiveVectorParty).values).Should(BeNil())
 		Ω(ctx.merged.Columns[5].(*archiveVectorParty).nulls).Should(BeNil())
 		Ω(ctx.merged.Columns[5].(*archiveVectorParty).counts).Should(BeNil())
-		Ω(ctx.merged.Columns[5].(*archiveVectorParty).length).Should(BeEquivalentTo(13))
+		Ω(ctx.merged.Columns[5].(*archiveVectorParty).capacity).Should(BeEquivalentTo(13))
 	})
 
 	ginkgo.It("test base iterator", func() {
@@ -568,11 +568,11 @@ var _ = ginkgo.Describe("merge", func() {
 		Ω(ctx.merged.Columns[3].(*archiveVectorParty).values).Should(BeNil())
 		Ω(ctx.merged.Columns[3].(*archiveVectorParty).nulls).Should(BeNil())
 		Ω(ctx.merged.Columns[3].(*archiveVectorParty).counts).Should(BeNil())
-		Ω(ctx.merged.Columns[3].(*archiveVectorParty).length).Should(BeEquivalentTo(7))
+		Ω(ctx.merged.Columns[3].(*archiveVectorParty).capacity).Should(BeEquivalentTo(7))
 		Ω(ctx.merged.Columns[5].(*archiveVectorParty).values).Should(BeNil())
 		Ω(ctx.merged.Columns[5].(*archiveVectorParty).nulls).Should(BeNil())
 		Ω(ctx.merged.Columns[5].(*archiveVectorParty).counts).Should(BeNil())
-		Ω(ctx.merged.Columns[5].(*archiveVectorParty).length).Should(BeEquivalentTo(10))
+		Ω(ctx.merged.Columns[5].(*archiveVectorParty).capacity).Should(BeEquivalentTo(10))
 	})
 
 	ginkgo.It("merge: unsorted column needs skip deleted rows", func() {

@@ -34,7 +34,7 @@ const (
 	HLLDataHeader uint32 = 0xACED0102
 	// EnumDelimiter is the delimiter to delimit enum cases.
 	EnumDelimiter = "\u0000\n"
-	// DenseDataLength is the length of hll dense data in bytes.
+	// DenseDataLength is the capacity of hll dense data in bytes.
 	DenseDataLength = 1 << 14 // 16kb
 	// DenseThreshold is the thresold to convert sparse value to dense value.
 	DenseThreshold = DenseDataLength / 4
@@ -682,8 +682,8 @@ func (hll *HLL) Decode(data []byte) {
 }
 
 // Encode encodes the HLL for cache storage.
-// Dense format will have a length of 1<<hllP.
-// Sparse format will have a smaller length
+// Dense format will have a capacity of 1<<hllP.
+// Sparse format will have a smaller capacity
 func (hll *HLL) Encode() []byte {
 	if len(hll.DenseData) != 0 {
 		return hll.DenseData

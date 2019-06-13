@@ -403,7 +403,7 @@ func (dm *diskMetaStore) WatchEnumDictEvents(table, column string, startCase int
 	}
 
 	channelCapacity := len(existingEnumCases) - startCase
-	// if start is larger than length of existing enum cases
+	// if start is larger than capacity of existing enum cases
 	// will treat as if sending from latest
 	if channelCapacity <= 0 {
 		channelCapacity = 1

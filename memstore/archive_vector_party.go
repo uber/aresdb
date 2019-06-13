@@ -142,11 +142,11 @@ func (vp *archiveVectorParty) WaitForDiskLoad() {
 
 // newArchiveVectorParty creates a archive store vector party,
 // archiveVectorParty use c allocated memory
-func newArchiveVectorParty(length int, dataType common.DataType, defaultValue common.DataValue, locker sync.Locker) *archiveVectorParty {
+func newArchiveVectorParty(capacity int, dataType common.DataType, defaultValue common.DataValue, locker sync.Locker) *archiveVectorParty {
 	vp := &archiveVectorParty{
 		cVectorParty: cVectorParty{
 			baseVectorParty: baseVectorParty{
-				length:       length,
+				capacity:       capacity,
 				dataType:     dataType,
 				defaultValue: defaultValue,
 			},

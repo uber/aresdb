@@ -21,7 +21,7 @@ import (
 // ColumnHeaderSize returns the total size of the column headers.
 func ColumnHeaderSize(numCols int) int {
 	return (numCols+1)*4 + // offset (4 bytes)
-		numCols*4 + // enum dict length (4 bytes)
+		numCols*4 + // enum dict capacity (4 bytes)
 		numCols*4 + // reserved (4 bytes)
 		numCols*4 + // data_type (4 bytes)
 		numCols*2 + // column_id (2 bytes)
@@ -81,7 +81,7 @@ func (u *UpsertBatchHeader) WriteEnumDictLength(value int, col int) error {
 	writer := utils.NewBufferWriter(u.enumDictLength)
 	err := writer.WriteUint32(uint32(value), col*4)
 	if err != nil {
-		return utils.StackError(err, "Failed to write enum dict length for column %d", col)
+		return utils.StackError(err, "Failed to write enum dict capacity for column %d", col)
 	}
 	return nil
 }

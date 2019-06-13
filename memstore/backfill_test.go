@@ -366,7 +366,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		defer backfillBatch.RUnlock()
 		for _, column := range backfillBatch.Columns {
 			if column != nil {
-				column.(*cLiveVectorParty).length = 3
+				column.(*cLiveVectorParty).capacity = 3
 			}
 		}
 

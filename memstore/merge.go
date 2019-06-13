@@ -39,14 +39,14 @@ type mergeContext struct {
 	patchIters []sortedColumnIterator
 
 	// Following fields will only be used during preallocate stage
-	// length is len(sortColumns).
+	// capacity is len(sortColumns).
 	mergedLengths []int
 
 	// Following fields will be only used during merge stage stores the indexes to
-	// write to the final merged archive batch for each column length is len(all columns).
+	// write to the final merged archive batch for each column capacity is len(all columns).
 	outputBegins []int
 	// It stores the accumulated counts to write to the final merged archive batch for
-	// each sorted column, length is len(all columns).
+	// each sorted column, capacity is len(all columns).
 	outputCounts []uint32
 	// Buffer the unsorted column for writing final uncompressed values.
 	unsortedColumns []int

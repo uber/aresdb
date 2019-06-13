@@ -239,7 +239,7 @@ func (v *Vector) UpperBound(first int, last int, value unsafe.Pointer) int {
 // GetSliceBytesAligned calculate the number of bytes of a slice of the vector,
 // represented by [lowerBound, upperBound),
 // aligned to 64-byte
-// return the buffer pointer, new start index (start entry in vector), and length in bytes
+// return the buffer pointer, new start index (start entry in vector), and capacity in bytes
 func (v *Vector) GetSliceBytesAligned(lowerBound int, upperBound int) (buffer unsafe.Pointer, startIndex int, bytes int) {
 	if v == nil || lowerBound == upperBound {
 		return

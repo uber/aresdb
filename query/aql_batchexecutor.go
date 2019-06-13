@@ -219,7 +219,7 @@ func (e *BatchExecutorImpl) reduce() {
 	if e.qc.OOPK.IsHLL() {
 		initIndexVector(e.qc.OOPK.currentBatch.dimIndexVectorD[0].getPointer(), 0, e.qc.OOPK.currentBatch.resultSize, e.stream, e.qc.Device)
 		initIndexVector(e.qc.OOPK.currentBatch.dimIndexVectorD[1].getPointer(), e.qc.OOPK.currentBatch.resultSize, e.qc.OOPK.currentBatch.resultSize+e.qc.OOPK.currentBatch.size, e.stream, e.qc.Device)
-	} else {
+	} else if !UseHashReduction() {
 		initIndexVector(e.qc.OOPK.currentBatch.dimIndexVectorD[0].getPointer(), 0, e.qc.OOPK.currentBatch.resultSize+e.qc.OOPK.currentBatch.size, e.stream, e.qc.Device)
 	}
 
@@ -229,6 +229,12 @@ func (e *BatchExecutorImpl) reduce() {
 				e.qc.OOPK.currentBatch.hll(e.qc.OOPK.NumDimsPerDimWidth, e.isLastBatch, e.stream, e.qc.Device)
 			e.qc.reportTimingForCurrentBatch(e.stream, &e.start, hllEvalTiming)
 		}, "hll", e.stream)
+	} else if UseHashReduction() {
+		e.qc.doProfile(func() {
+			e.qc.OOPK.currentBatch.hashReduce(
+				e.qc.OOPK.NumDimsPerDimWidth, e.qc.OOPK.MeasureBytes, e.qc.OOPK.AggregateType, e.stream, e.qc.Device)
+			e.qc.reportTimingForCurrentBatch(e.stream, &e.start, hashReduceEvalTiming)
+		}, "hash_reduce", e.stream)
 	} else {
 		// sort by key.
 		e.qc.doProfile(func() {

@@ -1,6 +1,6 @@
 # all values null
 data_type: Uint32
-length: 0
+capacity: 0
 has_counts: false
 values:
 

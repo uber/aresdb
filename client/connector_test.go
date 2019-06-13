@@ -202,7 +202,7 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		Ω(n).Should(Equal(0))
 
 		insertBytes = nil
-		// non matching length between column names and row
+		// non matching capacity between column names and row
 		n, err = connector.Insert("a", []string{"col0", "col1", "col2", "col3"}, []Row{
 			{100, 1, "1", true},
 			{200, int64(2)},

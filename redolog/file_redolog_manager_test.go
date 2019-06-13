@@ -293,7 +293,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		diskStore.AssertExpectations(utils.TestingT)
 	})
 
-	ginkgo.It("truncate redo log file works for insufficient buffer length", func() {
+	ginkgo.It("truncate redo log file works for insufficient buffer capacity", func() {
 		buffer, _ := memCom.NewUpsertBatchBuilder().ToByteArray()
 		correctBufferSize := len(buffer)
 

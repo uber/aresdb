@@ -246,7 +246,7 @@ var _ = ginkgo.Describe("stream serialization", func() {
 		Ω(reader.GetBytesRead()).Should(BeEquivalentTo(2147483648))
 	})
 
-	ginkgo.It("works for insufficient length", func() {
+	ginkgo.It("works for insufficient capacity", func() {
 		bs := make([]byte, 2)
 		buf := bytes.NewBuffer(bs)
 		reader := NewStreamDataReader(bytes.NewReader(buf.Bytes()))

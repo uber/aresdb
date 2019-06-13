@@ -112,7 +112,7 @@ func (c *columnBuilder) CalculateBufferSize(offset *int) {
 		// if golang memory, align to 4 bytes for offset vector
 		if isGoType {
 			*offset = utils.AlignOffset(*offset, 4)
-			// 1. uint32 for each offset value, and length = numRows + 1
+			// 1. uint32 for each offset value, and capacity = numRows + 1
 			// 2. last offset value is the end offset of the offset buffer
 			*offset += (len(c.values) + 1) * 4
 			// Padding size for value vector

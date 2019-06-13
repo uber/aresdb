@@ -1,5 +1,5 @@
 data_type: Bool
-length: 8
+capacity: 8
 has_counts: false
 values:
   - null

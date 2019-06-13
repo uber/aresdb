@@ -29,7 +29,7 @@ type ArchiveBatch struct {
 	Batch
 
 	// Size of the batch (number of rows). Notice that compression changes the
-	// length of some columns, does not change the size of the batch.
+	// capacity of some columns, does not change the size of the batch.
 	Size int
 
 	// Version for archive batches.

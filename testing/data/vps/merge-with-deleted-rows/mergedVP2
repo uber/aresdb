@@ -1,5 +1,5 @@
 data_type: Float32
-length: 7
+capacity: 7
 has_counts: true
 values:
   - -0.1,2

@@ -125,7 +125,7 @@ func (r *BackfillManager) Append(upsertBatch *memCom.UpsertBatch, redoFile int64
 }
 
 // ReadUpsertBatch reads upsert batch in backfill queue, user should not lock schema
-func (r *BackfillManager) ReadUpsertBatch(index, start, length int, schema *memCom.TableSchema) (data [][]interface{}, columnNames []string, err error) {
+func (r *BackfillManager) ReadUpsertBatch(index, start, capacity int, schema *memCom.TableSchema) (data [][]interface{}, columnNames []string, err error) {
 	r.RLock()
 	defer r.RUnlock()
 
@@ -136,7 +136,7 @@ func (r *BackfillManager) ReadUpsertBatch(index, start, length int, schema *memC
 			return
 		}
 
-		data, err = upsertBatch.ReadData(start, length)
+		data, err = upsertBatch.ReadData(start, capacity)
 		if err != nil {
 			return
 		}

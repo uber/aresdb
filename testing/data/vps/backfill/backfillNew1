@@ -1,6 +1,6 @@
 # sort columns, pk
 data_type: Uint32
-length: 4
+capacity: 4
 has_counts: true
 values:
   - 0,2

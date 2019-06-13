@@ -99,9 +99,9 @@ type ReadUpsertBatchRequest struct {
 	Offset int64 `path:"offset"`
 	// Start of records in upsert batch in this page.
 	Start int `query:"start,optional"`
-	// Number of records to show in this page. If length is 0, it means caller only want to
+	// Number of records to show in this page. If capacity is 0, it means caller only want to
 	// get another metadata of this upsert batch.
-	Length int `query:"length,optional"`
+	Length int `query:"capacity,optional"`
 	// Draw is the  counter that this object is a response to.
 	Draw int `query:"draw,optional"`
 }

@@ -43,7 +43,7 @@ func (t *Transaction) AddKeyValue(key string, version int, value proto.Message) 
 // WriteTo writes the transaction to the transaction store
 func (t *Transaction) WriteTo(store kv.TxnStore) error {
 	if len(t.keys) != len(t.versions) || len(t.versions) != len(t.values) {
-		return fmt.Errorf("length of keys (%d), versions (%d), values (%d) in Transaction do not match",
+		return fmt.Errorf("capacity of keys (%d), versions (%d), values (%d) in Transaction do not match",
 			len(t.keys), len(t.versions), len(t.values))
 	}
 	conditions := make([]kv.Condition, len(t.keys))

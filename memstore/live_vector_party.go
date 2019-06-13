@@ -24,7 +24,7 @@ import (
 )
 
 // cLiveVectorParty is the implementation of LiveVectorParty with c allocated memory
-// this vector party stores columns with fixed length data type
+// this vector party stores columns with fixed capacity data type
 type cLiveVectorParty struct {
 	cVectorParty
 }
@@ -58,7 +58,7 @@ func (vp *cLiveVectorParty) GetValue(offset int) (unsafe.Pointer, bool) {
 }
 
 // goLiveVectorParty is the implementation of LiveVectorParty with go allocated memory
-// this vector party stores columns with variable length data type
+// this vector party stores columns with variable capacity data type
 type goLiveVectorParty struct {
 	baseVectorParty
 
@@ -81,7 +81,7 @@ func (vp *cLiveVectorParty) Allocate(hasCount bool) {
 
 // Allocate implements Allocate in VectorParty interface
 func (vp *goLiveVectorParty) Allocate(hasCount bool) {
-	vp.values = make([]common.GoDataValue, vp.length)
+	vp.values = make([]common.GoDataValue, vp.capacity)
 }
 
 // SetDataValue implements SetDataValue in VectorParty interface
@@ -164,7 +164,7 @@ func (vp *goLiveVectorParty) GetBytes() int64 {
 func (vp *goLiveVectorParty) Slice(startRow, numRows int) common.SlicedVector {
 	beginIndex := startRow
 	// size is the number of entries in the vector,
-	size := vp.length - beginIndex
+	size := vp.capacity - beginIndex
 	if size < 0 {
 		size = 0
 	}
@@ -194,8 +194,8 @@ func (vp *goLiveVectorParty) Write(writer io.Writer) error {
 		return err
 	}
 
-	// write length
-	err = dataWriter.WriteUint32(uint32(vp.length))
+	// write capacity
+	err = dataWriter.WriteUint32(uint32(vp.capacity))
 	if err != nil {
 		return err
 	}
@@ -213,7 +213,7 @@ func (vp *goLiveVectorParty) Write(writer io.Writer) error {
 		return err
 	}
 
-	allValid := numValidValues == vp.length
+	allValid := numValidValues == vp.capacity
 
 	// write values
 	for i, value := range vp.values {
@@ -245,17 +245,17 @@ func (vp *goLiveVectorParty) Read(reader io.Reader, serializer common.VectorPart
 	vp.totalBytes = int64(totalBytes)
 	serializer.ReportVectorPartyMemoryUsage(int64(totalBytes * utils.GolangMemoryFootprintFactor))
 
-	length, err := dataReader.ReadUint32()
+	capacity, err := dataReader.ReadUint32()
 	if err != nil {
 		return err
 	}
-	vp.length = int(length)
+	vp.capacity = int(capacity)
 	vp.Allocate(false)
 	numValidValues, err := dataReader.ReadUint32()
 	if err != nil {
 		return err
 	}
-	allValid := numValidValues == uint32(vp.length)
+	allValid := numValidValues == uint32(vp.capacity)
 	for i := 0; i < int(numValidValues); i++ {
 		var index uint32
 		if !allValid {
@@ -282,7 +282,7 @@ func (vp *goLiveVectorParty) SafeDestruct() {
 		vp.values[i] = nil
 	}
 	vp.values = nil
-	vp.length = 0
+	vp.capacity = 0
 }
 
 // Equals implements Equals in VectorParty interface
@@ -319,20 +319,20 @@ func (vp *goLiveVectorParty) Equals(other common.VectorParty) bool {
 }
 
 // NewLiveVectorParty creates LiveVectorParty
-func NewLiveVectorParty(length int, dataType common.DataType, defaultValue common.DataValue, hostMemoryManager common.HostMemoryManager) common.LiveVectorParty {
+func NewLiveVectorParty(capacity int, dataType common.DataType, defaultValue common.DataValue, hostMemoryManager common.HostMemoryManager) common.LiveVectorParty {
 	isGoType := common.IsGoType(dataType)
 	if isGoType {
-		return newGoLiveVetorParty(length, dataType, hostMemoryManager)
+		return newGoLiveVetorParty(capacity, dataType, hostMemoryManager)
 	}
-	return newCLiveVectorParty(length, dataType, defaultValue)
+	return newCLiveVectorParty(capacity, dataType, defaultValue)
 }
 
 // newCLiveVectorParty creates a LiveVectorParty with c allocated memory
-func newCLiveVectorParty(length int, dataType common.DataType, defaultValue common.DataValue) *cLiveVectorParty {
+func newCLiveVectorParty(capacity int, dataType common.DataType, defaultValue common.DataValue) *cLiveVectorParty {
 	vp := &cLiveVectorParty{
 		cVectorParty: cVectorParty{
 			baseVectorParty: baseVectorParty{
-				length:       length,
+				capacity:       capacity,
 				dataType:     dataType,
 				defaultValue: defaultValue,
 			},
@@ -342,10 +342,10 @@ func newCLiveVectorParty(length int, dataType common.DataType, defaultValue comm
 }
 
 // newGoLiveVetorParty creates a LiveVectorParty with go allocated memory
-func newGoLiveVetorParty(length int, dataType common.DataType, hostMemoryManager common.HostMemoryManager) *goLiveVectorParty {
+func newGoLiveVetorParty(capacity int, dataType common.DataType, hostMemoryManager common.HostMemoryManager) *goLiveVectorParty {
 	vp := &goLiveVectorParty{
 		baseVectorParty: baseVectorParty{
-			length:       length,
+			capacity:       capacity,
 			dataType:     dataType,
 			defaultValue: common.NullDataValue,
 		},

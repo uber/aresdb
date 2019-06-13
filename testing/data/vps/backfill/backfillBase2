@@ -1,6 +1,6 @@
 # primary key
 data_type: Uint32
-length: 5
+capacity: 5
 has_counts: false
 values:
   - 0

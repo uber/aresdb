@@ -12,6 +12,7 @@ require (
 	github.com/bkaradzic/go-lz4 v0.0.0-20160924222819-7224d8d8f27e // indirect
 	github.com/chzyer/logex v1.1.10 // indirect
 	github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1 // indirect
+	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
 	github.com/confluentinc/confluent-kafka-go v0.0.0-20190207113419-213e7cd9dd31
 	github.com/coreos/bbolt v1.3.1-coreos.5 // indirect
 	github.com/coreos/etcd v3.3.13+incompatible // indirect
@@ -41,6 +42,7 @@ require (
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/leanovate/gopter v0.2.4 // indirect
 	github.com/m3db/m3 v0.9.5
+	github.com/m3db/m3x v0.0.0-20190408051622-ebf3c7b94afd
 	github.com/m3db/prometheus_client_golang v0.8.1 // indirect
 	github.com/m3db/prometheus_client_model v0.1.0 // indirect
 	github.com/m3db/prometheus_common v0.1.0 // indirect
@@ -52,7 +54,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
-	github.com/opentracing/opentracing-go v1.0.2 // indirect
+	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pierrec/lz4 v0.0.0-20190501090746-d705d4371bfc // indirect
 	github.com/pkg/errors v0.0.0-20190227000051-27936f6d90f9
@@ -64,7 +66,6 @@ require (
 	github.com/satori/go.uuid v0.0.0-20181028125025-b2ce2384e17b
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
-	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/cobra v0.0.3
@@ -73,7 +74,10 @@ require (
 	github.com/spf13/viper v1.0.1-0.20181205161347-3535c75fa87d
 	github.com/stretchr/testify v1.3.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
+	github.com/uber-go/atomic v1.4.0 // indirect
 	github.com/uber-go/tally v3.3.9+incompatible
+	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
+	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
 	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/config v0.0.0-20190430173543-773b5421bfe9
@@ -85,6 +89,7 @@ require (
 	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
+	google.golang.org/grpc v1.19.0
 	gopkg.in/validator.v2 v2.0.0-20180514200540-135c24b11c19
 	gopkg.in/yaml.v2 v2.2.2
 )

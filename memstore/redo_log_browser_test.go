@@ -84,7 +84,7 @@ var _ = ginkgo.Describe("redo_log_browser", func() {
 
 		rows, _, numRows, err = rb.ReadData(redoLogFile, 4, 2, 5)
 		Ω(err).ShouldNot(BeNil())
-		Ω(err.Error()).Should(ContainSubstring("Invalid start or length"))
+		Ω(err.Error()).Should(ContainSubstring("Invalid start or capacity"))
 		Ω(rows).Should(BeNil())
 		Ω(numRows).Should(Equal(0))
 

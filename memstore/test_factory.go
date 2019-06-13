@@ -177,7 +177,7 @@ func (t TestFactoryT) ReadVectorParty(name string) (*cVectorParty, error) {
 type rawVectorParty struct {
 	DataType  string   `yaml:"data_type"`
 	HasCounts bool     `yaml:"has_counts"`
-	Length    int      `yaml:"length"`
+	Length    int      `yaml:"capacity"`
 	Values    []string `yaml:"values"`
 }
 
@@ -204,7 +204,7 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 
 	if len(rvp.Values) != 0 && len(rvp.Values) != rvp.Length {
 		return nil, utils.StackError(nil,
-			"Values length %d is not as expected and it's not a mode 0 vp: %d",
+			"Values capacity %d is not as expected and it's not a mode 0 vp: %d",
 			len(rvp.Values),
 			rvp.Length,
 		)
@@ -222,7 +222,7 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 
 	vp := &cVectorParty{
 		baseVectorParty: baseVectorParty{
-			length:   rvp.Length,
+			capacity:   rvp.Length,
 			dataType: dataType,
 		},
 		columnMode: columnMode,
@@ -292,7 +292,7 @@ func (t TestFactoryT) ReadVector(name string) (*Vector, error) {
 
 type rawVector struct {
 	DataType string   `yaml:"data_type"`
-	Length   int      `yaml:"length"`
+	Length   int      `yaml:"capacity"`
 	Values   []string `yaml:"values"`
 }
 
@@ -316,7 +316,7 @@ func (rv *rawVector) toVector() (*Vector, error) {
 
 	if len(rv.Values) != rv.Length {
 		return nil, utils.StackError(nil,
-			"Values length %d is not as expected: %d",
+			"Values capacity %d is not as expected: %d",
 			len(rv.Values),
 			rv.Length,
 		)
