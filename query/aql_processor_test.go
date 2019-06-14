@@ -592,7 +592,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		// test boolean dimension value
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
-		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false, stream)
+		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4,
+			oopkContext.NumDimsPerDimWidth, false, false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
 		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset, 0)
 		// vp2
@@ -643,7 +644,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
-		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false, stream)
+		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false,
+			false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
 		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset, 0)
 		// vp2 == 2
@@ -724,7 +726,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
-		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false, stream)
+		ctx.prepareForDimAndMeasureEval(oopkContext.DimRowBytes, 4, oopkContext.NumDimsPerDimWidth, false,
+			false, stream)
 		valueOffset, nullOffset := queryCom.GetDimensionStartOffsets(oopkContext.NumDimsPerDimWidth, 0, ctx.resultCapacity)
 		dimensionExprRootAction := ctx.makeWriteToDimensionVectorAction(valueOffset, nullOffset, 0)
 		ctx.processExpression(exp, nil, tableScanners, foreignTables, stream, 0, dimensionExprRootAction)
@@ -789,7 +792,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		ctx.prepareForFiltering(columns, 0, 0, stream)
 		initIndexVector(ctx.indexVectorD.getPointer(), 0, ctx.size, stream, 0)
 
-		ctx.prepareForDimAndMeasureEval(dimRowBytes, 4, queryCom.DimCountsPerDimWidth{}, false, stream)
+		ctx.prepareForDimAndMeasureEval(dimRowBytes, 4, queryCom.DimCountsPerDimWidth{}, false,
+			false, stream)
 		measureExprRootAction := ctx.makeWriteToMeasureVectorAction(uint32(1), 4)
 		ctx.processExpression(exp, nil, tableScanners, foreignTables, stream, 0, measureExprRootAction)
 
@@ -872,6 +876,41 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		batchCtx.reduceByKey(numDims, 4, uint32(1), stream, 0)
 		Ω(dimensionOutputVector).Should(Equal([5]uint32{1, 2, 0, 0, 0x0101}))
 		Ω(measureOutputVector).Should(Equal([4]uint32{6, 4, 0, 0}))
+	})
+
+	ginkgo.It("hash_reduce", func() {
+		// one 4 byte dim
+		numDims := queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0}
+		var stream unsafe.Pointer
+
+		dimensionInputVector := [5]uint32{1, 1, 1, 2, 0x01010101}
+		measureInputVector := [4]uint32{1, 2, 3, 4}
+
+		var dimensionOutputVector [5]uint32
+		var measureOutputVector [4]uint32
+
+		batchCtx := oopkBatchContext{
+			dimensionVectorD: [2]devicePointer{{pointer: unsafe.Pointer(&dimensionInputVector)}, {pointer: unsafe.Pointer(&dimensionOutputVector)}},
+			hashVectorD:      [2]devicePointer{{pointer: unsafe.Pointer(nil)}, {pointer: unsafe.Pointer(nil)}},
+			dimIndexVectorD:  [2]devicePointer{{pointer: unsafe.Pointer(nil)}, {pointer: unsafe.Pointer(nil)}},
+			measureVectorD:   [2]devicePointer{{pointer: unsafe.Pointer(&measureInputVector)}, {pointer: unsafe.Pointer(&measureOutputVector)}},
+			size:             4,
+			resultSize:       0,
+			resultCapacity:   4,
+		}
+
+		// 1 is AGGR_SUM_UNSIGNED
+		batchCtx.hashReduce(numDims, 4, uint32(1), stream, 0)
+		Ω(batchCtx.resultSize).Should(Equal(2))
+		Ω(dimensionOutputVector[4]).Should(BeEquivalentTo(0x0101))
+
+		resMap := make(map[uint32]uint32)
+		for i := 0; i < batchCtx.resultSize; i++ {
+			resMap[dimensionOutputVector[i]] = measureOutputVector[i]
+		}
+
+		Ω(resMap[1]).Should(BeEquivalentTo(6))
+		Ω(resMap[2]).Should(BeEquivalentTo(4))
 	})
 
 	ginkgo.It("estimateScratchSpaceMemUsage should work", func() {

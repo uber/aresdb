@@ -84,7 +84,12 @@ struct init_helper {
 int init_helper::init_flag = init();
 
 DeviceMemoryFlags GetFlags() {
-  return DEVICE_MEMORY_IMPLEMENTATION_FLAG | POOLED_MEMORY_FLAG;
+  DeviceMemoryFlags
+      flags = DEVICE_MEMORY_IMPLEMENTATION_FLAG | POOLED_MEMORY_FLAG;
+#ifdef SUPPORT_HASH_REDUCTION
+  flags |= HASH_REDUCTION_SUPPORT;
+#endif
+  return flags;
 }
 
 CGoCallResHandle DeviceAllocate(size_t bytes, int device) {

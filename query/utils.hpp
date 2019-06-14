@@ -187,7 +187,9 @@ inline val_type atomicAdd(val_type* address, val_type val) {
 template <typename val_type>
 __host__ __device__
 inline val_type atomicAdd(val_type* address, val_type val) {
+  val_type old = *address;
   *address += val;
+  return old;
 }
 #endif
 
