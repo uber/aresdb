@@ -192,7 +192,7 @@ func getMapFromUpdate(service services.Service) (Map, error) {
 }
 
 func getStaticOptions(service services.Service) (StaticOptions, error) {
-	if service.Replication() == nil || service.Sharding() == nil || service.Instances() == nil {
+	if service == nil || service.Replication() == nil || service.Sharding() == nil || service.Instances() == nil {
 		return nil, errInvalidService
 	}
 	replicas := service.Replication().Replicas()
