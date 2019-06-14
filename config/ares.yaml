@@ -8,6 +8,8 @@ query:
   # enable timezone column for queries with "timezone": "timezone(city_id)"
   timezone_table:
     table_name: api_cities
+  enable_hash_reduction: false
+
 disk_store:
   write_sync: true
 meta_store:

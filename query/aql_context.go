@@ -19,9 +19,11 @@ import "C"
 
 import (
 	"bytes"
+	"github.com/uber/aresdb/cgoutils"
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 	"net/http"
 	"strings"
 	"time"
@@ -404,4 +406,14 @@ type AQLQueryContext struct {
 // IsHLL return if the aggregation function is HLL
 func (ctx *OOPKContext) IsHLL() bool {
 	return ctx.AggregateType == C.AGGR_HLL
+}
+
+func isAtomicAggType(aggType C.enum_AggregateFunction) bool {
+	return aggType == C.AGGR_SUM_SIGNED || aggType == C.AGGR_SUM_FLOAT;
+}
+
+// UseHashReduction return whether to use hash reduction or not
+func (ctx *OOPKContext) UseHashReduction() bool {
+	return utils.GetConfig().Query.EnableHashReduction &&
+		cgoutils.SupportHashReduction() && isAtomicAggType(ctx.AggregateType)
 }

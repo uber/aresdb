@@ -26,12 +26,14 @@ extern "C" {
 enum {
   DEVICE_MEMORY_IMPLEMENTATION_FLAG = 1,
   POOLED_MEMORY_FLAG = 1 << 1
+  HASH_REDUCTION_SUPPORT = 1 << 2;
 };
 
 char NOT_SUPPORTED_ERR_MSG[] = "Not supported";
 
 // device_memory_flags_t & 0x1: HOST(0) or DEVICE(1) implementation
 // device_memory_flags_t & 0x2: USE POOLED MEMORY MANAGEMENT OR NOT
+// device_memory_flags_t & 0x4: SUPPORT HASH REDUCTION OR NOT
 typedef uint32_t DeviceMemoryFlags;
 
 // We don't wrap the result with CGoCallResHandle as we know

@@ -35,6 +35,10 @@ func IsPooledMemory() bool {
 	return (GetFlags() & C.POOLED_MEMORY_FLAG) != 0
 }
 
+func SupportHashReduction() bool {
+	return (GetFlags() & C.HASH_REDUCTION_SUPPORT) != 0
+}
+
 // HostAlloc allocates memory in C.
 func HostAlloc(bytes int) unsafe.Pointer {
 	return unsafe.Pointer(doCGoCall(func() C.CGoCallResHandle {

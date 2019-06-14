@@ -19,7 +19,7 @@
 #include "../memory.h"
 
 DeviceMemoryFlags GetFlags(){
-  return 0x0;
+  return 0x4;
 }
 
 CGoCallResHandle HostAlloc(size_t bytes) {

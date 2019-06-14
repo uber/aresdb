@@ -36,7 +36,11 @@ char *checkCUDAError(const char *message) {
 }
 
 DeviceMemoryFlags GetFlags() {
-  return DEVICE_MEMORY_IMPLEMENTATION_FLAG;
+  DeviceMemoryFlags flags = DEVICE_MEMORY_IMPLEMENTATION_FLAG;
+#ifdef SUPPORT_HASH_REDUCTION
+  flags |= HASH_REDUCTION_SUPPORT;
+#endif
+  return flags;
 }
 
 CGoCallResHandle HostAlloc(size_t bytes) {

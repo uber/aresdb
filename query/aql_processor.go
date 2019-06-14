@@ -685,6 +685,7 @@ func (bc *oopkBatchContext) cleanupDeviceResultBuffers() {
 	deviceFreeAndSetNil(&bc.dimensionVectorD[0])
 	deviceFreeAndSetNil(&bc.dimensionVectorD[1])
 
+	// ok to free nil vectors even if it's not allocated.
 	deviceFreeAndSetNil(&bc.dimIndexVectorD[0])
 	deviceFreeAndSetNil(&bc.dimIndexVectorD[1])
 
@@ -750,7 +751,7 @@ func (bc *oopkBatchContext) prepareForFiltering(
 // prepareForDimAndMeasureEval ensures that dim/measure vectors have enough
 // capacity for bc.resultSize+bc.size.
 func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
-	dimRowBytes int, measureBytes int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth, isHLL bool, stream unsafe.Pointer) {
+	dimRowBytes int, measureBytes int, numDimsPerDimWidth queryCom.DimCountsPerDimWidth, isHLL bool, useHashReduction bool, stream unsafe.Pointer) {
 	if bc.resultSize+bc.size > bc.resultCapacity {
 		oldCapacity := bc.resultCapacity
 
@@ -765,14 +766,16 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 		})
 
 		// uint32_t for index value
-		bc.dimIndexVectorD = bc.reallocateResultBuffers(bc.dimIndexVectorD, 4, stream, nil)
+		if isHLL || !useHashReduction {
+			bc.dimIndexVectorD = bc.reallocateResultBuffers(bc.dimIndexVectorD, 4, stream, nil)
+		}
 		// uint64_t for hash value
 		// Note: only when aggregate function is hll, we need to reuse vector[0]
-		if isHLL {
+		if isHLL  {
 			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, func(to, from unsafe.Pointer) {
 				cgoutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*8, stream, bc.device)
 			})
-		} else {
+		} else if !useHashReduction {
 			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, nil)
 		}
 
@@ -1159,6 +1162,15 @@ func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize, columnMemUs
 		}
 		memUsage += maxRowsPerBatch * qc.OOPK.DimRowBytes * 2
 	} else {
+		if qc.OOPK.UseHashReduction() {
+			// For hash reduction, need hash table with int64_t key (8 bytes) and measureBytes value.
+			// The capacity is 2 * size.
+			memUsage += firstColumnSize * (8 + qc.OOPK.MeasureBytes) * 2
+		} else {
+			// For sort based reduction, need to allocate space for hash vectors (8bytes each) and
+			// dim index vectors (4 bytes each)
+			memUsage += firstColumnSize * (4 + 8) * 2
+		}
 		memUsage += firstColumnSize * qc.OOPK.DimRowBytes * 2
 	}
 
