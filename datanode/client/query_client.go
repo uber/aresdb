@@ -45,7 +45,7 @@ type aqlRespBody struct {
 	Results []queryCom.AQLQueryResult `json:"results"`
 }
 
-func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (result queryCom.AQLQueryResult, err error) {
+func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery)  (result queryCom.AQLQueryResult, err error) {
 	url := fmt.Sprintf("http://%s/query/aql", host.Address())
 	aqlRequestBody := aqlRequestBody{
 		[]queryCom.AQLQuery{query},
