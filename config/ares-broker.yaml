@@ -7,11 +7,6 @@ http:
 
 controller:
   address: localhost:6708
-  headers:
-    RPC-Caller:
-      - aresbroker
-    RPC-Service:
-      - ares-controller
 
 etcd:
   zone: local
