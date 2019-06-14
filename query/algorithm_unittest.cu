@@ -21,11 +21,12 @@
 #include <iterator>
 #include <iostream>
 #include <type_traits>
+#include <unordered_map>
 #include "gtest/gtest.h"
-#include "query/algorithm.hpp"
-#include "query/iterator.hpp"
+#include "algorithm.hpp"
+#include "iterator.hpp"
 #include "query/time_series_aggregate.h"
-#include "query/transform.hpp"
+#include "transform.hpp"
 #include "unittest_utils.hpp"
 
 namespace ares {
@@ -107,10 +108,10 @@ TEST(UnaryTransformTest, CheckInt) {
 
   int expectedValues[size] = {1, -1, 0};
   bool expectedNulls[size] = {true, true, false};
-  int *outputValues = reinterpret_cast<int *>(outputBasePtr);
+  int *outputValuesD = reinterpret_cast<int *>(outputBasePtr);
   bool *outputNulls = reinterpret_cast<bool *>(outputBasePtr) + 16;
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
             &expectedValues[0]));
 
   EXPECT_TRUE(
@@ -148,10 +149,10 @@ TEST(UnaryTransformTest, CheckConstant) {
                  Negate, 0, 0);
   int expectedValues[3] = {-1, -1, -1};
   bool expectedNulls[3] = {true, true, true};
-  int *outputValues = reinterpret_cast<int *>(outputBasePtr);
+  int *outputValuesD = reinterpret_cast<int *>(outputBasePtr);
   bool *outputNulls = reinterpret_cast<bool *>(outputBasePtr) + 16;
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
             &expectedValues[0]));
 
   EXPECT_TRUE(
@@ -177,13 +178,13 @@ TEST(UnaryTransformTest, CheckMeasureOutputIteratorForAvg) {
   uint32_t *baseCounts = allocate(&baseCountsH[0], size + 1);
   uint8_t *basePtr =
       allocate_column(nullptr, &inputNullsH[0], &inputValuesH[0], 0, 1, 12);
-  int64_t *outputValues = allocate(&outputValuesH[0], size);
+  int64_t *outputValuesD = allocate(&outputValuesH[0], size);
 
   DefaultValue defaultValue = {false, {.Int32Val = 0}};
   VectorPartySlice inputVP = {basePtr, 0, 8, 0, Int32, defaultValue};
 
   MeasureOutputVector outputMeasure = {
-      reinterpret_cast<uint32_t *>(outputValues), Int64,
+      reinterpret_cast<uint32_t *>(outputValuesD), Int64,
       AGGR_SUM_SIGNED};
 
   InputVector input = {{.VP = inputVP}, VectorPartyInput};
@@ -192,19 +193,19 @@ TEST(UnaryTransformTest, CheckMeasureOutputIteratorForAvg) {
   UnaryTransform(input, output, indexVector, size, baseCounts, 0,
                  Negate, 0, 0);
   int64_t expectedValues[3] = {3, -6, 0};
-  EXPECT_TRUE(equal(outputValues, outputValues + size,
+  EXPECT_TRUE(equal(outputValuesD, outputValuesD + size,
                     &expectedValues[0]));
 
   // Test NOOP functor
   UnaryTransform(input, output, indexVector, size, baseCounts, 0,
                  Noop, 0, 0);
   int64_t expectedValues2[3] = {-3, 6, 0};
-  EXPECT_TRUE(equal(outputValues, outputValues + size,
+  EXPECT_TRUE(equal(outputValuesD, outputValuesD + size,
                     &expectedValues2[0]));
 
   // Test avg aggregation.
   MeasureOutputVector outputMeasure2 = {
-      reinterpret_cast<uint32_t *>(outputValues), Float64,
+      reinterpret_cast<uint32_t *>(outputValuesD), Float64,
       AGGR_AVG_FLOAT};
 
   OutputVector output2 = {{.Measure = outputMeasure2}, MeasureOutput};
@@ -214,11 +215,11 @@ TEST(UnaryTransformTest, CheckMeasureOutputIteratorForAvg) {
   float_t expectedValues3[6] = {-1.0, 0, 1.0, 0, 0, 0};
   *reinterpret_cast<uint32_t*>(&expectedValues3[1]) = 3;
   *reinterpret_cast<uint32_t*>(&expectedValues3[3]) = 6;
-  EXPECT_TRUE(equal_print(outputValues, outputValues + size,
+  EXPECT_TRUE(equal_print(outputValuesD, outputValuesD + size,
                     reinterpret_cast<int64_t*>(&expectedValues3[0])));
 
   release(basePtr);
-  release(outputValues);
+  release(outputValuesD);
   release(indexVector);
   release(baseCounts);
 }
@@ -237,13 +238,13 @@ TEST(UnaryTransformTest, CheckDimensionOutputIterator) {
   uint8_t *basePtr =
       allocate_column(nullptr, &inputNullsH[0], &inputValuesH[0], 0, 1, 6);
   uint32_t *indexVector = allocate(&indexVectorH[0], size * 2);
-  uint8_t *outputValues = allocate(&outputValuesH[0], 9);
+  uint8_t *outputValuesD = allocate(&outputValuesH[0], 9);
 
   DefaultValue defaultValue = {false, {.Int32Val = 0}};
   VectorPartySlice inputVP = {basePtr, 0, 8, 0, Int16, defaultValue};
 
   DimensionOutputVector outputDimension = {
-      outputValues, outputValues + 6, Int16};
+      outputValuesD, outputValuesD + 6, Int16};
 
   InputVector input = {{.VP = inputVP}, VectorPartyInput};
   OutputVector output =
@@ -253,16 +254,16 @@ TEST(UnaryTransformTest, CheckDimensionOutputIterator) {
                  Negate, 0, 0);
 
   uint8_t expectedValues[9] = {1, 0, 0xFF, 0xFF, 0, 0, 1, 1, 0};
-  EXPECT_TRUE(equal(outputValues, outputValues + 9, &expectedValues[0]));
+  EXPECT_TRUE(equal(outputValuesD, outputValuesD + 9, &expectedValues[0]));
 
   // Test NOOP functor
   UnaryTransform(input, output, indexVector, size, nullptr, 0, Noop, 0, 0);
 
   uint8_t expectedValues2[9] = {0xFF, 0xFF, 1, 0, 0, 0, 1, 1, 0};
-  EXPECT_TRUE(equal(outputValues, outputValues + 9, &expectedValues2[0]));
+  EXPECT_TRUE(equal(outputValuesD, outputValuesD + 9, &expectedValues2[0]));
 
   release(basePtr);
-  release(outputValues);
+  release(outputValuesD);
   release(indexVector);
 }
 
@@ -396,11 +397,11 @@ TEST(BinaryTransformTest, CheckInt) {
   int expectedValues[3] = {0, 2, 0};
   bool expectedNulls[3] = {false, true, false};
 
-  int *outputValues = reinterpret_cast<int *>(outputBasePtr);
+  int *outputValuesD = reinterpret_cast<int *>(outputBasePtr);
   bool *outputNulls = reinterpret_cast<bool *>(outputBasePtr) + 16;
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
             &expectedValues[0]));
 
   EXPECT_TRUE(
@@ -449,11 +450,11 @@ TEST(BinaryTransformTest, CheckGeoPoint) {
   uint32_t expectedValues[3] = {true, false, false};
   bool expectedNulls[3] = {true, true, false};
 
-  uint32_t *outputValues = reinterpret_cast<uint32_t *>(outputBasePtr);
+  uint32_t *outputValuesD = reinterpret_cast<uint32_t *>(outputBasePtr);
   bool *outputNulls = reinterpret_cast<bool *>(outputBasePtr) + 16;
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
             &expectedValues[0]));
 
   EXPECT_TRUE(
@@ -526,11 +527,11 @@ TEST(BinaryTransformTest, CheckFloatAndUnpackedBoolIter) {
   float expectedValues[3] = {-2.1, 2.1, -0.1};
   bool expectedNulls[3] = {true, true, true};
 
-  float_t *outputValues = reinterpret_cast<float_t *>(outputBasePtr);
+  float_t *outputValuesD = reinterpret_cast<float_t *>(outputBasePtr);
   bool *outputNulls = reinterpret_cast<bool *>(outputBasePtr) + 16;
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
             &expectedValues[0]));
 
   EXPECT_TRUE(
@@ -544,7 +545,7 @@ TEST(BinaryTransformTest, CheckFloatAndUnpackedBoolIter) {
   bool expectedNulls2[3] = {true, true, true};
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
             &expectedValues2[0]));
 
   EXPECT_TRUE(
@@ -593,11 +594,11 @@ TEST(BinaryTransformTest, CheckConstantIterator) {
   float expectedValues[3] = {-0.9, 1.1, 0.1};
   bool expectedNulls[3] = {true, true, true};
 
-  float_t *outputValues = reinterpret_cast<float_t *>(outputBasePtr);
+  float_t *outputValuesD = reinterpret_cast<float_t *>(outputBasePtr);
   bool *outputNulls = reinterpret_cast<bool *>(outputBasePtr) + 16;
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
             &expectedValues[0]));
 
   EXPECT_TRUE(
@@ -683,7 +684,7 @@ TEST(BinaryTransformTest, CheckMeasureOutputIterator) {
 
   float outputValuesH[size] = {0, 0, 0};
 
-  float *outputValues = allocate(&outputValuesH[0], size);
+  float *outputValuesD = allocate(&outputValuesH[0], size);
   uint32_t *indexVector = allocate(&indexVectorH[0], size);
   uint32_t *baseCounts = allocate(&baseCountsH[0], size);
 
@@ -692,7 +693,7 @@ TEST(BinaryTransformTest, CheckMeasureOutputIterator) {
   ScratchSpaceVector rhsColumn = {rhsBasePtr, 16, Float32};
 
   MeasureOutputVector outputMeasure = {
-      reinterpret_cast<uint32_t *>(outputValues), Float32,
+      reinterpret_cast<uint32_t *>(outputValuesD), Float32,
       AGGR_SUM_FLOAT};
 
   InputVector lhs = {{.ScratchSpace = lhsColumn}, ScratchSpaceInput};
@@ -704,12 +705,12 @@ TEST(BinaryTransformTest, CheckMeasureOutputIterator) {
   float expectedValues[3] = {-6.3, 12.6, 0.0};
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + 3,
+      equal(outputValuesD, outputValuesD + 3,
             &expectedValues[0]));
 
   release(lhsBasePtr);
   release(rhsBasePtr);
-  release(outputValues);
+  release(outputValuesD);
   release(indexVector);
   release(baseCounts);
 }
@@ -776,13 +777,13 @@ TEST(HashLookupTest, CheckLookup) {
 
   uint32_t *indexVector = allocate(&indexVectorH[0], size);
 
-  RecordID *outputValues = allocate(&outputValuesH[0], size);
+  RecordID *outputValuesD = allocate(&outputValuesH[0], size);
 
   DefaultValue defaultValue = {false, {.Int32Val = 0}};
   VectorPartySlice inputVP = {basePtr, 0, 8, 0, Int32, defaultValue};
 
   InputVector input = {{.VP = inputVP}, VectorPartyInput};
-  HashLookup(input, outputValues, indexVector,
+  HashLookup(input, outputValuesD, indexVector,
              size, nullptr, 0, hashIndex, 0, 0);
 
   RecordID expectedOutputValues[18];
@@ -792,13 +793,14 @@ TEST(HashLookupTest, CheckLookup) {
   }
 
   EXPECT_TRUE(
-      equal(reinterpret_cast<uint8_t *>(outputValues),
-            reinterpret_cast<uint8_t *>(outputValues) + sizeof(RecordID) * size,
+      equal(reinterpret_cast<uint8_t *>(outputValuesD),
+            reinterpret_cast<uint8_t *>(
+                outputValuesD) + sizeof(RecordID) * size,
             reinterpret_cast<uint8_t *>(&expectedOutputValues[0])));
   release(buckets);
   release(indexVector);
   release(basePtr);
-  release(outputValues);
+  release(outputValuesD);
 }
 
 // cppcheck-suppress *
@@ -853,13 +855,13 @@ TEST(HashLookupTest, CheckUUID) {
 
   uint32_t *indexVector = allocate(&indexVectorH[0], size);
 
-  RecordID *outputValues = allocate(&outputValuesH[0], size);
+  RecordID *outputValuesD = allocate(&outputValuesH[0], size);
 
   DefaultValue defaultValue = {false, {}};
   VectorPartySlice inputVP = {basePtr, 0, 8, 0, UUID, defaultValue};
 
   InputVector input = {{.VP = inputVP}, VectorPartyInput};
-  HashLookup(input, outputValues, indexVector,
+  HashLookup(input, outputValuesD, indexVector,
              size, nullptr, 0, hashIndex, 0, 0);
 
   RecordID expectedOutputValues[3];
@@ -869,13 +871,14 @@ TEST(HashLookupTest, CheckUUID) {
   }
 
   EXPECT_TRUE(
-      equal(reinterpret_cast<uint8_t *>(outputValues),
-            reinterpret_cast<uint8_t *>(outputValues) + sizeof(RecordID) * size,
+      equal(reinterpret_cast<uint8_t *>(outputValuesD),
+            reinterpret_cast<uint8_t *>(
+                outputValuesD) + sizeof(RecordID) * size,
             reinterpret_cast<uint8_t *>(&expectedOutputValues[0])));
   release(buckets);
   release(indexVector);
   release(basePtr);
-  release(outputValues);
+  release(outputValuesD);
 }
 
 // cppcheck-suppress *
@@ -936,7 +939,7 @@ TEST(ForeignTableColumnTransformTest, CheckTransform) {
   int expectedValues[kNumRecords] = {-1, -2, -3, -4, -5};
   bool expectedNulls[kNumRecords] = {true, true, true, true, true};
 
-  int *outputValues = reinterpret_cast<int *>(outputBasePtr);
+  int *outputValuesD = reinterpret_cast<int *>(outputBasePtr);
   bool *outputNulls = reinterpret_cast<bool *>(outputBasePtr) + 24;
 
   UnaryTransform(input, output, nullptr, kNumRecords, nullptr, 0,
@@ -957,11 +960,11 @@ TEST(ForeignTableColumnTransformTest, CheckTransform) {
       timezoneLookup,
       timezoneLookupSize);
 
-  outputValues = reinterpret_cast<int *>(outputBasePtr);
+  outputValuesD = reinterpret_cast<int *>(outputBasePtr);
   outputNulls = reinterpret_cast<bool *>(outputBasePtr) + 24;
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + kNumRecords, &expectedValues[0]));
+      equal(outputValuesD, outputValuesD + kNumRecords, &expectedValues[0]));
   EXPECT_TRUE(equal(outputNulls, outputNulls + kNumRecords, &expectedNulls[0]));
 
   release(recordIDs);
@@ -975,7 +978,7 @@ TEST(ForeignTableColumnTransformTest, CheckTransform) {
 // cppcheck-suppress *
 TEST(SortDimColumnVectorTest, CheckSort) {
   // test with 1 4-byte dim, 1 2-byte dim and 1 1-byte dim
-  // with length = 3
+  // with capacity = 3
   // numBytes=(4+2+1+3)*3=30
   uint8_t keysH[30] = {0};
   reinterpret_cast<uint32_t *>(keysH)[0] = 1;
@@ -1028,15 +1031,15 @@ TEST(ReduceDimColumnVectorTest, CheckReduce) {
   uint32_t outputIndexVectorH[6] = {0};
   uint32_t outputValuesH[6] = {0};
 
-  uint8_t *inputDimValues = allocate(inputDimValuesH, 60);
+  uint8_t *inputDimValuesD = allocate(inputDimValuesH, 60);
   uint64_t *inputHashValues = allocate(inputHashValuesH, 6);
   uint32_t *inputIndexVector = allocate(inputIndexVectorH, 6);
-  uint32_t *inputValues = allocate(inputValuesH, 6);
+  uint32_t *inputValuesD = allocate(inputValuesH, 6);
 
-  uint8_t *outputDimValues = allocate(outputDimValuesH, 60);
+  uint8_t *outputDimValuesD = allocate(outputDimValuesH, 60);
   uint64_t *outputHashValues = allocate(outputHashValuesH, 6);
   uint32_t *outputIndexVector = allocate(outputIndexVectorH, 6);
-  uint32_t *outputValues = allocate(outputValuesH, 6);
+  uint32_t *outputValuesD = allocate(outputValuesH, 6);
 
   uint32_t expectedValues[3] = {3, 7, 11};
   uint32_t expectedIndex[3] = {1, 2, 0};
@@ -1049,23 +1052,23 @@ TEST(ReduceDimColumnVectorTest, CheckReduce) {
   int length = 6;
   int vectorCapacity = 6;
   DimensionVector inputKeys = {
-      inputDimValues,
+      inputDimValuesD,
       inputHashValues,
       inputIndexVector,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
 
   DimensionVector outputKeys = {
-      outputDimValues,
+      outputDimValuesD,
       outputHashValues,
       outputIndexVector,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
   CGoCallResHandle
       resHandle = Reduce(inputKeys,
-                         reinterpret_cast<uint8_t *>(inputValues),
+                         reinterpret_cast<uint8_t *>(inputValuesD),
                          outputKeys,
-                         reinterpret_cast<uint8_t *>(outputValues),
+                         reinterpret_cast<uint8_t *>(outputValuesD),
                          4,
                          length,
                          AGGR_SUM_UNSIGNED,
@@ -1074,9 +1077,10 @@ TEST(ReduceDimColumnVectorTest, CheckReduce) {
   EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 3);
   EXPECT_EQ(resHandle.pStrErr, nullptr);
 
-  EXPECT_TRUE(equal(outputValues, outputValues + 3, expectedValues));
+  EXPECT_TRUE(equal(outputValuesD, outputValuesD + 3, expectedValues));
   EXPECT_TRUE(equal(outputIndexVector, outputIndexVector + 3, expectedIndex));
-  EXPECT_TRUE(equal(outputDimValues, outputDimValues + 60, expectedDimValues));
+  EXPECT_TRUE(equal(outputDimValuesD,
+      outputDimValuesD + 60, expectedDimValues));
 }
 
 TEST(SortAndReduceTest, CheckReduceByAvg) {
@@ -1096,16 +1100,16 @@ TEST(SortAndReduceTest, CheckReduceByAvg) {
   uint32_t outputIndexVectorH[6] = {0};
   uint64_t outputValuesH[6] = {0};
 
-  uint8_t *inputDimValues = allocate(inputDimValuesH, 30);
+  uint8_t *inputDimValuesD = allocate(inputDimValuesH, 30);
   uint64_t *inputHashValues = allocate(inputHashValuesH, 6);
   uint32_t *inputIndexVector = allocate(inputIndexVectorH, 6);
-  uint32_t *inputValues =
+  uint32_t *inputValuesD =
       allocate(reinterpret_cast<uint32_t*>(&inputValuesH[0]), 12);
 
-  uint8_t *outputDimValues = allocate(outputDimValuesH, 30);
+  uint8_t *outputDimValuesD = allocate(outputDimValuesH, 30);
   uint64_t *outputHashValues = allocate(outputHashValuesH, 6);
   uint32_t *outputIndexVector = allocate(outputIndexVectorH, 6);
-  uint64_t *outputValues = allocate(outputValuesH, 6);
+  uint64_t *outputValuesD = allocate(outputValuesH, 6);
 
   float_t expectedValuesF[6] = {1.5, 0, 3.5, 0, 5.5, 0};
   uint64_t* expectedValues = reinterpret_cast<uint64_t*>(&expectedValuesF[0]);
@@ -1123,32 +1127,33 @@ TEST(SortAndReduceTest, CheckReduceByAvg) {
   int length = 6;
   int vectorCapacity = 6;
   DimensionVector inputKeys = {
-      inputDimValues,
+      inputDimValuesD,
       inputHashValues,
       inputIndexVector,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)0, (uint8_t)0}};
 
   DimensionVector outputKeys = {
-      outputDimValues,
+      outputDimValuesD,
       outputHashValues,
       outputIndexVector,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)0, (uint8_t)0}};
   CGoCallResHandle
       resHandle = Reduce(inputKeys,
-                         reinterpret_cast<uint8_t *>(inputValues),
+                         reinterpret_cast<uint8_t *>(inputValuesD),
                          outputKeys,
-                         reinterpret_cast<uint8_t *>(outputValues),
+                         reinterpret_cast<uint8_t *>(outputValuesD),
                          8,
                          length,
                          AGGR_AVG_FLOAT, 0, 0);
   EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 3);
   EXPECT_EQ(resHandle.pStrErr, nullptr);
 
-  EXPECT_TRUE(equal(outputValues, outputValues + 3, expectedValues));
+  EXPECT_TRUE(equal(outputValuesD, outputValuesD + 3, expectedValues));
   EXPECT_TRUE(equal(outputIndexVector, outputIndexVector + 3, expectedIndex));
-  EXPECT_TRUE(equal(outputDimValues, outputDimValues + 30, expectedDimValues));
+  EXPECT_TRUE(equal(outputDimValuesD,
+      outputDimValuesD + 30, expectedDimValues));
 }
 
 // cppcheck-suppress *
@@ -1444,14 +1449,14 @@ TEST(DateFunctorsTest, CheckGetStarts) {
   UnaryTransform(input, output, indexVector, size, nullptr, 0,
                  GetMonthStart, 0, 0);
 
-  uint32_t *outputValues = reinterpret_cast<uint32_t *>(outputBasePtr);
+  uint32_t *outputValuesD = reinterpret_cast<uint32_t *>(outputBasePtr);
   bool *outputNulls = reinterpret_cast<bool *>(outputBasePtr) + 16;
 
   uint32_t expectedValues[3] = {0, get_ts(2018, 6, 1), get_ts(1970, 1, 1)};
   bool expectedNulls[3] = {false, true, true};
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
                   &expectedValues[0]));
 
   EXPECT_TRUE(
@@ -1466,7 +1471,7 @@ TEST(DateFunctorsTest, CheckGetStarts) {
   bool expectedNulls2[3] = {false, true, true};
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
                   &expectedValues2[0]));
 
   EXPECT_TRUE(
@@ -1481,7 +1486,7 @@ TEST(DateFunctorsTest, CheckGetStarts) {
   bool expectedNulls3[3] = {false, true, true};
 
   EXPECT_TRUE(
-      equal(outputValues, outputValues + size,
+      equal(outputValuesD, outputValuesD + size,
             &expectedValues3[0]));
 
   EXPECT_TRUE(
@@ -1708,8 +1713,8 @@ TEST(GeoBatchIntersectionJoinTest, DimensionWriting) {
 
   uint8_t outputValuesH[10];
   thrust::fill(std::begin(outputValuesH), std::end(outputValuesH), 0);
-  uint8_t *outputValues = allocate(&outputValuesH[0], 10);
-  DimensionOutputVector outputDimension = {outputValues, outputValues + 5,
+  uint8_t *outputValuesD = allocate(&outputValuesH[0], 10);
+  DimensionOutputVector outputDimension = {outputValuesD, outputValuesD + 5,
                                            Uint8};
 
   InputVector points = {{.VP = inputVP}, VectorPartyInput};
@@ -1770,16 +1775,16 @@ TEST(ExpandTest, testOverFill) {
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     };
 
-    uint8_t *inputDimValues = allocate(inputDimValuesH, 60);
+    uint8_t *inputDimValuesD = allocate(inputDimValuesH, 60);
     uint32_t *inputIndexVector = allocate(inputIndexVectorH, 6);
     uint32_t *baseCountVector = allocate(baseCountVectorH, 16);
 
-    uint8_t *outputDimValues = allocate(outputDimValuesH, 100);
+    uint8_t *outputDimValuesD = allocate(outputDimValuesH, 100);
 
     int length = 6;
     int vectorCapacity = 6;
     DimensionVector inputKeys = {
-        inputDimValues,
+        inputDimValuesD,
         NULL,
         NULL,
         vectorCapacity,
@@ -1787,7 +1792,7 @@ TEST(ExpandTest, testOverFill) {
     int outCapacity =  10;
 
     DimensionVector outputKeys = {
-        outputDimValues,
+        outputDimValuesD,
         NULL,
         NULL,
         outCapacity,
@@ -1803,7 +1808,7 @@ TEST(ExpandTest, testOverFill) {
                            0);
     EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 10);
     EXPECT_EQ(resHandle.pStrErr, nullptr);
-    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100,
+    EXPECT_TRUE(equal(outputDimValuesD, outputDimValuesD + 100,
                         expectedDimValues));
 }
 
@@ -1838,25 +1843,25 @@ TEST(ExpandTest, testAppend) {
         0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
     };
 
-    uint8_t *inputDimValues = allocate(inputDimValuesH, 60);
+    uint8_t *inputDimValuesD = allocate(inputDimValuesH, 60);
     uint32_t *inputIndexVector = allocate(inputIndexVectorH, 6);
     uint32_t *baseCountVector = allocate(baseCountVectorH, 16);
 
-    uint8_t *outputDimValues = allocate(outputDimValuesH, 100);
+    uint8_t *outputDimValuesD = allocate(outputDimValuesH, 100);
 
     int length = 6;
     int vectorCapacity = 6;
     int outCapacity =  10;
 
     DimensionVector inputKeys = {
-        inputDimValues,
+        inputDimValuesD,
         NULL,
         NULL,
         vectorCapacity,
         {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
 
     DimensionVector outputKeys = {
-        outputDimValues,
+        outputDimValuesD,
         NULL,
         NULL,
         outCapacity,
@@ -1872,7 +1877,7 @@ TEST(ExpandTest, testAppend) {
                            0);
     EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 10);
     EXPECT_EQ(resHandle.pStrErr, nullptr);
-    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100,
+    EXPECT_TRUE(equal(outputDimValuesD, outputDimValuesD + 100,
                         expectedDimValues));
 }
 
@@ -1907,16 +1912,16 @@ TEST(ExpandTest, testFillPartial) {
         1, 1, 1, 1, 1, 1, 0, 0, 0, 0
     };
 
-    uint8_t *inputDimValues = allocate(inputDimValuesH, 60);
+    uint8_t *inputDimValuesD = allocate(inputDimValuesH, 60);
     uint32_t *inputIndexVector = allocate(inputIndexVectorH, 6);
     uint32_t *baseCountVector = allocate(baseCountVectorH, 16);
 
-    uint8_t *outputDimValues = allocate(outputDimValuesH, 100);
+    uint8_t *outputDimValuesD = allocate(outputDimValuesH, 100);
 
     int length = 3;
     int vectorCapacity = 6;
     DimensionVector inputKeys = {
-        inputDimValues,
+        inputDimValuesD,
         NULL,
         NULL,
         vectorCapacity,
@@ -1924,7 +1929,7 @@ TEST(ExpandTest, testFillPartial) {
     int outCapacity =  10;
 
     DimensionVector outputKeys = {
-        outputDimValues,
+        outputDimValuesD,
         NULL,
         NULL,
         outCapacity,
@@ -1940,7 +1945,7 @@ TEST(ExpandTest, testFillPartial) {
                            0);
     EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 6);
     EXPECT_EQ(resHandle.pStrErr, nullptr);
-    EXPECT_TRUE(equal(outputDimValues, outputDimValues + 100,
+    EXPECT_TRUE(equal(outputDimValuesD, outputDimValuesD + 100,
                         expectedDimValues));
 }
 
@@ -1961,12 +1966,14 @@ TEST(HashReductionTest, CheckReduce) {
   uint8_t outputDimValuesH[60] = {0};
   uint32_t outputValuesH[6] = {0};
 
-  uint8_t *inputDimValues = allocate(inputDimValuesH, 60);
-  uint32_t *inputValues = allocate(inputValuesH, 6);
+  uint8_t *inputDimValuesD = allocate(inputDimValuesH, 60);
+  uint32_t *inputValuesD = allocate(inputValuesH, 6);
 
-  uint8_t *outputDimValues = allocate(outputDimValuesH, 60);
-  uint32_t *outputValues = allocate(outputValuesH, 6);
+  uint8_t *outputDimValuesD = allocate(outputDimValuesH, 60);
+  uint32_t *outputValuesD = allocate(outputValuesH, 6);
 
+  // since the result is hashed therefore no order is ganranteed,
+  // we can build a result map and compare with the expected map.
   uint32_t expectedValues[3] = {3, 11, 7};
   // output dimension values should be [2,1,3] for each dim vector
   uint8_t expectedDimValues[60] = {
@@ -1974,36 +1981,78 @@ TEST(HashReductionTest, CheckReduce) {
       0, 0, 0, 0, 2, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 2, 1, 3, 0,
       0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0,
   };
-  int length = 6;
+
+  // the key is (dim[0] << 32) | (dim[1] << 16) | (dim[2] << 8) |
+  // valid[0] << 2 | valid[1] << 1 | valid[2].
+  auto build_map = [](uint8_t *dimValues, uint32_t *values, int length,
+      int capacity) {
+    std::unordered_map<int64_t, uint32_t> map;
+    for (int i = 0; i < length; i++) {
+      int64_t key = 0;
+      uint32_t* curDim32 = reinterpret_cast<uint32_t*>(dimValues) + i;
+      key |= static_cast<int64_t>(*curDim32) << 32;
+      curDim32 += capacity-i;
+
+      uint16_t* curDim16 = reinterpret_cast<uint16_t*>(curDim32) + i;
+      key |= static_cast<int64_t>(*curDim16) << 16;
+      curDim16 += capacity-i;
+
+      uint8_t* curDim8 = reinterpret_cast<uint8_t*>(curDim16) + i;
+      key |= static_cast<int64_t>(*curDim8) << 8;
+      curDim8 += capacity-i;
+
+      key |= static_cast<int64_t>(curDim8[i]) << 2;
+      curDim8 += capacity;
+
+      key |= static_cast<int64_t>(curDim8[i]) << 1;
+      curDim8 += capacity;
+
+      key |= static_cast<int64_t>(curDim8[i]);
+      map[key] = values[i];
+    }
+    return map;
+  };
+
+  auto expectedMap = build_map(expectedDimValues, expectedValues, 3, 6);
+  int capacity = 6;
   int vectorCapacity = 6;
   DimensionVector inputKeys = {
-      inputDimValues,
+      inputDimValuesD,
       nullptr,
       nullptr,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
 
   DimensionVector outputKeys = {
-      outputDimValues,
+      outputDimValuesD,
       nullptr,
       nullptr,
       vectorCapacity,
       {(uint8_t)0, (uint8_t)0, (uint8_t)1, (uint8_t)1, (uint8_t)1}};
   CGoCallResHandle
       resHandle = HashReduce(inputKeys,
-                         reinterpret_cast<uint8_t *>(inputValues),
+                         reinterpret_cast<uint8_t *>(inputValuesD),
                          outputKeys,
-                         reinterpret_cast<uint8_t *>(outputValues),
+                         reinterpret_cast<uint8_t *>(outputValuesD),
                          4,
-                         length,
+                         capacity,
                          AGGR_SUM_UNSIGNED,
                          0,
                          0);
   EXPECT_EQ(reinterpret_cast<int64_t>(resHandle.res), 3);
   EXPECT_EQ(resHandle.pStrErr, nullptr);
 
-  EXPECT_TRUE(equal(outputValues, outputValues + 3, expectedValues));
-  EXPECT_TRUE(equal(outputDimValues, outputDimValues + 60, expectedDimValues));
+  copy_device_to_host(outputDimValuesH, outputDimValuesD, 60);
+  copy_device_to_host(outputValuesH, outputValuesD, 6);
+
+  auto outputMap = build_map(outputDimValuesH, outputValuesH, 3, 6);
+
+  EXPECT_EQ(outputMap.size(), expectedMap.size());
+  for (auto iter = outputMap.begin(); iter != outputMap.end(); iter++) {
+    int64_t key = iter->first;
+    uint32_t value = iter->second;
+    EXPECT_EQ(value, expectedMap[key]);
+  }
 }
 #endif
 

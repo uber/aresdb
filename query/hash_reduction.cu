@@ -190,8 +190,7 @@ class HashReductionContext {
   // aggregation query. We also use this as the capacity for the hash map.
   // Note we cannot make this assumption if we are going to use this map
   // for join.
-  constexpr static uint32_t max_dim_values_capacity = 1E4;
-  constexpr static uint32_t load_factor = 2;
+  constexpr static float load_factor = 2;
   agg_func f;
   uint32_t capacity;
   uint32_t length;
@@ -279,7 +278,6 @@ class HashReductionContext {
         map, inputKeys.DimValues, inputKeys.VectorCapacity,
         outputKeys.DimValues, dimWidthPrefixSum,
         outputValue, globalWriteIndexDevice.get());
-    printf("extractssssss\n");
     thrust::for_each_n(GET_EXECUTION_POLICY(cudaStream),
                        thrust::counting_iterator<uint32_t>(0),
                        capacity, extractorFunc);
