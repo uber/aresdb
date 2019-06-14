@@ -110,11 +110,6 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	cfg.Etcd.Service = serviceName
 	configServiceCli, err := cfg.Etcd.NewClient(
 		instrument.NewOptions().SetLogger(zap.NewExample()))
-	//configServiceCli, err := etcd.NewConfigServiceClient(
-	//	etcd.NewOptions().
-	//	SetEnv("dev").
-	//	SetZone("local").SetService(serviceName).
-	//	SetClusters([]etcd.Cluster{etcd.NewCluster().SetZone("local").SetEndpoints([]string{"localhost:2379"})}))
 	if err != nil {
 		logger.Fatal("Failed to create config service client,", err)
 	}

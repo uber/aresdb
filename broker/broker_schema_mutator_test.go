@@ -24,6 +24,17 @@ import (
 var _ = ginkgo.Describe("broker schema mutator", func() {
 	testTable := common.Table{
 		Name: "t1",
+		Columns: []common.Column{{Name: "c1", Type: "Uint32"}},
+	}
+
+	testTableOneMoreCol := common.Table{
+		Name: "t1",
+		Columns: []common.Column{{Name: "c1", Type: "Uint32"}, {Name: "c2", Type: "SmallEnum"}},
+	}
+
+	testTableColDeleted := common.Table{
+		Name: "t1",
+		Columns: []common.Column{{Name: "c1", Type: "Uint32"}, {Name: "c2", Type: "SmallEnum", Deleted: true}},
 	}
 
 	ginkgo.It("should work", func() {
@@ -42,6 +53,31 @@ var _ = ginkgo.Describe("broker schema mutator", func() {
 		tschema, err := mutator.GetSchema("t1")
 		Ω(err).Should(BeNil())
 		Ω(tschema).Should(Equal(common2.NewTableSchema(&testTable)))
+
+		err = mutator.UpdateTable(testTableOneMoreCol)
+		Ω(err).Should(BeNil())
+
+		t, err = mutator.GetTable("t1")
+		Ω(err).Should(BeNil())
+		Ω(*t).Should(Equal(testTableOneMoreCol))
+
+		tschema, err = mutator.GetSchema("t1")
+		Ω(err).Should(BeNil())
+		Ω(tschema).Should(Equal(common2.NewTableSchema(&testTableOneMoreCol)))
+
+		err = mutator.DeleteColumn("t1", "bla")
+		Ω(err.Error()).Should(ContainSubstring("not found"))
+
+		err = mutator.DeleteColumn("t1", "c2")
+		Ω(err).Should(BeNil())
+
+		t, err = mutator.GetTable("t1")
+		Ω(err).Should(BeNil())
+		Ω(*t).Should(Equal(testTableColDeleted))
+
+		tschema, err = mutator.GetSchema("t1")
+		Ω(err).Should(BeNil())
+		Ω(tschema).Should(Equal(common2.NewTableSchema(&testTableColDeleted)))
 
 		err = mutator.DeleteTable("t1")
 		Ω(err).Should(BeNil())
