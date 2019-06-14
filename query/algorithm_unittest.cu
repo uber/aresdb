@@ -794,7 +794,8 @@ TEST(HashLookupTest, CheckLookup) {
 
   EXPECT_TRUE(
       equal(reinterpret_cast<uint8_t *>(outputValuesD),
-            reinterpret_cast<uint8_t *>(outputValuesD) + sizeof(RecordID) * size,
+            reinterpret_cast<uint8_t *>(
+                outputValuesD) + sizeof(RecordID) * size,
             reinterpret_cast<uint8_t *>(&expectedOutputValues[0])));
   release(buckets);
   release(indexVector);
@@ -871,7 +872,8 @@ TEST(HashLookupTest, CheckUUID) {
 
   EXPECT_TRUE(
       equal(reinterpret_cast<uint8_t *>(outputValuesD),
-            reinterpret_cast<uint8_t *>(outputValuesD) + sizeof(RecordID) * size,
+            reinterpret_cast<uint8_t *>(
+                outputValuesD) + sizeof(RecordID) * size,
             reinterpret_cast<uint8_t *>(&expectedOutputValues[0])));
   release(buckets);
   release(indexVector);
@@ -1077,7 +1079,8 @@ TEST(ReduceDimColumnVectorTest, CheckReduce) {
 
   EXPECT_TRUE(equal(outputValuesD, outputValuesD + 3, expectedValues));
   EXPECT_TRUE(equal(outputIndexVector, outputIndexVector + 3, expectedIndex));
-  EXPECT_TRUE(equal(outputDimValuesD, outputDimValuesD + 60, expectedDimValues));
+  EXPECT_TRUE(equal(outputDimValuesD,
+      outputDimValuesD + 60, expectedDimValues));
 }
 
 TEST(SortAndReduceTest, CheckReduceByAvg) {
@@ -1149,7 +1152,8 @@ TEST(SortAndReduceTest, CheckReduceByAvg) {
 
   EXPECT_TRUE(equal(outputValuesD, outputValuesD + 3, expectedValues));
   EXPECT_TRUE(equal(outputIndexVector, outputIndexVector + 3, expectedIndex));
-  EXPECT_TRUE(equal(outputDimValuesD, outputDimValuesD + 30, expectedDimValues));
+  EXPECT_TRUE(equal(outputDimValuesD,
+      outputDimValuesD + 30, expectedDimValues));
 }
 
 // cppcheck-suppress *
@@ -1948,7 +1952,7 @@ TEST(ExpandTest, testFillPartial) {
 // For now this test should only run in device mode and when c++14 is supported.
 // TODO(lucafuji): add host version of concurrent hash map to support host mode
 // mock and test.
-#if defined(SUPPORT_HASH_REDUCTION) || !defined(RUN_ON_DEVICE)
+#ifdef SUPPORT_HASH_REDUCTION
 // cppcheck-suppress *
 TEST(HashReductionTest, CheckReduce) {
   // test with 3 dimensions (4-byte, 2-byte, 1-byte)
@@ -2044,7 +2048,7 @@ TEST(HashReductionTest, CheckReduce) {
   auto outputMap = build_map(outputDimValuesH, outputValuesH, 3, 6);
 
   EXPECT_EQ(outputMap.size(), expectedMap.size());
-  for (auto iter = outputMap.begin(); iter != outputMap.end(); iter++){
+  for (auto iter = outputMap.begin(); iter != outputMap.end(); iter++) {
     int64_t key = iter->first;
     uint32_t value = iter->second;
     EXPECT_EQ(value, expectedMap[key]);

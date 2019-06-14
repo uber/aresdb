@@ -269,7 +269,7 @@ inline void release(V* devPtr) {
 }
 
 template<typename V>
-inline void copy_device_to_host(V* dst, V* src, size_t size){
+inline void copy_device_to_host(V* dst, V* src, size_t size) {
   size_t totalSize = size * sizeof(V);
   ares::asyncCopyDeviceToHost(reinterpret_cast<void *>(dst),
                               reinterpret_cast<void *>(src),

@@ -62,10 +62,10 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 link_directories(${CMAKE_BINARY_DIR}/lib)
 
 # HASH_REDUCTION right now is only support in device mode and when CXX standard is C++14.
-if ((${CXX_STANDARD} EQUAL 14) AND (QUERY_MODE STREQUAL "DEVICE"))
+if ((QUERY_MODE STRNEQUAL "DEVICE") OR (${CXX_STANDARD} EQUAL 14))
     list(APPEND MARCROS "SUPPORT_HASH_REDUCTION=1")
     set(SUPPORT_HASH_REDUCTION 1)
-endif()
+endif ()
 
 ################################
 # GTest
@@ -163,7 +163,7 @@ add_library(algorithm SHARED
         query/hash_lookup.cu
         query/hash_reduction.cu
         query/hll.cu
-        query/host_concurrent_unordered_map.hpp
+        query/concurrent_unordered_map.hpp
         query/iterator.hpp
         query/memory.cu
         query/memory.hpp
@@ -174,7 +174,7 @@ add_library(algorithm SHARED
         query/transform.cu
         query/transform.hpp
         query/utils.cu
-        query/utils.hpp query/host_concurrent_unordered_map.hpp)
+        query/utils.hpp query/concurrent_unordered_map.hpp)
 
 target_link_libraries(algorithm mem)
 ################################

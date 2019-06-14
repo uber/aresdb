@@ -12,62 +12,60 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUERY_HOST_CONCURRENT_UNORDERED_MAP_HPP
-#define QUERY_HOST_CONCURRENT_UNORDERED_MAP_HPP
+#ifndef QUERY_CONCURRENT_UNORDERED_MAP_HPP_
+#define QUERY_CONCURRENT_UNORDERED_MAP_HPP_
 
-#ifdef SUPPORT_HASH_REDUCTION
+#if defined(SUPPORT_HASH_REDUCTION) && defined(RUN_ON_DEVICE)
 #include <hash/concurrent_unordered_map.cuh>
 #include <hash/hash_functions.cuh>
 #endif
 #include <thrust/pair.h>
-#ifdef SUPPORT_HASH_REDUCTION
+#if defined(SUPPORT_HASH_REDUCTION) && defined(RUN_ON_DEVICE)
 #include <groupby/aggregation_operations.hpp>
 #endif
+#include <limits>
 #include <unordered_map>
 
-#ifndef SUPPORT_HASH_REDUCTION
-// we duplicate following operators from cudf for host mode only. This is because
-// including any cudf files requires c++14 however for host mode. We can remove
-// those operators once all of our dependent c++ compilers support c++14.
+namespace ares {
+#ifndef RUN_ON_DEVICE
+// we duplicate following operators from cudf for host mode only. This is
+// because including any cudf files requires c++14 however for host mode.
+// We can remove those operators once all of our dependent c++ compilers
+// support c++14.
 template<typename value_type>
-struct max_op{
-  constexpr static value_type IDENTITY{std::numeric_limits<value_type>::lowest()};
+struct max_op {
+  constexpr static value_type IDENTITY{
+    std::numeric_limits<value_type>::lowest()};
 
   __host__ __device__
-  value_type operator()(value_type new_value, value_type old_value)
-  {
+  value_type operator()(value_type new_value, value_type old_value) {
     return (new_value > old_value ? new_value : old_value);
   }
 };
 
 template<typename value_type>
-struct min_op
-{
+struct min_op {
   constexpr static value_type IDENTITY{std::numeric_limits<value_type>::max()};
 
   __host__ __device__
-  value_type operator()(value_type new_value, value_type old_value)
-  {
+  value_type operator()(value_type new_value, value_type old_value) {
     return (new_value < old_value ? new_value : old_value);
   }
 };
 
 template<typename value_type>
-struct count_op
-{
+struct count_op {
   constexpr static value_type IDENTITY{0};
 
   __host__ __device__
-  value_type operator()(value_type, value_type old_value)
-  {
+  value_type operator()(value_type, value_type old_value) {
     old_value += value_type{1};
     return old_value;
   }
 };
 
 template<typename value_type>
-struct sum_op
-{
+struct sum_op {
   constexpr static value_type IDENTITY{0};
 
   __host__ __device__
@@ -136,15 +134,31 @@ class host_concurrent_unordered_map {
   }
 };
 
-#ifdef SUPPORT_HASH_REDUCTION
+#if defined(RUN_ON_DEVICE) && defined(SUPPORT_HASH_REDUCTION)
 template<typename Key,
     typename Element,
     typename Hasher,
     typename Equality>
-  using hash_map = concurrent_unordered_map<Key, Element, Hasher, Equality>;
+using hash_map = concurrent_unordered_map<Key, Element, Hasher, Equality>;
+
+template <typename hash_map_type>
+__host_or_device__
+typename hash_map_type::value_type* map_value_at(hash_map_type* map,
+    size_t i) {
+  return map->data() + i;
+}
 #else
-template<typename Key,typename Element,typename Hasher,typename Equality>
+template<typename Key, typename Element, typename Hasher, typename Equality>
 using hash_map = host_concurrent_unordered_map<Key, Element, Hasher, Equality>;
+
+template <typename hash_map_type>
+__host_or_device__
+typename hash_map_type::const_iterator map_value_at(hash_map_type* map,
+    size_t i) {
+  return std::next(map->begin(), i);
+}
 #endif
 
-#endif //QUERY_HOST_CONCURRENT_UNORDERED_MAP_HPP
+}  // namespace ares
+
+#endif  // QUERY_CONCURRENT_UNORDERED_MAP_HPP_

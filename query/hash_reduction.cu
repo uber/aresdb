@@ -16,11 +16,13 @@
 #include <cstring>
 #include <algorithm>
 #include <exception>
+#include <cstdio>
+#include <cstdlib>
 #include "algorithm.hpp"
 #include "iterator.hpp"
 #include "memory.hpp"
 #include "query/time_series_aggregate.h"
-#include "host_concurrent_unordered_map.hpp"
+#include "concurrent_unordered_map.hpp"
 #include "utils.hpp"
 
 CGoCallResHandle HashReduce(DimensionVector inputKeys,
@@ -34,14 +36,13 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
                             int device) {
   CGoCallResHandle resHandle = {nullptr, nullptr};
   try {
-#ifdef RUN_ON_DEVICE
-    cudaSetDevice(device);
 #ifndef SUPPORT_HASH_REDUCTION
-    // if in device mode hash reduction is not supported, simply return 0;
     resHandle.res = reinterpret_cast<void *>(0);
     return resHandle;
-#endif
 #else
+#ifdef RUN_ON_DEVICE
+    cudaSetDevice(device);
+#endif
     cudaStream_t cudaStream = reinterpret_cast<cudaStream_t>(stream);
     resHandle.res = reinterpret_cast<void *>(ares::hash_reduction(inputKeys,
                                                                   inputValues,
@@ -52,7 +53,6 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
                                                                   aggFunc,
                                                                   cudaStream));
     CheckCUDAError("HashReduce");
-#endif
   }
   catch (std::exception &e) {
     std::cerr << "Exception happend when doing Reduce:" << e.what()
@@ -61,8 +61,9 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
   }
   return resHandle;
 }
+#endif
 
-#ifndef SUPPORT_HASH_REDUCTION
+#ifdef SUPPORT_HASH_REDUCTION
 namespace ares {
 
 template<typename map_type>
@@ -142,10 +143,9 @@ struct ExtractGroupByResultFunctor {
 
   __host_or_device__
   void operator()(const int i) {
-    printf("%d %d\n", i, map->capacity());
     if (i < map->capacity()) {
       key_type unusedKey = map->get_unused_key();
-      auto iter = std::next(map->begin(), i);
+      auto iter = ares::map_value_at(map, i);
       key_type current_key = iter->first;
       if (current_key != unusedKey) {
         uint32_t outputIdx = ares::atomicAdd(global_write_index, (uint32_t)1);
@@ -190,7 +190,7 @@ class HashReductionContext {
   // aggregation query. We also use this as the capacity for the hash map.
   // Note we cannot make this assumption if we are going to use this map
   // for join.
-  constexpr static uint32_t max_dim_values_capacity = 5E6;
+  constexpr static uint32_t max_dim_values_capacity = 1E4;
   agg_func f;
   uint32_t capacity;
   uint32_t length;
@@ -199,7 +199,7 @@ class HashReductionContext {
  public:
   explicit HashReductionContext(uint32_t length,
                                 value_type identity)
-      : capacity(std::min(length, max_dim_values_capacity)), length(length),
+      : capacity(length * 2), length(length),
         identity(identity) {
     f = agg_func();
   }
@@ -224,7 +224,7 @@ class HashReductionContext {
         thrust::make_tuple(hashIter, thrust::counting_iterator<uint32_t>(0)));
 
     auto hashIndexFusionFunc = []
-    __host__ __device__(
+    __host_or_device__(
         typename decltype(rawMapKeyIter)::value_type tuple) {
       return (static_cast<int64_t>(thrust::get<0>(tuple)) << 32)
           | (static_cast<int64_t>(thrust::get<1>(tuple)));
@@ -239,12 +239,12 @@ class HashReductionContext {
             reinterpret_cast<value_type *>(inputValues)));
 
     auto equality = []
-    __host__ __device__(key_type lhs, key_type rhs) {
+    __host_or_device__(key_type lhs, key_type rhs) {
       return lhs >> 32 == rhs >> 32;
     };
 
     auto insertionFunc = [=]
-    __host__ __device__(
+    __host_or_device__(
         thrust::tuple<key_type, value_type> key_value_tuple) {
       map->insert(tuple2pair(key_value_tuple), f, equality);
     };
@@ -278,7 +278,7 @@ class HashReductionContext {
         map, inputKeys.DimValues, inputKeys.VectorCapacity,
         outputKeys.DimValues, dimWidthPrefixSum,
         outputValue, globalWriteIndexDevice.get());
-    printf("extract");
+    printf("extractssssss\n");
     thrust::for_each_n(GET_EXECUTION_POLICY(cudaStream),
                        thrust::counting_iterator<uint32_t>(0),
                        capacity, extractorFunc);
@@ -299,22 +299,21 @@ class HashReductionContext {
               DimensionVector outputKeys, uint8_t *outputValues,
               cudaStream_t cudaStream) {
     auto equality = []
-    __host__ __device__(key_type lhs, key_type rhs) {
+    __host_or_device__(key_type lhs, key_type rhs) {
       return (lhs >> 32) == (rhs >> 32);
     };
 
-    typedef hash_map<key_type,
+    typedef ares::hash_map<key_type,
                      value_type,
                      Higher32BitsHasher,
-                     decltype(equality)>
-        map_type;
+                     decltype(equality)> map_type;
 
     host_unique_ptr<map_type>
         mapHost = make_host_unique<map_type>(capacity, identity, 0,
                                              Higher32BitsHasher(), equality);
-
     device_unique_ptr<map_type>
         mapDevice = make_device_unique<map_type>(cudaStream, mapHost.get());
+
     reduce(mapDevice.get(), inputKeys, inputValues, cudaStream);
     return output(mapDevice.get(),
                   inputKeys,
@@ -364,6 +363,7 @@ int hash_reduction(DimensionVector inputKeys, uint8_t *inputValues,
             cudaStream); break;
     case AGGR_SUM_UNSIGNED:
       if (valueBytes == 4) {
+        printf("using AGGR_SUM_UNSIGNED\n");
         REDUCE_INTERNAL(uint32_t, sum_op < uint32_t >)
       } else {
         REDUCE_INTERNAL(uint64_t, sum_op < uint64_t >)
