@@ -319,15 +319,15 @@ var _ = ginkgo.Describe("device_manager", func() {
 		// batch processing aggregate query
 		qc.IsNonAggregationQuery = false
 		memUsage = qc.estimateMemUsageForBatch(20, 128+128+128, 40)
-		Ω(memUsage).Should(Equal(1204))
+		Ω(memUsage).Should(Equal(1684))
 
 		// live batch columns + processing
 		memUsage = qc.estimateLiveBatchMemoryUsage(liveBatch)
-		Ω(memUsage).Should(Equal(589))
+		Ω(memUsage).Should(Equal(709))
 
 		// archive batch columns + processing
 		memUsage = qc.estimateArchiveBatchMemoryUsage(archiveBatch, false)
-		Ω(memUsage).Should(Equal(489))
+		Ω(memUsage).Should(Equal(513))
 	})
 
 	ginkgo.It("NewDeviceManager should work", func() {
