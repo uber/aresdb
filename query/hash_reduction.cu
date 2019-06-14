@@ -362,7 +362,6 @@ int hash_reduction(DimensionVector inputKeys, uint8_t *inputValues,
             cudaStream); break;
     case AGGR_SUM_UNSIGNED:
       if (valueBytes == 4) {
-        printf("using AGGR_SUM_UNSIGNED\n");
         REDUCE_INTERNAL(uint32_t, sum_op < uint32_t >)
       } else {
         REDUCE_INTERNAL(uint64_t, sum_op < uint64_t >)
