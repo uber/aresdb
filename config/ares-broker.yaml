@@ -20,13 +20,6 @@ etcd:
     - zone: local
       endpoints:
         - 127.0.0.1:2379
-    - zone: phx2
-      endpoints:
-        - schemadock-staging21-phx2.prod.uber.internal:2379
-        - schemadock-staging20-phx2.prod.uber.internal:2379
-        - schemadock-staging17-phx2.prod.uber.internal:2379
-        - schemadock-staging22-phx2.prod.uber.internal:2379
-        - schemadock-staging19-phx2.prod.uber.internal:2379
 
 cluster:
   enable: true
