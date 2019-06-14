@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package client
 
 import (
@@ -21,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/uber/aresdb/cluster/topology"
 	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/utils"
 	. "io/ioutil"
 	"net/http"
 )
@@ -43,7 +45,7 @@ type aqlRespBody struct {
 	Results []queryCom.AQLQueryResult `json:"results"`
 }
 
-func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery)  (result queryCom.AQLQueryResult, err error) {
+func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (result queryCom.AQLQueryResult, err error) {
 	url := fmt.Sprintf("http://%s/query/aql", host.Address())
 	aqlRequestBody := aqlRequestBody{
 		[]queryCom.AQLQuery{query},
@@ -81,10 +83,11 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host
 
 	var respBody aqlRespBody
 	err = json.Unmarshal(respBytes, &respBody)
-	if err != nil || len(respBody.Results) != 1{
+	if err != nil || len(respBody.Results) != 1 {
 		err = errors.New(fmt.Sprintf("invalid response from datanode, resp: %s", respBytes))
 		return
 	}
 	result = respBody.Results[0]
+	utils.GetLogger().With("host", host, "query", query, "result", result).Debug("datanode query client succeeded")
 	return
 }

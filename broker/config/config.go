@@ -15,6 +15,7 @@
 package config
 
 import (
+	"github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/uber/aresdb/common"
 )
 
@@ -24,4 +25,6 @@ type BrokerConfig struct {
 
 	ControllerConfig *common.ControllerConfig `yaml:"controller,omitempty"`
 	HTTP             common.HTTPConfig        `yaml:"http"`
+	Etcd             etcd.Configuration       `yaml:"etcd"`
+	Cluster          common.ClusterConfig     `yaml:"cluster"`
 }

@@ -107,6 +107,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 				return
 			}
 			utils.GetRootReporter().GetCounter(utils.SchemaCreationCount).Inc(1)
+			utils.GetLogger().With("table", table.Name).Debug("added new table")
 		} else {
 			var oldTable *common.Table
 			oldTable, err = j.schemaMutator.GetTable(table.Name)
@@ -121,11 +122,14 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 					return err
 				}
 				utils.GetRootReporter().GetCounter(utils.SchemaDeletionCount).Inc(1)
+				utils.GetLogger().With("table", table.Name).Debug("deleted table")
 				err = j.schemaMutator.CreateTable(&table)
 				if err != nil {
 					return err
 				}
 				utils.GetRootReporter().GetCounter(utils.SchemaCreationCount).Inc(1)
+				utils.GetLogger().With("table", table.Name).Debug("recreated table")
+
 			} else if oldTable.Incarnation == table.Incarnation && !reflect.DeepEqual(&table, oldTable) {
 				// found table update
 				j.schemaValidator.SetNewTable(table)
@@ -139,6 +143,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 					return
 				}
 				utils.GetRootReporter().GetCounter(utils.SchemaUpdateCount).Inc(1)
+				utils.GetLogger().With("table", table.Name).Debug("updated table")
 			}
 			oldTablesMap[table.Name] = false
 		}

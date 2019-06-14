@@ -17,11 +17,11 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	topoMocks "github.com/uber/aresdb/cluster/topology/mocks"
 	"github.com/uber/aresdb/query/common"
 	"net/http"
 	"net/http/httptest"
-	. "github.com/onsi/gomega"
 )
 
 var _ = ginkgo.Describe("datanode query client", func() {

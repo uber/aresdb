@@ -21,11 +21,6 @@ gateways:
   # example controller client configs
   controller:
     address: localhost:6708
-    headers:
-      RPC-Caller:
-        - aresdb
-      RPC-Service:
-        - ares-controller
 
 cluster:
   enable: false

@@ -16,7 +16,7 @@ package broker
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
@@ -28,38 +28,39 @@ import (
 )
 
 // NewQueryExecutor creates a new QueryExecutor
-func NewQueryExecutor(sm common.SchemaManager, topo topology.Topology, client dataCli.DataNodeQueryClient) common.QueryExecutor {
+func NewQueryExecutor(tsr memCom.TableSchemaReader, topo topology.Topology, client dataCli.DataNodeQueryClient) common.QueryExecutor {
 	return &queryExecutorImpl{
-		schemaManager:  sm,
-		topo:           topo,
-		dataNodeClient: client,
+		tableSchemaReader: tsr,
+		topo:              topo,
+		dataNodeClient:    client,
 	}
 }
 
 // queryExecutorImpl will be reused across all queries
 type queryExecutorImpl struct {
-	schemaManager  common.SchemaManager
-	topo           topology.Topology
-	dataNodeClient dataCli.DataNodeQueryClient
+	tableSchemaReader memCom.TableSchemaReader
+	topo              topology.Topology
+	dataNodeClient    dataCli.DataNodeQueryClient
 }
 
-func (qe *queryExecutorImpl) Execute(ctx context.Context, namespace, sqlQuery string, w http.ResponseWriter) (err error) {
+func (qe *queryExecutorImpl) Execute(ctx context.Context, sqlQuery string, w http.ResponseWriter) (err error) {
 	// parse
 	var aqlQuery *queryCom.AQLQuery
 	aqlQuery, err = query.Parse(sqlQuery, utils.GetLogger())
-
-	// compile
-	var schemaReader memCom.TableSchemaReader
-	schemaReader, err = qe.schemaManager.GetTableSchemaReader(namespace)
 	if err != nil {
 		return
 	}
 
+	// compile
 	// TODO: add timeout; hll
 	qc := &query.AQLQueryContext{
 		Query: aqlQuery,
 	}
-	qc.Compile(schemaReader)
+	qc.Compile(qe.tableSchemaReader)
+	if qc.Error != nil {
+		err = qc.Error
+		return
+	}
 
 	// execute
 	if qc.IsNonAggregationQuery {
@@ -84,7 +85,8 @@ func (qe *queryExecutorImpl) executeAggQuery(ctx context.Context, qc *query.AQLQ
 	if err != nil {
 		return
 	}
-	fmt.Println(result)
-	w.Write([]byte("todo!"))
+	var bs []byte
+	bs, err = json.Marshal(result)
+	w.Write([]byte(bs))
 	return
 }

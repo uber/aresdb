@@ -159,6 +159,7 @@ func (sn *ScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult
 		host := hosts[idx]
 
 		var fetchErr error
+		utils.GetLogger().With("host", host, "query", sn.query).Debug("sending query to datanode")
 		result, fetchErr = sn.dataNodeClient.Query(ctx, host, sn.query)
 		if fetchErr != nil {
 			utils.GetLogger().With(
@@ -174,6 +175,7 @@ func (sn *ScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult
 			"trial", trial,
 			"shard", sn.shardID,
 			"host", host).Info("fetch from datanode succeeded")
+		break
 	}
 	if result != nil {
 		err = nil
