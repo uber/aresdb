@@ -120,12 +120,10 @@ func (b *BrokerSchemaMutator) DeleteColumn(table string, column string) (err err
 }
 
 // ====  memstore/common.TableSchemaReader ====
-func (b *BrokerSchemaMutator) GetSchema(table string) (tableSchema *memCom.TableSchema, err error) {
-	tableSchema = b.tables[table]
-	return
+func (b *BrokerSchemaMutator) GetSchema(table string) (*memCom.TableSchema, error) {
+	return b.tables[table], nil
 }
 
-func (b *BrokerSchemaMutator) GetSchemas() (schemas map[string]*memCom.TableSchema) {
-	schemas = b.tables
-	return
+func (b *BrokerSchemaMutator) GetSchemas() (map[string]*memCom.TableSchema) {
+	return b.tables
 }
