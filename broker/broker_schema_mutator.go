@@ -124,6 +124,6 @@ func (b *BrokerSchemaMutator) GetSchema(table string) (*memCom.TableSchema, erro
 	return b.tables[table], nil
 }
 
-func (b *BrokerSchemaMutator) GetSchemas() (map[string]*memCom.TableSchema) {
+func (b *BrokerSchemaMutator) GetSchemas() map[string]*memCom.TableSchema {
 	return b.tables
 }

@@ -23,17 +23,17 @@ import (
 
 var _ = ginkgo.Describe("broker schema mutator", func() {
 	testTable := common.Table{
-		Name: "t1",
+		Name:    "t1",
 		Columns: []common.Column{{Name: "c1", Type: "Uint32"}},
 	}
 
 	testTableOneMoreCol := common.Table{
-		Name: "t1",
+		Name:    "t1",
 		Columns: []common.Column{{Name: "c1", Type: "Uint32"}, {Name: "c2", Type: "SmallEnum"}},
 	}
 
 	testTableColDeleted := common.Table{
-		Name: "t1",
+		Name:    "t1",
 		Columns: []common.Column{{Name: "c1", Type: "Uint32"}, {Name: "c2", Type: "SmallEnum", Deleted: true}},
 	}
 
