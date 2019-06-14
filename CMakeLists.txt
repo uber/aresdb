@@ -174,7 +174,7 @@ add_library(algorithm SHARED
         query/transform.cu
         query/transform.hpp
         query/utils.cu
-        query/utils.hpp query/concurrent_unordered_map.hpp)
+        query/utils.hpp)
 
 target_link_libraries(algorithm mem)
 ################################
