@@ -72,7 +72,6 @@ func (shard *TableShard) Bootstrap(
 		shard.bootstrapLock.Unlock()
 	}()
 
-
 	if atomic.LoadUint32(&shard.needPeerCopy) == 1 {
 		// find peer node for copy metadata and raw data
 		peerNode := shard.findBootstrapSource(origin, topo, topoState)
@@ -88,7 +87,7 @@ func (shard *TableShard) Bootstrap(
 		if dataStreamErr != nil {
 			return dataStreamErr
 		}
-		atomic.StoreUint32(&shard.needPeerCopy, 1)
+		atomic.StoreUint32(&shard.needPeerCopy, 0)
 	}
 
 	// load metadata from disk
@@ -108,7 +107,7 @@ func (shard *TableShard) Bootstrap(
 			if column.Deleted {
 				continue
 			}
-			shard.PreloadColumn(columnID, endDay - column.Config.PreloadingDays, endDay)
+			shard.PreloadColumn(columnID, endDay-column.Config.PreloadingDays, endDay)
 		}
 	} else {
 		// preload snapshot for dimension table
