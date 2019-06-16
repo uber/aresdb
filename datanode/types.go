@@ -55,7 +55,8 @@ type DataNode interface {
 	// Close data node
 	Close()
 
-	// Serve
+	// Serve will start serving read and write requests
+	// should always call Bootstrap() during server start before Serve()
 	Serve()
 }
 

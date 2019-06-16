@@ -304,10 +304,15 @@ func (d *dataNode) ID() string {
 func (d *dataNode) Serve() {
 	// start advertising to the cluster
 	d.advertise()
+	// enable archiving jobs
+	if !d.opts.ServerConfig().SchedulerOff {
+		d.memStore.GetScheduler().EnableJobType(memCom.ArchivingJobType, true)
+		d.opts.InstrumentOptions().Logger().Info("archiving jobs enabled")
+	}
 
+	// start server
 	router := mux.NewRouter()
 	httpWrappers := append([]utils.HTTPHandlerWrapper{utils.WithMetricsFunc}, d.opts.HTTPWrappers()...)
-
 	schemaRouter := router.PathPrefix("/schema")
 	if d.opts.ServerConfig().Cluster.Enable {
 		schemaRouter = schemaRouter.Methods(http.MethodGet)
@@ -350,6 +355,9 @@ func (d *dataNode) advertise() {
 		d.opts.InstrumentOptions().Logger().Fatalf("failed to advertise data node",
 			zap.String("id", d.opts.ServerConfig().InstanceConfig.ID),
 			zap.Error(err))
+	} else {
+		d.opts.InstrumentOptions().Logger().Info("start advertising datanode to cluster",
+			zap.String("id", d.opts.ServerConfig().InstanceConfig.ID))
 	}
 }
 
