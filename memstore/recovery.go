@@ -110,11 +110,11 @@ func (shard *TableShard) cleanOldSnapshotAndLogs(redoLogFile int64, offset uint3
 }
 
 // LoadMetaData loads metadata for the table Shard from metastore.
-func (shard *TableShard) LoadMetaData() {
+func (shard *TableShard) LoadMetaData() error {
 	if shard.Schema.Schema.IsFactTable {
 		cutoff, err := shard.metaStore.GetArchivingCutoff(shard.Schema.Schema.Name, shard.ShardID)
 		if err != nil {
-			utils.GetLogger().Panic(err)
+			return err
 		}
 
 		shard.ArchiveStore.CurrentVersion = NewArchiveStoreVersion(cutoff, shard)
@@ -128,7 +128,7 @@ func (shard *TableShard) LoadMetaData() {
 		// retrieve redoLog/offset checkpointed for backfill
 		redoLog, offset, err := shard.metaStore.GetBackfillProgressInfo(shard.Schema.Schema.Name, shard.ShardID)
 		if err != nil {
-			utils.GetLogger().Panic(err)
+			return err
 		}
 
 		shard.LiveStore.BackfillManager.LastRedoFile = redoLog
@@ -136,12 +136,13 @@ func (shard *TableShard) LoadMetaData() {
 	} else {
 		redoLogFile, offset, batchID, lastRecord, err := shard.metaStore.GetSnapshotProgress(shard.Schema.Schema.Name, shard.ShardID)
 		if err != nil {
-			utils.GetLogger().Panic(err)
+			return err
 		}
 		// retrieve latest snapshot info
 		record := memcom.RecordID{BatchID: batchID, Index: lastRecord}
 		shard.LiveStore.SnapshotManager.SetLastSnapshotInfo(redoLogFile, offset, record)
 	}
+	return nil
 }
 
 // loadSnapshots load snapshots for dimension tables
@@ -228,6 +229,8 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 
 	// tryPreload data according the column retention config and start the go routines
 	// to do eviction and preloading.
+	m.preloadAllFactTables()
+	// Start host memory manager
 	m.HostMemManager.Start()
 
 	// load snapshot for dimension tables
@@ -304,7 +307,10 @@ func (m *memStoreImpl) InitShards(schedulerOff bool) {
 // first and then replay redologs only if replayRedologs is true.
 func (m *memStoreImpl) LoadShard(schema *memcom.TableSchema, shard int, replayRedologs bool) error {
 	tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shard, m.options)
-	tableShard.LoadMetaData()
+	err := tableShard.LoadMetaData()
+	if err != nil {
+		utils.GetLogger().Panic(err)
+	}
 	if replayRedologs {
 		tableShard.PlayRedoLog()
 	}

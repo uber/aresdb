@@ -62,7 +62,6 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 		}))
 		staticTopology, _ := topology.NewStaticInitializer(staticMapOption).Init()
 		topoState := &topology.StateSnapshot{
-			Origin: host0,
 			ShardStates: map[topology.ShardID]map[topology.HostID]topology.HostShardState{
 				0: {
 					"instance0": topology.HostShardState{
@@ -120,6 +119,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 				ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 				DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
 			}, metaStore, diskStore, hostMemoryManager, 0, memStore.options)
+			shard.needPeerCopy = 1
 
 			ctrl := gomock.NewController(utils.TestingT)
 			defer ctrl.Finish()
@@ -194,7 +194,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			mockPeerDataNodeClient.On("FetchVectorPartyRawData", mock.Anything, mock.Anything).Return(mockFetchRawDataStream1, nil).Once()
 			mockPeerDataNodeClient.On("FetchVectorPartyRawData", mock.Anything, mock.Anything).Return(mockFetchRawDataStream2, nil).Once()
 
-			err := shard.Bootstrap(peerSource, host0, staticTopology, topoState, options)
+			err := shard.Bootstrap(peerSource, host0.ID(), staticTopology, topoState, options)
 			Ω(err).Should(BeNil())
 			Ω(column0MockBuffer.Buffer.Bytes()).Should(Equal([]byte{1, 2}))
 			Ω(column1MockBuffer.Buffer.Bytes()).Should(Equal([]byte{1, 2}))
@@ -222,6 +222,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 				ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 				DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
 			}, metaStore, diskStore, hostMemoryManager, 0, memStore.options)
+			shard.needPeerCopy = 1
 
 			ctrl := gomock.NewController(utils.TestingT)
 			defer ctrl.Finish()
@@ -291,7 +292,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			mockPeerDataNodeClient.On("FetchVectorPartyRawData", mock.Anything, mock.Anything).Return(mockFetchRawDataStream1, nil).Once()
 			mockPeerDataNodeClient.On("FetchVectorPartyRawData", mock.Anything, mock.Anything).Return(mockFetchRawDataStream2, nil).Once()
 
-			err := shard.Bootstrap(peerSource, host0, staticTopology, topoState, options)
+			err := shard.Bootstrap(peerSource, host0.ID(), staticTopology, topoState, options)
 			Ω(err).Should(BeNil())
 			Ω(column0MockBuffer.Buffer.Bytes()).Should(Equal([]byte{1, 2}))
 			Ω(column1MockBuffer.Buffer.Bytes()).Should(Equal([]byte{1, 2}))

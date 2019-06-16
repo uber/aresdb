@@ -58,6 +58,11 @@ type GatewayConfig struct {
 	Controller *ControllerConfig `yaml:"controller,omitempty"`
 }
 
+type InstanceConfig struct {
+	ID string `yaml:"id"`
+	Zone string `yaml:"zone"`
+}
+
 // ClusterConfig is the config for starting current instance with cluster mode
 type ClusterConfig struct {
 	// Enable controls whether to start in cluster mode
@@ -93,6 +98,11 @@ type RedoLogConfig struct {
 	KafkaConfig KafkaRedoLogConfig `yaml:"kafka"`
 }
 
+// HeartbeatConfig defines heart beat config
+type HeartbeatConfig struct {
+	TTLInSeconds int `yaml:"ttlInSeconds"`
+}
+
 // AresServerConfig is config specific for ares server.
 type AresServerConfig struct {
 	// HTTP port for serving.
@@ -115,6 +125,7 @@ type AresServerConfig struct {
 
 	// environment
 	Env string `yaml:"env"`
+	Zone string `yaml:"zone"`
 
 	Query     QueryConfig     `yaml:"query"`
 	DiskStore DiskStoreConfig `yaml:"disk_store"`
@@ -123,4 +134,10 @@ type AresServerConfig struct {
 	Gateway   GatewayConfig   `yaml:"gateway"`
 
 	RedoLogConfig RedoLogConfig `yaml:"redolog"`
+
+	// InstanceConfig defines instance
+	InstanceConfig InstanceConfig `yaml:"instance"`
+	// HeartbeatConfig defines heart beat
+	HeartbeatConfig HeartbeatConfig `yaml:"heartbeat"`
+
 }

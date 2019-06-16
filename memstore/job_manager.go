@@ -62,7 +62,7 @@ func (m *archiveJobManager) generateJobs() []Job {
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
 			tableShard.Schema.RLock()
-			if tableShard.Schema.Schema.IsFactTable {
+			if tableShard.Schema.Schema.IsFactTable && tableShard.IsDiskDataAvailable() {
 				interval := tableShard.Schema.Schema.Config.ArchivingIntervalMinutes * 60
 				delay := tableShard.Schema.Schema.Config.ArchivingDelayMinutes * 60
 				currentCutoff := tableShard.ArchiveStore.CurrentVersion.ArchivingCutoff
@@ -196,7 +196,7 @@ func (m *backfillJobManager) generateJobs() []Job {
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
 			tableShard.Schema.RLock()
-			if tableShard.Schema.Schema.IsFactTable {
+			if tableShard.Schema.Schema.IsFactTable && tableShard.IsDiskDataAvailable() {
 				key := getIdentifier(tableName, shardID, common.BackfillJobType)
 				backfillMgr := tableShard.LiveStore.BackfillManager
 				if backfillMgr.QualifyToTriggerBackfill() {
@@ -337,7 +337,7 @@ func (m *snapshotJobManager) generateJobs() []Job {
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
 			tableShard.Schema.RLock()
-			if !tableShard.Schema.Schema.IsFactTable {
+			if !tableShard.Schema.Schema.IsFactTable && tableShard.IsDiskDataAvailable() {
 				key := getIdentifier(tableName, shardID, common.SnapshotJobType)
 
 				snapshotManager := tableShard.LiveStore.SnapshotManager
@@ -464,6 +464,9 @@ func (m *purgeJobManager) generateJobs() []Job {
 	var jobs []Job
 	for tableName, shardMap := range m.memStore.TableShards {
 		for shardID, tableShard := range shardMap {
+			if !tableShard.IsDiskDataAvailable() {
+				continue
+			}
 			retentionDays := tableShard.Schema.Schema.Config.RecordRetentionInDays
 			key := getIdentifier(tableName, shardID, common.PurgeJobType)
 			if tableShard.ArchiveStore.PurgeManager.QualifyForPurge() &&

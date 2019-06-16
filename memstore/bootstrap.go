@@ -32,40 +32,29 @@ import (
 	"time"
 )
 
-// WaitForMetaDataBootstrap waits for metadata bootstrap to be finished before certain process can proceed
-// such as recovery, ingestion
-func (shard *TableShard) WaitForMetaDataBootstrap() {
-	shard.bootstrapLock.Lock()
-	for shard.bootstrapState < bootstrap.MetaDataBootstrapped {
-		shard.readyForRecovery.Wait()
-	}
-	shard.bootstrapLock.Unlock()
-}
-
-// IsBootstrapped returns whether this table shard is already bootstrapped.
+// IsBootstrapped returns whether this table shard is bootstrapped.
 func (shard *TableShard) IsBootstrapped() bool {
-	return shard.BootstrapState() == bootstrap.Bootstrapped
+	shard.bootstrapLock.Lock()
+	defer shard.bootstrapLock.Unlock()
+	return shard.bootstrapState == bootstrap.Bootstrapped
 }
 
-// BootstrapState returns this table shards' bootstrap state.
-func (shard *TableShard) BootstrapState() bootstrap.BootstrapState {
-	shard.bootstrapLock.RLock()
-	bs := shard.bootstrapState
-	shard.bootstrapLock.RUnlock()
-	return bs
+// IsDiskDataAvailable returns whether the data is available on disk for table shard
+func (shard *TableShard) IsDiskDataAvailable() bool {
+	return atomic.LoadUint32(&shard.needPeerCopy) != 1
 }
 
 // Bootstrap executes bootstrap for table shard
 func (shard *TableShard) Bootstrap(
 	peerSource client.PeerSource,
-	origin topology.Host,
+	origin string,
 	topo topology.Topology,
 	topoState *topology.StateSnapshot,
 	options bootstrap.Options,
 ) error {
 	shard.bootstrapLock.Lock()
 	// check whether shard is already bootstrapping
-	if shard.bootstrapState > bootstrap.BootstrapNotStarted && shard.bootstrapState < bootstrap.Bootstrapped {
+	if shard.bootstrapState == bootstrap.Bootstrapping {
 		shard.bootstrapLock.Unlock()
 		return bootstrap.ErrTableShardIsBootstrapping
 	}
@@ -83,19 +72,54 @@ func (shard *TableShard) Bootstrap(
 		shard.bootstrapLock.Unlock()
 	}()
 
-	// find peer node for copy data
-	peerNode := shard.findBootstrapSource(origin, topo, topoState)
-	var dataStreamErr error
-	borrowErr := peerSource.BorrowConnection(peerNode.ID(), func(nodeClient rpc.PeerDataNodeClient) {
-		dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient, options)
-	})
 
-	if borrowErr != nil {
-		return borrowErr
+	if atomic.LoadUint32(&shard.needPeerCopy) == 1 {
+		// find peer node for copy metadata and raw data
+		peerNode := shard.findBootstrapSource(origin, topo, topoState)
+		var dataStreamErr error
+
+		borrowErr := peerSource.BorrowConnection(peerNode.ID(), func(nodeClient rpc.PeerDataNodeClient) {
+			dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient, options)
+		})
+
+		if borrowErr != nil {
+			return borrowErr
+		}
+		if dataStreamErr != nil {
+			return dataStreamErr
+		}
+		atomic.StoreUint32(&shard.needPeerCopy, 1)
 	}
-	if dataStreamErr != nil {
-		return dataStreamErr
+
+	// load metadata from disk
+	err := shard.LoadMetaData()
+	if err != nil {
+		return err
 	}
+
+	// preload snapshot or archive batches into memory
+	shard.Schema.RLock()
+	schema := shard.Schema.Schema
+	shard.Schema.RUnlock()
+	if schema.IsFactTable {
+		// preload all columns for fact table
+		endDay := int(utils.Now().Unix() / 86400)
+		for columnID, column := range schema.Columns {
+			if column.Deleted {
+				continue
+			}
+			shard.PreloadColumn(columnID, endDay - column.Config.PreloadingDays, endDay)
+		}
+	} else {
+		// preload snapshot for dimension table
+		err = shard.LoadSnapshot()
+		if err != nil {
+			return err
+		}
+	}
+
+	// start play redolog
+	shard.PlayRedoLog()
 	success = true
 	return nil
 }
@@ -342,12 +366,6 @@ func (shard *TableShard) setTableShardMetadata(tableShardMeta *rpc.TableShardMet
 			return utils.StackError(err, "failed to update archiving cutoff")
 		}
 	}
-
-	// mark table shard level metadata bootstrap finished
-	shard.bootstrapLock.Lock()
-	shard.bootstrapState = bootstrap.MetaDataBootstrapped
-	shard.readyForRecovery.Broadcast()
-	shard.bootstrapLock.Unlock()
 	return nil
 }
 
@@ -429,7 +447,7 @@ func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.P
 }
 
 func (shard *TableShard) findBootstrapSource(
-	origin topology.Host, topo topology.Topology, topoState *topology.StateSnapshot) topology.Host {
+	origin string, topo topology.Topology, topoState *topology.StateSnapshot) topology.Host {
 
 	peers := make([]topology.Host, 0, topo.Get().HostsLen())
 	hostShardStates, ok := topoState.ShardStates[topology.ShardID(shard.ShardID)]
@@ -440,7 +458,7 @@ func (shard *TableShard) findBootstrapSource(
 	}
 
 	for _, hostShardState := range hostShardStates {
-		if hostShardState.Host.ID() == origin.ID() {
+		if hostShardState.Host.ID() == origin {
 			// Don't take self into account
 			continue
 		}
@@ -465,7 +483,7 @@ func (shard *TableShard) findBootstrapSource(
 		utils.GetLogger().
 			With("table", shard.Schema.Schema.Name).
 			With("shardID", shard.ShardID).
-			With("origin", origin.ID()).
+			With("origin", origin).
 			With("source", "").
 			Info("no available bootstrap sorce")
 	} else {

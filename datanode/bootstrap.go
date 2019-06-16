@@ -21,15 +21,16 @@
 package datanode
 
 import (
-	"fmt"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
+	"github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
 
 	xerrors "github.com/m3db/m3/src/x/errors"
+	xsync "github.com/m3db/m3/src/x/sync"
 	"sync"
 	"time"
 )
@@ -39,6 +40,7 @@ type bootstrapManagerImpl struct {
 	sync.RWMutex
 
 	datanode                    DataNode
+	peerSource                  client.PeerSource
 	opts                        Options
 	log                         common.Logger
 	state                       bootstrap.BootstrapState
@@ -48,10 +50,8 @@ type bootstrapManagerImpl struct {
 	topo                        topology.Topology
 }
 
-func NewBootstrapManager(datanode DataNode, opts Options, topo topology.Topology) (BootstrapManager, error) {
-	if topo == nil {
-		return nil, fmt.Errorf("failed at NewBootstrapManager, reason: topo is nil")
-	}
+// NewBootstrapManager creates bootstrap manager
+func NewBootstrapManager(datanode DataNode, opts Options, topo topology.Topology) BootstrapManager {
 	scope := opts.InstrumentOptions().MetricsScope()
 	return &bootstrapManagerImpl{
 		datanode: datanode,
@@ -59,8 +59,7 @@ func NewBootstrapManager(datanode DataNode, opts Options, topo topology.Topology
 		log:      opts.InstrumentOptions().Logger(),
 		status:   scope.Gauge("bootstrapped"),
 		topo:     topo,
-	}, nil
-
+	}
 }
 
 func (m *bootstrapManagerImpl) IsBootstrapped() bool {
@@ -129,12 +128,86 @@ func (m *bootstrapManagerImpl) Report() {
 
 func (m *bootstrapManagerImpl) bootstrap() error {
 	starDatanodeBootstrap := utils.Now()
-	err := m.datanode.Bootstrap(m.topo, m.opts.BootstrapOptions())
-	took := utils.Now().Sub(starDatanodeBootstrap)
-	m.log.Info("bootstrap finished",
-		zap.String("datanode", m.datanode.Host().ID()),
-		zap.Duration("duration", took),
+
+	tables := m.datanode.Tables()
+	shardSet := m.datanode.ShardSet()
+
+	workers := xsync.NewWorkerPool(m.opts.BootstrapOptions().MaxConcurrentTableShards())
+	workers.Init()
+
+	var (
+		multiErr = xerrors.NewMultiError()
+		mutex    sync.Mutex
+		wg       sync.WaitGroup
 	)
 
+	topoStateSnapshot := newInitialTopologyState(m.topo)
+	for _, shard := range shardSet.All() {
+		shardID := shard.ID()
+		for _, table := range tables {
+			tableShard, err := m.datanode.GetTableShard(table, shardID)
+			if err != nil {
+				mutex.Lock()
+				multiErr = multiErr.Add(err)
+				mutex.Unlock()
+				continue
+			}
+
+			if tableShard.IsBootstrapped() {
+				tableShard.Users.Done()
+				continue
+			}
+
+			wg.Add(1)
+			workers.Go(func() {
+				err := tableShard.Bootstrap(m.peerSource, m.datanode.ID(), m.topo, topoStateSnapshot, m.opts.BootstrapOptions())
+				mutex.Lock()
+				multiErr = multiErr.Add(err)
+				mutex.Unlock()
+
+				// unpin table shard after use
+				tableShard.Users.Done()
+				wg.Done()
+			})
+		}
+	}
+	wg.Wait()
+
+	err := multiErr.FinalError()
+	took := utils.Now().Sub(starDatanodeBootstrap)
+	m.log.Info("bootstrap finished",
+		zap.String("datanode", m.datanode.ID()),
+		zap.Duration("duration", took),
+	)
 	return err
+}
+
+func newInitialTopologyState(topo topology.Topology) *topology.StateSnapshot {
+	topoMap := topo.Get()
+
+	var (
+		hostShardSets = topoMap.HostShardSets()
+		topologyState = &topology.StateSnapshot{
+			ShardStates: topology.ShardStates{},
+		}
+	)
+
+	for _, hostShardSet := range hostShardSets {
+		for _, currShard := range hostShardSet.ShardSet().All() {
+			shardID := topology.ShardID(currShard.ID())
+			existing, ok := topologyState.ShardStates[shardID]
+			if !ok {
+				existing = map[topology.HostID]topology.HostShardState{}
+				topologyState.ShardStates[shardID] = existing
+			}
+
+			hostID := topology.HostID(hostShardSet.Host().ID())
+			existing[hostID] = topology.HostShardState{
+				Host:       hostShardSet.Host(),
+				ShardState: currShard.State(),
+			}
+		}
+	}
+
+	return topologyState
 }

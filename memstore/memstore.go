@@ -39,8 +39,14 @@ type MemStore interface {
 	GetMemoryUsageDetails() (map[string]TableShardMemoryUsage, error)
 	// GetScheduler returns the scheduler for scheduling archiving and backfill jobs.
 	GetScheduler() Scheduler
+	// GetHostMemoryManager returns the host memory manager
+	GetHostMemoryManager() common.HostMemoryManager
+	// AddTableShard add a table shard to the memstore
+	AddTableShard(table string, shardID int, needPeerCopy bool)
 	// GetTableShard gets the data for a pinned table Shard. Caller needs to unpin after use.
 	GetTableShard(table string, shardID int) (*TableShard, error)
+	// RemoveTableShard removes table shard from memstore
+	RemoveTableShard(table string, shardID int)
 	// FetchSchema fetches schema from metaStore and updates in-memory copy of table schema,
 	// and set up watch channels for metaStore schema changes, used for bootstrapping mem store.
 	FetchSchema() error
@@ -250,4 +256,93 @@ func (m *memStoreImpl) TryEvictBatchColumn(table string, shardID int, batchID in
 
 	utils.GetLogger().Debugf("Successfully evict batch from memstore: table %s, shardID %d, batchID %d, columnID %d", table, shardID, batchID, columnID)
 	return true, nil
+}
+
+func (m *memStoreImpl) AddTableShard(table string, shardID int, needPeerCopy bool) {
+	m.Lock()
+	defer m.Unlock()
+
+	schema := m.TableSchemas[table]
+	if schema != nil {
+		// table might get deleted at this point
+		return
+	}
+
+	shardMap := m.TableShards[table]
+	if shardMap == nil {
+		shardMap = make(map[int]*TableShard)
+	}
+	if _, exist := shardMap[shardID]; !exist {
+		// create new shard
+		tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shardID, m.redologManagerMaster)
+		if needPeerCopy {
+			tableShard.needPeerCopy = 1
+		}
+		shardMap[shardID] = tableShard
+		utils.AddTableShardReporter(table, shardID)
+	}
+	m.TableShards[table] = shardMap
+}
+
+func (m *memStoreImpl) RemoveTableShard(table string, shardID int) {
+	var shard *TableShard
+	// Detach first.
+	m.Lock()
+	shards := m.TableShards[table]
+	if shards != nil {
+		shard = shards[shardID]
+		delete(shards, shardID)
+		utils.DeleteTableShardReporter(table, shardID)
+	}
+	m.Unlock()
+	// Destruct.
+	if shard != nil {
+		shard.Destruct()
+	}
+}
+
+// preloadAllFactTables preloads recent days data for all columns of all table shards into memory.
+// The number of preloading days is defined at each column level. This call will happen at
+// shard initialization stage.
+func (m *memStoreImpl) preloadAllFactTables() {
+	tableShardSnapshot := make(map[string][]int)
+
+	// snapshot (tableName, shardID)s.
+	m.RLock()
+	for tableName, shardMap := range m.TableShards {
+		tableShardSnapshot[tableName] = make([]int, 0, len(shardMap))
+		for shardID := range shardMap {
+			tableShardSnapshot[tableName] = append(tableShardSnapshot[tableName], shardID)
+		}
+	}
+	m.RUnlock()
+
+	currentDay := int(utils.Now().Unix() / 86400)
+	for tableName, shardIDs := range tableShardSnapshot {
+		for _, shardID := range shardIDs {
+			tableShard, err := m.GetTableShard(tableName, shardID)
+			// Table shard may have already been removed from this node.
+			if err != nil {
+				continue
+			}
+			tableShard.Schema.RLock()
+			columns := tableShard.Schema.Schema.Columns
+			tableShard.Schema.RUnlock()
+			if tableShard.Schema.Schema.IsFactTable {
+				archiveStoreVersion := tableShard.ArchiveStore.GetCurrentVersion()
+				for columnID, column := range columns {
+					if !column.Deleted {
+						preloadingDays := column.Config.PreloadingDays
+						tableShard.PreloadColumn(columnID, currentDay-preloadingDays, currentDay)
+					}
+				}
+				archiveStoreVersion.Users.Done()
+			}
+			tableShard.Users.Done()
+		}
+	}
+}
+
+func (m *memStoreImpl) GetHostMemoryManager() common.HostMemoryManager {
+	return m.HostMemManager
 }

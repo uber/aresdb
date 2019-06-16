@@ -22,3 +22,8 @@ func (_m *PeerSource) BorrowConnection(hostID string, fn client.WithConnectionFn
 
 	return r0
 }
+
+// Close provides a mock function with given fields:
+func (_m *PeerSource) Close() {
+	_m.Called()
+}

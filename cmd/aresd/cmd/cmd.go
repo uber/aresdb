@@ -114,9 +114,6 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	scope.Counter("restart").Inc(1)
 	serverRestartTimer := scope.Timer("restart").Start()
 
-	// TODO: Init topology
-	// topo := topology.NewDynamicInitializer().Init()
-
 	// Create MetaStore.
 	metaStorePath := filepath.Join(cfg.RootPath, "metastore")
 	metaStore, err := metastore.NewDiskMetaStore(metaStorePath)
@@ -205,9 +202,6 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	// Init shards.
 	utils.GetLogger().Infof("Initializing shards from local DiskStore %s", cfg.RootPath)
 	memStore.InitShards(cfg.SchedulerOff)
-
-	// TODO: Create topology and bootstrapManager
-	// bootstrapManager := datanode.NewBootstrapManager()
 
 	// Start serving.
 	dataHandler := api.NewDataHandler(memStore)
