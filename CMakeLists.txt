@@ -276,7 +276,7 @@ add_custom_target(aresd DEPENDS lib ${ALL_GO_SRC_LIST}
 
 add_custom_target(aresbrokerd DEPENDS ${ALL_GO_SRC_LIST}
         COMMAND go build -o bin/aresbrokerd ./cmd/broker/main.go
-        VERBATIM	
+        VERBATIM
         )
 
 add_custom_target(ares-subscriber DEPENDS rdkafka::rdkafka ${ALL_GO_SRC_LIST}
