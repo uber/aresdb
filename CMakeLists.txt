@@ -34,9 +34,9 @@ endif ()
 ################################
 # Compiler and linker flags
 ################################
-# Explicit set the CXX_STANDARD instead of detecting from
+# Explicitly set the CXX_STANDARD instead of detecting from
 # CMAKE_CXX_FEATURES since NVCC has its own way to check whether
-# host compiler support specific CXX_STANDARD.
+# host compiler supports specific CXX_STANDARD.
 if (NOT DEFINED CXX_STANDARD)
     set(CXX_STANDARD 11)
 endif ()
