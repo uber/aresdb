@@ -147,6 +147,7 @@ var _ = ginkgo.Describe("Purge", func() {
 		bootstrapToken.On("ReleaseToken",  mock.Anything, mock.Anything).Return().Once()
 
 		err := memStore.Purge(testTable, testShardID, 0, 2, mockReporter)
-		Ω(err).ShouldNot(BeNil())
+		// purge should always be no err, but here since no mock added, if not disabled, there will be mock error
+		Ω(err).Should(BeNil())
 	})
 })

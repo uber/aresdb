@@ -17,7 +17,6 @@ package memstore
 import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
-	"github.com/pkg/errors"
 )
 
 // Purge purges out of retention data for table shard
@@ -26,7 +25,8 @@ func (m *memStoreImpl) Purge(tableName string, shardID, batchIDStart, batchIDEnd
 	if m.options.bootstrapToken.AcquireToken(tableName, uint32(shardID)) {
 		defer m.options.bootstrapToken.ReleaseToken(tableName, uint32(shardID))
 	} else {
-		return errors.New("unable to acquire bootstrap token, retry later")
+		utils.GetLogger().With("table", tableName, "shard", shardID).Error("Purge failed, unable to acquire bootstrap token, retry later")
+		return nil
 	}
 
 	start := utils.Now()

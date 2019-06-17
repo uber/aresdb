@@ -421,9 +421,7 @@ func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawD
 	if err != nil {
 		return err
 	}
-	if reader == nil {
-		return os.ErrNotExist
-	}
+
 	defer reader.Close()
 
 	bufferedReader := bufio.NewReaderSize(reader, bufferSize)
