@@ -31,17 +31,35 @@ if (NOT QUERY_MODE)
     endif ()
 endif ()
 
+if(NOT WIN32)
+  string(ASCII 27 Esc)
+  set(ColourReset "${Esc}[m")
+  set(ColourBold  "${Esc}[1m")
+  set(Red         "${Esc}[31m")
+  set(Green       "${Esc}[32m")
+  set(Yellow      "${Esc}[33m")
+  set(Blue        "${Esc}[34m")
+  set(Magenta     "${Esc}[35m")
+  set(Cyan        "${Esc}[36m")
+  set(White       "${Esc}[37m")
+  set(BoldRed     "${Esc}[1;31m")
+  set(BoldGreen   "${Esc}[1;32m")
+  set(BoldYellow  "${Esc}[1;33m")
+  set(BoldBlue    "${Esc}[1;34m")
+  set(BoldMagenta "${Esc}[1;35m")
+  set(BoldCyan    "${Esc}[1;36m")
+  set(BoldWhite   "${Esc}[1;37m")
+endif()
+
 ################################
 # Compiler and linker flags
 ################################
-set(CXX_STANDARD 11)
-message("Detecting whether compiler support C++14")
-foreach (FEATURE ${CMAKE_CXX_COMPILE_FEATURES})
-    if (FEATURE STREQUAL "cxx_std_14")
-        message("C++14 is supported")
-        set(CXX_STANDARD 14)
-    endif ()
-endforeach ()
+# Explicitly set the CXX_STANDARD instead of detecting from
+# CMAKE_CXX_FEATURES since NVCC has its own way to check whether
+# host compiler supports specific CXX_STANDARD.
+if (NOT DEFINED CXX_STANDARD)
+    set(CXX_STANDARD 11)
+endif ()
 
 set(CMAKE_CUDA_STANDARD ${CXX_STANDARD})
 set(CMAKE_CXX_STANDARD ${CXX_STANDARD})
@@ -62,9 +80,10 @@ set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 link_directories(${CMAKE_BINARY_DIR}/lib)
 
 # HASH_REDUCTION right now is only support in device mode and when CXX standard is C++14.
-if ((QUERY_MODE STRNEQUAL "DEVICE") OR (${CXX_STANDARD} EQUAL 14))
+if ((NOT QUERY_MODE STREQUAL "DEVICE") OR (${CXX_STANDARD} EQUAL 14))
     list(APPEND MARCROS "SUPPORT_HASH_REDUCTION=1")
     set(SUPPORT_HASH_REDUCTION 1)
+    message("${Green}Hash reduction is supported${ColourReset}!")
 endif ()
 
 ################################
@@ -100,6 +119,10 @@ if (QUERY_MODE STREQUAL "DEVICE" AND USE_RMM)
     add_library(rmm SHARED IMPORTED)
     set_target_properties(rmm PROPERTIES IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/librmm.so)
     add_dependencies(rmm project_rmm)
+    include_directories(
+            ${RMM_SRC_DIR}/include
+            ${RMM_SRC_DIR}/thirdparty/cnmem/include
+    )
 endif ()
 ######################################################
 # CUDF
@@ -252,7 +275,7 @@ add_custom_target(aresd DEPENDS lib ${ALL_GO_SRC_LIST}
 
 add_custom_target(aresbrokerd DEPENDS ${ALL_GO_SRC_LIST}
         COMMAND go build -o bin/aresbrokerd ./cmd/broker/main.go
-        VERBATIM
+        VERBATIM	
         )
 
 add_custom_target(ares-subscriber DEPENDS rdkafka::rdkafka ${ALL_GO_SRC_LIST}
