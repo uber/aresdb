@@ -268,6 +268,7 @@ add_custom_target(lint
 add_custom_target(lib DEPENDS algorithm mem)
 
 string(REPLACE " " ";" ALL_GO_SRC_LIST ${ALL_GO_SRC})
+
 add_custom_target(aresd DEPENDS lib ${ALL_GO_SRC_LIST}
         COMMAND go build -o bin/aresd ./cmd/aresd/main.go
         VERBATIM
