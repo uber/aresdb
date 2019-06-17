@@ -19,12 +19,12 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	"github.com/uber/aresdb/cluster/topology"
-	"github.com/uber/aresdb/query"
-	"github.com/uber/aresdb/query/common"
 	shardMock "github.com/uber/aresdb/cluster/shard/mocks"
+	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
+	"github.com/uber/aresdb/query"
+	"github.com/uber/aresdb/query/common"
 	"net/http/httptest"
 )
 

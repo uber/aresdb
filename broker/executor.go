@@ -71,7 +71,7 @@ func (qe *queryExecutorImpl) Execute(ctx context.Context, sqlQuery string, w htt
 
 func (qe *queryExecutorImpl) executeNonAggQuery(ctx context.Context, qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
 	plan := NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient, w)
-	err = plan.Execute(ctx);
+	err = plan.Execute(ctx)
 	return
 }
 

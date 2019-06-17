@@ -150,7 +150,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 		qc := &query.AQLQueryContext{
 			Query:         &aqlQuery,
 			ReturnHLLData: false,
-			DataOnly: aqlRequest.DataOnly != 0,
+			DataOnly:      aqlRequest.DataOnly != 0,
 		}
 		qc.Compile(handler.memStore)
 		qc.ResponseWriter = w

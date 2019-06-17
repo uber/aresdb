@@ -28,9 +28,9 @@ import (
 
 // StreamingScanNode implements StreamingPlanNode
 type StreamingScanNode struct {
-	query queryCom.AQLQuery
-	shardID uint32
-	topo topology.Topology
+	query          queryCom.AQLQuery
+	shardID        uint32
+	topo           topology.Topology
 	dataNodeClient dataCli.DataNodeQueryClient
 }
 
@@ -91,9 +91,9 @@ func NewNonAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, clien
 	plan.nodes = make([]*StreamingScanNode, len(shards))
 	for i, shard := range shards {
 		plan.nodes[i] = &StreamingScanNode{
-			shardID: shard,
-			query: *qc.Query,
-			topo: topo,
+			shardID:        shard,
+			query:          *qc.Query,
+			topo:           topo,
 			dataNodeClient: client,
 		}
 	}
@@ -101,17 +101,17 @@ func NewNonAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, clien
 	return
 }
 
-type  streamingScanNoderesult struct {
+type streamingScanNoderesult struct {
 	data []byte
 	err  error
 }
 
 // NonAggQueryPlan implements QueryPlan
-type NonAggQueryPlan struct{
-	w http.ResponseWriter
+type NonAggQueryPlan struct {
+	w          http.ResponseWriter
 	resultChan chan streamingScanNoderesult
-	headers []string
-	nodes []*StreamingScanNode
+	headers    []string
+	nodes      []*StreamingScanNode
 }
 
 func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
@@ -136,18 +136,18 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 	for _, node := range nqp.nodes {
 		go func(n *StreamingScanNode) {
 			var bs []byte
-			bs, err = node.Execute(ctx)
+			bs, err = n.Execute(ctx)
 			utils.GetLogger().With("dataSize", len(bs), "error", err).Debug("sending result to result channel")
 			nqp.resultChan <- streamingScanNoderesult{
 				data: bs,
-				err: err,
+				err:  err,
 			}
 		}(node)
 	}
 
 	for i := 0; i < len(nqp.nodes); i++ {
 		utils.GetLogger().With("node", i).Debug("waiting for response from StreamingScanNode")
-		res := <- nqp.resultChan
+		res := <-nqp.resultChan
 		utils.GetLogger().With("node", i).Debug("got response from StreamingScanNode")
 		if res.err != nil {
 			err = res.err

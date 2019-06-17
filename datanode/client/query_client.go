@@ -64,11 +64,11 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host
 }
 
 func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (bs []byte, err error) {
-		bs, err = dc.queryRaw(ctx, host, query)
-		if err == nil {
-			utils.GetLogger().With("host", host, "query", query).Debug("datanode query client QueryRaw succeeded")
-		}
-		return
+	bs, err = dc.queryRaw(ctx, host, query)
+	if err == nil {
+		utils.GetLogger().With("host", host, "query", query).Debug("datanode query client QueryRaw succeeded")
+	}
+	return
 }
 
 func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (bs []byte, err error) {
@@ -105,6 +105,5 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.H
 		bs = nil
 	}
 
-	//utils.GetLogger().With("host", host, "query", query, "data", bs).Debug("got raw data from datanode")
 	return
 }

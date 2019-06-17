@@ -410,7 +410,7 @@ func (ctx *OOPKContext) IsHLL() bool {
 }
 
 func isAtomicAggType(aggType C.enum_AggregateFunction) bool {
-	return aggType == C.AGGR_SUM_SIGNED || aggType == C.AGGR_SUM_FLOAT;
+	return aggType == C.AGGR_SUM_SIGNED || aggType == C.AGGR_SUM_FLOAT
 }
 
 // UseHashReduction return whether to use hash reduction or not
