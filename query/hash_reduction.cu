@@ -38,7 +38,6 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
   try {
 #ifndef SUPPORT_HASH_REDUCTION
     resHandle.res = reinterpret_cast<void *>(0);
-    return resHandle;
 #else
 #ifdef RUN_ON_DEVICE
     cudaSetDevice(device);
@@ -53,6 +52,7 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
                                                                   aggFunc,
                                                                   cudaStream));
     CheckCUDAError("HashReduce");
+#endif
   }
   catch (std::exception &e) {
     std::cerr << "Exception happend when doing Reduce:" << e.what()
@@ -61,7 +61,6 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
   }
   return resHandle;
 }
-#endif
 
 #ifdef SUPPORT_HASH_REDUCTION
 namespace ares {
