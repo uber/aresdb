@@ -34,14 +34,12 @@ endif ()
 ################################
 # Compiler and linker flags
 ################################
-set(CXX_STANDARD 11)
-message("Detecting whether compiler support C++14")
-foreach (FEATURE ${CMAKE_CXX_COMPILE_FEATURES})
-    if (FEATURE STREQUAL "cxx_std_14")
-        message("C++14 is supported")
-        set(CXX_STANDARD 14)
-    endif ()
-endforeach ()
+# Explicit set the CXX_STANDARD instead of detecting from
+# CMAKE_CXX_FEATURES since NVCC has its own way to check whether
+# host compiler support specific CXX_STANDARD.
+if (NOT DEFINED CXX_STANDARD)
+    set(CXX_STANDARD 11)
+endif ()
 
 set(CMAKE_CUDA_STANDARD ${CXX_STANDARD})
 set(CMAKE_CXX_STANDARD ${CXX_STANDARD})
