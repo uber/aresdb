@@ -119,6 +119,10 @@ if (QUERY_MODE STREQUAL "DEVICE" AND USE_RMM)
     add_library(rmm SHARED IMPORTED)
     set_target_properties(rmm PROPERTIES IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/librmm.so)
     add_dependencies(rmm project_rmm)
+    include_directories(
+            ${RMM_SRC_DIR}/include
+            ${RMM_SRC_DIR}/thirdparty/cnmem/include
+    )
 endif ()
 ######################################################
 # CUDF
