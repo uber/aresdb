@@ -396,6 +396,7 @@ type AQLQueryContext struct {
 	// fields for non aggregate query
 	// Flag to indicate if this query is not aggregation query
 	IsNonAggregationQuery      bool
+	DataOnly                   bool
 	numberOfRowsWritten        int
 	maxBatchSizeAfterPrefilter int
 
@@ -409,7 +410,7 @@ func (ctx *OOPKContext) IsHLL() bool {
 }
 
 func isAtomicAggType(aggType C.enum_AggregateFunction) bool {
-	return aggType == C.AGGR_SUM_SIGNED || aggType == C.AGGR_SUM_FLOAT;
+	return aggType == C.AGGR_SUM_SIGNED || aggType == C.AGGR_SUM_FLOAT
 }
 
 // UseHashReduction return whether to use hash reduction or not

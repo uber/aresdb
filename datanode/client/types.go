@@ -30,5 +30,8 @@ type PeerSource interface {
 }
 
 type DataNodeQueryClient interface {
+	// used for agg query
 	Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (queryCom.AQLQueryResult, error)
+	// used for non agg query, header is left out, only matrixData returned as raw bytes
+	QueryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery) ([]byte, error)
 }

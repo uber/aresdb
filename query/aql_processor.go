@@ -771,7 +771,7 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 		}
 		// uint64_t for hash value
 		// Note: only when aggregate function is hll, we need to reuse vector[0]
-		if isHLL  {
+		if isHLL {
 			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, func(to, from unsafe.Pointer) {
 				cgoutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*8, stream, bc.device)
 			})
@@ -1492,11 +1492,14 @@ func (qc *AQLQueryContext) initializeNonAggResponse() {
 			headers[i] = dim.Expr
 		}
 		if qc.ResponseWriter != nil {
-			headersBytes, _ := json.Marshal(headers)
-			qc.ResponseWriter.Write([]byte(`{"results":[{"headers":`))
-			qc.ResponseWriter.Write(headersBytes)
-			qc.ResponseWriter.Write([]byte(`,"matrixData":[`))
+			if !qc.DataOnly {
+				headersBytes, _ := json.Marshal(headers)
+				qc.ResponseWriter.Write([]byte(`{"results":[{"headers":`))
+				qc.ResponseWriter.Write(headersBytes)
+				qc.ResponseWriter.Write([]byte(`,"matrixData":[`))
+			}
 		} else {
+			// non eager flush
 			qc.Results = make(queryCom.AQLQueryResult)
 			qc.Results.SetHeaders(headers)
 		}

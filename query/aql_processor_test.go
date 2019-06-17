@@ -2251,5 +2251,12 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 		qc.initializeNonAggResponse()
 		Ω(w.Body.String()).Should(Equal(`{"results":[{"headers":["foo"],"matrixData":[`))
+
+		qc.DataOnly = true
+		w = httptest.NewRecorder()
+		qc.ResponseWriter = w
+
+		qc.initializeNonAggResponse()
+		Ω(w.Body.String()).Should(Equal(``))
 	})
 })
