@@ -46,7 +46,33 @@ type aqlRespBody struct {
 }
 
 func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (result queryCom.AQLQueryResult, err error) {
-	url := fmt.Sprintf("http://%s/query/aql", host.Address())
+	var bs []byte
+	bs, err = dc.queryRaw(ctx, host, query)
+	if err != nil {
+		return
+	}
+
+	var respBody aqlRespBody
+	err = json.Unmarshal(bs, &respBody)
+	if err != nil || len(respBody.Results) != 1 {
+		err = errors.New(fmt.Sprintf("invalid response from datanode, resp: %s", bs))
+		return
+	}
+	result = respBody.Results[0]
+	utils.GetLogger().With("host", host, "query", query, "result", result).Debug("datanode query client Query succeeded")
+	return
+}
+
+func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (bs []byte, err error) {
+		bs, err = dc.queryRaw(ctx, host, query)
+		if err == nil {
+			utils.GetLogger().With("host", host, "query", query).Debug("datanode query client QueryRaw succeeded")
+		}
+		return
+}
+
+func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (bs []byte, err error) {
+	url := fmt.Sprintf("http://%s/query/aql?dataonly=1", host.Address())
 	aqlRequestBody := aqlRequestBody{
 		[]queryCom.AQLQuery{query},
 	}
@@ -74,20 +100,11 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host
 		err = errors.New(fmt.Sprintf("got status code %d from datanode", res.StatusCode))
 		return
 	}
-	var respBytes []byte
-	respBytes, err = ReadAll(res.Body)
+	bs, err = ReadAll(res.Body)
 	if err != nil {
-		respBytes = nil
-		return
+		bs = nil
 	}
 
-	var respBody aqlRespBody
-	err = json.Unmarshal(respBytes, &respBody)
-	if err != nil || len(respBody.Results) != 1 {
-		err = errors.New(fmt.Sprintf("invalid response from datanode, resp: %s", respBytes))
-		return
-	}
-	result = respBody.Results[0]
-	utils.GetLogger().With("host", host, "query", query, "result", result).Debug("datanode query client succeeded")
+	//utils.GetLogger().With("host", host, "query", query, "data", bs).Debug("got raw data from datanode")
 	return
 }

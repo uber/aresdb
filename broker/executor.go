@@ -70,11 +70,8 @@ func (qe *queryExecutorImpl) Execute(ctx context.Context, sqlQuery string, w htt
 }
 
 func (qe *queryExecutorImpl) executeNonAggQuery(ctx context.Context, qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
-	// TODO impplement non agg query executor
-	//1. write headers
-	//2. calculate fan out plan based on topology
-	//3. fan out requests, upon data from data nodes, flush to w
-	//4. close, clean up, logging, metrics
+	plan := NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient, w)
+	err = plan.Execute(ctx);
 	return
 }
 

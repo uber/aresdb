@@ -18,7 +18,6 @@ import (
 	"context"
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
-	"io"
 	"net/http"
 )
 
@@ -46,9 +45,4 @@ type BlockingPlanNode interface {
 type MergeNode interface {
 	BlockingPlanNode
 	AggType() AggType
-}
-
-// StreamingPlanNode defines query plan nodes that eager flushes to output
-type StreamingPlanNode interface {
-	Execute(writer io.Writer) error
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/uber/aresdb/query/expr"
 )
 
-var _ = ginkgo.Describe("query plan", func() {
+var _ = ginkgo.Describe("agg query plan", func() {
 	ginkgo.It("splitAvgQuery should work", func() {
 		q := common2.AQLQuery{
 			Table: "foo",
@@ -133,7 +133,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		Ω(ok).Should(BeTrue())
 		Ω(mn.aggType).Should(Equal(common.Count))
 		Ω(mn.children).Should(HaveLen(len(mockShardIds)))
-		sn, ok := mn.children[0].(*ScanNode)
+		sn, ok := mn.children[0].(*BlockingScanNode)
 		Ω(ok).Should(BeTrue())
 		Ω(sn.shardID).Should(Equal(uint32(0)))
 	})
@@ -173,7 +173,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		Ω(countn.children).Should(HaveLen(len(mockShardIds)))
 	})
 
-	ginkgo.It("ScanNode Execute should work happy path", func() {
+	ginkgo.It("BlockingScanNode Execute should work happy path", func() {
 		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
@@ -188,7 +188,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		myResult := common2.AQLQueryResult{"foo": 1}
 		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
 
-		sn := ScanNode{
+		sn := BlockingScanNode{
 			query:          q,
 			shardID:        0,
 			topo:           &mockTopo,
@@ -200,7 +200,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		Ω(res).Should(Equal(myResult))
 	})
 
-	ginkgo.It("ScanNode Execute should fail routing error", func() {
+	ginkgo.It("BlockingScanNode Execute should fail routing error", func() {
 		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
@@ -210,7 +210,7 @@ var _ = ginkgo.Describe("query plan", func() {
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		sn := ScanNode{
+		sn := BlockingScanNode{
 			query:          q,
 			shardID:        0,
 			topo:           &mockTopo,
@@ -221,7 +221,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		Ω(err.Error()).Should(ContainSubstring("route shard failed"))
 	})
 
-	ginkgo.It("ScanNode Execute should fail datanode error", func() {
+	ginkgo.It("BlockingScanNode Execute should fail datanode error", func() {
 		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
@@ -235,7 +235,7 @@ var _ = ginkgo.Describe("query plan", func() {
 
 		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Times(rpcRetries)
 
-		sn := ScanNode{
+		sn := BlockingScanNode{
 			query:          q,
 			shardID:        0,
 			topo:           &mockTopo,
@@ -246,7 +246,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		Ω(err.Error()).Should(ContainSubstring("fetch from datanode failed"))
 	})
 
-	ginkgo.It("ScanNode Execute should work after retry", func() {
+	ginkgo.It("BlockingScanNode Execute should work after retry", func() {
 		q := common2.AQLQuery{}
 
 		mockTopo := topoMock.Topology{}
@@ -262,7 +262,7 @@ var _ = ginkgo.Describe("query plan", func() {
 		myResult := common2.AQLQueryResult{"foo": 1}
 		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil).Once()
 
-		sn := ScanNode{
+		sn := BlockingScanNode{
 			query:          q,
 			shardID:        0,
 			topo:           &mockTopo,

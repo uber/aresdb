@@ -130,8 +130,8 @@ func (mn *mergeNodeImpl) Execute(ctx context.Context) (result queryCom.AQLQueryR
 	return
 }
 
-// ScanNode is a BlockingPlanNode that handles rpc calls to fetch data from datanode
-type ScanNode struct {
+// BlockingScanNode is a BlockingPlanNode that handles rpc calls to fetch data from datanode
+type BlockingScanNode struct {
 	blockingPlanNodeImpl
 
 	query          queryCom.AQLQuery
@@ -140,7 +140,7 @@ type ScanNode struct {
 	dataNodeClient dataCli.DataNodeQueryClient
 }
 
-func (sn *ScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
+func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
 	trial := 0
 	for trial < rpcRetries {
 		trial++
@@ -219,14 +219,6 @@ func (ap *AggQueryPlan) Execute(ctx context.Context) (results queryCom.AQLQueryR
 	return ap.root.Execute(ctx)
 }
 
-// NonAggQueryPlan implements QueryPlan
-//1. write headers
-//2. calculate fan out plan based on topology
-//3. fan out requests, upon data from data nodes, flush to w
-//4. close, clean up, logging, metrics
-// TODO
-type NonAggQueryPlan struct{}
-
 // splitAvgQuery to sum and count queries
 func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom.AQLQuery) {
 	measure := q.Measures[0]
@@ -256,7 +248,7 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 func buildSubPlan(agg common.AggType, q queryCom.AQLQuery, shardIDs []uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
 	for _, shardID := range shardIDs {
-		root.Add(&ScanNode{
+		root.Add(&BlockingScanNode{
 			query:          q,
 			shardID:        shardID,
 			topo:           topo,

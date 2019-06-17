@@ -150,6 +150,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 		qc := &query.AQLQueryContext{
 			Query:         &aqlQuery,
 			ReturnHLLData: false,
+			DataOnly: aqlRequest.DataOnly != 0,
 		}
 		qc.Compile(handler.memStore)
 		qc.ResponseWriter = w
@@ -182,15 +183,19 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 			statusCode = http.StatusInternalServerError
 			return
 		}
-		w.Write([]byte(`]}]`))
 
-		if aqlRequest.Verbose > 0 {
-			w.Write([]byte(`,"context":`))
-			qcBytes, _ := json.Marshal(qcs)
-			w.Write(qcBytes)
+		if !qc.DataOnly {
+			w.Write([]byte(`]}]`))
+
+			if aqlRequest.Verbose > 0 {
+				w.Write([]byte(`,"context":`))
+				qcBytes, _ := json.Marshal(qcs)
+				w.Write(qcBytes)
+			}
+
+			w.Write([]byte(`}`))
 		}
 
-		w.Write([]byte(`}`))
 	} else {
 		requestResponseWriter = getReponseWriter(returnHLL, len(aqlRequest.Body.Queries))
 

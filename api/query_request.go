@@ -45,6 +45,8 @@ type AQLRequest struct {
 	// in: query
 	Query string `query:"q,optional" json:"q"`
 	// in: query
+	DataOnly int `query:"dataonly,optional" json:"dataonly"`
+	// in: query
 	DeviceChoosingTimeout int `query:"timeout,optional" json:"timeout"`
 	// in: header
 	Accept string `header:"Accept,optional" json:"accept"`
