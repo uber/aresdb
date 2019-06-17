@@ -18,6 +18,7 @@ import (
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
+	"os"
 )
 
 // VectorPartyHeader is the magic header written into the beginning of each vector party file.
@@ -107,13 +108,12 @@ func (s *vectorPartyArchiveSerializer) ReadVectorParty(vp common.VectorParty) er
 	readCloser, err := s.diskstore.OpenVectorPartyFileForRead(s.table, s.columnID, s.shard,
 		s.batchID, s.batchVersion, s.seqNum)
 	if err != nil {
+		if err == os.ErrNotExist {
+			return nil
+		}
 		return err
 	}
 
-	// No data on disk, return without setting fields for vp.
-	if readCloser == nil {
-		return nil
-	}
 	defer readCloser.Close()
 	return vp.Read(readCloser, s)
 }

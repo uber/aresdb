@@ -30,6 +30,8 @@ import (
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
+	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
@@ -185,7 +187,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		}
 		redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, mockDiskStore, mockMetaStore)
 
-		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID, redoManagerFactory)
+		options := memstore.NewOptions(new(memComMocks.BootStrapToken), redoManagerFactory)
+		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID, options)
 
 		mockShardNotExistErr := convertToAPIError(errors.New("Failed to get shard"))
 		memStore.On("GetTableShard", redoLogTableName, redoLogShardID).Return(redoLogShard, nil).

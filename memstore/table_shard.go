@@ -19,7 +19,6 @@ import (
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"sync"
 )
@@ -37,7 +36,7 @@ type TableShard struct {
 	// For convenience.
 	metaStore            metaCom.MetaStore
 	diskStore            diskstore.DiskStore
-	redoLogManagerMaster *redolog.RedoLogManagerMaster
+	options              Options
 
 	// Live store. Its locks also cover the primary key.
 	LiveStore *LiveStore `json:"liveStore"`
@@ -61,14 +60,14 @@ type TableShard struct {
 
 // NewTableShard creates and initiates a table shard based on the schema.
 func NewTableShard(schema *common.TableSchema, metaStore metaCom.MetaStore,
-	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int, redoLogManagerMaster *redolog.RedoLogManagerMaster) *TableShard {
+	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int, options Options) *TableShard {
 	tableShard := &TableShard{
 		ShardID:              shard,
 		Schema:               schema,
 		diskStore:            diskStore,
 		metaStore:            metaStore,
 		HostMemoryManager:    hostMemoryManager,
-		redoLogManagerMaster: redoLogManagerMaster,
+		options:              options,
 	}
 	tableShard.readyForRecovery = sync.NewCond(&tableShard.bootstrapLock)
 
@@ -84,7 +83,7 @@ func (shard *TableShard) Destruct() {
 	// TODO: if this blocks on archiving for too long, figure out a way to cancel it.
 	shard.Users.Wait()
 
-	shard.redoLogManagerMaster.Close(shard.Schema.Schema.Name, shard.ShardID)
+	shard.options.redoLogMaster.Close(shard.Schema.Schema.Name, shard.ShardID)
 
 	shard.LiveStore.Destruct()
 

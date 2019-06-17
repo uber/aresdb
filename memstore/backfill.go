@@ -216,9 +216,13 @@ func (shard *TableShard) createNewArchiveStoreVersionForBackfill(
 		oldBatch := backfillCtx.base
 		// Purge batches on disk.
 		if purgeOldBatch {
-			if err = shard.diskStore.DeleteBatchVersions(shard.Schema.Schema.Name, shard.ShardID,
-				int(oldBatch.BatchID), oldBatch.Version, oldBatch.SeqNum); err != nil {
-				return
+			if shard.options.bootstrapToken.AcquireToken(shard.Schema.Schema.Name, uint32(shard.ShardID)) {
+				err = shard.diskStore.DeleteBatchVersions(shard.Schema.Schema.Name, shard.ShardID,
+					int(oldBatch.BatchID), oldBatch.Version, oldBatch.SeqNum)
+				shard.options.bootstrapToken.ReleaseToken(shard.Schema.Schema.Name, uint32(shard.ShardID))
+				if err != nil {
+					return
+				}
 			}
 		}
 

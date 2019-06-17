@@ -105,7 +105,7 @@ var _ = ginkgo.Describe("backfill", func() {
 			0, uint32(0), uint32(0)).Return(nil)
 
 		hostMemoryManager = NewHostMemoryManager(m, 1<<32)
-		shard = NewTableShard(tableSchema, m.metaStore, m.diskStore, hostMemoryManager, shardID, m.redologManagerMaster)
+		shard = NewTableShard(tableSchema, m.metaStore, m.diskStore, hostMemoryManager, shardID, m.options)
 		batch, err := getFactory().ReadArchiveBatch("backfill/backfillBase")
 		Ω(err).Should(BeNil())
 		baseBatch = &ArchiveBatch{

@@ -41,7 +41,6 @@ var (
 	errInvalidSessionID = errors.New("invalid session id")
 	errInvalidRequset   = errors.New("invalid request, table/shard not match")
 	errSessionExisting  = errors.New("The request table/shard already have session running from the same node")
-	errUsageOccupied    = errors.New("Can not acquire table/shard token, retry after a while")
 )
 
 type PeerDataNodeServerImpl struct {
@@ -108,7 +107,7 @@ func (p *PeerDataNodeServerImpl) AcquireToken(tableName string, shardID uint32) 
 
 // AcquireToken release the token count, must call this when call AcquireToken success
 func (p *PeerDataNodeServerImpl) ReleaseToken(tableName string, shardID uint32) {
-	// nothing to do now
+	// nothing to do for now
 }
 
 // getNextSequence create new session id
@@ -321,7 +320,21 @@ func (p *PeerDataNodeServerImpl) FetchTableShardMetaData(ctx context.Context, re
 		return nil, err
 	}
 
-	batchIDs, err := p.metaStore.GetArchiveBatches(req.Table, int(req.Shard), req.StartBatchID, req.EndBatchID)
+	// adjust start/end batchID according to local retention setting and request
+	// we'll take the intersection batches
+	startBatchID := int32(0)
+	endBatchID := int32(utils.Now().Unix() / 86400)
+	if t.Config.RecordRetentionInDays > 0 {
+		startBatchID = endBatchID - int32(t.Config.RecordRetentionInDays) + 1
+	}
+	if req.StartBatchID > startBatchID {
+		startBatchID = req.StartBatchID
+	}
+	if req.EndBatchID > 0 && req.EndBatchID < endBatchID {
+		endBatchID = req.EndBatchID
+	}
+
+	batchIDs, err := p.metaStore.GetArchiveBatches(req.Table, int(req.Shard), startBatchID, endBatchID)
 	if err != nil {
 		return nil, err
 	}
@@ -408,6 +421,7 @@ func (p *PeerDataNodeServerImpl) FetchVectorPartyRawData(req *pb.VectorPartyRawD
 	if err != nil {
 		return err
 	}
+
 	defer reader.Close()
 
 	bufferedReader := bufio.NewReaderSize(reader, bufferSize)

@@ -13,3 +13,13 @@ type TableSchemaReader interface {
 	// Provide exclusive access to read/write data protected by MemStore.
 	utils.RWLocker
 }
+
+// BootStrapToken used to Acqure/Release token during data purge operations
+type BootStrapToken interface {
+	// Call AcquireToken to reserve usage token before any data purge operation
+	// when return result is true, then you can proceed to the purge operation and later call ReleaseToken to release the token
+	// when return result is false, then some bootstrap work is going on, no purge operation is permitted
+	AcquireToken(table string, shard uint32) bool
+	// Call ReleaseToken wheneven you call AcquireToken with true return value to release token
+	ReleaseToken(table string, shard uint32)
+}

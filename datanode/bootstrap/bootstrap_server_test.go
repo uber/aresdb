@@ -289,7 +289,7 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 		Ω(err.Error()).Should(ContainSubstring("EOF"))
 	})
 
-	ginkgo.It("AcquireUsage/ReleaseUseage test", func() {
+	ginkgo.It("AcquireToken/ReleaseToken test", func() {
 		s := peerServer.(*PeerDataNodeServerImpl)
 		ok := s.AcquireToken(factTable, 0)
 		Ω(ok).Should(BeTrue())
@@ -302,6 +302,8 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 		req.NodeID = nodeID
 		session, err := client.StartSession(context.Background(), &req)
 		Ω(err).Should(BeNil())
+		Ω(len(s.sessions)).Should(Equal(1))
+		Ω(len(s.tableShardSessions)).Should(Equal(1))
 
 		// some session running, acquire token shall fail
 		ok = s.AcquireToken(factTable, 0)

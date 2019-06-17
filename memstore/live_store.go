@@ -104,7 +104,7 @@ type LiveStore struct {
 func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
 	schema := shard.Schema
 	tableCfg := schema.Schema.Config
-	redoLogManager, err := shard.redoLogManagerMaster.NewRedologManager(schema.Schema.Name, shard.ShardID, &tableCfg)
+	redoLogManager, err := shard.options.redoLogMaster.NewRedologManager(schema.Schema.Name, shard.ShardID, &tableCfg)
 	if err != nil {
 		utils.GetLogger().Fatal(err)
 	}

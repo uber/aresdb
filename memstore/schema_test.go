@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
+	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/metastore/mocks"
@@ -144,6 +145,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 	mockMetastore := &mocks.MetaStore{}
 	mockDiskstore := CreateMockDiskStore()
 	redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, mockDiskstore, mockMetastore)
+	options := NewOptions(new(memComMocks.BootStrapToken), redologManagerMaster)
 
 	var testHostMemoryManager *hostMemoryManager
 
@@ -154,7 +156,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 			TableShards:          make(map[string]map[int]*TableShard),
 			metaStore:            mockMetastore,
 			diskStore:            mockDiskstore,
-			redologManagerMaster: redologManagerMaster,
+			options:              options,
 		}
 
 		testMemstore.scheduler = newScheduler(&testMemstore)
@@ -165,7 +167,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		testMemstore.TableSchemas[testTable.Name] = tableSchema
 
 		testTableShard := NewTableShard(tableSchema, mockMetastore, mockDiskstore,
-			NewHostMemoryManager(&testMemstore, 1<<32), 0, redologManagerMaster)
+			NewHostMemoryManager(&testMemstore, 1<<32), 0, options)
 
 		testMemstore.TableShards[testTable.Name] = map[int]*TableShard{
 			0: testTableShard,

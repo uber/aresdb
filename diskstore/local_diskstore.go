@@ -211,7 +211,9 @@ func (l LocalDiskStore) OpenSnapshotVectorPartyFileForRead(table string, shard i
 	redoLogFile int64, offset uint32, batchID int, columnID int) (io.ReadCloser, error) {
 	snapshotFilePath := GetPathForTableSnapshotColumnFilePath(l.rootPath, table, shard, redoLogFile, offset, batchID, columnID)
 	f, err := os.OpenFile(snapshotFilePath, os.O_RDONLY, 0644)
-	if err != nil {
+	if os.IsNotExist(err) {
+		return nil, os.ErrNotExist
+	} else if err != nil {
 		return nil, utils.StackError(err, "Failed to open snapshot file: %s for read", snapshotFilePath)
 	}
 	return f, nil
@@ -304,7 +306,7 @@ func (l LocalDiskStore) OpenVectorPartyFileForRead(table string, columnID int, s
 		seqNum, columnID)
 	f, err := os.OpenFile(vectorPartyFilePath, os.O_RDONLY, 0644)
 	if os.IsNotExist(err) {
-		return nil, nil
+		return nil, os.ErrNotExist
 	} else if err != nil {
 		return nil, utils.StackError(err, "Failed to open vector party file: %s for read", vectorPartyFilePath)
 	}

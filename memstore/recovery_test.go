@@ -29,6 +29,8 @@ import (
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+
 	"time"
 )
 
@@ -68,7 +70,7 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		memstore := createMemStore("abc", 0, []memCom.DataType{memCom.Uint32}, []int{0}, 10, true, false, metaStore, diskStore)
 		memstore.TableShards["abc"] = nil
-		memstore.redologManagerMaster.Stop()
+		memstore.options.redoLogMaster.Stop()
 		memstore.InitShards(false)
 		shard := memstore.TableShards["abc"][0]
 		Ω(len(shard.LiveStore.Batches)).Should(Equal(1))
@@ -127,6 +129,21 @@ var _ = ginkgo.Describe("recovery", func() {
 		shard.cleanOldSnapshotAndLogs(0, 0)
 
 		diskStore.AssertCalled(utils.TestingT, "DeleteSnapshot", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	ginkgo.It("cleanOldSnapshotAndLogs should be blocked for DeleteSnapshot", func() {
+		diskStore := &diskMocks.DiskStore{}
+		metaStore := &metaMocks.MetaStore{}
+
+		// no mock on DeleteSnapshot will be fine as it wont be called
+		m := createMemStore(tableName, 0, []memCom.DataType{memCom.Uint16, memCom.SmallEnum, memCom.UUID, memCom.Uint32},
+			[]int{0}, batchSize, false, false, metaStore, diskStore)
+
+		shard, _ := m.GetTableShard(tableName, 0)
+		shard.options.bootstrapToken = new(memComMocks.BootStrapToken)
+		shard.options.bootstrapToken.(*memComMocks.BootStrapToken).On("AcquireToken", mock.Anything, mock.Anything).Return(false)
+		shard.options.bootstrapToken.(*memComMocks.BootStrapToken).On("ReleaseToken", mock.Anything, mock.Anything).Return()
+		shard.cleanOldSnapshotAndLogs(0, 0)
 	})
 
 	ginkgo.It("PlayRedoLog should work for file redolog", func() {
@@ -199,12 +216,12 @@ var _ = ginkgo.Describe("recovery", func() {
 		m := createMemStore(tableName, 0, []memCom.DataType{memCom.Uint32},
 			[]int{0}, batchSize, true, false, metaStore, diskStore)
 		// close the default one
-		m.redologManagerMaster.Stop()
+		m.options.redoLogMaster.Stop()
 		//reassign
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
-		m.redologManagerMaster, _ = redolog.NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
+		m.options.redoLogMaster, _ = redolog.NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
 		schema, _ := m.GetSchema(tableName)
-		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, m.redologManagerMaster)
+		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, m.options)
 
 		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		for i := 0; i < 10; i++ {

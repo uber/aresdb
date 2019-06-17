@@ -23,7 +23,7 @@ import (
 
 // HandleIngestion logs an upsert batch and applies it to the in-memory store.
 func (m *memStoreImpl) HandleIngestion(table string, shardID int, upsertBatch *common.UpsertBatch) error {
-	if m.redologManagerMaster.RedoLogConfig.DiskConfig.Disabled {
+	if m.options.redoLogMaster.RedoLogConfig.DiskConfig.Disabled {
 		return utils.StackError(nil, "Local redolog file not enabled")
 	}
 	shard, err := m.GetTableShard(table, shardID)
@@ -51,7 +51,7 @@ func (shard *TableShard) saveUpsertBatch(upsertBatch *common.UpsertBatch, redoLo
 		utils.GetReporter(tableName, shardID).GetCounter(utils.IngestedUpsertBatches).Inc(1)
 		utils.GetReporter(tableName, shardID).GetGauge(utils.UpsertBatchSize).Update(float64(len(upsertBatch.GetBuffer())))
 		// for non-recovery and local file based redolog, need write the upsertbatch into redolog file
-		if !shard.redoLogManagerMaster.RedoLogConfig.DiskConfig.Disabled {
+		if !shard.options.redoLogMaster.RedoLogConfig.DiskConfig.Disabled {
 			// change original file/offset to be local redolog file/offset
 			redoLogFile, offset = shard.LiveStore.RedoLogManager.AppendToRedoLog(upsertBatch)
 		}

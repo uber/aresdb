@@ -119,7 +119,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 				},
 				ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 				DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-			}, metaStore, diskStore, hostMemoryManager, 0, memStore.redologManagerMaster)
+			}, metaStore, diskStore, hostMemoryManager, 0, memStore.options)
 
 			ctrl := gomock.NewController(utils.TestingT)
 			defer ctrl.Finish()
@@ -221,7 +221,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 				},
 				ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 				DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-			}, metaStore, diskStore, hostMemoryManager, 0, memStore.redologManagerMaster)
+			}, metaStore, diskStore, hostMemoryManager, 0, memStore.options)
 
 			ctrl := gomock.NewController(utils.TestingT)
 			defer ctrl.Finish()

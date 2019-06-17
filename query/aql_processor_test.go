@@ -70,6 +70,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	var diskStore diskstore.DiskStore
 	var hostMemoryManager memCom.HostMemoryManager
 	var shard *memstore.TableShard
+	var options memstore.Options
 	var redologManagerMaster *redolog.RedoLogManagerMaster
 	table := "table1"
 	shardID := 0
@@ -109,6 +110,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			"OpenVectorPartyFileForRead", table, mock.Anything, shardID, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
 		redologManagerMaster, _ = redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+		bootstrapToken := new(memComMocks.BootStrapToken)
+		options = memstore.NewOptions(bootstrapToken, redologManagerMaster)
 		shard = memstore.NewTableShard(&memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: table,
@@ -131,7 +134,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID, redologManagerMaster)
+		}, metaStore, diskStore, hostMemoryManager, shardID, options)
 
 		shardMap := map[int]*memstore.TableShard{
 			shardID: shard,
@@ -209,6 +212,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		batch99.SafeDestruct()
 		da := getDeviceAllocator()
 		Ω(da.(*memoryTrackingDeviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(0))
+		redologManagerMaster.Stop()
 	})
 
 	ginkgo.It("prefilterSlice", func() {
@@ -1089,6 +1093,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	ginkgo.It("ProcessQuery should work for timezone column queries", func() {
 		timezoneTable := "table2"
 		memStore := new(memMocks.MemStore)
+		redologManagerMaster.Stop()
 
 		mainTableSchema := metaCom.Table{
 			Name: table,
@@ -1156,12 +1161,11 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		memStore.On("RLock").Return(nil)
 		memStore.On("RUnlock").Return(nil)
 
-		redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
 		timezoneTableShard := memstore.NewTableShard(&memCom.TableSchema{
 			Schema:            timezoneTableSchema,
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.SmallEnum},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID, redoManagerFactory)
+		}, metaStore, diskStore, hostMemoryManager, shardID, options)
 		timezoneTableBatch := memstore.LiveBatch{
 			Batch: memstore.Batch{
 				RWMutex: &sync.RWMutex{},
@@ -1190,7 +1194,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			Schema:            mainTableSchema,
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Uint32},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID, redoManagerFactory)
+		}, metaStore, diskStore, hostMemoryManager, shardID, options)
 		mainTableShard.LiveStore = &memstore.LiveStore{
 			LastReadRecord: memCom.RecordID{BatchID: -90, Index: 0},
 			Batches: map[int32]*memstore.LiveBatch{
@@ -1414,7 +1418,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		shapeLiveVP := memstore.NewLiveVectorParty(3, memCom.GeoShape, memCom.NullDataValue, mockMemoryManager)
 		shapeLiveVP.Allocate(false)
 
-		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, redologManagerMaster)
+		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager,1, options)
 		geoFenceLiveStore := geoFenceTableShard.LiveStore
 
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{
@@ -1680,7 +1684,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		shapeLiveVP := memstore.NewLiveVectorParty(3, memCom.GeoShape, memCom.NullDataValue, mockMemoryManager)
 		shapeLiveVP.Allocate(false)
 
-		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, redologManagerMaster)
+		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, options)
 		geoFenceLiveStore := geoFenceTableShard.LiveStore
 
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{
