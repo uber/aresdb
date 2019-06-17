@@ -15,6 +15,13 @@ package memstore
 
 import (
 	"context"
+	"io"
+	"math"
+	"math/rand"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	m3Shard "github.com/m3db/m3/src/cluster/shard"
 	xerrors "github.com/m3db/m3/src/x/errors"
 	xretry "github.com/m3db/m3/src/x/retry"
@@ -24,12 +31,6 @@ import (
 	"github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
 	"github.com/uber/aresdb/utils"
-	"io"
-	"math"
-	"math/rand"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // IsBootstrapped returns whether this table shard is bootstrapped.

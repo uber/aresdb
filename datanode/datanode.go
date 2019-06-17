@@ -17,6 +17,12 @@ package datanode
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/pprof"
+	"path/filepath"
+	"sync"
+	"time"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/placement"
@@ -36,49 +42,44 @@ import (
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
-	"net/http"
-	"net/http/pprof"
-	"path/filepath"
-	"sync"
-	"time"
 )
 
 // dataNode includes metastore, memstore and diskstore
 type dataNode struct {
 	sync.RWMutex
 
-	hostID     string
-	startedAt  time.Time
-	shardSet   shard.ShardSet
+	hostID          string
+	startedAt       time.Time
+	shardSet        shard.ShardSet
 	clusterServices services.Services
 
-	namespace  cluster.Namespace
-	metaStore  metaCom.MetaStore
-	memStore   memstore.MemStore
-	diskStore  diskstore.DiskStore
+	namespace cluster.Namespace
+	metaStore metaCom.MetaStore
+	memStore  memstore.MemStore
+	diskStore diskstore.DiskStore
 
-	opts                 Options
-	logger               common.Logger
-	metrics              datanodeMetrics
-	handlers 			 datanodeHandlers
+	opts     Options
+	logger   common.Logger
+	metrics  datanodeMetrics
+	handlers datanodeHandlers
 
-	bootstraps int
-	bootstrapManager     BootstrapManager
+	bootstraps       int
+	bootstrapManager BootstrapManager
 
 	mapWatch topology.MapWatch
-	close 		  chan struct{}
+	close    chan struct{}
 }
 
 type datanodeHandlers struct {
-	schemaHandler *api.SchemaHandler
-	enumHandler   *api.EnumHandler
-	queryHandler  *api.QueryHandler
-	dataHandler   *api.DataHandler
-	nodeModuleHandler http.Handler
+	schemaHandler      *api.SchemaHandler
+	enumHandler        *api.EnumHandler
+	queryHandler       *api.QueryHandler
+	dataHandler        *api.DataHandler
+	nodeModuleHandler  http.Handler
 	debugStaticHandler http.Handler
-	debugHandler  *api.DebugHandler
+	debugHandler       *api.DebugHandler
 	healthCheckHandler *api.HealthCheckHandler
-	swaggerHandler http.Handler
+	swaggerHandler     http.Handler
 }
 
 type datanodeMetrics struct {
@@ -144,15 +145,15 @@ func (d *dataNode) Open() error {
 	}
 
 	select {
-		case <-d.mapWatch.C():
-			hostShardSet, ok := d.mapWatch.Get().LookupHostShardSet(d.hostID)
-			if !ok {
-				d.shardSet = shard.NewShardSet(nil)
-			} else {
-				d.shardSet = hostShardSet.ShardSet()
-			}
-			d.AssignShardSet(d.shardSet)
-		default:
+	case <-d.mapWatch.C():
+		hostShardSet, ok := d.mapWatch.Get().LookupHostShardSet(d.hostID)
+		if !ok {
+			d.shardSet = shard.NewShardSet(nil)
+		} else {
+			d.shardSet = hostShardSet.ShardSet()
+		}
+		d.AssignShardSet(d.shardSet)
+	default:
 	}
 
 	d.memStore.GetHostMemoryManager().Start()
@@ -203,7 +204,7 @@ func (d *dataNode) startActiveTopologyWatch() {
 		select {
 		case <-d.close:
 			d.mapWatch.Close()
-		case <- d.mapWatch.C():
+		case <-d.mapWatch.C():
 			topoMap := d.mapWatch.Get()
 			hostShardSet, ok := topoMap.LookupHostShardSet(d.hostID)
 			if ok {
@@ -217,8 +218,8 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 	ticker := time.NewTicker(time.Second)
 	for {
 		select {
-		case <- ticker.C:
-		case <- d.close:
+		case <-ticker.C:
+		case <-d.close:
 			return
 		}
 
@@ -353,11 +354,11 @@ func (d *dataNode) advertise() {
 	err := d.clusterServices.Advertise(ad)
 	if err != nil {
 		d.opts.InstrumentOptions().Logger().Fatalf("failed to advertise data node",
-			zap.String("id", d.opts.ServerConfig().InstanceConfig.ID),
+			zap.String("id", d.hostID),
 			zap.Error(err))
 	} else {
 		d.opts.InstrumentOptions().Logger().Info("start advertising datanode to cluster",
-			zap.String("id", d.opts.ServerConfig().InstanceConfig.ID))
+			zap.String("id", d.hostID))
 	}
 }
 
@@ -378,8 +379,8 @@ func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
 	var (
 		incoming = make(map[uint32]m3Shard.Shard, len(shardSet.All()))
 		existing = make(map[uint32]struct{}, len(d.shardSet.AllIDs()))
-		removing  []uint32
-		adding    []m3Shard.Shard
+		removing []uint32
+		adding   []m3Shard.Shard
 	)
 
 	for _, shard := range shardSet.All() {
@@ -436,22 +437,21 @@ func (d *dataNode) Bootstrap() error {
 
 func newDatanodeMetrics(scope tally.Scope) datanodeMetrics {
 	return datanodeMetrics{
-		restartTimer:        scope.Timer("restart"),
+		restartTimer: scope.Timer("restart"),
 	}
 }
 
 func (d *dataNode) newHandlers() datanodeHandlers {
 	healthCheckHandler := api.NewHealthCheckHandler()
 	return datanodeHandlers{
-		schemaHandler: api.NewSchemaHandler(d.metaStore),
-		enumHandler: api.NewEnumHandler(d.memStore, d.metaStore),
-		queryHandler:  api.NewQueryHandler(d.memStore, d.opts.ServerConfig().Query),
-		dataHandler:   api.NewDataHandler(d.memStore),
-		nodeModuleHandler: http.StripPrefix("/node_modules/", http.FileServer(http.Dir("./api/ui/node_modules/"))),
+		schemaHandler:      api.NewSchemaHandler(d.metaStore),
+		enumHandler:        api.NewEnumHandler(d.memStore, d.metaStore),
+		queryHandler:       api.NewQueryHandler(d.memStore, d.opts.ServerConfig().Query),
+		dataHandler:        api.NewDataHandler(d.memStore),
+		nodeModuleHandler:  http.StripPrefix("/node_modules/", http.FileServer(http.Dir("./api/ui/node_modules/"))),
 		debugStaticHandler: http.StripPrefix("/static/", utils.NoCache(http.FileServer(http.Dir("./api/ui/debug/")))),
-		swaggerHandler: http.StripPrefix("/swagger/", http.FileServer(http.Dir("./api/ui/swagger/"))),
+		swaggerHandler:     http.StripPrefix("/swagger/", http.FileServer(http.Dir("./api/ui/swagger/"))),
 		healthCheckHandler: healthCheckHandler,
-		debugHandler: api.NewDebugHandler(d.memStore, d.metaStore, d.handlers.queryHandler, healthCheckHandler),
+		debugHandler:       api.NewDebugHandler(d.memStore, d.metaStore, d.handlers.queryHandler, healthCheckHandler),
 	}
 }
-
