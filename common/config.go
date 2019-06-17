@@ -58,9 +58,17 @@ type GatewayConfig struct {
 	Controller *ControllerConfig `yaml:"controller,omitempty"`
 }
 
+// InstanceConfig defines the config related to this instance in distributed cluster
 type InstanceConfig struct {
+	// ID represents the instance id of this datanode
 	ID string `yaml:"id"`
+	// Env represents the environment this data node belongs to
+	// eg. dev, staging, sandbox, production, etc.
+	Env string `yaml:"env"`
+	// zone represent the zone this cluster belongs to
 	Zone string `yaml:"zone"`
+	// namespace is the namespace this instance belongs to
+	Namespace string `yaml:"namespace"`
 }
 
 // ClusterConfig is the config for starting current instance with cluster mode
@@ -98,11 +106,6 @@ type RedoLogConfig struct {
 	KafkaConfig KafkaRedoLogConfig `yaml:"kafka"`
 }
 
-// HeartbeatConfig defines heart beat config
-type HeartbeatConfig struct {
-	TTLInSeconds int `yaml:"ttlInSeconds"`
-}
-
 // AresServerConfig is config specific for ares server.
 type AresServerConfig struct {
 	// HTTP port for serving.
@@ -125,7 +128,6 @@ type AresServerConfig struct {
 
 	// environment
 	Env string `yaml:"env"`
-	Zone string `yaml:"zone"`
 
 	Query     QueryConfig     `yaml:"query"`
 	DiskStore DiskStoreConfig `yaml:"disk_store"`
@@ -135,9 +137,6 @@ type AresServerConfig struct {
 
 	RedoLogConfig RedoLogConfig `yaml:"redolog"`
 
-	// InstanceConfig defines instance
+	// InstanceConfig defines instance config within distributed cluster
 	InstanceConfig InstanceConfig `yaml:"instance"`
-	// HeartbeatConfig defines heart beat
-	HeartbeatConfig HeartbeatConfig `yaml:"heartbeat"`
-
 }

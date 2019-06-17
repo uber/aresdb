@@ -341,9 +341,9 @@ func (d *dataNode) Serve() {
 
 func (d *dataNode) advertise() {
 	serviceID := services.NewServiceID().
-		SetEnvironment(d.opts.ServerConfig().Env).
-		SetZone(d.opts.ServerConfig().Zone).
-		SetName(utils.DataNodeServiceName(d.opts.ServerConfig().Cluster.ClusterName))
+		SetEnvironment(d.opts.ServerConfig().InstanceConfig.Env).
+		SetZone(d.opts.ServerConfig().InstanceConfig.Zone).
+		SetName(utils.DataNodeServiceName(d.opts.ServerConfig().InstanceConfig.Namespace))
 
 	placementInstance := placement.NewInstance().SetID(d.hostID)
 	ad := services.NewAdvertisement().
