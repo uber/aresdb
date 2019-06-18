@@ -47,7 +47,5 @@ var _ = ginkgo.Describe("peer source", func() {
 		})
 		Ω(err).ShouldNot(BeNil())
 		Ω(workWithConn).Should(Equal(1))
-
-		peerSource.Close()
 	})
 })

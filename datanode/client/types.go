@@ -24,6 +24,4 @@ type WithConnectionFn func(rpc.PeerDataNodeClient)
 type PeerSource interface {
 	// BorrowConnection will borrow a connection and execute a user function.
 	BorrowConnection(hostID string, fn WithConnectionFn) error
-	// Close close peer source and all managed peers
-	Close()
 }
