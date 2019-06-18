@@ -50,28 +50,7 @@ func (j *jobMutatorImpl) GetJob(namespace, name string) (job models.JobConfig, e
 		return job, common.ErrJobConfigDoesNotExist
 	}
 
-	job.StreamingConfig = models.KafkaConfig{
-		TopicType:           models.KafkaTopicType,
-		LatestOffset:        models.KafkaLatestOffset,
-		ErrorThreshold:      models.KafkaErrorThreshold,
-		StatusCheckInterval: models.KafkaStatusCheckInterval,
-		ARThreshold:         models.KafkaAutoRecoveryThreshold,
-		ProcessorCount:      models.KafkaProcessorCount,
-		BatchSize:           models.KafkaBatchSize,
-		MaxBatchDelayMS:     models.KafkaMaxBatchDelayMS,
-		MegaBytePerSec:      models.KafkaMegaBytePerSec,
-		RestartOnFailure:    models.KafkaRestartOnFailure,
-		RestartInterval:     models.KafkaRestartInterval,
-		FailureHandler: models.FailureHandler{
-			Type: models.FailureHandlerType,
-			Config: models.FailureHandlerConfig{
-				InitRetryIntervalInSeconds: models.FailureHandlerInitRetryIntervalInSeconds,
-				Multiplier:                 models.FailureHandlerMultiplier,
-				MaxRetryMinutes:            models.FailureHandlerMaxRetryMinutes,
-			},
-		},
-	}
-
+	job.StreamingConfig = models.DefaultKafkaConfig
 	err = json.Unmarshal(jobProto.Config, &job)
 	return
 }
