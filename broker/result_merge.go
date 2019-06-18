@@ -92,6 +92,13 @@ func (c *resultMergeContext) mergeResultsRecursive(lhs, rhs interface{}) {
 			l = l / r
 		}
 		c.parent[c.path[len(c.path)-1]] = l
+	case queryCom.HLL:
+		r := rhs.(queryCom.HLL)
+		if c.agg != common.Hll {
+			c.err = utils.StackError(nil, fmt.Sprintf("error merging: HLL value found for non Hll aggregation: %d", c.agg))
+		}
+		l.Merge(r)
+		c.parent[c.path[len(c.path)-1]] = l
 	case map[string]interface{}:
 		r := rhs.(map[string]interface{})
 		for k, lv := range l {

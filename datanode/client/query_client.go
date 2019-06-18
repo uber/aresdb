@@ -45,33 +45,48 @@ type aqlRespBody struct {
 	Results []queryCom.AQLQueryResult `json:"results"`
 }
 
-func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (result queryCom.AQLQueryResult, err error) {
+func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery, hll bool) (result queryCom.AQLQueryResult, err error) {
 	var bs []byte
-	bs, err = dc.queryRaw(ctx, host, query)
+	bs, err = dc.queryRaw(ctx, host, query, hll)
 	if err != nil {
 		return
 	}
 
-	var respBody aqlRespBody
-	err = json.Unmarshal(bs, &respBody)
-	if err != nil || len(respBody.Results) != 1 {
-		err = errors.New(fmt.Sprintf("invalid response from datanode, resp: %s", bs))
-		return
+	if hll {
+		var results []queryCom.AQLQueryResult
+		var errs []error
+		results, errs, err = queryCom.ParseHLLQueryResults(bs)
+		if err != nil {
+			utils.GetLogger().With("host", host, "query", query, "error", err, "errors", errs, "hll", hll).Error("datanode query client Query failed")
+			return
+		}
+		if len(results) != 1 {
+			errors.New(fmt.Sprintf("invalid response from datanode, resp: %s", bs))
+		}
+		result = results[0]
+	} else {
+		var respBody aqlRespBody
+		err = json.Unmarshal(bs, &respBody)
+		if err != nil || len(respBody.Results) != 1 {
+			err = errors.New(fmt.Sprintf("invalid response from datanode, resp: %s", bs))
+			return
+		}
+		result = respBody.Results[0]
 	}
-	result = respBody.Results[0]
-	utils.GetLogger().With("host", host, "query", query, "result", result).Debug("datanode query client Query succeeded")
+
+	utils.GetLogger().With("host", host, "query", query, "result", result, "hll", hll).Debug("datanode query client Query succeeded")
 	return
 }
 
 func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (bs []byte, err error) {
-	bs, err = dc.queryRaw(ctx, host, query)
+	bs, err = dc.queryRaw(ctx, host, query, false)
 	if err == nil {
 		utils.GetLogger().With("host", host, "query", query).Debug("datanode query client QueryRaw succeeded")
 	}
 	return
 }
 
-func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (bs []byte, err error) {
+func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery, hll bool) (bs []byte, err error) {
 	url := fmt.Sprintf("http://%s/query/aql?dataonly=1", host.Address())
 	aqlRequestBody := aqlRequestBody{
 		[]queryCom.AQLQuery{query},
@@ -85,6 +100,9 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.H
 	req, err = http.NewRequest(http.MethodPost, url, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return
+	}
+	if hll {
+		req.Header.Add(utils.HTTPAcceptTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
 	}
 
 	req = req.WithContext(ctx)

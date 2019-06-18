@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/broker/common"
 	queryCom "github.com/uber/aresdb/query/common"
+	"io/ioutil"
 )
 
 var _ = ginkgo.Describe("resultMerge", func() {
@@ -442,6 +443,17 @@ var _ = ginkgo.Describe("resultMerge", func() {
 				errPattern: "error calculating avg",
 			},
 		})
+	})
+
+	ginkgo.It("hll should work same shape", func() {
+		data, err := ioutil.ReadFile("../testing/data/query/hll_query_results")
+		Ω(err).Should(BeNil())
+		lhs, _, _ := queryCom.ParseHLLQueryResults(data)
+		rhs, _, _ := queryCom.ParseHLLQueryResults(data)
+		ctx := newResultMergeContext(common.Hll)
+		result := ctx.run(lhs[0], rhs[0])
+		Ω(ctx.err).Should(BeNil())
+		Ω(result).Should(Equal(lhs[0]))
 	})
 })
 

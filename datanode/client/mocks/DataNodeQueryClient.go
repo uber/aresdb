@@ -11,13 +11,13 @@ type DataNodeQueryClient struct {
 	mock.Mock
 }
 
-// Query provides a mock function with given fields: ctx, host, query
-func (_m *DataNodeQueryClient) Query(ctx context.Context, host topology.Host, query common.AQLQuery) (common.AQLQueryResult, error) {
-	ret := _m.Called(ctx, host, query)
+// Query provides a mock function with given fields: ctx, host, query, hll
+func (_m *DataNodeQueryClient) Query(ctx context.Context, host topology.Host, query common.AQLQuery, hll bool) (common.AQLQueryResult, error) {
+	ret := _m.Called(ctx, host, query, hll)
 
 	var r0 common.AQLQueryResult
-	if rf, ok := ret.Get(0).(func(context.Context, topology.Host, common.AQLQuery) common.AQLQueryResult); ok {
-		r0 = rf(ctx, host, query)
+	if rf, ok := ret.Get(0).(func(context.Context, topology.Host, common.AQLQuery, bool) common.AQLQueryResult); ok {
+		r0 = rf(ctx, host, query, hll)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(common.AQLQueryResult)
@@ -25,8 +25,8 @@ func (_m *DataNodeQueryClient) Query(ctx context.Context, host topology.Host, qu
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, topology.Host, common.AQLQuery) error); ok {
-		r1 = rf(ctx, host, query)
+	if rf, ok := ret.Get(1).(func(context.Context, topology.Host, common.AQLQuery, bool) error); ok {
+		r1 = rf(ctx, host, query, hll)
 	} else {
 		r1 = ret.Error(1)
 	}

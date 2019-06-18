@@ -136,7 +136,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 		return
 	}
 
-	returnHLL := aqlRequest.Accept == ContentTypeHyperLogLog
+	returnHLL := aqlRequest.Accept == utils.HTTPContentTypeHyperLogLog
 	if aqlRequest.DeviceChoosingTimeout <= 0 {
 		aqlRequest.DeviceChoosingTimeout = -1
 	}
@@ -230,7 +230,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager, aqlRequest AQLRequest, aqlQuery queryCom.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
 	qc = &query.AQLQueryContext{
 		Query:         &aqlQuery,
-		ReturnHLLData: aqlRequest.Accept == ContentTypeHyperLogLog,
+		ReturnHLLData: aqlRequest.Accept == utils.HTTPContentTypeHyperLogLog,
 	}
 	qc.Compile(memStore)
 
@@ -388,7 +388,7 @@ func (w *HLLQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQuery
 
 // Respond writes the final response into ResponseWriter.
 func (w *HLLQueryResponseWriter) Respond(rw http.ResponseWriter) {
-	rw.Header().Set("Content-Type", ContentTypeHyperLogLog)
+	rw.Header().Set("Content-Type", utils.HTTPContentTypeHyperLogLog)
 	RespondBytesWithCode(rw, w.statusCode, w.response.GetBytes())
 }
 

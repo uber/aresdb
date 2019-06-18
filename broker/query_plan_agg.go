@@ -141,6 +141,8 @@ type BlockingScanNode struct {
 }
 
 func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
+	isHll := common.CallNameToAggType[sn.query.Measures[0].ExprParsed.(*expr.Call).Name] == common.Hll
+
 	trial := 0
 	for trial < rpcRetries {
 		trial++
@@ -160,7 +162,7 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 
 		var fetchErr error
 		utils.GetLogger().With("host", host, "query", sn.query).Debug("sending query to datanode")
-		result, fetchErr = sn.dataNodeClient.Query(ctx, host, sn.query)
+		result, fetchErr = sn.dataNodeClient.Query(ctx, host, sn.query, isHll)
 		if fetchErr != nil {
 			utils.GetLogger().With(
 				"error", fetchErr,
@@ -198,14 +200,14 @@ func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, client d
 	measure := qc.Query.Measures[0].ExprParsed.(*expr.Call)
 	agg := common.CallNameToAggType[measure.Name]
 	// TODO revisit how to implement AVG. maybe add rollingAvg to datanode so only 1 call per shard needed
-	if agg == common.Avg {
+	switch agg {
+	case common.Avg:
 		root = NewMergeNode(common.Avg)
 		sumQuery, countQuery := splitAvgQuery(*qc.Query)
 		root.Add(
 			buildSubPlan(common.Sum, sumQuery, shards, topo, client),
 			buildSubPlan(common.Count, countQuery, shards, topo, client))
-	} else {
-		// TODO impl HLL differently?
+	default:
 		root = buildSubPlan(agg, *qc.Query, shards, topo, client)
 	}
 
