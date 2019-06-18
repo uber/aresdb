@@ -101,7 +101,7 @@ var _ = Describe("job_config", func() {
 		assigned := models.IngestionAssignment{
 			Subscriber: "0",
 			Jobs:       []models.JobConfig{jc},
-			Instances: map[string]models.InstanceView{
+			Instances: map[string]models.Instance{
 				"instance0": {
 					Address: "instance0:9374",
 				},
