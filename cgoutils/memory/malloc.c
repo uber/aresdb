@@ -35,6 +35,16 @@ CGoCallResHandle HostFree(void *p) {
   return resHandle;
 }
 
+CGoCallResHandle HostMemCpy(void *dst, const void* src, size_t bytes) {
+  CGoCallResHandle resHandle = {NULL, NULL};
+  void* ptr = memcpy(dst, src, bytes);
+  if (ptr != dst) {
+    resHandle.pStrErr =
+        fmtError("HostMemCpy", "Returned pointer does not match destination");
+  }
+  return resHandle;
+}
+
 // Dummy implementations.
 CGoCallResHandle CreateCudaStream(int device) {
   CGoCallResHandle resHandle = {NULL, NULL};
@@ -111,10 +121,7 @@ CGoCallResHandle CudaProfilerStop() {
 
 CGoCallResHandle GetDeviceMemoryInfo(size_t *freeSize, size_t *totalSize,
     int device){
-  char* pStrErr = (char *) malloc(sizeof(NOT_SUPPORTED_ERR_MSG));
-  snprintf(pStrErr, sizeof(NOT_SUPPORTED_ERR_MSG),
-      NOT_SUPPORTED_ERR_MSG);
-  CGoCallResHandle resHandle = {NULL, pStrErr};
+  CGoCallResHandle resHandle = {NULL, fmtError("GetDeviceMemoryInfo", "Not supported")};
   return resHandle;
 }
 

@@ -17,6 +17,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "utils.h"
 
 #ifdef __cplusplus
@@ -29,7 +31,14 @@ enum {
   HASH_REDUCTION_SUPPORT = 1 << 2,
 };
 
-char NOT_SUPPORTED_ERR_MSG[] = "Not supported";
+const int MAX_ERROR_LEN = 100;
+
+char *fmtError(const char *funcName, const char *message) {
+    char *buffer = (char *)(malloc(MAX_ERROR_LEN));
+    snprintf(buffer, MAX_ERROR_LEN,
+             "ERROR when making C function %s: %s\n", funcName, message);
+    return buffer;
+}
 
 // device_memory_flags_t & 0x1: HOST(0) or DEVICE(1) implementation
 // device_memory_flags_t & 0x2: USE POOLED MEMORY MANAGEMENT OR NOT
@@ -44,6 +53,8 @@ DeviceMemoryFlags GetFlags();
 CGoCallResHandle HostAlloc(size_t bytes);
 
 CGoCallResHandle HostFree(void *p);
+
+CGoCallResHandle HostMemCpy(void *dst, const void* src, size_t bytes);
 
 CGoCallResHandle CreateCudaStream(int device);
 

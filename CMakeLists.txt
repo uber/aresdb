@@ -203,7 +203,7 @@ target_link_libraries(algorithm mem)
 ################################
 # rdkafka
 ################################
-include(rdkafka.cmake)
+#include(rdkafka.cmake)
 ################################
 # Unit Tests
 ################################
