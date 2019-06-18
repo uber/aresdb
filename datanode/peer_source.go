@@ -25,10 +25,12 @@ type peer struct {
 	closed bool
 }
 
+// Host returns the host of the peer
 func (p *peer) Host() topology.Host {
 	return p.host
 }
 
+// BorrowConnection from peer
 func (p *peer) BorrowConnection(fn client.WithConnectionFn) (err error) {
 	p.Lock()
 	if p.closed {
@@ -53,6 +55,7 @@ func (p *peer) BorrowConnection(fn client.WithConnectionFn) (err error) {
 	return nil
 }
 
+// Close close the peer
 func (p *peer) Close() {
 	utils.GetLogger().With("host", p.host.String()).Info("closing peer connection")
 	// waiting for on going operation with client connection
@@ -61,16 +64,17 @@ func (p *peer) Close() {
 	p.Lock()
 	defer p.Unlock()
 	if p.conn != nil {
-		p.conn = nil
-		p.closed = true
 		err := p.conn.Close()
 		if err != nil {
 			utils.GetLogger().With("host", p.host.String(), "error", err.Error()).Error("failed to close grpc connection")
 		}
+		p.closed = true
+		p.conn = nil
 	}
 }
 
-func NewPeer(host topology.Host) *peer {
+// newPeer create a new peer object
+func newPeer(host topology.Host) *peer {
 	return &peer{
 		host: host,
 	}
@@ -127,7 +131,7 @@ func (ps *peerSource) updateTopoMap(topoMap topology.Map) {
 	for _, host := range topoMap.Hosts() {
 		knownHosts[host.ID()] = struct{}{}
 		if _, exist := ps.peers[host.ID()]; !exist {
-			ps.peers[host.ID()] = NewPeer(host)
+			ps.peers[host.ID()] = newPeer(host)
 		}
 	}
 
