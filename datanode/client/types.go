@@ -23,7 +23,7 @@ import (
 // WithConnectionFn defines function with PeerDataNodeClient
 type WithConnectionFn func(rpc.PeerDataNodeClient)
 
-// PeerSource represent a peer source
+// PeerSource represent a peer source which manages peer connections
 type PeerSource interface {
 	// BorrowConnection will borrow a connection and execute a user function.
 	BorrowConnection(hostID string, fn WithConnectionFn) error
