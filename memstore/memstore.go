@@ -274,7 +274,7 @@ func (m *memStoreImpl) AddTableShard(table string, shardID int, needPeerCopy boo
 	}
 	if _, exist := shardMap[shardID]; !exist {
 		// create new shard
-		tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shardID, m.redologManagerMaster)
+		tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shardID, m.options)
 		if needPeerCopy {
 			tableShard.needPeerCopy = 1
 		}

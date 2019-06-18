@@ -90,6 +90,7 @@ type datanodeMetrics struct {
 func NewDataNode(
 	hostID string,
 	namespace cluster.Namespace,
+	bootstrapToken memCom.BootStrapToken,
 	redoLogManagerMaster *redolog.RedoLogManagerMaster,
 	opts Options) (DataNode, error) {
 
@@ -106,7 +107,7 @@ func NewDataNode(
 		return nil, utils.StackError(err, "failed to initialize local metastore")
 	}
 	diskStore := diskstore.NewLocalDiskStore(opts.ServerConfig().RootPath)
-	memStore := memstore.NewMemStore(metaStore, diskStore, redoLogManagerMaster)
+	memStore := memstore.NewMemStore(metaStore, diskStore, memstore.NewOptions(bootstrapToken, redoLogManagerMaster))
 
 	d := &dataNode{
 		hostID:    hostID,
