@@ -174,7 +174,9 @@ var _ = ginkgo.Describe("agg query plan", func() {
 	})
 
 	ginkgo.It("BlockingScanNode Execute should work happy path", func() {
-		q := common2.AQLQuery{}
+		q := common2.AQLQuery{
+			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
+		}
 
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
@@ -186,7 +188,36 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
 		myResult := common2.AQLQueryResult{"foo": 1}
-		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
+
+		sn := BlockingScanNode{
+			query:          q,
+			shardID:        0,
+			topo:           &mockTopo,
+			dataNodeClient: &mockDatanodeCli,
+		}
+
+		res, err := sn.Execute(context.TODO())
+		Ω(err).Should(BeNil())
+		Ω(res).Should(Equal(myResult))
+	})
+
+	ginkgo.It("BlockingScanNode Execute hll should work happy path", func() {
+		q := common2.AQLQuery{
+			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "hll"}}},
+		}
+
+		mockTopo := topoMock.Topology{}
+		mockMap := topoMock.Map{}
+		mockTopo.On("Get").Return(&mockMap)
+		mockHost1 := topoMock.Host{}
+		mockHost2 := topoMock.Host{}
+		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{&mockHost1, &mockHost2}, nil)
+
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
+
+		myResult := common2.AQLQueryResult{"foo": 1}
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, true).Return(myResult, nil)
 
 		sn := BlockingScanNode{
 			query:          q,
@@ -201,7 +232,9 @@ var _ = ginkgo.Describe("agg query plan", func() {
 	})
 
 	ginkgo.It("BlockingScanNode Execute should fail routing error", func() {
-		q := common2.AQLQuery{}
+		q := common2.AQLQuery{
+			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
+		}
 
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
@@ -222,7 +255,9 @@ var _ = ginkgo.Describe("agg query plan", func() {
 	})
 
 	ginkgo.It("BlockingScanNode Execute should fail datanode error", func() {
-		q := common2.AQLQuery{}
+		q := common2.AQLQuery{
+			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
+		}
 
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
@@ -233,7 +268,7 @@ var _ = ginkgo.Describe("agg query plan", func() {
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Times(rpcRetries)
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Times(rpcRetries)
 
 		sn := BlockingScanNode{
 			query:          q,
@@ -247,7 +282,9 @@ var _ = ginkgo.Describe("agg query plan", func() {
 	})
 
 	ginkgo.It("BlockingScanNode Execute should work after retry", func() {
-		q := common2.AQLQuery{}
+		q := common2.AQLQuery{
+			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
+		}
 
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
@@ -258,9 +295,9 @@ var _ = ginkgo.Describe("agg query plan", func() {
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Once()
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Once()
 		myResult := common2.AQLQueryResult{"foo": 1}
-		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil).Once()
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil).Once()
 
 		sn := BlockingScanNode{
 			query:          q,
