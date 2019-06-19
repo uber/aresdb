@@ -58,6 +58,19 @@ type GatewayConfig struct {
 	Controller *ControllerConfig `yaml:"controller,omitempty"`
 }
 
+// InstanceConfig defines the config related to this instance in distributed cluster
+type InstanceConfig struct {
+	// ID represents the instance id of this datanode
+	ID string `yaml:"id"`
+	// Env represents the environment this data node belongs to
+	// eg. dev, staging, sandbox, production, etc.
+	Env string `yaml:"env"`
+	// zone represent the zone this cluster belongs to
+	Zone string `yaml:"zone"`
+	// namespace is the namespace this instance belongs to
+	Namespace string `yaml:"namespace"`
+}
+
 // ClusterConfig is the config for starting current instance with cluster mode
 type ClusterConfig struct {
 	// Enable controls whether to start in cluster mode
@@ -123,4 +136,7 @@ type AresServerConfig struct {
 	Gateway   GatewayConfig   `yaml:"gateway"`
 
 	RedoLogConfig RedoLogConfig `yaml:"redolog"`
+
+	// InstanceConfig defines instance config within distributed cluster
+	InstanceConfig InstanceConfig `yaml:"instance"`
 }

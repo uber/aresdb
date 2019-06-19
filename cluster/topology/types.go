@@ -205,7 +205,6 @@ type MapProvider interface {
 // StateSnapshot represents a snapshot of the state of the topology at a
 // given moment.
 type StateSnapshot struct {
-	Origin      Host
 	ShardStates ShardStates
 }
 

@@ -477,6 +477,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		}
 		// avoid eviction.
 		testHostMemoryManager.unManagedMemorySize = 0
+		testHostMemoryManager.memStore.preloadAllFactTables()
 		testHostMemoryManager.Start()
 		defer testHostMemoryManager.Stop()
 		Ω(testHostMemoryManager.getManagedSpaceUsage()).Should(Equal(int64(128 * (10 + 5))))
@@ -764,6 +765,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		Ω(testHostMemoryManager.totalMemorySize).Should(Equal(int64(1000)))
 
 		// Start eviction executor loop.
+		testHostMemoryManager.memStore.preloadAllFactTables()
 		testHostMemoryManager.Start()
 		defer testHostMemoryManager.Stop()
 		// Check managedMemorySize

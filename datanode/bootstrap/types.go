@@ -55,8 +55,6 @@ const (
 	BootstrapNotStarted BootstrapState = iota
 	// Bootstrapping indicates bootstrap process is in progress.
 	Bootstrapping
-	// MetaDataBootstrapped indicates metadata bootstrap has completed.
-	MetaDataBootstrapped
 	// Bootstrapped indicates a bootstrap process has completed.
 	Bootstrapped
 )

@@ -17,8 +17,9 @@ package datanode
 import (
 	"github.com/uber/aresdb/cluster"
 	"github.com/uber/aresdb/cluster/shard"
-	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
+	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/utils"
 	"time"
 )
@@ -27,26 +28,36 @@ type DataNode interface {
 	// Options returns the database options.
 	Options() Options
 
-	// ShardSet returns the set of shards currently associated with this datanode.
-	ShardSet() (shard.ShardSet, error)
-
-	// AssignNamespace sets the namespace.
-	AssignNamespace(namespace cluster.Namespace)
+	// ID returns the host id of the DataNode
+	ID() string
 
 	// Namespaces returns the namespace.
 	Namespace() cluster.Namespace
 
-	// Host returns the datanode host information.
-	Host() topology.Host
+	// ShardSet returns the set of shards currently associated with this datanode.
+	ShardSet() shard.ShardSet
 
-	// Bootstrap performs bootstrapping.
-	Bootstrap(topo topology.Topology, options bootstrap.Options) error
+	// AssignShardSet assigns shard set to the data node
+	AssignShardSet(shard.ShardSet)
 
-	// TableShardsBootstrapState captures and returns a snapshot of the datanode's bootstrap state for each table shard.
-	TableShardsBootstrapState() bootstrap.TableShardsBootstrapState
+	// Tables
+	Tables() []string
 
-	// // ShardsBootstrapState captures and returns a snapshot of the datanode's bootstrap state for each shard.
-	ShardsBootstrapState() bootstrap.ShardsBootstrapState
+	// GetTableShard will get table shard
+	GetTableShard(table string, shardID uint32) (*memstore.TableShard, error)
+
+	// Open data node
+	Open() error
+
+	// Bootstrap starts data node bootstap
+	Bootstrap() error
+
+	// Close data node
+	Close()
+
+	// Serve will start serving read and write requests
+	// should always call Bootstrap() during server start before Serve()
+	Serve()
 }
 
 // BootstrapManager manages the bootstrap process.
@@ -68,7 +79,7 @@ type BootstrapManager interface {
 // Options represents the options for storage.
 type Options interface {
 	// SetInstrumentOptions sets the instrumentation options.
-	SetInstrumentOptions(value utils.Options) Options
+	SetInstrumentOptions(utils.Options) Options
 
 	// InstrumentOptions returns the instrumentation options.
 	InstrumentOptions() utils.Options
@@ -77,6 +88,19 @@ type Options interface {
 	BootstrapOptions() bootstrap.Options
 
 	// SetBootstrapOptions sets bootstrap options
-	SetBootstrapOptions(options bootstrap.Options) Options
+	SetBootstrapOptions(bootstrap.Options) Options
+
+	// SetServerConfig sets server config
+	SetServerConfig(common.AresServerConfig) Options
+
+	// SetServerConfig returns server config
+	ServerConfig() common.AresServerConfig
+
+	// HTTPWrappers returns http handler wrappers
+	HTTPWrappers() []utils.HTTPHandlerWrapper
+
+	// SetHTTPWrappers returns http handler wrappers
+	SetHTTPWrappers([]utils.HTTPHandlerWrapper) Options
+
 }
 

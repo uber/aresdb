@@ -27,11 +27,6 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 )
 
-const (
-	// SelfID is the string used to represent the ID of the origin node.
-	SelfID = "self"
-)
-
 // MustNewTopologyMap returns a new topology.Map with provided parameters.
 // It's a utility method to make tests easier to write.
 func MustNewTopologyMap(replicas int, assignment map[string][]shard.Shard) topology.Map {
@@ -102,7 +97,6 @@ type HostShardStates map[string][]shard.Shard
 // as input.
 func NewStateSnapshot(hostShardStates HostShardStates) *topology.StateSnapshot {
 	topoState := &topology.StateSnapshot{
-		Origin:      topology.NewHost(SelfID, "127.0.0.1"),
 		ShardStates: make(map[topology.ShardID]map[topology.HostID]topology.HostShardState),
 	}
 

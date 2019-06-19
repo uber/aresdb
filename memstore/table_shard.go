@@ -54,8 +54,10 @@ type TableShard struct {
 	// bootstrapLock protects bootstrapState
 	bootstrapLock  sync.RWMutex
 	bootstrapState bootstrap.BootstrapState
-	// conditional variable for recovery readiness
-	readyForRecovery *sync.Cond
+	// needPeerCopy mark whether the table shard need to copy data from peer
+	// before own disk data is available for serve
+	// default to 0 (no need for peer copy)
+	needPeerCopy   uint32
 }
 
 // NewTableShard creates and initiates a table shard based on the schema.
@@ -69,7 +71,6 @@ func NewTableShard(schema *common.TableSchema, metaStore metaCom.MetaStore,
 		HostMemoryManager:    hostMemoryManager,
 		options:              options,
 	}
-	tableShard.readyForRecovery = sync.NewCond(&tableShard.bootstrapLock)
 
 	archiveStore := NewArchiveStore(tableShard)
 	tableShard.ArchiveStore = archiveStore

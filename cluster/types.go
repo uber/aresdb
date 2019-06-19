@@ -16,7 +16,6 @@ package cluster
 
 import (
 	m3shard "github.com/m3db/m3/src/cluster/shard"
-	"github.com/m3db/m3/src/x/ident"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/utils"
 )
@@ -30,13 +29,13 @@ type Database interface {
 	Namespaces() []Namespace
 
 	// Namespace returns the specified namespace.
-	Namespace(ns ident.ID) (Namespace, bool)
+	Namespace(ns string) (Namespace, bool)
 }
 
 // Namespace is aresDB database namespace
 type Namespace interface {
 	// ID returns the ID of the namespace
-	ID() ident.ID
+	ID() string
 
 	// Tables returns the tables of the namespace.
 	Tables() ([]string, error)
@@ -45,7 +44,7 @@ type Namespace interface {
 	Shards() ([]m3shard.Shard, error)
 
 	// Topology return the topology description
-	Topology() (topology.Topology, error)
+	Topology() topology.Topology
 }
 
 // Options represents the options for storage.
