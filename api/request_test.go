@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/utils"
 	"net/http"
 )
 
@@ -46,7 +47,7 @@ var _ = ginkgo.Describe("api request", func() {
 		aqlR := AQLRequest{}
 		err = ReadRequest(r, &aqlR)
 		Ω(err).Should(BeNil())
-		Ω(aqlR.Accept).Should(Equal(ContentTypeHyperLogLog))
+		Ω(aqlR.Accept).Should(Equal(utils.HTTPContentTypeHyperLogLog))
 	})
 
 })

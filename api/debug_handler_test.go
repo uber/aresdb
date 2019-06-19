@@ -29,8 +29,8 @@ import (
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
-	memMocks "github.com/uber/aresdb/memstore/mocks"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+	memMocks "github.com/uber/aresdb/memstore/mocks"
 
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"

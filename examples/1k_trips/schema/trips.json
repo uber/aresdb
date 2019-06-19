@@ -26,6 +26,10 @@
       "type": "UUID"
     },
     {
+      "name": "driver_uuid_hll",
+      "type": "Uint32"
+    },
+    {
       "name": "request_point",
       "type": "GeoPoint"
     }

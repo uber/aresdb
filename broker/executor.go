@@ -52,7 +52,7 @@ func (qe *queryExecutorImpl) Execute(ctx context.Context, sqlQuery string, w htt
 	}
 
 	// compile
-	// TODO: add timeout; hll
+	// TODO: add timeout
 	qc := &query.AQLQueryContext{
 		Query: aqlQuery,
 	}

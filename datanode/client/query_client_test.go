@@ -49,7 +49,7 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		mockHost.On("Address").Return(add)
 
 		client := NewDataNodeQueryClient()
-		res, err := client.Query(context.TODO(), &mockHost, common.AQLQuery{})
+		res, err := client.Query(context.TODO(), &mockHost, common.AQLQuery{}, false)
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(aqlResult))
 	})
@@ -63,7 +63,7 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		mockHost.On("Address").Return(add)
 
 		client := NewDataNodeQueryClient()
-		_, err := client.Query(context.TODO(), &mockHost, common.AQLQuery{})
+		_, err := client.Query(context.TODO(), &mockHost, common.AQLQuery{}, false)
 		Ω(err.Error()).Should(ContainSubstring("got status code"))
 	})
 
@@ -82,7 +82,7 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		mockHost.On("Address").Return(add)
 
 		client := NewDataNodeQueryClient()
-		_, err := client.Query(context.TODO(), &mockHost, common.AQLQuery{})
+		_, err := client.Query(context.TODO(), &mockHost, common.AQLQuery{}, false)
 		Ω(err.Error()).Should(ContainSubstring("invalid response from datanode"))
 	})
 })

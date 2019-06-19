@@ -147,15 +147,3 @@ func ReadRequest(r *http.Request, obj interface{}) error {
 	}
 	return nil
 }
-
-// ContentType defines the type of http content-type.
-type ContentType string
-
-const (
-	// ContentTypeUpsertBatch defines the upsert data content type.
-	ContentTypeUpsertBatch = "application/upsert-data"
-	// ContentTypeHyperLogLog defines the hyperloglog query result content type.
-	ContentTypeHyperLogLog = "application/hll"
-	// ContentTypeJSON defines the json content type.
-	ContentTypeJSON = "application/json"
-)
