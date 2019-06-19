@@ -23,7 +23,8 @@ type HostMemoryReporter func(bytes int64);
 // allocation request from customer, it will request more memory from underlying
 // NativeMemoryPool. All address returned back to client are an 2 element array of offset
 // where the first offset is the memory allocated to the caller and second offset is the
-// footer offset to current slab.
+// footer offset to current slab. For more information related how slab allocator works,
+// please refer to https://github.com/couchbase/go-slab.
 type HighLevelMemoryPool interface {
 	// Allocate allocates size byte memory and return back to client.
 	Allocate(size int) [2]uintptr
@@ -144,7 +145,7 @@ func (mp *singleChunkNativeMemoryPool) Malloc(size int) uintptr {
 		}
 		mp.block = newBlock
 		mp.totalSize = newSize
-		mp.nChunks += 1
+		mp.nChunks = mp.totalSize / nativeChunkSize
 	}
 	addr := uintptr(mp.allocatedSize)
 	mp.allocatedSize += size

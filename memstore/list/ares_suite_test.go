@@ -23,8 +23,8 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 )
 
-func TestMemStore(t *testing.T) {
+func TestListDataType(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("junit.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Ares List Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "Ares List Data Type Suite", []Reporter{junitReporter})
 }
