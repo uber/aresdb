@@ -59,7 +59,7 @@ func (m *namespaceMutatorImpl) ListNamespaces() ([]string, error) {
 	entityList, _, err := readEntityList(m.txnStore, utils.NamespaceListKey())
 	if common.IsNonExist(err) {
 		return []string{}, nil
-	} else {
+	} else if err != nil {
 		return nil, err
 	}
 
