@@ -245,6 +245,10 @@ func (c *ControllerHTTPClient) FetchAllEnums(tableName string, columnName string
 
 // ExtendEnumCases extends enum cases to given table column
 func (c *ControllerHTTPClient) ExtendEnumCases(tableName, columnName string, enumCases []string) (enumIDs []int, err error) {
+	if len(enumCases) == 0 {
+		return
+	}
+
 	enumCasesBytes, err := json.Marshal(enumCases)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to marshal enum cases")

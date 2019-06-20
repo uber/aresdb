@@ -14,8 +14,9 @@
 package etcd
 
 import (
-	"github.com/m3db/m3/src/cluster/kv/mem"
 	"testing"
+
+	"github.com/m3db/m3/src/cluster/kv/mem"
 
 	"github.com/uber/aresdb/controller/models"
 	"github.com/uber/aresdb/controller/mutators/common"
@@ -53,7 +54,7 @@ func TestJobMutator(t *testing.T) {
 
 	aresSubscriberPayload := models.JobConfig{
 		Name:    "demand",
-		Version: 0,
+		Version: 1,
 		AresTableConfig: models.TableConfig{
 			Name: "rta_table1",
 		},
