@@ -41,7 +41,7 @@ type jobMutatorImpl struct {
 // GetJob gets job config by name
 func (j *jobMutatorImpl) GetJob(namespace, name string) (job models.JobConfig, err error) {
 	var jobProto pb.EntityConfig
-	jobProto, _, err = j.readJob(namespace, name)
+	jobProto, version, err := j.readJob(namespace, name)
 	if err != nil {
 		return job, err
 	}
@@ -52,6 +52,9 @@ func (j *jobMutatorImpl) GetJob(namespace, name string) (job models.JobConfig, e
 
 	job.StreamingConfig = models.DefaultKafkaConfig
 	err = json.Unmarshal(jobProto.Config, &job)
+
+	// always return etcd internal version, version from job payload is ignored
+	job.Version = version
 	return
 }
 

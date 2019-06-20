@@ -333,6 +333,10 @@ func (hf *httpSchemaFetcher) FetchAllEnums(tableName, columnName string) ([]stri
 }
 
 func (hf *httpSchemaFetcher) ExtendEnumCases(tableName, columnName string, enumCases []string) ([]int, error) {
+	if len(enumCases) == 0 {
+		return []int{}, nil
+	}
+
 	enumCasesRequest := enumCasesWrapper{
 		EnumCases: enumCases,
 	}

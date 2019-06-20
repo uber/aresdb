@@ -15,12 +15,13 @@ package etcd
 
 import (
 	"encoding/json"
-	"github.com/golang/mock/gomock"
-	"github.com/m3db/m3/src/cluster/kv/mem"
-	"github.com/m3db/m3/src/cluster/services/leader/campaign"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
+	"github.com/m3db/m3/src/cluster/kv/mem"
+	"github.com/m3db/m3/src/cluster/services/leader/campaign"
 
 	"github.com/uber/aresdb/controller/models"
 
@@ -60,6 +61,7 @@ func TestIngestionAssignmentTask(t *testing.T) {
 
 	job1 := models.JobConfig{
 		Name:            "job1",
+		Version:         1,
 		AresTableConfig: models.TableConfig{Name: "table1"},
 		StreamingConfig: models.KafkaConfig{
 			TopicType:           models.KafkaTopicType,
