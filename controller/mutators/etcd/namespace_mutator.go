@@ -57,9 +57,12 @@ func (m *namespaceMutatorImpl) CreateNamespace(namespace string) (err error) {
 
 func (m *namespaceMutatorImpl) ListNamespaces() ([]string, error) {
 	entityList, _, err := readEntityList(m.txnStore, utils.NamespaceListKey())
-	if err != nil {
+	if common.IsNonExist(err) {
+		return []string{}, nil
+	} else {
 		return nil, err
 	}
+
 	result := make([]string, len(entityList.Entities))
 	for i, ns := range entityList.Entities {
 		result[i] = ns.Name
