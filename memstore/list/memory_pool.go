@@ -23,8 +23,9 @@ type HostMemoryReporter func(bytes int64);
 // allocation request from customer, it will request more memory from underlying
 // NativeMemoryPool. All address returned back to client are an 2 element array of offset
 // where the first offset is the memory allocated to the caller and second offset is the
-// footer offset to current slab. For more information related how slab allocator works,
-// please refer to https://github.com/couchbase/go-slab.
+// footer offset to current slab. Note that allocate a memory chunk larger than slabSize
+// will fail. For more information related how slab allocator works, please refer to
+// https://github.com/couchbase/go-slab.
 type HighLevelMemoryPool interface {
 	// Allocate allocates size byte memory and return back to client.
 	Allocate(size int) [2]uintptr
