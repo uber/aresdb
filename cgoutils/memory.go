@@ -15,6 +15,7 @@
 package cgoutils
 
 // #cgo LDFLAGS: -L${SRCDIR}/../lib -lmem
+// #include "string.h"
 // #include "memory.h"
 import "C"
 import (
@@ -50,6 +51,13 @@ func HostAlloc(bytes int) unsafe.Pointer {
 func HostFree(p unsafe.Pointer) {
 	doCGoCall(func() C.CGoCallResHandle {
 		return C.HostFree(p)
+	})
+}
+
+// HostMemCpy copies memory between two host addresses
+func HostMemCpy(dst unsafe.Pointer, src unsafe.Pointer, bytes int) {
+	doCGoCall(func() C.CGoCallResHandle {
+		return C.HostMemCpy(dst, src, C.size_t(bytes))
 	})
 }
 

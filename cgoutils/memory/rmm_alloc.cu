@@ -21,8 +21,6 @@
 
 #include "../memory.h"
 
-const int MAX_ERROR_LEN = 100;
-
 // checkCUDAError checks the cuda error of last runtime calls and returns the
 // pointer to the buffer of error message. This buffer needs to be released
 // by caller or upper callers.
@@ -138,6 +136,16 @@ CGoCallResHandle HostFree(void *p) {
   CGoCallResHandle resHandle = {NULL, NULL};
   cudaFreeHost(p);
   resHandle.pStrErr = checkCUDAError("Free");
+  return resHandle;
+}
+
+CGoCallResHandle HostMemCpy(void *dst, const void* src, size_t bytes) {
+  CGoCallResHandle resHandle = {NULL, NULL};
+  void* ptr = memcpy(dst, src, bytes);
+  if (ptr != dst) {
+    resHandle.pStrErr =
+        fmtError("HostMemCpy", "Returned pointer does not match destination");
+  }
   return resHandle;
 }
 
