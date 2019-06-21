@@ -15,7 +15,6 @@
 package datanode
 
 import (
-	"github.com/uber/aresdb/cluster"
 	"github.com/uber/aresdb/cluster/shard"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
@@ -30,9 +29,6 @@ type DataNode interface {
 
 	// ID returns the host id of the DataNode
 	ID() string
-
-	// Namespaces returns the namespace.
-	Namespace() cluster.Namespace
 
 	// ShardSet returns the set of shards currently associated with this datanode.
 	ShardSet() shard.ShardSet
