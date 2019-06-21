@@ -15,12 +15,11 @@
 package cmd
 
 import (
-	"code.uber.internal/rt/onix/clients/logger"
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/services"
-	"github.com/m3db/m3x/instrument"
+	"github.com/m3db/m3/src/x/instrument"
 	"github.com/spf13/cobra"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/api"
@@ -116,7 +115,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	scope.Counter("restart").Inc(1)
 
 	if cfg.Distributed {
-		startDataNode(cfg, scope, httpWrappers...)
+		startDataNode(cfg, logger, scope, httpWrappers...)
 		return
 	}
 
@@ -250,7 +249,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 }
 
 // start datanode in distributed mode
-func startDataNode(cfg common.AresServerConfig, scope tally.Scope, httpWrappers ...utils.HTTPHandlerWrapper) {
+func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tally.Scope, httpWrappers ...utils.HTTPHandlerWrapper) {
 	serverRestartTimer := scope.Timer("restart").Start()
 
 	opts := datanode.NewOptions().SetServerConfig(cfg).SetInstrumentOptions(utils.NewOptions()).SetBootstrapOptions(bootstrap.NewOptions()).SetHTTPWrappers(httpWrappers)
@@ -273,17 +272,21 @@ func startDataNode(cfg common.AresServerConfig, scope tally.Scope, httpWrappers 
 	if err != nil {
 		logger.Fatal("Failed to create datanode,", err)
 	}
+	defer dataNode.Close()
 
+	// preparing
 	err = dataNode.Open()
 	if err != nil {
 		logger.Fatal("Failed to open datanode,", err)
 	}
-	dataNode.Bootstrap()
+	// bootstrap and recovery
+	err = dataNode.Bootstrap()
 	if err != nil {
 		logger.Fatal("Failed to bootstrap datanode,", err)
 	}
 
 	serverRestartTimer.Stop()
 
+	// start serving traffic
 	dataNode.Serve()
 }

@@ -15,8 +15,8 @@
 package common
 
 import (
-	"net/http"
 	"github.com/m3db/m3/src/cluster/client/etcd"
+	"net/http"
 )
 
 // TimezoneConfig is the static config for timezone column support
@@ -66,7 +66,7 @@ type InstanceConfig struct {
 	// namespace is the namespace this instance belongs to
 	Namespace string `yaml:"namespace"`
 	// etcd client required config
-	Etcd      etcd.Configuration  `yaml:"etcd"`
+	Etcd etcd.Configuration `yaml:"etcd"`
 }
 
 // ClusterConfig is the config for starting current instance with cluster mode
@@ -127,7 +127,7 @@ type AresServerConfig struct {
 	// environment
 	Env string `yaml:"env"`
 
-	Distributed bool `yaml"distributed"`
+	Distributed bool `yaml:"distributed"`
 
 	Query     QueryConfig     `yaml:"query"`
 	DiskStore DiskStoreConfig `yaml:"disk_store"`

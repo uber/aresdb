@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"code.uber.internal/rt/onix/clients/logger"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/placement"
@@ -71,8 +70,8 @@ type dataNode struct {
 
 	bootstraps           int
 	bootstrapManager     BootstrapManager
-	bootstrapServer      rpc.PeerDataNodeServer
 	redoLogManagerMaster *redolog.RedoLogManagerMaster
+	grpcServer           *grpc.Server
 
 	mapWatch topology.MapWatch
 	close    chan struct{}
@@ -125,6 +124,10 @@ func NewDataNode(
 
 	memStore := memstore.NewMemStore(metaStore, diskStore, memstore.NewOptions(bootstrapToken, redoLogManagerMaster))
 
+	grpcServer := grpc.NewServer()
+	rpc.RegisterPeerDataNodeServer(grpcServer, bootstrapServer)
+	reflection.Register(grpcServer)
+
 	d := &dataNode{
 		hostID:               hostID,
 		topo:                 topo,
@@ -134,7 +137,7 @@ func NewDataNode(
 		opts:                 opts,
 		logger:               logger,
 		metrics:              newDatanodeMetrics(scope),
-		bootstrapServer:      bootstrapServer,
+		grpcServer:           grpcServer,
 		redoLogManagerMaster: redoLogManagerMaster,
 	}
 	d.handlers = d.newHandlers()
@@ -202,11 +205,11 @@ func (d *dataNode) startSchemaWatch() {
 	if d.opts.ServerConfig().Cluster.Enable {
 		// TODO better to reuse the code direcly in controller to talk to etcd
 		if d.opts.ServerConfig().Cluster.ClusterName == "" {
-			logger.Fatal("Missing cluster name")
+			d.logger.Fatal("Missing cluster name")
 		}
 		controllerClientCfg := d.opts.ServerConfig().Gateway.Controller
 		if controllerClientCfg == nil {
-			logger.Fatal("Missing controller client config")
+			d.logger.Fatal("Missing controller client config")
 		}
 		if d.opts.ServerConfig().Cluster.InstanceName != "" {
 			controllerClientCfg.Headers.Add(controllerCli.InstanceNameHeaderKey, d.opts.ServerConfig().Cluster.InstanceName)
@@ -223,6 +226,8 @@ func (d *dataNode) startSchemaWatch() {
 func (d *dataNode) Close() {
 	close(d.close)
 	d.mapWatch.Close()
+	d.grpcServer.Stop()
+	d.redoLogManagerMaster.Stop()
 }
 
 func (d *dataNode) startDebugServer() {
@@ -377,18 +382,11 @@ func (d *dataNode) Serve() {
 	allowHeaders := handlers.AllowedHeaders([]string{"Accept", "Accept-Language", "Content-Language", "Origin", "Content-Type"})
 	allowMethods := handlers.AllowedMethods([]string{"GET", "PUT", "POST", "DELETE", "OPTIONS"})
 
-	// create grpc server
-	// TODO tls certificate setup?
-	grpcServer := grpc.NewServer()
-	rpc.RegisterPeerDataNodeServer(grpcServer, d.bootstrapServer)
-	reflection.Register(grpcServer)
-
 	// record time from data node started to actually serving
 	d.metrics.restartTimer.Record(utils.Now().Sub(d.startedAt))
 	d.opts.InstrumentOptions().Logger().Infof("Starting HTTP server on port %d with max connection %d", d.opts.ServerConfig().Port, d.opts.ServerConfig().HTTP.MaxConnections)
-	utils.LimitServe(d.opts.ServerConfig().Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(mixedHandler(grpcServer, router)), d.opts.ServerConfig().HTTP)
-	grpcServer.Stop()
-	d.redoLogManagerMaster.Stop()
+	utils.LimitServe(d.opts.ServerConfig().Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(mixedHandler(d.grpcServer, router)), d.opts.ServerConfig().HTTP)
+
 }
 
 func (d *dataNode) advertise() {

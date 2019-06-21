@@ -97,6 +97,4 @@ type Options interface {
 
 	// SetHTTPWrappers returns http handler wrappers
 	SetHTTPWrappers([]utils.HTTPHandlerWrapper) Options
-
 }
-
