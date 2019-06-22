@@ -29,10 +29,11 @@ import (
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
 
-	xerrors "github.com/m3db/m3/src/x/errors"
-	xsync "github.com/m3db/m3/src/x/sync"
 	"sync"
 	"time"
+
+	xerrors "github.com/m3db/m3/src/x/errors"
+	xsync "github.com/m3db/m3/src/x/sync"
 )
 
 // bootstrapManagerImpl is the implementation of the interface databaseBootstrapManager

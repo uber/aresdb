@@ -18,11 +18,17 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/m3db/m3/src/cluster/services"
+	"github.com/m3db/m3/src/x/instrument"
 	"github.com/spf13/cobra"
+	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/api"
 	"github.com/uber/aresdb/cgoutils"
+	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/common"
 	controllerCli "github.com/uber/aresdb/controller/client"
+	"github.com/uber/aresdb/datanode"
+	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
@@ -34,11 +40,6 @@ import (
 	"path/filepath"
 	"time"
 	"unsafe"
-	"google.golang.org/grpc"
-	"strings"
-	pb "github.com/uber/aresdb/datanode/generated/proto/rpc"
-	"google.golang.org/grpc/reflection"
-	"github.com/uber/aresdb/datanode/bootstrap"
 )
 
 // Options represents options for executing command
@@ -112,6 +113,14 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	utils.Init(cfg, logger, queryLogger, scope)
 
 	scope.Counter("restart").Inc(1)
+
+	if cfg.Distributed {
+		startDataNode(cfg, logger, scope, httpWrappers...)
+		return
+	}
+
+	// TODO keep this path for non-distributed mode, and to aovid code break
+	// should be removed later after distributed mode is mature
 	serverRestartTimer := scope.Timer("restart").Start()
 
 	// Create MetaStore.
@@ -145,8 +154,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	}
 
-	bootstrapServer := bootstrap.NewPeerDataNodeServer(metaStore, diskStore)
-	bootstrapToken := bootstrapServer.(memCom.BootStrapToken)
+	bootstrapToken := bootstrap.NewPeerDataNodeServer(metaStore, diskStore).(memCom.BootStrapToken)
 
 	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(&cfg.RedoLogConfig, diskStore, metaStore)
 	if err != nil {
@@ -234,25 +242,51 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, metaStore)
 	go batchStatsReporter.Run()
 
-	// create grpc server
-	// TODO tls certificate setup?
-	grpcServer := grpc.NewServer()
-	pb.RegisterPeerDataNodeServer(grpcServer, bootstrapServer)
-	reflection.Register(grpcServer)
-
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
-	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(mixedHandler(grpcServer, router)), cfg.HTTP)
+	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	batchStatsReporter.Stop()
 	redoLogManagerMaster.Stop()
 }
 
-// mixed handler for both grpc and traditional http
-func mixedHandler(grpcServer *grpc.Server, httpHandler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if grpcServer != nil && r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
-			grpcServer.ServeHTTP(w, r)
-		} else {
-			httpHandler.ServeHTTP(w, r)
-		}
-	})
+// start datanode in distributed mode
+func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tally.Scope, httpWrappers ...utils.HTTPHandlerWrapper) {
+	serverRestartTimer := scope.Timer("restart").Start()
+
+	opts := datanode.NewOptions().SetServerConfig(cfg).SetInstrumentOptions(utils.NewOptions()).SetBootstrapOptions(bootstrap.NewOptions()).SetHTTPWrappers(httpWrappers)
+
+	var topo topology.Topology
+	etcdCfg := cfg.InstanceConfig.Etcd
+	etcdCfg.Service = utils.DataNodeServiceName(cfg.InstanceConfig.Namespace)
+	configServiceCli, err := etcdCfg.NewClient(instrument.NewOptions())
+	if err != nil {
+		logger.Fatal("Failed to create etcd client,", err)
+	}
+
+	dynamicOptions := topology.NewDynamicOptions().SetConfigServiceClient(configServiceCli).SetServiceID(services.NewServiceID().SetZone(etcdCfg.Zone).SetName(etcdCfg.Service).SetEnvironment(etcdCfg.Env))
+	topo, err = topology.NewDynamicInitializer(dynamicOptions).Init()
+	if err != nil {
+		logger.Fatal("Failed to initialize dynamic topology,", err)
+	}
+
+	dataNode, err := datanode.NewDataNode(cfg.InstanceConfig.ID, topo, opts)
+	if err != nil {
+		logger.Fatal("Failed to create datanode,", err)
+	}
+	defer dataNode.Close()
+
+	// preparing
+	err = dataNode.Open()
+	if err != nil {
+		logger.Fatal("Failed to open datanode,", err)
+	}
+	// bootstrap and recovery
+	err = dataNode.Bootstrap()
+	if err != nil {
+		logger.Fatal("Failed to bootstrap datanode,", err)
+	}
+
+	serverRestartTimer.Stop()
+
+	// start serving traffic
+	dataNode.Serve()
 }

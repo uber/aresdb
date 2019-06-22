@@ -17,6 +17,7 @@ package datanode
 import (
 	"errors"
 	"fmt"
+	controllerCli "github.com/uber/aresdb/controller/client"
 	"net/http"
 	"net/http/pprof"
 	"path/filepath"
@@ -30,10 +31,11 @@ import (
 	m3Shard "github.com/m3db/m3/src/cluster/shard"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/api"
-	"github.com/uber/aresdb/cluster"
 	"github.com/uber/aresdb/cluster/shard"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/datanode/bootstrap"
+	"github.com/uber/aresdb/datanode/generated/proto/rpc"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
@@ -42,6 +44,9 @@ import (
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+	"strings"
 )
 
 // dataNode includes metastore, memstore and diskstore
@@ -53,7 +58,7 @@ type dataNode struct {
 	shardSet        shard.ShardSet
 	clusterServices services.Services
 
-	namespace cluster.Namespace
+	topo      topology.Topology
 	metaStore metaCom.MetaStore
 	memStore  memstore.MemStore
 	diskStore diskstore.DiskStore
@@ -63,8 +68,10 @@ type dataNode struct {
 	metrics  datanodeMetrics
 	handlers datanodeHandlers
 
-	bootstraps       int
-	bootstrapManager BootstrapManager
+	bootstraps           int
+	bootstrapManager     BootstrapManager
+	redoLogManagerMaster *redolog.RedoLogManagerMaster
+	grpcServer           *grpc.Server
 
 	mapWatch topology.MapWatch
 	close    chan struct{}
@@ -89,9 +96,7 @@ type datanodeMetrics struct {
 // NewDataNode creates a new data node
 func NewDataNode(
 	hostID string,
-	namespace cluster.Namespace,
-	bootstrapToken memCom.BootStrapToken,
-	redoLogManagerMaster *redolog.RedoLogManagerMaster,
+	topo topology.Topology,
 	opts Options) (DataNode, error) {
 
 	iOpts := opts.InstrumentOptions()
@@ -107,20 +112,36 @@ func NewDataNode(
 		return nil, utils.StackError(err, "failed to initialize local metastore")
 	}
 	diskStore := diskstore.NewLocalDiskStore(opts.ServerConfig().RootPath)
+
+	bootstrapServer := bootstrap.NewPeerDataNodeServer(metaStore, diskStore)
+	bootstrapToken := bootstrapServer.(memCom.BootStrapToken)
+
+	redologCfg := opts.ServerConfig().RedoLogConfig
+	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(&redologCfg, diskStore, metaStore)
+	if err != nil {
+		return nil, utils.StackError(err, "failed to initialize redolog manager master")
+	}
+
 	memStore := memstore.NewMemStore(metaStore, diskStore, memstore.NewOptions(bootstrapToken, redoLogManagerMaster))
 
+	grpcServer := grpc.NewServer()
+	rpc.RegisterPeerDataNodeServer(grpcServer, bootstrapServer)
+	reflection.Register(grpcServer)
+
 	d := &dataNode{
-		hostID:    hostID,
-		namespace: namespace,
-		metaStore: metaStore,
-		memStore:  memStore,
-		diskStore: diskStore,
-		opts:      opts,
-		logger:    logger,
-		metrics:   newDatanodeMetrics(scope),
+		hostID:               hostID,
+		topo:                 topo,
+		metaStore:            metaStore,
+		memStore:             memStore,
+		diskStore:            diskStore,
+		opts:                 opts,
+		logger:               logger,
+		metrics:              newDatanodeMetrics(scope),
+		grpcServer:           grpcServer,
+		redoLogManagerMaster: redoLogManagerMaster,
 	}
 	d.handlers = d.newHandlers()
-	d.bootstrapManager = NewBootstrapManager(d, opts, namespace.Topology())
+	d.bootstrapManager = NewBootstrapManager(d, opts, topo)
 
 	return d, nil
 }
@@ -128,19 +149,21 @@ func NewDataNode(
 // Open data node for serving
 func (d *dataNode) Open() error {
 	d.startedAt = utils.Now()
+
+	//1. start schema watch
+	d.startSchemaWatch()
+
 	// memstore fetch local disk schema
 	err := d.memStore.FetchSchema()
 	if err != nil {
 		return err
 	}
 
-	//TODO: 1. start schema watch
-
 	// 2. start debug server
 	go d.startDebugServer()
 
 	// 3. first shard assignment
-	d.mapWatch, err = d.namespace.Topology().Watch()
+	d.mapWatch, err = d.topo.Watch()
 	if err != nil {
 		return utils.StackError(err, "failed to watch topology")
 	}
@@ -178,9 +201,33 @@ func (d *dataNode) Open() error {
 	return nil
 }
 
+func (d *dataNode) startSchemaWatch() {
+	if d.opts.ServerConfig().Cluster.Enable {
+		// TODO better to reuse the code direcly in controller to talk to etcd
+		if d.opts.ServerConfig().Cluster.ClusterName == "" {
+			d.logger.Fatal("Missing cluster name")
+		}
+		controllerClientCfg := d.opts.ServerConfig().Gateway.Controller
+		if controllerClientCfg == nil {
+			d.logger.Fatal("Missing controller client config")
+		}
+		if d.opts.ServerConfig().Cluster.InstanceName != "" {
+			controllerClientCfg.Headers.Add(controllerCli.InstanceNameHeaderKey, d.opts.ServerConfig().Cluster.InstanceName)
+		}
+
+		controllerClient := controllerCli.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
+		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, d.metaStore, metastore.NewTableSchameValidator(), controllerClient, d.opts.ServerConfig().Cluster.ClusterName, "")
+		// immediate initial fetch
+		schemaFetchJob.FetchSchema()
+		go schemaFetchJob.Run()
+	}
+}
+
 func (d *dataNode) Close() {
 	close(d.close)
 	d.mapWatch.Close()
+	d.grpcServer.Stop()
+	d.redoLogManagerMaster.Stop()
 }
 
 func (d *dataNode) startDebugServer() {
@@ -240,7 +287,7 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 			continue
 		}
 
-		dynamicTopo, ok := d.namespace.Topology().(topology.DynamicTopology)
+		dynamicTopo, ok := d.topo.(topology.DynamicTopology)
 		if !ok {
 			d.logger.Error("cannot mark shard available", zap.Error(errors.New("topology is not dynamic")))
 			continue
@@ -338,13 +385,14 @@ func (d *dataNode) Serve() {
 	// record time from data node started to actually serving
 	d.metrics.restartTimer.Record(utils.Now().Sub(d.startedAt))
 	d.opts.InstrumentOptions().Logger().Infof("Starting HTTP server on port %d with max connection %d", d.opts.ServerConfig().Port, d.opts.ServerConfig().HTTP.MaxConnections)
-	utils.LimitServe(d.opts.ServerConfig().Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), d.opts.ServerConfig().HTTP)
+	utils.LimitServe(d.opts.ServerConfig().Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(mixedHandler(d.grpcServer, router)), d.opts.ServerConfig().HTTP)
+
 }
 
 func (d *dataNode) advertise() {
 	serviceID := services.NewServiceID().
-		SetEnvironment(d.opts.ServerConfig().InstanceConfig.Env).
-		SetZone(d.opts.ServerConfig().InstanceConfig.Zone).
+		SetEnvironment(d.opts.ServerConfig().InstanceConfig.Etcd.Env).
+		SetZone(d.opts.ServerConfig().InstanceConfig.Etcd.Zone).
 		SetName(utils.DataNodeServiceName(d.opts.ServerConfig().InstanceConfig.Namespace))
 
 	placementInstance := placement.NewInstance().SetID(d.hostID)
@@ -366,11 +414,6 @@ func (d *dataNode) advertise() {
 // GetTableShard returns the table shard from the datanode
 func (d *dataNode) GetTableShard(table string, shardID uint32) (*memstore.TableShard, error) {
 	return d.memStore.GetTableShard(table, int(shardID))
-}
-
-// Namespaces returns the namespace.
-func (d *dataNode) Namespace() cluster.Namespace {
-	return d.namespace
 }
 
 func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
@@ -455,4 +498,15 @@ func (d *dataNode) newHandlers() datanodeHandlers {
 		healthCheckHandler: healthCheckHandler,
 		debugHandler:       api.NewDebugHandler(d.memStore, d.metaStore, d.handlers.queryHandler, healthCheckHandler),
 	}
+}
+
+// mixed handler for both grpc and traditional http
+func mixedHandler(grpcServer *grpc.Server, httpHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if grpcServer != nil && r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+			grpcServer.ServeHTTP(w, r)
+		} else {
+			httpHandler.ServeHTTP(w, r)
+		}
+	})
 }

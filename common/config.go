@@ -15,6 +15,7 @@
 package common
 
 import (
+	"github.com/m3db/m3/src/cluster/client/etcd"
 	"net/http"
 )
 
@@ -62,13 +63,10 @@ type GatewayConfig struct {
 type InstanceConfig struct {
 	// ID represents the instance id of this datanode
 	ID string `yaml:"id"`
-	// Env represents the environment this data node belongs to
-	// eg. dev, staging, sandbox, production, etc.
-	Env string `yaml:"env"`
-	// zone represent the zone this cluster belongs to
-	Zone string `yaml:"zone"`
 	// namespace is the namespace this instance belongs to
 	Namespace string `yaml:"namespace"`
+	// etcd client required config
+	Etcd etcd.Configuration `yaml:"etcd"`
 }
 
 // ClusterConfig is the config for starting current instance with cluster mode
@@ -128,6 +126,8 @@ type AresServerConfig struct {
 
 	// environment
 	Env string `yaml:"env"`
+
+	Distributed bool `yaml:"distributed"`
 
 	Query     QueryConfig     `yaml:"query"`
 	DiskStore DiskStoreConfig `yaml:"disk_store"`
