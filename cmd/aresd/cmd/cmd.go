@@ -210,7 +210,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	// Init shards.
 	utils.GetLogger().Infof("Initializing shards from local DiskStore %s", cfg.RootPath)
-	memStore.InitShards(cfg.SchedulerOff)
+	memStore.InitShards(cfg.SchedulerOff, topology.NewStaticShardOwner([]int{0}))
 
 	// Start serving.
 	dataHandler := api.NewDataHandler(memStore)

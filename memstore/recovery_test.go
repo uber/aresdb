@@ -17,6 +17,7 @@ package memstore
 import (
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
+	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/redolog"
@@ -71,7 +72,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		memstore := createMemStore("abc", 0, []memCom.DataType{memCom.Uint32}, []int{0}, 10, true, false, metaStore, diskStore)
 		memstore.TableShards["abc"] = nil
 		memstore.options.redoLogMaster.Stop()
-		memstore.InitShards(false)
+		memstore.InitShards(false, topology.NewStaticShardOwner([]int{0}))
 		shard := memstore.TableShards["abc"][0]
 		Ω(len(shard.LiveStore.Batches)).Should(Equal(1))
 		value, validity := ReadShardValue(shard, 0, []byte{123, 0, 0, 0})

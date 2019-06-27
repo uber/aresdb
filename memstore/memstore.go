@@ -15,6 +15,7 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/cluster/topology"
 	"sync"
 
 	"fmt"
@@ -51,7 +52,7 @@ type MemStore interface {
 	// and set up watch channels for metaStore schema changes, used for bootstrapping mem store.
 	FetchSchema() error
 	// InitShards loads/recovers data for shards initially owned by the current instance.
-	InitShards(schedulerOff bool)
+	InitShards(schedulerOff bool, shardOwner topology.ShardOwner)
 	// HandleIngestion logs an upsert batch and applies it to the in-memory store.
 	HandleIngestion(table string, shardID int, upsertBatch *common.UpsertBatch) error
 	// Archive is the process moving stable records in fact tables from live batches to archive

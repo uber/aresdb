@@ -257,13 +257,6 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(Equal(ErrTableDoesNotExist))
 	})
 
-	ginkgo.It("GetOwnedShards", func() {
-		diskMetaStore := createDiskMetastore("base")
-		res, err := diskMetaStore.GetOwnedShards("a")
-		Ω(err).Should(BeNil())
-		Ω(res[0]).Should(Equal(0))
-	})
-
 	ginkgo.It("GetEnumDict", func() {
 		diskMetaStore := createDiskMetastore("base")
 		enumCases, err := diskMetaStore.GetEnumDict("a", "column1")

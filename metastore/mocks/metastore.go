@@ -233,29 +233,6 @@ func (_m *MetaStore) GetEnumDict(table string, column string) ([]string, error) 
 	return r0, r1
 }
 
-// GetOwnedShards provides a mock function with given fields: table
-func (_m *MetaStore) GetOwnedShards(table string) ([]int, error) {
-	ret := _m.Called(table)
-
-	var r0 []int
-	if rf, ok := ret.Get(0).(func(string) []int); ok {
-		r0 = rf(table)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]int)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(table)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetRedoLogCheckpointOffset provides a mock function with given fields: table, shard
 func (_m *MetaStore) GetRedoLogCheckpointOffset(table string, shard int) (int64, error) {
 	ret := _m.Called(table, shard)
