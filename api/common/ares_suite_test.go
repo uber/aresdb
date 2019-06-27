@@ -12,15 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package api
+package common
 
 import (
-	"github.com/uber/aresdb/query"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"testing"
+
+	"github.com/onsi/ginkgo/reporters"
 )
 
-// AQLResponse represents queryAQL response.
-// swagger:response aqlResponse
-type AQLResponse struct {
-	//in: body
-	Body query.AQLResponse
+func TestAPI(t *testing.T) {
+	RegisterFailHandler(Fail)
+	junitReporter := reporters.NewJUnitReporter("junit.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Ares API Common Suite", []Reporter{junitReporter})
 }

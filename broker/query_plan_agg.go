@@ -20,7 +20,6 @@ import (
 	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
-	"github.com/uber/aresdb/query"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
@@ -191,24 +190,24 @@ type AggQueryPlan struct {
 }
 
 // NewAggQueryPlan creates a new agg query plan
-func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan AggQueryPlan) {
+func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan AggQueryPlan) {
 	var root common.MergeNode
 
 	shards := topo.Get().ShardSet().AllIDs()
 
 	// compiler already checked that only 1 measure exists, which is a expr.Call
-	measure := qc.Query.Measures[0].ExprParsed.(*expr.Call)
+	measure := qc.AQLQuery.Measures[0].ExprParsed.(*expr.Call)
 	agg := common.CallNameToAggType[measure.Name]
 	// TODO revisit how to implement AVG. maybe add rollingAvg to datanode so only 1 call per shard needed
 	switch agg {
 	case common.Avg:
 		root = NewMergeNode(common.Avg)
-		sumQuery, countQuery := splitAvgQuery(*qc.Query)
+		sumQuery, countQuery := splitAvgQuery(*qc.AQLQuery)
 		root.Add(
 			buildSubPlan(common.Sum, sumQuery, shards, topo, client),
 			buildSubPlan(common.Count, countQuery, shards, topo, client))
 	default:
-		root = buildSubPlan(agg, *qc.Query, shards, topo, client)
+		root = buildSubPlan(agg, *qc.AQLQuery, shards, topo, client)
 	}
 
 	plan = AggQueryPlan{
@@ -234,6 +233,7 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 		},
 	}
 	sumq.Measures[0].Expr = strings.Replace(strings.ToLower(sumq.Measures[0].Expr), "avg", "sum", 1)
+	sumq.Measures[0].ExprParsed, _ = expr.ParseExpr(sumq.Measures[0].Expr)
 
 	countq = q
 	countq.Measures = []queryCom.Measure{
@@ -244,6 +244,7 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 		},
 	}
 	countq.Measures[0].Expr = "count(*)"
+	countq.Measures[0].ExprParsed, _ = expr.ParseExpr(countq.Measures[0].Expr)
 	return
 }
 

@@ -17,7 +17,6 @@ package broker
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	common2 "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore/common"
 )
 
@@ -50,20 +49,12 @@ var _ = ginkgo.Describe("broker schema mutator", func() {
 		Ω(err).Should(BeNil())
 		Ω(*t).Should(Equal(testTable))
 
-		tschema, err := mutator.GetSchema("t1")
-		Ω(err).Should(BeNil())
-		Ω(tschema).Should(Equal(common2.NewTableSchema(&testTable)))
-
 		err = mutator.UpdateTable(testTableOneMoreCol)
 		Ω(err).Should(BeNil())
 
 		t, err = mutator.GetTable("t1")
 		Ω(err).Should(BeNil())
 		Ω(*t).Should(Equal(testTableOneMoreCol))
-
-		tschema, err = mutator.GetSchema("t1")
-		Ω(err).Should(BeNil())
-		Ω(tschema).Should(Equal(common2.NewTableSchema(&testTableOneMoreCol)))
 
 		err = mutator.DeleteColumn("t1", "bla")
 		Ω(err.Error()).Should(ContainSubstring("not found"))
@@ -74,10 +65,6 @@ var _ = ginkgo.Describe("broker schema mutator", func() {
 		t, err = mutator.GetTable("t1")
 		Ω(err).Should(BeNil())
 		Ω(*t).Should(Equal(testTableColDeleted))
-
-		tschema, err = mutator.GetSchema("t1")
-		Ω(err).Should(BeNil())
-		Ω(tschema).Should(Equal(common2.NewTableSchema(&testTableColDeleted)))
 
 		err = mutator.DeleteTable("t1")
 		Ω(err).Should(BeNil())
@@ -90,7 +77,4 @@ func assertTableListLen(mutator *BrokerSchemaMutator, length int) {
 	tables, err := mutator.ListTables()
 	Ω(err).Should(BeNil())
 	Ω(tables).Should(HaveLen(length))
-
-	tableSchemas := mutator.GetSchemas()
-	Ω(tableSchemas).Should(HaveLen(length))
 }

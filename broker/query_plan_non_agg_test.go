@@ -23,7 +23,6 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
-	"github.com/uber/aresdb/query"
 	"github.com/uber/aresdb/query/common"
 	"net/http/httptest"
 )
@@ -40,8 +39,9 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 				{Expr: "field2"},
 			},
 		}
-		qc := query.AQLQueryContext{
-			Query: &q,
+		qc := QueryContext{
+			AQLQuery:              &q,
+			IsNonAggregationQuery: true,
 		}
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}

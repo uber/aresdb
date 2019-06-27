@@ -25,6 +25,8 @@ const (
 	AresSubscriber = "ares-subscriber"
 	// AresDataNode sets the name for ares datanode
 	AresDataNode = "ares-datanode"
+	// AresBroker sets the name for ares broker
+	AresBroker = "ares-broker"
 )
 
 // etcd keys
@@ -94,7 +96,12 @@ func SubscriberServiceName(namespace string) string {
 	return path.Join(namespace, AresSubscriber)
 }
 
-// DataNodeServiceName builds the subscriber service name
+// DataNodeServiceName builds the data node service name
 func DataNodeServiceName(namespace string) string {
+	return path.Join(namespace, AresDataNode)
+}
+
+// BrokerServiceName builds the broker service name
+func BrokerServiceName(namespace string) string {
 	return path.Join(namespace, AresDataNode)
 }

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package api
+package common
 
 import (
-	"github.com/uber/aresdb/query"
+	queryCom "github.com/uber/aresdb/query/common"
 )
 
 // QueryContext contains settings common for all requests
@@ -53,7 +53,7 @@ type AQLRequest struct {
 	// in: header
 	Origin string `header:"Rpc-Caller,optional" json:"origin"`
 	// in: body
-	Body query.AQLRequest `body:""`
+	Body queryCom.AQLRequest `body:""`
 }
 
 // SQLRequest represents SQL query request. Debug mode will

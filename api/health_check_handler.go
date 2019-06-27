@@ -15,6 +15,7 @@
 package api
 
 import (
+	"github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"net/http"
@@ -41,7 +42,7 @@ func (handler *HealthCheckHandler) HealthCheck(w http.ResponseWriter, r *http.Re
 	disabled := handler.disable
 	handler.RUnlock()
 	if disabled {
-		RespondBytesWithCode(w, http.StatusServiceUnavailable, []byte("Health check disabled"))
+		common.RespondBytesWithCode(w, http.StatusServiceUnavailable, []byte("Health check disabled"))
 	} else {
 		io.WriteString(w, "OK")
 	}

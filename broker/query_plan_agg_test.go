@@ -13,7 +13,6 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
-	"github.com/uber/aresdb/query"
 	common2 "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 )
@@ -31,13 +30,13 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		Ω(q1).Should(Equal(common2.AQLQuery{
 			Table: "foo",
 			Measures: []common2.Measure{
-				{Expr: "sum(fare)"},
+				{Expr: "sum(fare)", ExprParsed: &expr.Call{Name: "sum", Args: []expr.Expr{&expr.VarRef{Val: "fare"}}}},
 			},
 		}))
 		Ω(q2).Should(Equal(common2.AQLQuery{
 			Table: "foo",
 			Measures: []common2.Measure{
-				{Expr: "count(*)"},
+				{Expr: "count(*)", ExprParsed: &expr.Call{Name: "count", Args: []expr.Expr{&expr.Wildcard{}}}},
 			},
 		}))
 		Ω(q).Should(Equal(common2.AQLQuery{
@@ -115,8 +114,8 @@ var _ = ginkgo.Describe("agg query plan", func() {
 				{Expr: "count(*)", ExprParsed: &expr.Call{Name: "count"}},
 			},
 		}
-		qc := query.AQLQueryContext{
-			Query: &q,
+		qc := QueryContext{
+			AQLQuery: &q,
 		}
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
@@ -145,8 +144,8 @@ var _ = ginkgo.Describe("agg query plan", func() {
 				{Expr: "avg(*)", ExprParsed: &expr.Call{Name: "avg"}},
 			},
 		}
-		qc := query.AQLQueryContext{
-			Query: &q,
+		qc := QueryContext{
+			AQLQuery: &q,
 		}
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}

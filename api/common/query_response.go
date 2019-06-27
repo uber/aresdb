@@ -12,20 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package query
+package common
 
 import (
 	queryCom "github.com/uber/aresdb/query/common"
 )
 
-// AQLRequest contains multiple of AQLQueries.
-type AQLRequest struct {
-	Queries []queryCom.AQLQuery `json:"queries"`
-}
-
-// AQLResponse contains results for multiple AQLQueries.
+// AQLResponse represents queryAQL response.
+// swagger:response aqlResponse
 type AQLResponse struct {
-	Results      []queryCom.AQLQueryResult `json:"results"`
-	Errors       []error                   `json:"errors,omitempty"`
-	QueryContext []*AQLQueryContext        `json:"context,omitempty"`
+	//in: body
+	Body queryCom.AQLResponse
 }

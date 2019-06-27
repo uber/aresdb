@@ -17,8 +17,9 @@ package api
 import (
 	"net/http"
 
+	"github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/memstore"
-	"github.com/uber/aresdb/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 
 	"github.com/gorilla/mux"
@@ -51,23 +52,23 @@ func (handler *DataHandler) Register(router *mux.Router, wrappers ...utils.HTTPH
 //        200: noContentResponse
 func (handler *DataHandler) PostData(w http.ResponseWriter, r *http.Request) {
 	var postDataRequest PostDataRequest
-	err := ReadRequest(r, &postDataRequest)
+	err := common.ReadRequest(r, &postDataRequest)
 	if err != nil {
-		RespondWithError(w, err)
+		common.RespondWithError(w, err)
 		return
 	}
 
-	upsertBatch, err := common.NewUpsertBatch(postDataRequest.Body)
+	upsertBatch, err := memCom.NewUpsertBatch(postDataRequest.Body)
 	if err != nil {
-		RespondWithBadRequest(w, err)
+		common.RespondWithBadRequest(w, err)
 		return
 	}
 
 	err = handler.memStore.HandleIngestion(postDataRequest.TableName, postDataRequest.Shard, upsertBatch)
 	if err != nil {
-		RespondWithError(w, err)
+		common.RespondWithError(w, err)
 		return
 	}
 
-	RespondWithJSONObject(w, nil)
+	common.RespondWithJSONObject(w, nil)
 }

@@ -220,7 +220,7 @@ func (u *UpsertBatch) GetColumnIndex(columnID int) (int, error) {
 // and the validity of the value.
 func (u *UpsertBatch) GetValue(row int, col int) (unsafe.Pointer, bool, error) {
 	if col >= len(u.columns) {
-		return nil, false, utils.StackError(nil, "Column index %d out of range %d", col, u.columns)
+		return nil, false, utils.StackError(nil, "Column index %d out of range %d", col, len(u.columns))
 	}
 	if row >= u.NumRows {
 		return nil, false, utils.StackError(nil, "Row index %d out of range %d", col, u.NumRows)
@@ -232,7 +232,7 @@ func (u *UpsertBatch) GetValue(row int, col int) (unsafe.Pointer, bool, error) {
 // GetBool returns the data (boolean type) stored at (row, col), and the validity of the value.
 func (u *UpsertBatch) GetBool(row int, col int) (bool, bool, error) {
 	if col >= len(u.columns) {
-		return false, false, utils.StackError(nil, "Column index %d out of range %d", col, u.columns)
+		return false, false, utils.StackError(nil, "Column index %d out of range %d", col, len(u.columns))
 	}
 	if row >= u.NumRows {
 		return false, false, utils.StackError(nil, "Row index %d out of range %d", col, u.NumRows)
@@ -248,7 +248,7 @@ func (u *UpsertBatch) GetBool(row int, col int) (bool, bool, error) {
 func (u *UpsertBatch) GetDataValue(row, col int) (DataValue, error) {
 	val := DataValue{}
 	if col >= len(u.columns) {
-		return val, utils.StackError(nil, "Column index %d out of range %d", col, u.columns)
+		return val, utils.StackError(nil, "Column index %d out of range %d", col, len(u.columns))
 	}
 	if row >= u.NumRows {
 		return val, utils.StackError(nil, "Row index %d out of range %d", row, u.NumRows)

@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
-	"github.com/uber/aresdb/query"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"math/rand"
@@ -78,21 +77,27 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 	return
 }
 
-func NewNonAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient, w http.ResponseWriter) (plan NonAggQueryPlan) {
-	headers := make([]string, len(qc.Query.Dimensions))
-	for i, dim := range qc.Query.Dimensions {
+func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient, w http.ResponseWriter) (plan NonAggQueryPlan) {
+	headers := make([]string, len(qc.AQLQuery.Dimensions))
+	for i, dim := range qc.AQLQuery.Dimensions {
 		headers[i] = dim.Expr
 	}
 	plan.headers = headers
 	plan.w = w
 	plan.resultChan = make(chan streamingScanNoderesult)
 
+	// assign shards to hosts
 	shards := topo.Get().ShardSet().AllIDs()
+	//hosts := topo.Get().Hosts()
+	//assignments := make(map[topology.Host][]uint32)
+	//for
+
+
 	plan.nodes = make([]*StreamingScanNode, len(shards))
 	for i, shard := range shards {
 		plan.nodes[i] = &StreamingScanNode{
 			shardID:        shard,
-			query:          *qc.Query,
+			query:          *qc.AQLQuery,
 			topo:           topo,
 			dataNodeClient: client,
 		}

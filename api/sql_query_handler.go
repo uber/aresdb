@@ -15,8 +15,9 @@
 package api
 
 import (
-	"github.com/uber/aresdb/query"
+	"github.com/uber/aresdb/api/common"
 	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/sql"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
@@ -36,10 +37,10 @@ import (
 //        200: aqlResponse
 //        400: aqlResponse
 func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
-	sqlRequest := SQLRequest{Device: -1}
+	sqlRequest := common.SQLRequest{Device: -1}
 
-	if err := ReadRequest(r, &sqlRequest); err != nil {
-		RespondWithBadRequest(w, err)
+	if err := common.ReadRequest(r, &sqlRequest); err != nil {
+		common.RespondWithBadRequest(w, err)
 		utils.GetLogger().With(
 			"error", err,
 			"statusCode", http.StatusBadRequest,
@@ -52,9 +53,9 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		aqlQueries = make([]queryCom.AQLQuery, len(sqlRequest.Body.Queries))
 		startTs := utils.Now()
 		for i, sqlQuery := range sqlRequest.Body.Queries {
-			parsedAQLQuery, err := query.Parse(sqlQuery, utils.GetLogger())
+			parsedAQLQuery, err := sql.Parse(sqlQuery, utils.GetLogger())
 			if err != nil {
-				RespondWithBadRequest(w, err)
+				common.RespondWithBadRequest(w, err)
 				return
 			}
 			aqlQueries[i] = *parsedAQLQuery
@@ -65,7 +66,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	aqlRequest := AQLRequest{
+	aqlRequest := common.AQLRequest{
 		Device:                sqlRequest.Device,
 		Verbose:               sqlRequest.Verbose + sqlRequest.Debug,
 		Debug:                 sqlRequest.Debug,
@@ -73,7 +74,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		DeviceChoosingTimeout: sqlRequest.DeviceChoosingTimeout,
 		Accept:                sqlRequest.Accept,
 		Origin:                sqlRequest.Origin,
-		Body: query.AQLRequest{
+		Body: queryCom.AQLRequest{
 			Queries: aqlQueries,
 		},
 	}
