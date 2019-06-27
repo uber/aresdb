@@ -97,6 +97,11 @@ type AQLQuery struct {
 	// Name of the main table.
 	Table string `json:"table"`
 
+	// Shards of the query
+	// If empty then all shards of the table
+	// owned by they host will be queried
+	Shards []int `json:"shards"`
+
 	// Foreign tables to be joined.
 	Joins []Join `json:"joins,omitempty"`
 

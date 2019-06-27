@@ -384,9 +384,13 @@ func (d *dataNode) Serve() {
 
 	// record time from data node started to actually serving
 	d.metrics.restartTimer.Record(utils.Now().Sub(d.startedAt))
+
+	// start batch reporter
+	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, d.memStore, d)
+	go batchStatsReporter.Run()
+
 	d.opts.InstrumentOptions().Logger().Infof("Starting HTTP server on port %d with max connection %d", d.opts.ServerConfig().Port, d.opts.ServerConfig().HTTP.MaxConnections)
 	utils.LimitServe(d.opts.ServerConfig().Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(mixedHandler(d.grpcServer, router)), d.opts.ServerConfig().HTTP)
-
 }
 
 func (d *dataNode) advertise() {
@@ -418,6 +422,7 @@ func (d *dataNode) GetTableShard(table string, shardID uint32) (*memstore.TableS
 
 func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
 	d.Lock()
+	defer d.Unlock()
 
 	tables := d.Tables()
 	var (
@@ -469,7 +474,18 @@ func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
 			}
 		}()
 	}
-	d.RUnlock()
+}
+
+// GetOwnedShards returns all shard ids the datanode owns
+func (d *dataNode) GetOwnedShards() []int {
+	d.RLock()
+	defer d.RUnlock()
+	shardIDs := d.shardSet.AllIDs()
+	ids := make([]int, len(shardIDs))
+	for i, shardID := range shardIDs {
+		ids[i] = int(shardID)
+	}
+	return ids
 }
 
 func (d *dataNode) Bootstrap() error {
@@ -490,7 +506,7 @@ func (d *dataNode) newHandlers() datanodeHandlers {
 	return datanodeHandlers{
 		schemaHandler:      api.NewSchemaHandler(d.metaStore),
 		enumHandler:        api.NewEnumHandler(d.memStore, d.metaStore),
-		queryHandler:       api.NewQueryHandler(d.memStore, d.opts.ServerConfig().Query),
+		queryHandler:       api.NewQueryHandler(d.memStore, d, d.opts.ServerConfig().Query),
 		dataHandler:        api.NewDataHandler(d.memStore),
 		nodeModuleHandler:  http.StripPrefix("/node_modules/", http.FileServer(http.Dir("./api/ui/node_modules/"))),
 		debugStaticHandler: http.StripPrefix("/static/", utils.NoCache(http.FileServer(http.Dir("./api/ui/debug/")))),

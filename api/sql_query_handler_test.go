@@ -17,6 +17,7 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"github.com/uber/aresdb/cluster/topology"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -62,9 +63,12 @@ var _ = ginkgo.Describe("QueryHandler SQL", func() {
 	var memStore *memMocks.MemStore
 	ginkgo.BeforeEach(func() {
 		memStore = CreateMemStore(testSchema, 0, nil, CreateMockDiskStore())
-		queryHandler := NewQueryHandler(memStore, common.QueryConfig{
-			DeviceMemoryUtilization: 1.0,
-		})
+		queryHandler := NewQueryHandler(
+			memStore,
+			topology.NewStaticShardOwner([]int{0}),
+			common.QueryConfig{
+				DeviceMemoryUtilization: 1.0,
+			})
 		testRouter := mux.NewRouter()
 		testRouter.HandleFunc("/sql", queryHandler.HandleSQL).Methods(http.MethodGet, http.MethodPost)
 		testServer = httptest.NewUnstartedServer(WithPanicHandling(testRouter))

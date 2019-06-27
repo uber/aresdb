@@ -15,7 +15,7 @@
 package memstore
 
 import (
-	metaCom "github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/utils"
 	"time"
 )
@@ -24,16 +24,16 @@ import (
 type BatchStatsReporter struct {
 	intervalInSeconds int
 	memStore          MemStore
-	metaStore         metaCom.MetaStore
+	shardOwner        topology.ShardOwner
 	stopChan          chan struct{}
 }
 
 // NewBatchStatsReporter create a new BatchStatsReporter instance
-func NewBatchStatsReporter(intervalInSeconds int, memStore MemStore, metaStore metaCom.MetaStore) *BatchStatsReporter {
+func NewBatchStatsReporter(intervalInSeconds int, memStore MemStore, shardOwner topology.ShardOwner) *BatchStatsReporter {
 	return &BatchStatsReporter{
 		intervalInSeconds: intervalInSeconds,
 		memStore:          memStore,
-		metaStore:         metaStore,
+		shardOwner:        shardOwner,
 		stopChan:          make(chan struct{}),
 	}
 }
@@ -76,10 +76,7 @@ func (batchStats *BatchStatsReporter) reportBatchStat(batchIDs map[int]string) {
 	tables := batchStats.memStore.GetSchemas()
 
 	for table, schema := range tables {
-		shards, err := batchStats.metaStore.GetOwnedShards(table)
-		if err != nil {
-			continue
-		}
+		shards := batchStats.shardOwner.GetOwnedShards()
 		for _, shardID := range shards {
 			shard, err := batchStats.memStore.GetTableShard(table, shardID)
 			if err != nil || shard == nil {

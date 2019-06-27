@@ -39,9 +39,6 @@ type MetaStore interface {
 	// the return value is: redoLogFile, offset, lastReadBatchID, lastReadBatchOffset
 	GetSnapshotProgress(table string, shard int) (int64, uint32, int32, uint32, error)
 
-	// shard ownership.
-	GetOwnedShards(table string) ([]int, error)
-
 	// Set the watcher for table shard ownership change events.
 	// Should only be called once.
 	// Returns an event channel that emits desired ownership states,

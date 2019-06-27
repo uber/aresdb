@@ -137,11 +137,6 @@ func (dm *diskMetaStore) GetTable(name string) (*common.Table, error) {
 	return dm.readSchemaFile(name)
 }
 
-// GetOwnedShards returns the list of shards that are owned by this instance.
-func (dm *diskMetaStore) GetOwnedShards(table string) ([]int, error) {
-	return []int{0}, nil
-}
-
 // GetEnumDict gets the enum cases for given tableName and columnName
 func (dm *diskMetaStore) GetEnumDict(tableName, columnName string) ([]string, error) {
 	dm.RLock()

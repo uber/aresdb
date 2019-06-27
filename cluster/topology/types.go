@@ -195,6 +195,11 @@ type DynamicOptions interface {
 	InstrumentOptions() utils.Options
 }
 
+// ShardOwner represents an entity that owned shards
+type ShardOwner interface {
+	GetOwnedShards() []int
+}
+
 // MapProvider is an interface that can provide
 // a topology map.
 type MapProvider interface {

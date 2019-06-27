@@ -17,6 +17,7 @@ package memstore
 import (
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/memstore/common"
 
 	. "github.com/onsi/gomega"
@@ -28,7 +29,7 @@ var _ = ginkgo.Describe("batch stats should work", func() {
 	metaStore := &metaMocks.MetaStore{}
 	memStore := createMemStore("abc", 0, []common.DataType{common.Uint32, common.Uint8}, []int{0}, 10, true, false, metaStore, CreateMockDiskStore())
 
-	batchStatsReporter := NewBatchStatsReporter(1, memStore, metaStore)
+	batchStatsReporter := NewBatchStatsReporter(1, memStore, topology.NewStaticShardOwner([]int{0}))
 
 	ginkgo.It("batch stats report should work", func() {
 		metaStore.On("GetOwnedShards", mock.Anything).Return([]int{0}, nil)

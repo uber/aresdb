@@ -56,7 +56,7 @@ func (qe *queryExecutorImpl) Execute(ctx context.Context, sqlQuery string, w htt
 	qc := &query.AQLQueryContext{
 		Query: aqlQuery,
 	}
-	qc.Compile(qe.tableSchemaReader)
+	qc.Compile(qe.tableSchemaReader, topology.NewTopologyShardOwner(qe.topo))
 	if qc.Error != nil {
 		err = qc.Error
 		return

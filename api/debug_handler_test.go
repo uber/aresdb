@@ -17,6 +17,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/uber/aresdb/cluster/topology"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -225,10 +226,13 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 			"OpenVectorPartyFileForWrite", mock.Anything,
 			mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(writer, nil)
 
-		queryHandler := NewQueryHandler(memStore, common.QueryConfig{
-			DeviceMemoryUtilization: 0.9,
-			DeviceChoosingTimeout:   5,
-		})
+		queryHandler := NewQueryHandler(
+			memStore,
+			topology.NewStaticShardOwner([]int{0}),
+			common.QueryConfig{
+				DeviceMemoryUtilization: 0.9,
+				DeviceChoosingTimeout:   5,
+			})
 
 		healthCheckHandler := NewHealthCheckHandler()
 		debugHandler = NewDebugHandler(memStore, mockMetaStore, queryHandler, healthCheckHandler)
