@@ -48,26 +48,40 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		mockShardSet := shardMock.ShardSet{}
 		mockTopo.On("Get").Return(&mockMap)
 		mockMap.On("ShardSet").Return(&mockShardSet)
-		mockShardIds := []uint32{0, 1, 2}
+		mockShardIds := []uint32{0, 1, 2, 3, 4, 5}
 		mockShardSet.On("AllIDs").Return(mockShardIds)
-		mockHost1 := topoMock.Host{}
-		mockHost2 := topoMock.Host{}
-		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{&mockHost1, &mockHost2}, nil)
-		mockMap.On("RouteShard", uint32(1)).Return([]topology.Host{&mockHost1, &mockHost2}, nil)
-		mockMap.On("RouteShard", uint32(2)).Return([]topology.Host{&mockHost1, &mockHost2}, nil)
+		mockHost1 := &topoMock.Host{}
+		mockHost2 := &topoMock.Host{}
+		mockHost3 := &topoMock.Host{}
+		mockHosts := []topology.Host{
+			mockHost1,
+			mockHost2,
+			mockHost3,
+		}
+		mockMap.On("Hosts").Return(mockHosts)
+		//host1: 0,1,2,3
+		//host2: 4,5,0,1
+		//host3: 2,3,4,5
+		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(1)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(2)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(3)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(4)).Return([]topology.Host{mockHost2, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(5)).Return([]topology.Host{mockHost2, mockHost3}, nil)
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
 		w := httptest.NewRecorder()
-		plan := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
+		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
+		Ω(err).Should(BeNil())
 
-		Ω(plan.nodes).Should(HaveLen(len(mockShardIds)))
+		Ω(plan.nodes).Should(HaveLen(len(mockHosts)))
 		Ω(plan.headers).Should(Equal([]string{"field1", "field2"}))
 
 		bs := []byte(`["foo", "1"],["bar", "2"']`)
 		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
 
-		err := plan.Execute(context.TODO())
+		err = plan.Execute(context.TODO())
 		Ω(err).Should(BeNil())
 
 		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo", "1"],["bar", "2"'],["foo", "1"],["bar", "2"'],["foo", "1"],["bar", "2"']]}`))

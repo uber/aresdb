@@ -27,6 +27,7 @@ func CalculateShardAssignment(topo topology.Topology) (as map[topology.Host][]ui
 	shardIDs := m.ShardSet().AllIDs()
 
 	// initialize host map
+	as = make(map[topology.Host][]uint32)
 	for _, host := range hosts {
 		as[host] = []uint32{}
 	}

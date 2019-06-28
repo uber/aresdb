@@ -31,15 +31,29 @@ var _ = ginkgo.Describe("broker util", func() {
 		mockMap.On("ShardSet").Return(&mockShardSet)
 		mockShardIds := []uint32{0, 1, 2, 3, 4, 5}
 		mockShardSet.On("AllIDs").Return(mockShardIds)
+		mockHost1 := &topoMock.Host{}
+		mockHost2 := &topoMock.Host{}
+		mockHost3 := &topoMock.Host{}
 		mockHosts := []topology.Host{
-			&topoMock.Host{},
-			&topoMock.Host{},
-			&topoMock.Host{},
+			mockHost1,
+			mockHost2,
+			mockHost3,
 		}
-		mockMap.On("Hosts").Return(&mockHosts)
+		mockMap.On("Hosts").Return(mockHosts)
+		//host1: 0,1,2,3
+		//host2: 4,5,0,1
+		//host3: 2,3,4,5
+		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(1)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(2)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(3)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(4)).Return([]topology.Host{mockHost2, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(5)).Return([]topology.Host{mockHost2, mockHost3}, nil)
 
 		res, err := CalculateShardAssignment(&mockTopo)
 		Ω(err).Should(BeNil())
-		Ω(res).Should(BeNil())
+		Ω(res[mockHost1]).Should(HaveLen(2))
+		Ω(res[mockHost2]).Should(HaveLen(2))
+		Ω(res[mockHost3]).Should(HaveLen(2))
 	})
 })

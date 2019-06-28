@@ -29,7 +29,6 @@ import (
 type StreamingScanNode struct {
 	query          queryCom.AQLQuery
 	host           topology.Host
-	topo           topology.Topology
 	dataNodeClient dataCli.DataNodeQueryClient
 }
 
@@ -88,7 +87,6 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli
 		plan.nodes[i] = &StreamingScanNode{
 			query:          q,
 			host:           host,
-			topo:           topo,
 			dataNodeClient: client,
 		}
 		i++

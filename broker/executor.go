@@ -60,13 +60,20 @@ func (qe *queryExecutorImpl) Execute(ctx context.Context, sqlQuery string, w htt
 }
 
 func (qe *queryExecutorImpl) executeNonAggQuery(ctx context.Context, qc *QueryContext, w http.ResponseWriter) (err error) {
-	plan := NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient, w)
-	err = plan.Execute(ctx)
-	return
+	var plan NonAggQueryPlan
+	plan, err = NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient, w)
+	if err != nil {
+		return
+	}
+	return plan.Execute(ctx)
 }
 
 func (qe *queryExecutorImpl) executeAggQuery(ctx context.Context, qc *QueryContext, w http.ResponseWriter) (err error) {
-	plan := NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
+	var plan AggQueryPlan
+	plan, err = NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
+	if err != nil {
+		return
+	}
 	var result queryCom.AQLQueryResult
 	result, err = plan.Execute(ctx)
 	if err != nil {
