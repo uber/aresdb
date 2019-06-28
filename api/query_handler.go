@@ -16,6 +16,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/cluster/topology"
 	"net/http"
 
 	"github.com/uber/aresdb/memstore"
@@ -31,14 +32,16 @@ import (
 
 // QueryHandler handles query execution.
 type QueryHandler struct {
+	shardOwner    topology.ShardOwner
 	memStore      memstore.MemStore
 	deviceManager *query.DeviceManager
 }
 
 // NewQueryHandler creates a new QueryHandler.
-func NewQueryHandler(memStore memstore.MemStore, cfg common.QueryConfig) *QueryHandler {
+func NewQueryHandler(memStore memstore.MemStore, shardOwner topology.ShardOwner, cfg common.QueryConfig) *QueryHandler {
 	return &QueryHandler{
 		memStore:      memStore,
+		shardOwner:    shardOwner,
 		deviceManager: query.NewDeviceManager(cfg),
 	}
 }
@@ -152,7 +155,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 			ReturnHLLData: false,
 			DataOnly:      aqlRequest.DataOnly != 0,
 		}
-		qc.Compile(handler.memStore)
+		qc.Compile(handler.memStore, handler.shardOwner)
 		qc.ResponseWriter = w
 		if qc.Error != nil {
 			err = qc.Error
@@ -201,7 +204,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 
 		var qc *query.AQLQueryContext
 		for i, aqlQuery := range aqlRequest.Body.Queries {
-			qc, statusCode = handleQuery(handler.memStore, handler.deviceManager, aqlRequest, aqlQuery)
+			qc, statusCode = handleQuery(handler.memStore, handler.shardOwner, handler.deviceManager, aqlRequest, aqlQuery)
 			if aqlRequest.Verbose > 0 {
 				requestResponseWriter.ReportQueryContext(qc)
 			}
@@ -227,12 +230,12 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest AQLRequest, w http.Res
 	return
 }
 
-func handleQuery(memStore memstore.MemStore, deviceManager *query.DeviceManager, aqlRequest AQLRequest, aqlQuery queryCom.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
+func handleQuery(memStore memstore.MemStore, shardOwner topology.ShardOwner, deviceManager *query.DeviceManager, aqlRequest AQLRequest, aqlQuery queryCom.AQLQuery) (qc *query.AQLQueryContext, statusCode int) {
 	qc = &query.AQLQueryContext{
 		Query:         &aqlQuery,
 		ReturnHLLData: aqlRequest.Accept == utils.HTTPContentTypeHyperLogLog,
 	}
-	qc.Compile(memStore)
+	qc.Compile(memStore, shardOwner)
 
 	for tableName := range qc.TableSchemaByName {
 		utils.GetRootReporter().GetChildCounter(map[string]string{

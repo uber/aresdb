@@ -18,6 +18,7 @@ package query
 import "C"
 
 import (
+	"github.com/uber/aresdb/cluster/topology"
 	"sort"
 	"strings"
 	"unsafe"
@@ -58,7 +59,7 @@ const (
 
 // Compile compiles AQLQueryContext for data feeding and query
 // execution. Caller should check for AQLQueryContext.Error.
-func (qc *AQLQueryContext) Compile(tableSchemaReader memCom.TableSchemaReader) {
+func (qc *AQLQueryContext) Compile(tableSchemaReader memCom.TableSchemaReader, shardOwner topology.ShardOwner) {
 	// processTimezone might append additional joins
 	qc.processTimezone()
 	if qc.Error != nil {
@@ -66,7 +67,7 @@ func (qc *AQLQueryContext) Compile(tableSchemaReader memCom.TableSchemaReader) {
 	}
 
 	// Read schema for every table used.
-	qc.readSchema(tableSchemaReader)
+	qc.readSchema(tableSchemaReader, shardOwner)
 	defer qc.releaseSchema()
 	if qc.Error != nil {
 		return
@@ -482,7 +483,7 @@ func (qc *AQLQueryContext) processTimezone() {
 	}
 }
 
-func (qc *AQLQueryContext) readSchema(tableSchemaReader memCom.TableSchemaReader) {
+func (qc *AQLQueryContext) readSchema(tableSchemaReader memCom.TableSchemaReader, shardOwner topology.ShardOwner) {
 	qc.TableScanners = make([]*TableScanner, 1+len(qc.Query.Joins))
 	qc.TableIDByAlias = make(map[string]int)
 	qc.TableSchemaByName = make(map[string]*memCom.TableSchema)
@@ -500,7 +501,15 @@ func (qc *AQLQueryContext) readSchema(tableSchemaReader memCom.TableSchemaReader
 	schema.RLock()
 	qc.TableScanners[0] = &TableScanner{}
 	qc.TableScanners[0].Schema = schema
-	qc.TableScanners[0].Shards = []int{0}
+
+	// use user query specified shards
+	// or all shards it owns when user did not specify
+	if len(qc.Query.Shards) == 0 {
+		qc.TableScanners[0].Shards = shardOwner.GetOwnedShards()
+	} else {
+		qc.TableScanners[0].Shards = qc.Query.Shards
+	}
+
 	qc.TableScanners[0].ColumnUsages = make(map[int]columnUsage)
 	if schema.Schema.IsFactTable {
 		// Archiving cutoff filter usage for fact table.
@@ -524,12 +533,19 @@ func (qc *AQLQueryContext) readSchema(tableSchemaReader memCom.TableSchemaReader
 
 		qc.TableScanners[1+i] = &TableScanner{}
 		qc.TableScanners[1+i].Schema = schema
-		qc.TableScanners[1+i].Shards = []int{0}
 		qc.TableScanners[1+i].ColumnUsages = make(map[int]columnUsage)
 		if schema.Schema.IsFactTable {
+			// we will only support fact to fact join within same shard
+			qc.TableScanners[1+i].Shards = qc.TableScanners[0].Shards
 			// Archiving cutoff filter usage for fact table.
 			qc.TableScanners[1+i].ColumnUsages[0] = columnUsedByLiveBatches
+		} else {
+			// for fact to dimension table join
+			// we can assume shard zero for dimension table
+			// since dimension table is not sharded
+			qc.TableScanners[1+i].Shards = []int{0}
 		}
+
 
 		alias := join.Alias
 		if alias == "" {

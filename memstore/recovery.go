@@ -15,6 +15,7 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/cluster/topology"
 	"sync"
 
 	"math"
@@ -213,13 +214,9 @@ func (m *memStoreImpl) playRedoLogs() {
 
 // InitShards loads/recovers data for shards initially owned by the current instance.
 // It also watches Shard ownership change events and handles them in a separate goroutine.
-func (m *memStoreImpl) InitShards(schedulerOff bool) {
-	for table, schema := range m.TableSchemas {
-		shards, err := m.metaStore.GetOwnedShards(table)
-		if err != nil {
-			utils.GetLogger().Panic(err)
-		}
-
+func (m *memStoreImpl) InitShards(schedulerOff bool, shardOwner topology.ShardOwner) {
+	for _, schema := range m.TableSchemas {
+		shards := shardOwner.GetOwnedShards()
 		for _, shard := range shards {
 			if err := m.LoadShard(schema, shard, false); err != nil {
 				utils.GetLogger().Panic(err)

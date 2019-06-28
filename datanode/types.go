@@ -33,9 +33,6 @@ type DataNode interface {
 	// ShardSet returns the set of shards currently associated with this datanode.
 	ShardSet() shard.ShardSet
 
-	// AssignShardSet assigns shard set to the data node
-	AssignShardSet(shard.ShardSet)
-
 	// Tables
 	Tables() []string
 

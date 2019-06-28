@@ -17,6 +17,7 @@ package query
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/uber/aresdb/cluster/topology"
 
 	"time"
 	"unsafe"
@@ -152,7 +153,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				},
 			},
 		}
-		qc.readSchema(store)
+		qc.readSchema(store, topology.NewStaticShardOwner([]int{0}))
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.TableIDByAlias).Should(Equal(map[string]int{
 			"trips": 0,
@@ -187,7 +188,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				Table: "tripsy",
 			},
 		}
-		qc.readSchema(store)
+		qc.readSchema(store, topology.NewStaticShardOwner([]int{0}))
 		Ω(qc.Error).ShouldNot(BeNil())
 		qc.releaseSchema()
 
@@ -199,7 +200,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				},
 			},
 		}
-		qc.readSchema(store)
+		qc.readSchema(store, topology.NewStaticShardOwner([]int{0}))
 		Ω(qc.Error).ShouldNot(BeNil())
 		qc.releaseSchema()
 	})
@@ -2039,7 +2040,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 		qc.Query = query
-		qc.readSchema(store)
+		qc.readSchema(store, topology.NewStaticShardOwner([]int{0}))
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
@@ -2187,7 +2188,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 		qc.Query = query
-		qc.readSchema(store)
+		qc.readSchema(store, topology.NewStaticShardOwner([]int{0}))
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
@@ -2261,7 +2262,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 		qc.Query = query
-		qc.readSchema(store)
+		qc.readSchema(store, topology.NewStaticShardOwner([]int{0}))
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).Should(BeNil())
@@ -2334,7 +2335,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 		qc.Query = query
-		qc.readSchema(store)
+		qc.readSchema(store, topology.NewStaticShardOwner([]int{0}))
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).ShouldNot(BeNil())
@@ -2375,7 +2376,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			},
 		}
 		qc.Query = query
-		qc.readSchema(store)
+		qc.readSchema(store, topology.NewStaticShardOwner([]int{0}))
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).ShouldNot(BeNil())

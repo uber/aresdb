@@ -178,7 +178,8 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	enumHandler := api.NewEnumHandler(memStore, metaStore)
 
 	// create query hanlder.
-	queryHandler := api.NewQueryHandler(memStore, cfg.Query)
+	// static shard owner with non distributed version
+	queryHandler := api.NewQueryHandler(memStore, topology.NewStaticShardOwner([]int{0}), cfg.Query)
 
 	// create health check handler.
 	healthCheckHandler := api.NewHealthCheckHandler()
@@ -209,7 +210,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	// Init shards.
 	utils.GetLogger().Infof("Initializing shards from local DiskStore %s", cfg.RootPath)
-	memStore.InitShards(cfg.SchedulerOff)
+	memStore.InitShards(cfg.SchedulerOff, topology.NewStaticShardOwner([]int{0}))
 
 	// Start serving.
 	dataHandler := api.NewDataHandler(memStore)
@@ -239,7 +240,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	serverRestartTimer.Stop()
 
-	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, metaStore)
+	batchStatsReporter := memstore.NewBatchStatsReporter(5*60, memStore, topology.NewStaticShardOwner([]int{0}))
 	go batchStatsReporter.Run()
 
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
