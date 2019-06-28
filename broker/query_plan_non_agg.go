@@ -17,18 +17,18 @@ package broker
 import (
 	"context"
 	"encoding/json"
+	"github.com/uber/aresdb/broker/util"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
-	"math/rand"
 	"net/http"
 )
 
 // StreamingScanNode implements StreamingPlanNode
 type StreamingScanNode struct {
 	query          queryCom.AQLQuery
-	shardID        uint32
+	host           topology.Host
 	topo           topology.Topology
 	dataNodeClient dataCli.DataNodeQueryClient
 }
@@ -38,28 +38,14 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 	for trial < rpcRetries {
 		trial++
 
-		hosts, routeErr := ssn.topo.Get().RouteShard(ssn.shardID)
-		if routeErr != nil {
-			utils.GetLogger().With(
-				"error", routeErr,
-				"shard", ssn.shardID,
-				"trial", trial).Error("route shard failed")
-			err = utils.StackError(routeErr, "route shard failed")
-			continue
-		}
-		// pick random routable host
-		idx := rand.Intn(len(hosts))
-		host := hosts[idx]
-
 		var fetchErr error
 
-		utils.GetLogger().With("host", host, "query", ssn.query).Debug("sending query to datanode")
-		bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, host, ssn.query)
+		utils.GetLogger().With("host", ssn.host, "query", ssn.query).Debug("sending query to datanode")
+		bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.host, ssn.query)
 		if fetchErr != nil {
 			utils.GetLogger().With(
 				"error", fetchErr,
-				"shard", ssn.shardID,
-				"host", host,
+				"host", ssn.host,
 				"query", ssn.query,
 				"trial", trial).Error("fetch from datanode failed")
 			err = utils.StackError(fetchErr, "fetch from datanode failed")
@@ -67,8 +53,7 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 		}
 		utils.GetLogger().With(
 			"trial", trial,
-			"shard", ssn.shardID,
-			"host", host).Info("fetch from datanode succeeded")
+			"host", ssn.host).Info("fetch from datanode succeeded")
 		break
 	}
 	if bs != nil {
@@ -77,7 +62,7 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 	return
 }
 
-func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient, w http.ResponseWriter) (plan NonAggQueryPlan) {
+func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient, w http.ResponseWriter) (plan NonAggQueryPlan, err error) {
 	headers := make([]string, len(qc.AQLQuery.Dimensions))
 	for i, dim := range qc.AQLQuery.Dimensions {
 		headers[i] = dim.Expr
@@ -86,21 +71,27 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli
 	plan.w = w
 	plan.resultChan = make(chan streamingScanNoderesult)
 
-	// assign shards to hosts
-	shards := topo.Get().ShardSet().AllIDs()
-	//hosts := topo.Get().Hosts()
-	//assignments := make(map[topology.Host][]uint32)
-	//for
+	var assignment map[topology.Host][]uint32
+	assignment, err = util.CalculateShardAssignment(topo)
+	if err != nil {
+		return
+	}
 
-
-	plan.nodes = make([]*StreamingScanNode, len(shards))
-	for i, shard := range shards {
+	plan.nodes = make([]*StreamingScanNode, len(assignment))
+	i := 0
+	for host, shards := range assignment {
+		// make deep copy
+		q := *qc.AQLQuery
+		for _, shard := range shards {
+			q.Shards = append(q.Shards, int(shard))
+		}
 		plan.nodes[i] = &StreamingScanNode{
-			shardID:        shard,
-			query:          *qc.AQLQuery,
+			query:          q,
+			host:           host,
 			topo:           topo,
 			dataNodeClient: client,
 		}
+		i++
 	}
 
 	return
