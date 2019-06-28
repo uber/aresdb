@@ -15,12 +15,12 @@
 package redolog
 
 import (
+	"encoding/json"
 	"github.com/Shopify/sarama"
-	metaCom "github.com/uber/aresdb/metastore/common"
-	"sync"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
-	"encoding/json"
+	metaCom "github.com/uber/aresdb/metastore/common"
+	"sync"
 )
 
 // compositeRedologManager is the class to take data ingestion from all data source (kafka, http, etc.), write to local redolog when necessary,
@@ -38,7 +38,7 @@ type compositeRedoLogManager struct {
 }
 
 // NewCompositeRedoLogManager create compositeRedoLogManager oibject
-func newCompositeRedoLogManager(namespace, table, surfix string, shard int, tableConfig *metaCom.TableConfig,
+func newCompositeRedoLogManager(namespace, table, suffix string, shard int, tableConfig *metaCom.TableConfig,
 	consumer sarama.Consumer, diskStore diskstore.DiskStore,
 	commitFunc func(string, int, int64) error,
 	checkPointFunc func(string, int, int64) error,
@@ -47,7 +47,7 @@ func newCompositeRedoLogManager(namespace, table, surfix string, shard int, tabl
 
 	fileRedoLogManager := newFileRedoLogManager(int64(tableConfig.RedoLogRotationInterval), int64(tableConfig.MaxRedoLogFileSize), diskStore, table, shard)
 
-	kafkaReader := newKafkaRedoLogManager(namespace, table, surfix, shard, consumer, false, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
+	kafkaReader := newKafkaRedoLogManager(namespace, table, suffix, shard, consumer, false, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
 
 	manager := &compositeRedoLogManager{
 		Table:               table,
@@ -86,7 +86,6 @@ func (s *compositeRedoLogManager) Iterator() (NextUpsertFunc, error) {
 func (s *compositeRedoLogManager) WaitForRecoveryDone() {
 	s.fileRedoLogManager.WaitForRecoveryDone()
 }
-
 
 // AppendToRedoLog append upsert batch into redolog file or commit offset
 func (s *compositeRedoLogManager) AppendToRedoLog(upsertBatch *common.UpsertBatch) (int64, uint32) {

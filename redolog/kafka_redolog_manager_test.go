@@ -21,9 +21,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
-	metaMocks "github.com/uber/aresdb/metastore/mocks"
 )
 
 var _ = ginkgo.Describe("kafka redolog manager", func() {
@@ -105,7 +105,7 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 
 		err = redoManager.CheckpointRedolog(1, 1, 0)
 		Ω(err).Should(BeNil())
-		Ω(commitedOffset).Should(ContainElement(int64(maxBatchesPerFile-1)))
+		Ω(commitedOffset).Should(ContainElement(int64(maxBatchesPerFile - 1)))
 		redoManager.Close()
 
 		batchInfo := nextUpsertBatch()

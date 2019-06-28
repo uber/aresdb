@@ -65,11 +65,11 @@ func NewKafkaRedoLogManagerMaster(cfg *common.RedoLogConfig, diskStore diskstore
 	}
 
 	return &RedoLogManagerMaster{
-		RedoLogConfig:      cfg,
-		diskStore:          diskStore,
-		managers:           make(map[string]map[int]RedologManager),
-		metaStore:          metaStore,
-		consumer:           consumer,
+		RedoLogConfig: cfg,
+		diskStore:     diskStore,
+		managers:      make(map[string]map[int]RedologManager),
+		metaStore:     metaStore,
+		consumer:      consumer,
 	}, nil
 }
 

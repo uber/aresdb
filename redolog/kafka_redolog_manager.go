@@ -49,26 +49,26 @@ type kafkaRedoLogManager struct {
 
 	done chan struct{}
 
-	commitFunc     func(string, int, int64) error
-	checkPointFunc func(string, int, int64) error
-	getCommitOffsetFunc func(string, int) (int64, error)
+	commitFunc              func(string, int, int64) error
+	checkPointFunc          func(string, int, int64) error
+	getCommitOffsetFunc     func(string, int) (int64, error)
 	getCheckpointOffsetFunc func(string, int) (int64, error)
 
 	// used for external blocking check if recovery done
-	recoveryChan       chan bool
-	recoveryDone       bool
+	recoveryChan chan bool
+	recoveryDone bool
 	// batch recovered counts
 	batchRecovered int
 	batchReceived  int
 }
 
 // newKafkaRedoLogManager creates kafka redolog manager
-func newKafkaRedoLogManager(namespace, table, surfix string, shard int, consumer sarama.Consumer, includeRecovery bool,
+func newKafkaRedoLogManager(namespace, table, suffix string, shard int, consumer sarama.Consumer, includeRecovery bool,
 	commitFunc func(string, int, int64) error,
 	checkPointFunc func(string, int, int64) error,
 	getCommitOffsetFunc func(string, int) (int64, error),
 	getCheckpointOffsetFunc func(string, int) (int64, error)) *kafkaRedoLogManager {
-	topic := utils.GetTopicFromTable(namespace, table, surfix)
+	topic := utils.GetTopicFromTable(namespace, table, suffix)
 	return &kafkaRedoLogManager{
 		TableName:               table,
 		Shard:                   shard,
@@ -159,12 +159,12 @@ func (k *kafkaRedoLogManager) addMessage(fileID int64, kafkaOffset int64, size i
 	}
 	k.TotalRedologSize += size
 
-	if (k.recoveryDone) {
+	if k.recoveryDone {
 		k.batchReceived++
 	} else {
 		k.batchRecovered++
 	}
-	if k.batchReceived%commitInterval == (commitInterval-1) {
+	if k.batchReceived%commitInterval == (commitInterval - 1) {
 		k.commitFunc(k.TableName, k.Shard, kafkaOffset)
 	}
 }

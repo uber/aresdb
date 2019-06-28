@@ -399,6 +399,10 @@ func (d *dataNode) advertise() {
 		SetZone(d.opts.ServerConfig().InstanceConfig.Etcd.Zone).
 		SetName(utils.DataNodeServiceName(d.opts.ServerConfig().InstanceConfig.Namespace))
 
+	d.clusterServices.SetMetadata(serviceID, services.NewMetadata().
+		SetHeartbeatInterval(time.Duration(d.opts.ServerConfig().InstanceConfig.HeartbeatConfig.Interval)*time.Second).
+		SetLivenessInterval(time.Duration(d.opts.ServerConfig().InstanceConfig.HeartbeatConfig.Timeout)*time.Second))
+
 	placementInstance := placement.NewInstance().SetID(d.hostID)
 	ad := services.NewAdvertisement().
 		SetServiceID(serviceID).
