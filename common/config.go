@@ -92,6 +92,8 @@ type KafkaRedoLogConfig struct {
 	Enabled bool `yaml:"enabled"`
 	// kafka brokers
 	Brokers []string `yaml:"brokers"`
+	// topic name surfix
+	TopicSuffix string `yaml:"surfix""`
 }
 
 // Configs related to data import and redolog option

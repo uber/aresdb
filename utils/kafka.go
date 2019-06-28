@@ -20,6 +20,10 @@ import "fmt"
 const aresRedologKafkaTopicPrefix = "ares-redolog"
 
 // GetTopicFromTable get the topic name for namespace and table name
-func GetTopicFromTable(namespace, table string) string {
-	return fmt.Sprintf("%s-%s-%s", aresRedologKafkaTopicPrefix, namespace, table)
+func GetTopicFromTable(namespace, table, surfix string) string {
+	if surfix == "" {
+		return fmt.Sprintf("%s-%s-%s", aresRedologKafkaTopicPrefix, namespace, table)
+	} else {
+		return fmt.Sprintf("%s-%s-%s-%s", aresRedologKafkaTopicPrefix, namespace, table, surfix)
+	}
 }

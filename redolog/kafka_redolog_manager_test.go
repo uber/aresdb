@@ -78,10 +78,10 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 		Ω(err).Should(BeNil())
 		Ω(r.(*kafkaRedoLogManager)).ShouldNot(BeNil())
 
-		redoManager := newKafkaRedoLogManager(namespace, table, shard, consumer, true, commitFunc, checkPointFunc, getCommitFunc, getCheckpointFunc)
+		redoManager := newKafkaRedoLogManager(namespace, table, "staging", shard, consumer, true, commitFunc, checkPointFunc, getCommitFunc, getCheckpointFunc)
 		// create 2 * maxBatchesPerFile number of messages
 		for i := 0; i < 2*maxBatchesPerFile; i++ {
-			consumer.ExpectConsumePartition(utils.GetTopicFromTable(namespace, table), 0, mocks.AnyOffset).
+			consumer.ExpectConsumePartition(utils.GetTopicFromTable(namespace, table, "staging"), 0, mocks.AnyOffset).
 				YieldMessage(&sarama.ConsumerMessage{
 					Value: upsertBatchBytes,
 				})

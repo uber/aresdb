@@ -84,7 +84,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 		buffer, _ := memCom.NewUpsertBatchBuilder().ToByteArray()
 		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		for i := 0; i < 2*maxBatchesPerFile; i++ {
-			f.consumer.(*kafkaMocks.Consumer).ExpectConsumePartition(utils.GetTopicFromTable(namespace, table), int32(shard), kafkaMocks.AnyOffset).
+			f.consumer.(*kafkaMocks.Consumer).ExpectConsumePartition(utils.GetTopicFromTable(namespace, table, ""), int32(shard), kafkaMocks.AnyOffset).
 				YieldMessage(&sarama.ConsumerMessage{
 					Value: upsertBatch.GetBuffer(),
 				})
@@ -168,7 +168,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 
 		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		for i := 0; i < 2*maxBatchesPerFile; i++ {
-			f.consumer.(*kafkaMocks.Consumer).ExpectConsumePartition(utils.GetTopicFromTable(namespace, table), int32(shard), kafkaMocks.AnyOffset).
+			f.consumer.(*kafkaMocks.Consumer).ExpectConsumePartition(utils.GetTopicFromTable(namespace, table, ""), int32(shard), kafkaMocks.AnyOffset).
 				YieldMessage(&sarama.ConsumerMessage{
 					Value: upsertBatch.GetBuffer(),
 				})

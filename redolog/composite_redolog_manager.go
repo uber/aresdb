@@ -38,7 +38,7 @@ type compositeRedoLogManager struct {
 }
 
 // NewCompositeRedoLogManager create compositeRedoLogManager oibject
-func newCompositeRedoLogManager(namespace, table string, shard int, tableConfig *metaCom.TableConfig,
+func newCompositeRedoLogManager(namespace, table, surfix string, shard int, tableConfig *metaCom.TableConfig,
 	consumer sarama.Consumer, diskStore diskstore.DiskStore,
 	commitFunc func(string, int, int64) error,
 	checkPointFunc func(string, int, int64) error,
@@ -47,7 +47,7 @@ func newCompositeRedoLogManager(namespace, table string, shard int, tableConfig 
 
 	fileRedoLogManager := newFileRedoLogManager(int64(tableConfig.RedoLogRotationInterval), int64(tableConfig.MaxRedoLogFileSize), diskStore, table, shard)
 
-	kafkaReader := newKafkaRedoLogManager(namespace, table, shard, consumer, false, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
+	kafkaReader := newKafkaRedoLogManager(namespace, table, surfix, shard, consumer, false, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
 
 	manager := &compositeRedoLogManager{
 		Table:               table,

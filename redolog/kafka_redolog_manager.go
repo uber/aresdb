@@ -63,12 +63,12 @@ type kafkaRedoLogManager struct {
 }
 
 // newKafkaRedoLogManager creates kafka redolog manager
-func newKafkaRedoLogManager(namespace, table string, shard int, consumer sarama.Consumer, includeRecovery bool,
+func newKafkaRedoLogManager(namespace, table, surfix string, shard int, consumer sarama.Consumer, includeRecovery bool,
 	commitFunc func(string, int, int64) error,
 	checkPointFunc func(string, int, int64) error,
 	getCommitOffsetFunc func(string, int) (int64, error),
 	getCheckpointOffsetFunc func(string, int) (int64, error)) *kafkaRedoLogManager {
-	topic := utils.GetTopicFromTable(namespace, table)
+	topic := utils.GetTopicFromTable(namespace, table, surfix)
 	return &kafkaRedoLogManager{
 		TableName:               table,
 		Shard:                   shard,

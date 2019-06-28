@@ -98,9 +98,9 @@ func (m *RedoLogManagerMaster) NewRedologManager(table string, shard int, tableC
 		getCheckpointOffsetFunc := m.metaStore.GetRedoLogCheckpointOffset
 
 		if m.RedoLogConfig.DiskConfig.Disabled {
-			manager = newKafkaRedoLogManager(m.RedoLogConfig.Namespace, table, shard, m.consumer, true, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
+			manager = newKafkaRedoLogManager(m.RedoLogConfig.Namespace, table, m.RedoLogConfig.KafkaConfig.TopicSuffix, shard, m.consumer, true, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
 		} else {
-			manager = newCompositeRedoLogManager(m.RedoLogConfig.Namespace, table, shard, tableConfig, m.consumer, m.diskStore, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
+			manager = newCompositeRedoLogManager(m.RedoLogConfig.Namespace, table, m.RedoLogConfig.KafkaConfig.TopicSuffix, shard, tableConfig, m.consumer, m.diskStore, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
 		}
 	} else {
 		manager = newFileRedoLogManager(int64(tableConfig.RedoLogRotationInterval), int64(tableConfig.MaxRedoLogFileSize), m.diskStore, table, shard)
