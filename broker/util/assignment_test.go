@@ -12,37 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package broker
+package util
 
 import (
-	"context"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
 	shardMock "github.com/uber/aresdb/cluster/shard/mocks"
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
-	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
-	"github.com/uber/aresdb/query/common"
-	"net/http/httptest"
 )
 
-var _ = ginkgo.Describe("non agg query plan", func() {
+var _ = ginkgo.Describe("broker util", func() {
 	ginkgo.It("should work happy path", func() {
-		q := common.AQLQuery{
-			Table: "table1",
-			Measures: []common.Measure{
-				{Expr: "1"},
-			},
-			Dimensions: []common.Dimension{
-				{Expr: "field1"},
-				{Expr: "field2"},
-			},
-		}
-		qc := QueryContext{
-			AQLQuery:              &q,
-			IsNonAggregationQuery: true,
-		}
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
 		mockShardSet := shardMock.ShardSet{}
@@ -69,21 +50,10 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		mockMap.On("RouteShard", uint32(4)).Return([]topology.Host{mockHost2, mockHost3}, nil)
 		mockMap.On("RouteShard", uint32(5)).Return([]topology.Host{mockHost2, mockHost3}, nil)
 
-		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
-
-		w := httptest.NewRecorder()
-		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
+		res, err := CalculateShardAssignment(&mockTopo)
 		Ω(err).Should(BeNil())
-
-		Ω(plan.nodes).Should(HaveLen(len(mockHosts)))
-		Ω(plan.headers).Should(Equal([]string{"field1", "field2"}))
-
-		bs := []byte(`["foo", "1"],["bar", "2"']`)
-		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
-
-		err = plan.Execute(context.TODO())
-		Ω(err).Should(BeNil())
-
-		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo", "1"],["bar", "2"'],["foo", "1"],["bar", "2"'],["foo", "1"],["bar", "2"']]}`))
+		Ω(res[mockHost1]).Should(HaveLen(2))
+		Ω(res[mockHost2]).Should(HaveLen(2))
+		Ω(res[mockHost3]).Should(HaveLen(2))
 	})
 })

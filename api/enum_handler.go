@@ -17,6 +17,7 @@ package api
 import (
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/memstore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
@@ -53,15 +54,15 @@ func (handler *EnumHandler) ListEnumCases(w http.ResponseWriter, r *http.Request
 	var listEnumCasesRequest ListEnumCasesRequest
 	var listEnumCasesResponse ListEnumCasesResponse
 
-	err := ReadRequest(r, &listEnumCasesRequest)
+	err := common.ReadRequest(r, &listEnumCasesRequest)
 	if err != nil {
-		RespondWithError(w, err)
+		common.RespondWithError(w, err)
 		return
 	}
 
 	tableSchema, err := handler.memStore.GetSchema(listEnumCasesRequest.TableName)
 	if err != nil {
-		RespondWithError(w, ErrTableDoesNotExist)
+		common.RespondWithError(w, ErrTableDoesNotExist)
 		return
 	}
 
@@ -69,14 +70,14 @@ func (handler *EnumHandler) ListEnumCases(w http.ResponseWriter, r *http.Request
 	enumDict, columnExist := tableSchema.EnumDicts[listEnumCasesRequest.ColumnName]
 	if !columnExist {
 		tableSchema.RUnlock()
-		RespondWithError(w, ErrColumnDoesNotExist)
+		common.RespondWithError(w, ErrColumnDoesNotExist)
 		return
 	}
 
 	listEnumCasesResponse.JSONBuffer, err = json.Marshal(enumDict.ReverseDict)
 	tableSchema.RUnlock()
 
-	RespondWithJSONBytes(w, listEnumCasesResponse.JSONBuffer, err)
+	common.RespondWithJSONBytes(w, listEnumCasesResponse.JSONBuffer, err)
 }
 
 // AddEnumCase swagger:route POST /schema/tables/{table}/columns/{column}/enum-cases addEnumCase
@@ -90,9 +91,9 @@ func (handler *EnumHandler) AddEnumCase(w http.ResponseWriter, r *http.Request) 
 	var addEnumCaseRequest AddEnumCaseRequest
 	var addEnumCaseResponse AddEnumCaseResponse
 
-	err := ReadRequest(r, &addEnumCaseRequest)
+	err := common.ReadRequest(r, &addEnumCaseRequest)
 	if err != nil {
-		RespondWithError(w, err)
+		common.RespondWithError(w, err)
 		return
 	}
 
@@ -100,9 +101,9 @@ func (handler *EnumHandler) AddEnumCase(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		// TODO: need mapping from metaStore error to api error
 		// for metaStore error might also be user error
-		RespondWithError(w, err)
+		common.RespondWithError(w, err)
 		return
 	}
 
-	RespondWithJSONObject(w, addEnumCaseResponse.Body)
+	common.RespondWithJSONObject(w, addEnumCaseResponse.Body)
 }

@@ -9,7 +9,7 @@ type Dimension struct {
 	// The SQL expression for computing the dimension.
 	// Expr can be empty when TimeBucketizer is specified, which implies the
 	// designated time column from the main table is used as the expresssion.
-	Expr       string `json:"sqlExpression"`
+	Expr       string    `json:"sqlExpression"`
 	ExprParsed expr.Expr `json:"-"`
 
 	// Decides how to bucketize a timestamp Dimension before grouping by.
@@ -49,12 +49,12 @@ type Measure struct {
 	// Alias/name of the measure, to be referenced by other (derived) measures.
 	Alias string `json:"alias,omitempty"`
 	// The SQL expression for computing the measure.
-	Expr       string `json:"sqlExpression"`
+	Expr       string    `json:"sqlExpression"`
 	ExprParsed expr.Expr `json:"-"`
 
 	// Row level filters to apply for this measure.
 	// The filters are ANDed togther.
-	Filters       []string `json:"rowFilters,omitempty"`
+	Filters       []string    `json:"rowFilters,omitempty"`
 	FiltersParsed []expr.Expr `json:"-"`
 }
 
@@ -67,7 +67,7 @@ type Join struct {
 	Alias string `json:"alias"`
 
 	// Condition expressions to be ANDed together for the join.
-	Conditions       []string `json:"conditions"`
+	Conditions       []string    `json:"conditions"`
 	ConditionsParsed []expr.Expr `json:"-"`
 }
 
@@ -112,7 +112,7 @@ type AQLQuery struct {
 	Measures []Measure `json:"measures"`
 
 	// Row level filters to apply for all measures. The filters are ANDed together.
-	Filters       []string `json:"rowFilters,omitempty"`
+	Filters       []string    `json:"rowFilters,omitempty"`
 	FiltersParsed []expr.Expr `json:"-"`
 
 	// Syntax sugar for specifying a time based range filter.
@@ -150,4 +150,16 @@ type AQLQuery struct {
 
 func (d Dimension) IsTimeDimension() bool {
 	return d.TimeBucketizer != "" || d.TimeUnit != ""
+}
+
+// AQLRequest contains multiple of AQLQueries.
+type AQLRequest struct {
+	Queries []AQLQuery `json:"queries"`
+}
+
+// AQLResponse contains results for multiple AQLQueries.
+type AQLResponse struct {
+	Results      []AQLQueryResult `json:"results"`
+	Errors       []error          `json:"errors,omitempty"`
+	QueryContext []string         `json:"context,omitempty"`
 }

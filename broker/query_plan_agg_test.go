@@ -13,7 +13,6 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
-	"github.com/uber/aresdb/query"
 	common2 "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 )
@@ -31,13 +30,13 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		Ω(q1).Should(Equal(common2.AQLQuery{
 			Table: "foo",
 			Measures: []common2.Measure{
-				{Expr: "sum(fare)"},
+				{Expr: "sum(fare)", ExprParsed: &expr.Call{Name: "sum", Args: []expr.Expr{&expr.VarRef{Val: "fare"}}}},
 			},
 		}))
 		Ω(q2).Should(Equal(common2.AQLQuery{
 			Table: "foo",
 			Measures: []common2.Measure{
-				{Expr: "count(*)"},
+				{Expr: "count(*)", ExprParsed: &expr.Call{Name: "count", Args: []expr.Expr{&expr.Wildcard{}}}},
 			},
 		}))
 		Ω(q).Should(Equal(common2.AQLQuery{
@@ -115,27 +114,46 @@ var _ = ginkgo.Describe("agg query plan", func() {
 				{Expr: "count(*)", ExprParsed: &expr.Call{Name: "count"}},
 			},
 		}
-		qc := query.AQLQueryContext{
-			Query: &q,
+		qc := QueryContext{
+			AQLQuery: &q,
 		}
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
 		mockShardSet := shardMock.ShardSet{}
 		mockTopo.On("Get").Return(&mockMap)
 		mockMap.On("ShardSet").Return(&mockShardSet)
-		mockShardIds := []uint32{0, 1, 2}
+		mockShardIds := []uint32{0, 1, 2, 3, 4, 5}
 		mockShardSet.On("AllIDs").Return(mockShardIds)
+		mockHost1 := &topoMock.Host{}
+		mockHost2 := &topoMock.Host{}
+		mockHost3 := &topoMock.Host{}
+		mockHosts := []topology.Host{
+			mockHost1,
+			mockHost2,
+			mockHost3,
+		}
+		mockMap.On("Hosts").Return(mockHosts)
+		//host1: 0,1,2,3
+		//host2: 4,5,0,1
+		//host3: 2,3,4,5
+		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(1)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(2)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(3)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(4)).Return([]topology.Host{mockHost2, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(5)).Return([]topology.Host{mockHost2, mockHost3}, nil)
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		plan := NewAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		plan, err := NewAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
 		mn, ok := plan.root.(*mergeNodeImpl)
 		Ω(ok).Should(BeTrue())
 		Ω(mn.aggType).Should(Equal(common.Count))
-		Ω(mn.children).Should(HaveLen(len(mockShardIds)))
+		Ω(mn.children).Should(HaveLen(len(mockHosts)))
 		sn, ok := mn.children[0].(*BlockingScanNode)
 		Ω(ok).Should(BeTrue())
-		Ω(sn.shardID).Should(Equal(uint32(0)))
+		Ω(sn.query.Shards).Should(HaveLen(2))
 	})
 
 	ginkgo.It("NewAggQueryPlan should work for avg query", func() {
@@ -145,20 +163,39 @@ var _ = ginkgo.Describe("agg query plan", func() {
 				{Expr: "avg(*)", ExprParsed: &expr.Call{Name: "avg"}},
 			},
 		}
-		qc := query.AQLQueryContext{
-			Query: &q,
+		qc := QueryContext{
+			AQLQuery: &q,
 		}
 		mockTopo := topoMock.Topology{}
 		mockMap := topoMock.Map{}
 		mockShardSet := shardMock.ShardSet{}
 		mockTopo.On("Get").Return(&mockMap)
 		mockMap.On("ShardSet").Return(&mockShardSet)
-		mockShardIds := []uint32{0, 1, 2}
+		mockShardIds := []uint32{0, 1, 2, 3, 4, 5}
 		mockShardSet.On("AllIDs").Return(mockShardIds)
+		mockHost1 := &topoMock.Host{}
+		mockHost2 := &topoMock.Host{}
+		mockHost3 := &topoMock.Host{}
+		mockHosts := []topology.Host{
+			mockHost1,
+			mockHost2,
+			mockHost3,
+		}
+		mockMap.On("Hosts").Return(mockHosts)
+		//host1: 0,1,2,3
+		//host2: 4,5,0,1
+		//host3: 2,3,4,5
+		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(1)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(2)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(3)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(4)).Return([]topology.Host{mockHost2, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(5)).Return([]topology.Host{mockHost2, mockHost3}, nil)
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		plan := NewAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		plan, err := NewAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
 		mn, ok := plan.root.(*mergeNodeImpl)
 		Ω(ok).Should(BeTrue())
 		Ω(mn.aggType).Should(Equal(common.Avg))
@@ -166,11 +203,11 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		sumn, ok := mn.children[0].(*mergeNodeImpl)
 		Ω(ok).Should(BeTrue())
 		Ω(sumn.aggType).Should(Equal(common.Sum))
-		Ω(sumn.children).Should(HaveLen(len(mockShardIds)))
+		Ω(sumn.children).Should(HaveLen(len(mockHosts)))
 		countn, ok := mn.children[1].(*mergeNodeImpl)
 		Ω(ok).Should(BeTrue())
 		Ω(countn.aggType).Should(Equal(common.Count))
-		Ω(countn.children).Should(HaveLen(len(mockShardIds)))
+		Ω(countn.children).Should(HaveLen(len(mockHosts)))
 	})
 
 	ginkgo.It("BlockingScanNode Execute should work happy path", func() {
@@ -192,8 +229,6 @@ var _ = ginkgo.Describe("agg query plan", func() {
 
 		sn := BlockingScanNode{
 			query:          q,
-			shardID:        0,
-			topo:           &mockTopo,
 			dataNodeClient: &mockDatanodeCli,
 		}
 
@@ -221,37 +256,12 @@ var _ = ginkgo.Describe("agg query plan", func() {
 
 		sn := BlockingScanNode{
 			query:          q,
-			shardID:        0,
-			topo:           &mockTopo,
 			dataNodeClient: &mockDatanodeCli,
 		}
 
 		res, err := sn.Execute(context.TODO())
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(myResult))
-	})
-
-	ginkgo.It("BlockingScanNode Execute should fail routing error", func() {
-		q := common2.AQLQuery{
-			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
-		}
-
-		mockTopo := topoMock.Topology{}
-		mockMap := topoMock.Map{}
-		mockTopo.On("Get").Return(&mockMap)
-		mockMap.On("RouteShard", uint32(0)).Return(nil, errors.New("routing error")).Times(rpcRetries)
-
-		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
-
-		sn := BlockingScanNode{
-			query:          q,
-			shardID:        0,
-			topo:           &mockTopo,
-			dataNodeClient: &mockDatanodeCli,
-		}
-
-		_, err := sn.Execute(context.TODO())
-		Ω(err.Error()).Should(ContainSubstring("route shard failed"))
 	})
 
 	ginkgo.It("BlockingScanNode Execute should fail datanode error", func() {
@@ -272,8 +282,6 @@ var _ = ginkgo.Describe("agg query plan", func() {
 
 		sn := BlockingScanNode{
 			query:          q,
-			shardID:        0,
-			topo:           &mockTopo,
 			dataNodeClient: &mockDatanodeCli,
 		}
 
@@ -301,8 +309,6 @@ var _ = ginkgo.Describe("agg query plan", func() {
 
 		sn := BlockingScanNode{
 			query:          q,
-			shardID:        0,
-			topo:           &mockTopo,
 			dataNodeClient: &mockDatanodeCli,
 		}
 

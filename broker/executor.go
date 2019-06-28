@@ -20,15 +20,13 @@ import (
 	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
-	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/query"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	queryCom "github.com/uber/aresdb/query/common"
-	"github.com/uber/aresdb/utils"
 	"net/http"
 )
 
 // NewQueryExecutor creates a new QueryExecutor
-func NewQueryExecutor(tsr memCom.TableSchemaReader, topo topology.Topology, client dataCli.DataNodeQueryClient) common.QueryExecutor {
+func NewQueryExecutor(tsr metaCom.TableSchemaReader, topo topology.Topology, client dataCli.DataNodeQueryClient) common.QueryExecutor {
 	return &queryExecutorImpl{
 		tableSchemaReader: tsr,
 		topo:              topo,
@@ -38,25 +36,17 @@ func NewQueryExecutor(tsr memCom.TableSchemaReader, topo topology.Topology, clie
 
 // queryExecutorImpl will be reused across all queries
 type queryExecutorImpl struct {
-	tableSchemaReader memCom.TableSchemaReader
+	tableSchemaReader metaCom.TableSchemaReader
 	topo              topology.Topology
 	dataNodeClient    dataCli.DataNodeQueryClient
 }
 
 func (qe *queryExecutorImpl) Execute(ctx context.Context, sqlQuery string, w http.ResponseWriter) (err error) {
-	// parse
-	var aqlQuery *queryCom.AQLQuery
-	aqlQuery, err = query.Parse(sqlQuery, utils.GetLogger())
-	if err != nil {
-		return
-	}
+	// TODO: add timeout
 
 	// compile
-	// TODO: add timeout
-	qc := &query.AQLQueryContext{
-		Query: aqlQuery,
-	}
-	qc.Compile(qe.tableSchemaReader, topology.NewTopologyShardOwner(qe.topo))
+	qc := NewQueryContext(sqlQuery, w)
+	qc.Compile(qe.tableSchemaReader)
 	if qc.Error != nil {
 		err = qc.Error
 		return
@@ -69,14 +59,21 @@ func (qe *queryExecutorImpl) Execute(ctx context.Context, sqlQuery string, w htt
 	return qe.executeAggQuery(ctx, qc, w)
 }
 
-func (qe *queryExecutorImpl) executeNonAggQuery(ctx context.Context, qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
-	plan := NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient, w)
-	err = plan.Execute(ctx)
-	return
+func (qe *queryExecutorImpl) executeNonAggQuery(ctx context.Context, qc *QueryContext, w http.ResponseWriter) (err error) {
+	var plan NonAggQueryPlan
+	plan, err = NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient, w)
+	if err != nil {
+		return
+	}
+	return plan.Execute(ctx)
 }
 
-func (qe *queryExecutorImpl) executeAggQuery(ctx context.Context, qc *query.AQLQueryContext, w http.ResponseWriter) (err error) {
-	plan := NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
+func (qe *queryExecutorImpl) executeAggQuery(ctx context.Context, qc *QueryContext, w http.ResponseWriter) (err error) {
+	var plan AggQueryPlan
+	plan, err = NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
+	if err != nil {
+		return
+	}
 	var result queryCom.AQLQueryResult
 	result, err = plan.Execute(ctx)
 	if err != nil {

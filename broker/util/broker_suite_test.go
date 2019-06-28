@@ -12,20 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package query
+package util
 
 import (
-	queryCom "github.com/uber/aresdb/query/common"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"testing"
+
+	"github.com/onsi/ginkgo/reporters"
 )
 
-// AQLRequest contains multiple of AQLQueries.
-type AQLRequest struct {
-	Queries []queryCom.AQLQuery `json:"queries"`
-}
-
-// AQLResponse contains results for multiple AQLQueries.
-type AQLResponse struct {
-	Results      []queryCom.AQLQueryResult `json:"results"`
-	Errors       []error                   `json:"errors,omitempty"`
-	QueryContext []*AQLQueryContext        `json:"context,omitempty"`
+func TestDataNode(t *testing.T) {
+	RegisterFailHandler(Fail)
+	junitReporter := reporters.NewJUnitReporter("junit.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Ares Broker Util Suite", []Reporter{junitReporter})
 }

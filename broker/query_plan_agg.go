@@ -18,13 +18,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/uber/aresdb/broker/common"
+	"github.com/uber/aresdb/broker/util"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
-	"github.com/uber/aresdb/query"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
-	"math/rand"
 	"strings"
 	"sync"
 )
@@ -135,8 +134,7 @@ type BlockingScanNode struct {
 	blockingPlanNodeImpl
 
 	query          queryCom.AQLQuery
-	shardID        uint32
-	topo           topology.Topology
+	host           topology.Host
 	dataNodeClient dataCli.DataNodeQueryClient
 }
 
@@ -147,27 +145,13 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 	for trial < rpcRetries {
 		trial++
 
-		hosts, routeErr := sn.topo.Get().RouteShard(sn.shardID)
-		if routeErr != nil {
-			utils.GetLogger().With(
-				"error", routeErr,
-				"shard", sn.shardID,
-				"trial", trial).Error("route shard failed")
-			err = utils.StackError(routeErr, "route shard failed")
-			continue
-		}
-		// pick random routable host
-		idx := rand.Intn(len(hosts))
-		host := hosts[idx]
-
 		var fetchErr error
-		utils.GetLogger().With("host", host, "query", sn.query).Debug("sending query to datanode")
-		result, fetchErr = sn.dataNodeClient.Query(ctx, host, sn.query, isHll)
+		utils.GetLogger().With("host", sn.host, "query", sn.query).Debug("sending query to datanode")
+		result, fetchErr = sn.dataNodeClient.Query(ctx, sn.host, sn.query, isHll)
 		if fetchErr != nil {
 			utils.GetLogger().With(
 				"error", fetchErr,
-				"shard", sn.shardID,
-				"host", host,
+				"host", sn.host,
 				"query", sn.query,
 				"trial", trial).Error("fetch from datanode failed")
 			err = utils.StackError(fetchErr, "fetch from datanode failed")
@@ -175,8 +159,7 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 		}
 		utils.GetLogger().With(
 			"trial", trial,
-			"shard", sn.shardID,
-			"host", host).Info("fetch from datanode succeeded")
+			"host", sn.host).Info("fetch from datanode succeeded")
 		break
 	}
 	if result != nil {
@@ -191,24 +174,28 @@ type AggQueryPlan struct {
 }
 
 // NewAggQueryPlan creates a new agg query plan
-func NewAggQueryPlan(qc *query.AQLQueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan AggQueryPlan) {
+func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan AggQueryPlan, err error) {
 	var root common.MergeNode
 
-	shards := topo.Get().ShardSet().AllIDs()
+	var assignments map[topology.Host][]uint32
+	assignments, err = util.CalculateShardAssignment(topo)
+	if err != nil {
+		return
+	}
 
 	// compiler already checked that only 1 measure exists, which is a expr.Call
-	measure := qc.Query.Measures[0].ExprParsed.(*expr.Call)
+	measure := qc.AQLQuery.Measures[0].ExprParsed.(*expr.Call)
 	agg := common.CallNameToAggType[measure.Name]
 	// TODO revisit how to implement AVG. maybe add rollingAvg to datanode so only 1 call per shard needed
 	switch agg {
 	case common.Avg:
 		root = NewMergeNode(common.Avg)
-		sumQuery, countQuery := splitAvgQuery(*qc.Query)
+		sumQuery, countQuery := splitAvgQuery(*qc.AQLQuery)
 		root.Add(
-			buildSubPlan(common.Sum, sumQuery, shards, topo, client),
-			buildSubPlan(common.Count, countQuery, shards, topo, client))
+			buildSubPlan(common.Sum, sumQuery, assignments, topo, client),
+			buildSubPlan(common.Count, countQuery, assignments, topo, client))
 	default:
-		root = buildSubPlan(agg, *qc.Query, shards, topo, client)
+		root = buildSubPlan(agg, *qc.AQLQuery, assignments, topo, client)
 	}
 
 	plan = AggQueryPlan{
@@ -234,6 +221,7 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 		},
 	}
 	sumq.Measures[0].Expr = strings.Replace(strings.ToLower(sumq.Measures[0].Expr), "avg", "sum", 1)
+	sumq.Measures[0].ExprParsed, _ = expr.ParseExpr(sumq.Measures[0].Expr)
 
 	countq = q
 	countq.Measures = []queryCom.Measure{
@@ -244,16 +232,20 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 		},
 	}
 	countq.Measures[0].Expr = "count(*)"
+	countq.Measures[0].ExprParsed, _ = expr.ParseExpr(countq.Measures[0].Expr)
 	return
 }
 
-func buildSubPlan(agg common.AggType, q queryCom.AQLQuery, shardIDs []uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
+func buildSubPlan(agg common.AggType, q queryCom.AQLQuery, assignments map[topology.Host][]uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
-	for _, shardID := range shardIDs {
+	for host, shardIDs := range assignments {
+		// make deep copy
+		for _, shard := range shardIDs {
+			q.Shards = append(q.Shards, int(shard))
+		}
 		root.Add(&BlockingScanNode{
 			query:          q,
-			shardID:        shardID,
-			topo:           topo,
+			host:           host,
 			dataNodeClient: client,
 		})
 	}

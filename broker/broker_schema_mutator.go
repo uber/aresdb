@@ -23,9 +23,7 @@ import (
 	"sync"
 )
 
-// BrokerSchemaMutator implements 2 interfaces
-//  - metastore.TableSchemaMutator needed by SchemaFetchJob
-//  - memstore.TableSchemaReader needed by compiler
+// BrokerSchemaMutator implements metastore.TableSchemaMutator
 type BrokerSchemaMutator struct {
 	sync.RWMutex
 
@@ -117,13 +115,4 @@ func (b *BrokerSchemaMutator) DeleteColumn(table string, column string) (err err
 	oldSchema.Columns[target].Deleted = true
 	b.tables[table] = memCom.NewTableSchema(&oldSchema)
 	return
-}
-
-// ====  memstore/common.TableSchemaReader ====
-func (b *BrokerSchemaMutator) GetSchema(table string) (*memCom.TableSchema, error) {
-	return b.tables[table], nil
-}
-
-func (b *BrokerSchemaMutator) GetSchemas() map[string]*memCom.TableSchema {
-	return b.tables
 }

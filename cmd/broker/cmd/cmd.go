@@ -105,7 +105,7 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 
 	var topo topology.Topology
 
-	serviceName := utils.DataNodeServiceName(clusterName)
+	serviceName := utils.BrokerServiceName(clusterName)
 
 	cfg.Etcd.Service = serviceName
 	configServiceCli, err := cfg.Etcd.NewClient(

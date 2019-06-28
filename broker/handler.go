@@ -17,7 +17,7 @@ package broker
 import (
 	"context"
 	"github.com/gorilla/mux"
-	"github.com/uber/aresdb/api"
+	apiCom "github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
@@ -39,15 +39,15 @@ func (handler *QueryHandler) Register(router *mux.Router, wrappers ...utils.HTTP
 
 func (handler *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) {
 	var queryReqeust BrokerQueryRequest
-	err := api.ReadRequest(r, &queryReqeust)
+	err := apiCom.ReadRequest(r, &queryReqeust)
 	if err != nil {
-		api.RespondWithError(w, err)
+		apiCom.RespondWithError(w, err)
 		return
 	}
 
 	err = handler.exec.Execute(context.TODO(), queryReqeust.Body.Query, w)
 	if err != nil {
-		api.RespondWithError(w, err)
+		apiCom.RespondWithError(w, err)
 		return
 	}
 	// TODO: logging and metrics

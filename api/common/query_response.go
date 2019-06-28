@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package api
+package common
 
 import (
-	"github.com/uber/aresdb/query"
+	queryCom "github.com/uber/aresdb/query/common"
 )
 
 // AQLResponse represents queryAQL response.
 // swagger:response aqlResponse
 type AQLResponse struct {
 	//in: body
-	Body query.AQLResponse
+	Body queryCom.AQLResponse
 }
