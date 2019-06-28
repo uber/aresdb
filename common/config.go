@@ -59,6 +59,14 @@ type GatewayConfig struct {
 	Controller *ControllerConfig `yaml:"controller,omitempty"`
 }
 
+// HeartbeatConfig is the config for timeout and check interval with etcd
+type HeartbeatConfig struct {
+	// heartbeat timeout value
+	Timeout int `yaml:"timeout"`
+	// heartbeat interval value
+	Interval int `yaml:"interval"`
+}
+
 // InstanceConfig defines the config related to this instance in distributed cluster
 type InstanceConfig struct {
 	// ID represents the instance id of this datanode
@@ -67,6 +75,8 @@ type InstanceConfig struct {
 	Namespace string `yaml:"namespace"`
 	// etcd client required config
 	Etcd etcd.Configuration `yaml:"etcd"`
+	// etcd heartbeat config
+	HeartbeatConfig HeartbeatConfig `yaml:"heartbeat"`
 }
 
 // ClusterConfig is the config for starting current instance with cluster mode
@@ -92,6 +102,8 @@ type KafkaRedoLogConfig struct {
 	Enabled bool `yaml:"enabled"`
 	// kafka brokers
 	Brokers []string `yaml:"brokers"`
+	// topic name suffix
+	TopicSuffix string `yaml:"suffix"`
 }
 
 // Configs related to data import and redolog option

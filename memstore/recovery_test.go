@@ -205,6 +205,7 @@ var _ = ginkgo.Describe("recovery", func() {
 					"host2",
 				},
 				Enabled: true,
+				TopicSuffix: "staging",
 			},
 		}
 
@@ -226,7 +227,7 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		for i := 0; i < 10; i++ {
-			consumer.(*mocks.Consumer).ExpectConsumePartition(utils.GetTopicFromTable("ns1", tableName), int32(1), mocks.AnyOffset).
+			consumer.(*mocks.Consumer).ExpectConsumePartition(utils.GetTopicFromTable("ns1", tableName, "staging"), int32(1), mocks.AnyOffset).
 				YieldMessage(&sarama.ConsumerMessage{
 					Value: upsertBatch.GetBuffer(),
 				})
