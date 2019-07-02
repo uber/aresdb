@@ -63,8 +63,6 @@ var (
 	ErrInsufficientColumnCount = errors.New("Insufficient column count")
 	// ErrReusingColumnIDNotAllowed indicates attempt to reuse id of deleted column
 	ErrReusingColumnIDNotAllowed = errors.New("Reusing column id not allowed")
-	// ErrNewColumnWithDeletion indicates adding a new column with deleted flag on
-	ErrNewColumnWithDeletion = errors.New("Can not add column with deleted flag on")
 	// ErrIllegalChangeSortColumn indicates illegal changes on sort columns
 	ErrIllegalChangeSortColumn = errors.New("Illegal changes on sort columns")
 	// ErrDuplicatedColumn indicates a column is used more than onces in sort or pk columns

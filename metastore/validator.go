@@ -85,10 +85,6 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 	for columnID, column := range table.Columns {
 		if !column.Deleted {
 			nonDeletedColumnsCount++
-		} else {
-			if creation {
-				return ErrNewColumnWithDeletion
-			}
 		}
 		if colNameDedup[column.Name] {
 			return ErrDuplicatedColumnName
@@ -220,13 +216,6 @@ func (v tableSchemaValidatorImpl) validateSchemaUpdate(newTable, oldTable *commo
 			oldCol.DisableAutoExpand != newCol.DisableAutoExpand ||
 			oldCol.HLLConfig != newCol.HLLConfig {
 			return ErrSchemaUpdateNotAllowed
-		}
-	}
-
-	for ; i < len(newTable.Columns); i++ {
-		newCol := newTable.Columns[i]
-		if newCol.Deleted {
-			return ErrNewColumnWithDeletion
 		}
 	}
 	// end validate columns
