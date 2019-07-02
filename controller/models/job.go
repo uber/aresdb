@@ -55,6 +55,7 @@ type KafkaConfig struct {
 type JobConfig struct {
 	Name            string      `json:"job"`
 	Version         int         `json:"version"`
+	NumShards       int         `json:"numShards,omitempty"`
 	AresTableConfig TableConfig `json:"aresTableConfig"`
 	StreamingConfig KafkaConfig `json:"streamConfig"`
 }

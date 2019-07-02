@@ -61,9 +61,6 @@ type JobAresConfig map[string]*JobConfig
 // JobConfig wraps job config controller
 type JobConfig struct {
 	models.JobConfig
-	// NumShards is the number of shards defined in this aresCluster
-	NumShards uint32 `json:"numShards" yaml:"numShards"`
-
 	// maps from column name to columnID for convenience
 	columnDict      map[string]int
 	destinations    map[string]*DestinationConfig
