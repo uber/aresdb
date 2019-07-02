@@ -36,7 +36,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	var writer io.WriteCloser
 	var reader io.ReadCloser
 	var buf *bytes.Buffer
-	m := getFactory().NewMockMemStore()
+	m := GetFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
 
 	ginkgo.BeforeEach(func() {
@@ -73,7 +73,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	})
 
 	ginkgo.It("mode 0 vector should work", func() {
-		mode0Int8, err := getFactory().ReadArchiveVectorParty("serializer/mode0_int8", nil)
+		mode0Int8, err := GetFactory().ReadArchiveVectorParty("serializer/mode0_int8", nil)
 		Ω(err).Should(BeNil())
 		defer mode0Int8.SafeDestruct()
 
@@ -91,7 +91,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	})
 
 	ginkgo.It("mode 1 vector should work", func() {
-		mode1Bool, err := getFactory().ReadArchiveVectorParty("serializer/mode1_bool", nil)
+		mode1Bool, err := GetFactory().ReadArchiveVectorParty("serializer/mode1_bool", nil)
 		Ω(err).Should(BeNil())
 		defer mode1Bool.SafeDestruct()
 
@@ -109,7 +109,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	})
 
 	ginkgo.It("mode 2 vector should work", func() {
-		mode2Int8, err := getFactory().ReadArchiveVectorParty("serializer/mode2_int8", nil)
+		mode2Int8, err := GetFactory().ReadArchiveVectorParty("serializer/mode2_int8", nil)
 		Ω(err).Should(BeNil())
 		defer mode2Int8.SafeDestruct()
 
@@ -127,7 +127,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	})
 
 	ginkgo.It("mode 3 vector should work", func() {
-		mode3Int8, err := getFactory().ReadArchiveVectorParty("serializer/mode3_int8", nil)
+		mode3Int8, err := GetFactory().ReadArchiveVectorParty("serializer/mode3_int8", nil)
 		Ω(err).Should(BeNil())
 		defer mode3Int8.SafeDestruct()
 
@@ -148,7 +148,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	})
 
 	ginkgo.It("mode 0 vector snapshot should work", func() {
-		mode0Int8, err := getFactory().ReadLiveVectorParty("serializer/mode0_int8")
+		mode0Int8, err := GetFactory().ReadLiveVectorParty("serializer/mode0_int8")
 		Ω(err).Should(BeNil())
 		defer mode0Int8.SafeDestruct()
 
@@ -166,7 +166,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	})
 
 	ginkgo.It("mode 1 vector snapshot should work", func() {
-		mode1Bool, err := getFactory().ReadLiveVectorParty("serializer/mode1_bool")
+		mode1Bool, err := GetFactory().ReadLiveVectorParty("serializer/mode1_bool")
 		Ω(err).Should(BeNil())
 		defer mode1Bool.SafeDestruct()
 
@@ -184,7 +184,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	})
 
 	ginkgo.It("mode 2 vector snapshot should work", func() {
-		mode2Int8, err := getFactory().ReadLiveVectorParty("serializer/mode2_int8")
+		mode2Int8, err := GetFactory().ReadLiveVectorParty("serializer/mode2_int8")
 		Ω(err).Should(BeNil())
 		defer mode2Int8.SafeDestruct()
 
@@ -202,7 +202,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 	})
 
 	ginkgo.It("mode 3 vector snapshot should work", func() {
-		mode3Int8, err := getFactory().ReadLiveVectorParty("serializer/mode3_int8")
+		mode3Int8, err := GetFactory().ReadLiveVectorParty("serializer/mode3_int8")
 		Ω(err).Should(BeNil())
 		defer mode3Int8.SafeDestruct()
 
@@ -239,7 +239,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		diskStore := &mocks.DiskStore{}
 
 		shard := NewTableShard(schema, nil, diskStore,
-			NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32), 0, m.options)
+			NewHostMemoryManager(GetFactory().NewMockMemStore(), 1<<32), 0, m.options)
 		archiveSerializer := NewVectorPartyArchiveSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID, 0, 0, 0, 0)
 		snapshotSerializer := NewVectorPartySnapshotSerializer(shard, 0, 0, 0, 0, 0, 0)
 

@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		os.Remove(testBasePath)
 		os.MkdirAll(testBasePath, 0777)
 
-		c1, err = getFactory().ReadArchiveVectorParty("host-memory-manager/c1", &sync.RWMutex{})
+		c1, err = GetFactory().ReadArchiveVectorParty("host-memory-manager/c1", &sync.RWMutex{})
 		Ω(err).Should(BeNil())
 
 		buf = &bytes.Buffer{}
@@ -888,14 +888,14 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		// Call tryEviction explictly
 		// Pin vp so eviction will fail fast
 		testMemStore.TableShards[testTableName][0].ArchiveStore.GetCurrentVersion().
-			Batches[testBatchID1].Columns[0].(*archiveVectorParty).pins = 1
+			Batches[testBatchID1].Columns[0].(*archiveVectorParty).Pins = 1
 		testHostMemoryManager.tryEviction()
 		Ω(testHostMemoryManager.managedMemorySize).Should(Equal(int64(800)))
 		Ω(len(testHostMemoryManager.batchInfosByColumn[testTableName])).Should(Equal(1))
 
 		// Release vp so eviction will happen
 		testMemStore.TableShards[testTableName][0].ArchiveStore.GetCurrentVersion().
-			Batches[testBatchID1].Columns[0].(*archiveVectorParty).pins = 0
+			Batches[testBatchID1].Columns[0].(*archiveVectorParty).Pins = 0
 		testHostMemoryManager.tryEviction()
 		Ω(testHostMemoryManager.managedMemorySize).Should(Equal(int64(0)))
 		Ω(len(testHostMemoryManager.batchInfosByColumn[testTableName])).Should(Equal(0))
@@ -985,12 +985,8 @@ func CreateMockMetaStore() *metaMocks.MetaStore {
 
 func CreateTestArchiveBatchColumns() []memCom.VectorParty {
 	return []memCom.VectorParty{
-		&archiveVectorParty{
-			pins: 0,
-		},
-		&archiveVectorParty{
-			pins: 0,
-		},
+		&archiveVectorParty{},
+		&archiveVectorParty{},
 	}
 }
 

@@ -152,11 +152,11 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 	var getTestMemstore = func() *memStoreImpl {
 
 		testMemstore := memStoreImpl{
-			TableSchemas:         make(map[string]*memCom.TableSchema),
-			TableShards:          make(map[string]map[int]*TableShard),
-			metaStore:            mockMetastore,
-			diskStore:            mockDiskstore,
-			options:              options,
+			TableSchemas: make(map[string]*memCom.TableSchema),
+			TableShards:  make(map[string]map[int]*TableShard),
+			metaStore:    mockMetastore,
+			diskStore:    mockDiskstore,
+			options:      options,
 		}
 
 		testMemstore.scheduler = newScheduler(&testMemstore)

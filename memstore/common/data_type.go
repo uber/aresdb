@@ -466,3 +466,11 @@ func GetGoDataValue(dataType DataType) GoDataValue {
 	}
 	return nil
 }
+
+// CalculateListElementBytes returns the total size in bytes needs to be allocated for a list type column for a single
+// row along with the validity vector start. Rt
+func CalculateListElementBytes(dataType DataType, length int) int {
+	// DataTypeBits(dataType)+1 => element bits
+	// (element_bits*length + 63) / 64 => round by 64 bit
+	return ((DataTypeBits(dataType)+1)*length + 63) / 64 * 8
+}

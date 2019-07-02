@@ -53,7 +53,7 @@ var _ = ginkgo.Describe("backfill manager", func() {
 		DefaultValues: []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue,
 			&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
 	}
-	upsertBatch, _ := getFactory().ReadUpsertBatch("backfill/upsertBatch0")
+	upsertBatch, _ := GetFactory().ReadUpsertBatch("backfill/upsertBatch0")
 	numRows := upsertBatch.NumRows
 
 	metaStoreMock := &mocks.MetaStore{}

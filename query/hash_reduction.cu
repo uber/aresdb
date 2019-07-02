@@ -62,7 +62,7 @@ CGoCallResHandle HashReduce(DimensionVector inputKeys,
   return resHandle;
 }
 
-#ifdef SUPPORT_HASH_REDUCTION
+#ifndef SUPPORT_HASH_REDUCTION
 namespace ares {
 
 template<typename map_type>

@@ -15,9 +15,8 @@
 package memstore
 
 import (
-	"errors"
-
 	"encoding/hex"
+	"errors"
 
 	"unsafe"
 
@@ -36,7 +35,7 @@ var _ = ginkgo.Describe("archive store", func() {
 	var shardID, batchID int
 	var cutoff uint32 = 100
 
-	m := getFactory().NewMockMemStore()
+	m := GetFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
 
 	ginkgo.It("newArchiveStoreVersion should work", func() {
@@ -163,7 +162,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			PrimaryKeyColumnTypes: []memCom.DataType{memCom.Uint32, memCom.Uint8, memCom.Uint8, memCom.Uint8},
 		}
 
-		batch, err := getFactory().ReadArchiveBatch("backfill/buildIndex")
+		batch, err := GetFactory().ReadArchiveBatch("backfill/buildIndex")
 		Ω(err).Should(BeNil())
 		archiveBatch := &ArchiveBatch{
 			Size:  3,
@@ -209,7 +208,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			DefaultValues:         []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
 		}
 
-		batch, err := getFactory().ReadArchiveBatch("backfill/cloneVPForWrite")
+		batch, err := GetFactory().ReadArchiveBatch("backfill/cloneVPForWrite")
 		Ω(err).Should(BeNil())
 		archiveBatch := &ArchiveBatch{
 			Size:  3,
@@ -259,7 +258,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			PrimaryKeyColumnTypes: []memCom.DataType{memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.Uint32},
 		}
 
-		batch, err := getFactory().ReadArchiveBatch("backfill/cloneVPForWrite")
+		batch, err := GetFactory().ReadArchiveBatch("backfill/cloneVPForWrite")
 		Ω(err).Should(BeNil())
 		archiveBatch := &ArchiveBatch{
 			Size:  3,
@@ -277,13 +276,13 @@ var _ = ginkgo.Describe("archive store", func() {
 		}
 
 		for columnID := 0; columnID < 4; columnID++ {
-			Ω(requestedVPs[columnID].(*archiveVectorParty).pins).Should(Equal(1))
+			Ω(requestedVPs[columnID].(*archiveVectorParty).Pins).Should(Equal(1))
 		}
 
 		UnpinVectorParties(requestedVPs)
 
 		for columnID := 0; columnID < 4; columnID++ {
-			Ω(requestedVPs[columnID].(*archiveVectorParty).pins).Should(Equal(0))
+			Ω(requestedVPs[columnID].(*archiveVectorParty).Pins).Should(Equal(0))
 		}
 	})
 })

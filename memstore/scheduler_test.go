@@ -47,7 +47,7 @@ var _ = ginkgo.Describe("scheduler", func() {
 	var counter int
 
 	mockErr := errors.New("UpdateArchivingCutoff fails")
-	m := getFactory().NewMockMemStore()
+	m := GetFactory().NewMockMemStore()
 	(m.metaStore).(*mocks.MetaStore).On(
 		"UpdateArchivingCutoff", mock.Anything, mock.Anything, mock.Anything).Return(mockErr)
 

@@ -27,7 +27,7 @@ var _ = ginkgo.Describe("live vector party", func() {
 	var hostMemoryManager common.HostMemoryManager
 
 	ginkgo.BeforeEach(func() {
-		mockMemStore = getFactory().NewMockMemStore()
+		mockMemStore = GetFactory().NewMockMemStore()
 		hostMemoryManager = NewHostMemoryManager(mockMemStore, 1<<32)
 	})
 

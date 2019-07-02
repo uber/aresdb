@@ -33,8 +33,7 @@ var _ = ginkgo.Describe("merge", func() {
 
 	ginkgo.BeforeEach(func() {
 
-		//scheduler = newScheduler(getFactory().NewMockMemStore())
-		hostMemoryManager = NewHostMemoryManager(getFactory().NewMockMemStore(), 1<<32)
+		hostMemoryManager = NewHostMemoryManager(GetFactory().NewMockMemStore(), 1<<32)
 		shard = &TableShard{
 			HostMemoryManager: hostMemoryManager,
 		}
@@ -65,9 +64,9 @@ var _ = ginkgo.Describe("merge", func() {
 		//| true          | 0.1               | null                    | 2               | 170                 | null                    |
 		//+---------------+-------------------+-------------------------+-----------------+---------------------+-------------------------+
 
-		batch0, err = getFactory().ReadArchiveBatch("patchBatch0")
+		batch0, err = GetFactory().ReadArchiveBatch("patchBatch0")
 		Ω(err).Should(BeNil())
-		batch1, err = getFactory().ReadArchiveBatch("patchBatch1")
+		batch1, err = GetFactory().ReadArchiveBatch("patchBatch1")
 		Ω(err).Should(BeNil())
 		vs := &LiveStore{
 			LastReadRecord: common.RecordID{BatchID: -101, Index: 4},
@@ -167,7 +166,7 @@ var _ = ginkgo.Describe("merge", func() {
 		//+--------+-------+--------+--------------
 		//                 | 5      |
 		//				   +--------+
-		tmpBatch, err := getFactory().ReadArchiveBatch("archiveBatch")
+		tmpBatch, err := GetFactory().ReadArchiveBatch("archiveBatch")
 		Ω(err).Should(BeNil())
 		base = &ArchiveBatch{
 			Version: 0,
@@ -273,7 +272,7 @@ var _ = ginkgo.Describe("merge", func() {
 		//                 | 13     |
 		//
 
-		tmpBatch, err = getFactory().ReadArchiveBatch("mergedBatch")
+		tmpBatch, err = GetFactory().ReadArchiveBatch("mergedBatch")
 		Ω(err).Should(BeNil())
 		merged = &ArchiveBatch{
 			Version: cutoff,
@@ -283,7 +282,7 @@ var _ = ginkgo.Describe("merge", func() {
 		}
 
 		// Init test data for no sort columns test case.
-		noSortColumnBatch, err = getFactory().ReadArchiveBatch("no-sort-columns/patchBatch")
+		noSortColumnBatch, err = GetFactory().ReadArchiveBatch("no-sort-columns/patchBatch")
 		Ω(err).Should(BeNil())
 
 		vs2 := &LiveStore{
@@ -309,7 +308,7 @@ var _ = ginkgo.Describe("merge", func() {
 			data: ss2,
 		}
 
-		tmpBatch, err = getFactory().ReadArchiveBatch("no-sort-columns/baseBatch")
+		tmpBatch, err = GetFactory().ReadArchiveBatch("no-sort-columns/baseBatch")
 		Ω(err).Should(BeNil())
 
 		noSortColumnBase = &ArchiveBatch{
@@ -319,7 +318,7 @@ var _ = ginkgo.Describe("merge", func() {
 			Shard:   shard,
 		}
 
-		tmpBatch, err = getFactory().ReadArchiveBatch("no-sort-columns/mergedBatch")
+		tmpBatch, err = GetFactory().ReadArchiveBatch("no-sort-columns/mergedBatch")
 		Ω(err).Should(BeNil())
 		noSortColumnMerged = &ArchiveBatch{
 			Batch:   *tmpBatch,
@@ -344,7 +343,7 @@ var _ = ginkgo.Describe("merge", func() {
 			data:        ss,
 		}
 
-		tmpBatch, err = getFactory().ReadArchiveBatch("merge-with-deleted-columns/mergedBatch")
+		tmpBatch, err = GetFactory().ReadArchiveBatch("merge-with-deleted-columns/mergedBatch")
 		Ω(err).Should(BeNil())
 
 		mergedWithDeletedColumnsMerged = &ArchiveBatch{
@@ -532,7 +531,7 @@ var _ = ginkgo.Describe("merge", func() {
 	})
 
 	ginkgo.It("merge: base has deleted rows", func() {
-		tmpBatch, err := getFactory().ReadArchiveBatch("merge-with-deleted-rows/mergedBatch")
+		tmpBatch, err := GetFactory().ReadArchiveBatch("merge-with-deleted-rows/mergedBatch")
 		Ω(err).Should(BeNil())
 
 		mergedWithDeletedRows := &ArchiveBatch{
@@ -577,7 +576,7 @@ var _ = ginkgo.Describe("merge", func() {
 
 	ginkgo.It("merge: unsorted column needs skip deleted rows", func() {
 		// load base
-		tmpBatch, err := getFactory().ReadArchiveBatch("merge-with-deleted-rows/baseBatch")
+		tmpBatch, err := GetFactory().ReadArchiveBatch("merge-with-deleted-rows/baseBatch")
 		Ω(err).Should(BeNil())
 		baseBatch := &ArchiveBatch{
 			Batch:   *tmpBatch,
@@ -587,7 +586,7 @@ var _ = ginkgo.Describe("merge", func() {
 		}
 
 		// load patch
-		patchData, err := getFactory().ReadArchiveBatch("merge-with-deleted-rows/patchBatch")
+		patchData, err := GetFactory().ReadArchiveBatch("merge-with-deleted-rows/patchBatch")
 		Ω(err).Should(BeNil())
 
 		vs := &LiveStore{
@@ -615,7 +614,7 @@ var _ = ginkgo.Describe("merge", func() {
 		}
 
 		// load merged batch
-		tmpBatch, err = getFactory().ReadArchiveBatch("merge-with-deleted-rows/mergedBatch2")
+		tmpBatch, err = GetFactory().ReadArchiveBatch("merge-with-deleted-rows/mergedBatch2")
 		Ω(err).Should(BeNil())
 
 		mergedWithDeletedRows := &ArchiveBatch{
@@ -714,7 +713,7 @@ var _ = ginkgo.Describe("merge", func() {
 		Ω(ctx.merged.Version).Should(BeEquivalentTo(cutoff))
 		Ω(ctx.merged.Size).Should(BeEquivalentTo(8))
 
-		mergedNilBase, err := getFactory().ReadArchiveBatch("merge-nil-base")
+		mergedNilBase, err := GetFactory().ReadArchiveBatch("merge-nil-base")
 		Ω(err).Should(BeNil())
 		for i := 0; i < ctx.numColumns; i++ {
 			Ω(ctx.merged.Columns[i].Equals(mergedNilBase.Columns[i])).Should(BeTrue())

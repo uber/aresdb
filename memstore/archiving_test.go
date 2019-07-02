@@ -47,7 +47,7 @@ var _ = ginkgo.Describe("archiving", func() {
 	key := getIdentifier(table, shardID, memCom.ArchivingJobType)
 	day := 0
 
-	m = getFactory().NewMockMemStore()
+	m = GetFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
 	shard := NewTableShard(&memCom.TableSchema{
 		Schema: metaCom.Table{
@@ -82,13 +82,13 @@ var _ = ginkgo.Describe("archiving", func() {
 	ginkgo.BeforeEach(func() {
 		//dataTypes = []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32}
 		var err error
-		batch110, err = getFactory().ReadLiveBatch("archiving/batch-110")
+		batch110, err = GetFactory().ReadLiveBatch("archiving/batch-110")
 		Ω(err).Should(BeNil())
-		batch101, err = getFactory().ReadLiveBatch("archiving/batch-101")
+		batch101, err = GetFactory().ReadLiveBatch("archiving/batch-101")
 		Ω(err).Should(BeNil())
-		batch99, err = getFactory().ReadLiveBatch("archiving/batch-99")
+		batch99, err = GetFactory().ReadLiveBatch("archiving/batch-99")
 		Ω(err).Should(BeNil())
-		tmpBatch, err := getFactory().ReadArchiveBatch("archiving/archiveBatch0")
+		tmpBatch, err := GetFactory().ReadArchiveBatch("archiving/archiveBatch0")
 		Ω(err).Should(BeNil())
 		archiveBatch0 = &ArchiveBatch{
 			Version: 0,
@@ -294,7 +294,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardID := 0
 		key := getIdentifier(table, shardID, memCom.ArchivingJobType)
 		liveStore := &LiveStore{}
-		batch120, err := getFactory().ReadLiveBatch("archiving/batch-120")
+		batch120, err := GetFactory().ReadLiveBatch("archiving/batch-120")
 		Ω(err).Should(BeNil())
 		liveStore.Batches = map[int32]*LiveBatch{
 			-120: {
@@ -353,7 +353,7 @@ var _ = ginkgo.Describe("archiving", func() {
 				},
 			},
 		}
-		batch120, err := getFactory().ReadLiveBatch("archiving/batch-120")
+		batch120, err := GetFactory().ReadLiveBatch("archiving/batch-120")
 		Ω(err).Should(BeNil())
 
 		// all event time are old

@@ -17,9 +17,9 @@ package memstore
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"math/rand"
 	"testing"
-	memCom "github.com/uber/aresdb/memstore/common"
 )
 
 var _ = ginkgo.Describe("CuckooIndex", func() {

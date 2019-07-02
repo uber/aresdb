@@ -70,11 +70,11 @@ var _ = ginkgo.Describe("backfill", func() {
 
 		var err error
 
-		upsertBatches[0], err = getFactory().ReadUpsertBatch("backfill/upsertBatch0")
+		upsertBatches[0], err = GetFactory().ReadUpsertBatch("backfill/upsertBatch0")
 		Ω(err).Should(BeNil())
-		upsertBatches[1], err = getFactory().ReadUpsertBatch("backfill/upsertBatch1")
+		upsertBatches[1], err = GetFactory().ReadUpsertBatch("backfill/upsertBatch1")
 		Ω(err).Should(BeNil())
-		upsertBatches[2], err = getFactory().ReadUpsertBatch("backfill/upsertBatch2")
+		upsertBatches[2], err = GetFactory().ReadUpsertBatch("backfill/upsertBatch2")
 		Ω(err).Should(BeNil())
 
 		patch = &backfillPatch{
@@ -90,7 +90,7 @@ var _ = ginkgo.Describe("backfill", func() {
 			backfillBatches: upsertBatches[:],
 		}
 
-		m = getFactory().NewMockMemStore()
+		m = GetFactory().NewMockMemStore()
 		writer := new(utilsMocks.WriteCloser)
 		writer.On("Write", mock.Anything).Return(0, nil)
 		writer.On("Close").Return(nil)
@@ -106,7 +106,7 @@ var _ = ginkgo.Describe("backfill", func() {
 
 		hostMemoryManager = NewHostMemoryManager(m, 1<<32)
 		shard = NewTableShard(tableSchema, m.metaStore, m.diskStore, hostMemoryManager, shardID, m.options)
-		batch, err := getFactory().ReadArchiveBatch("backfill/backfillBase")
+		batch, err := GetFactory().ReadArchiveBatch("backfill/backfillBase")
 		Ω(err).Should(BeNil())
 		baseBatch = &ArchiveBatch{
 			Size:  5,
@@ -115,7 +115,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		}
 		shard.ArchiveStore.CurrentVersion.Batches[0] = baseBatch
 
-		batch, err = getFactory().ReadArchiveBatch("backfill/backfillNew")
+		batch, err = GetFactory().ReadArchiveBatch("backfill/backfillNew")
 		Ω(err).Should(BeNil())
 		newBatch = &ArchiveBatch{
 			Size:  6,
@@ -360,7 +360,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		Ω(backfillCtx.baseRowDeleted).Should(ConsistOf(1, 4))
 
 		// Compare result batch with expected batch.
-		batch, err := getFactory().ReadLiveBatch("backfill/backfillTempLiveStore")
+		batch, err := GetFactory().ReadLiveBatch("backfill/backfillTempLiveStore")
 		Ω(err).Should(BeNil())
 		backfillBatch := backfillCtx.backfillStore.GetBatchForRead(BaseBatchID)
 		defer backfillBatch.RUnlock()

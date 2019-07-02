@@ -111,16 +111,16 @@ var _1 = ginkgo.Describe("NativeMemoryPool tests", func() {
 
 		var totalMemory int64
 		nativeMPImpl.hostMemoryReporter = func(bytes int64) {
-			totalMemory = bytes
+			totalMemory += bytes
 		}
 
 		// First allocation should allocate a new chunk and return a zero offset.
 		addr := nativeMP.Malloc(12)
 		Ω(addr).Should(BeZero())
 		Ω(nativeMPImpl.block).ShouldNot(BeZero())
-		Ω(nativeMPImpl.allocatedSize).Should(Equal(12))
-		Ω(nativeMPImpl.totalSize).Should(Equal(nativeChunkSize))
-		Ω(nativeMPImpl.nChunks).Should(Equal(1))
+		Ω(nativeMPImpl.allocatedSize).Should(BeEquivalentTo(12))
+		Ω(nativeMPImpl.totalSize).Should(BeEquivalentTo(nativeChunkSize))
+		Ω(nativeMPImpl.nChunks).Should(BeEquivalentTo(1))
 
 		Ω(nativeMP.GetBaseAddr()).ShouldNot(BeZero())
 
@@ -129,21 +129,21 @@ var _1 = ginkgo.Describe("NativeMemoryPool tests", func() {
 
 		// Allocate another memory within current chunk.
 		Ω(nativeMP.Malloc(12)).Should(BeEquivalentTo(12))
-		Ω(nativeMPImpl.allocatedSize).Should(Equal(24))
-		Ω(nativeMPImpl.totalSize).Should(Equal(nativeChunkSize))
-		Ω(nativeMPImpl.nChunks).Should(Equal(1))
+		Ω(nativeMPImpl.allocatedSize).Should(BeEquivalentTo(24))
+		Ω(nativeMPImpl.totalSize).Should(BeEquivalentTo(nativeChunkSize))
+		Ω(nativeMPImpl.nChunks).Should(BeEquivalentTo(1))
 
 		// set val at offset 0
 		setUint8Val(addr+nativeMP.GetBaseAddr(), 11)
 		oldBaseAddr := nativeMP.GetBaseAddr()
 		// Allocate more memory that cannot fit in current chunk, old memory content
 		// should be carried over.
-		Ω(nativeMP.Malloc(nativeChunkSize)).Should(BeEquivalentTo(24))
-		Ω(nativeMPImpl.allocatedSize).Should(Equal(24 + nativeChunkSize))
-		Ω(nativeMPImpl.totalSize).Should(Equal(2 * nativeChunkSize))
-		Ω(nativeMPImpl.nChunks).Should(Equal(2))
+		Ω(nativeMP.Malloc(int(nativeChunkSize))).Should(BeEquivalentTo(24))
+		Ω(nativeMPImpl.allocatedSize).Should(BeEquivalentTo(24 + nativeChunkSize))
+		Ω(nativeMPImpl.totalSize).Should(BeEquivalentTo(2 * nativeChunkSize))
+		Ω(nativeMPImpl.nChunks).Should(BeEquivalentTo(2))
 
-		Ω(nativeMP.GetBaseAddr()).ShouldNot(Equal(oldBaseAddr))
+		Ω(nativeMP.GetBaseAddr()).ShouldNot(BeEquivalentTo(oldBaseAddr))
 		Ω(getUint8Val(nativeMP.GetBaseAddr())).Should(BeEquivalentTo(11))
 
 		Ω(totalMemory).Should(BeEquivalentTo(nativeChunkSize * 2))
@@ -153,7 +153,7 @@ var _1 = ginkgo.Describe("NativeMemoryPool tests", func() {
 	})
 
 	ginkgo.It("test large allocation", func() {
-		Ω(nativeMP.Malloc(nativeChunkSize * 3)).Should(BeZero())
+		Ω(nativeMP.Malloc(int(nativeChunkSize * 3))).Should(BeZero())
 
 		tailAddr := uintptr(3*nativeChunkSize - 1)
 		setUint8Val(nativeMP.GetBaseAddr()+tailAddr, 11)

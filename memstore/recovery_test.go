@@ -28,9 +28,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
-	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 
 	"time"
 )
