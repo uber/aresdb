@@ -273,7 +273,7 @@ func (d *dataNode) startActiveTopologyWatch() {
 }
 
 func (d *dataNode) startAnalyzingShardAvailability() {
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -315,6 +315,7 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 						zap.Error(err),
 						zap.String("table", table),
 						zap.Uint32("shard", shardID))
+					continue
 				}
 				if tableShard.IsBootstrapped() {
 					numTablesBootstrapped++
