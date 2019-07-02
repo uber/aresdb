@@ -19,6 +19,8 @@ import (
 	"github.com/gorilla/mux"
 	apiCom "github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/broker/common"
+	queryCom "github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/sql"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
@@ -34,18 +36,26 @@ func NewQueryHandler(executor common.QueryExecutor) QueryHandler {
 }
 
 func (handler *QueryHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
-	router.HandleFunc("/", utils.ApplyHTTPWrappers(handler.HandleQuery, wrappers)).Methods(http.MethodPost)
+	router.HandleFunc("/sql", utils.ApplyHTTPWrappers(handler.HandleSQL, wrappers)).Methods(http.MethodPost)
+	router.HandleFunc("/aql", utils.ApplyHTTPWrappers(handler.HandleAQL, wrappers)).Methods(http.MethodPost)
 }
 
-func (handler *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request) {
-	var queryReqeust BrokerQueryRequest
+func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
+	var queryReqeust BrokerSQLRequest
 	err := apiCom.ReadRequest(r, &queryReqeust)
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return
 	}
 
-	err = handler.exec.Execute(context.TODO(), queryReqeust.Body.Query, w)
+	var aql *queryCom.AQLQuery
+	aql, err = sql.Parse(queryReqeust.Body.Query, utils.GetLogger())
+	if err != nil {
+		apiCom.RespondWithError(w, err)
+		return
+	}
+
+	err = handler.exec.Execute(context.TODO(), aql, w)
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return
@@ -54,11 +64,27 @@ func (handler *QueryHandler) HandleQuery(w http.ResponseWriter, r *http.Request)
 	return
 }
 
-// SQLRequest represents SQL query request. Debug mode will
+func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
+	var queryReqeust BrokerAQLRequest
+	err := apiCom.ReadRequest(r, &queryReqeust)
+	if err != nil {
+		apiCom.RespondWithError(w, err)
+		return
+	}
+
+	err = handler.exec.Execute(context.TODO(), &queryReqeust.Body.Query, w)
+	if err != nil {
+		apiCom.RespondWithError(w, err)
+		return
+	}
+	return
+}
+
+// BrokerSQLRequest represents SQL query request. Debug mode will
 // run **each batch** in synchronized mode and report time
 // for each step.
 // swagger:parameters querySQL
-type BrokerQueryRequest struct {
+type BrokerSQLRequest struct {
 	// in: query
 	Verbose int `query:"verbose,optional" json:"verbose"`
 	// in: query
@@ -70,5 +96,24 @@ type BrokerQueryRequest struct {
 	// in: body
 	Body struct {
 		Query string `json:"query"`
+	} `body:""`
+}
+
+// BrokerAQLRequest represents AQL query request. Debug mode will
+// run **each batch** in synchronized mode and report time
+// for each step.
+// swagger:parameters querySQL
+type BrokerAQLRequest struct {
+	// in: query
+	Verbose int `query:"verbose,optional" json:"verbose"`
+	// in: query
+	Debug int `query:"debug,optional" json:"debug"`
+	// in: header
+	Accept string `header:"Accept,optional" json:"accept"`
+	// in: header
+	Origin string `header:"Rpc-Caller,optional" json:"origin"`
+	// in: body
+	Body struct {
+		Query queryCom.AQLQuery `json:"query"`
 	} `body:""`
 }
