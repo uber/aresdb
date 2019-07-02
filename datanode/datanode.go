@@ -140,7 +140,7 @@ func NewDataNode(
 		metrics:              newDatanodeMetrics(scope),
 		grpcServer:           grpcServer,
 		redoLogManagerMaster: redoLogManagerMaster,
-		shardSet:			  shard.NewShardSet(nil),
+		shardSet:             shard.NewShardSet(nil),
 		close:                make(chan struct{}),
 	}
 	d.handlers = d.newHandlers()
@@ -451,7 +451,6 @@ func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
 		adding   []m3Shard.Shard
 	)
 
-
 	for _, shard := range shardSet.All() {
 		incoming[shard.ID()] = shard
 	}
@@ -480,7 +479,6 @@ func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
 
 	for _, shard := range adding {
 		for _, table := range tables {
-			d.logger.Infof("adding table shard", table, shard.ID())
 			d.memStore.AddTableShard(table, int(shard.ID()), shard.State() == m3Shard.Initializing)
 		}
 	}
