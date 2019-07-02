@@ -19,7 +19,6 @@ import (
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
-	"github.com/uber/aresdb/query/sql"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
@@ -30,7 +29,6 @@ const (
 
 // QueryContext is broker query context
 type QueryContext struct {
-	RawQuery              string
 	AQLQuery              *common.AQLQuery
 	IsNonAggregationQuery bool
 	Writer                http.ResponseWriter
@@ -38,9 +36,9 @@ type QueryContext struct {
 }
 
 // NewQueryContext creates new query context
-func NewQueryContext(sqlQuery string, w http.ResponseWriter) *QueryContext {
+func NewQueryContext(aql *common.AQLQuery, w http.ResponseWriter) *QueryContext {
 	ctx := QueryContext{
-		RawQuery: sqlQuery,
+		AQLQuery: aql,
 		Writer:   w,
 	}
 	return &ctx
@@ -48,10 +46,6 @@ func NewQueryContext(sqlQuery string, w http.ResponseWriter) *QueryContext {
 
 // Compile sql to AQL and extract information for routing
 func (c *QueryContext) Compile(schemaReader metaCom.TableSchemaReader) {
-	c.AQLQuery, c.Error = sql.Parse(c.RawQuery, utils.GetLogger())
-	if c.Error != nil {
-		return
-	}
 
 	// validate main table
 	var err error

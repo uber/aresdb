@@ -18,6 +18,7 @@ import (
 	"errors"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
@@ -29,7 +30,21 @@ var _ = ginkgo.Describe("query compiler", func() {
 		mockMutator := metaMocks.TableSchemaReader{}
 		mockMutator.On("GetTable", "table1").Return(nil, nil)
 
-		qc := NewQueryContext("SELECT count(*) FROM table1 GROUP BY field1", httptest.NewRecorder())
+		qc := NewQueryContext(&common.AQLQuery{
+			Table: "table1",
+			Joins: nil,
+			Dimensions: []common.Dimension{
+				{
+					Expr: "field1",
+				},
+			},
+			Measures: []common.Measure{
+				{
+					Expr: "count(*)",
+				},
+			},
+			SQLQuery: "SELECT count(*) FROM table1 GROUP BY field1",
+		}, httptest.NewRecorder())
 		qc.Compile(&mockMutator)
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.AQLQuery).Should(Equal(&common.AQLQuery{
@@ -49,7 +64,23 @@ var _ = ginkgo.Describe("query compiler", func() {
 			SQLQuery: "SELECT count(*) FROM table1 GROUP BY field1",
 		}))
 
-		qc = NewQueryContext("SELECT * FROM table1", httptest.NewRecorder())
+		qc = NewQueryContext(&common.AQLQuery{
+			Table: "table1",
+			Joins: nil,
+			Dimensions: []common.Dimension{
+				{
+					Expr: "*",
+				},
+			},
+			Measures: []common.Measure{
+				{
+					Expr:       "1",
+					ExprParsed: &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: 2},
+				},
+			},
+			Limit:    nonAggregationQueryLimit,
+			SQLQuery: "SELECT * FROM table1",
+		}, httptest.NewRecorder())
 		qc.Compile(&mockMutator)
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.AQLQuery).Should(Equal(&common.AQLQuery{
@@ -75,22 +106,72 @@ var _ = ginkgo.Describe("query compiler", func() {
 		mockMutator := metaMocks.TableSchemaReader{}
 		mockMutator.On("GetTable", "tableNonExist").Return(nil, errors.New("not found"))
 
-		qc := NewQueryContext("SELECT count(*) FROM tableNonExist GROUP BY field1", httptest.NewRecorder())
+		qc := NewQueryContext(&common.AQLQuery{
+			Table: "tableNonExist",
+			Joins: nil,
+			Dimensions: []common.Dimension{
+				{
+					Expr: "*",
+				},
+			},
+			Measures: []common.Measure{
+				{
+					Expr:       "1",
+					ExprParsed: &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: 2},
+				},
+			},
+			Limit:    nonAggregationQueryLimit,
+			SQLQuery: "SELECT * FROM tableNonExist",
+		}, httptest.NewRecorder())
 		qc.Compile(&mockMutator)
 		Ω(qc.Error).ShouldNot(BeNil())
 
-		mockMutator.On("GetTable", "tabl1").Return(nil, nil)
+		mockMutator.On("GetTable", "table1").Return(nil, nil)
 		mockMutator.On("GetTable", "foreignTableNonExsit").Return(nil, errors.New("no found"))
-		qc = NewQueryContext("SELECT count(*) FROM table1 JOIN foreignTableNonExsit GROUP BY field1", httptest.NewRecorder())
+		qc = NewQueryContext(&common.AQLQuery{
+			Table: "table1",
+			Joins: []common.Join{
+				{Table: "foreignTableNonExsit"},
+			},
+			Dimensions: []common.Dimension{
+				{
+					Expr: "*",
+				},
+			},
+			Measures: []common.Measure{
+				{
+					Expr:       "1",
+					ExprParsed: &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: 2},
+				},
+			},
+			Limit: nonAggregationQueryLimit,
+		}, httptest.NewRecorder())
 		qc.Compile(&mockMutator)
 		Ω(qc.Error).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("should fail more than 1 measure", func() {
 		mockMutator := metaMocks.TableSchemaReader{}
-		mockMutator.On("GetTable", "tableNonExist").Return(nil, errors.New("not found"))
+		mockMutator.On("GetTable", mock.Anything).Return(nil, nil)
 
-		qc := NewQueryContext("SELECT count(*), avg(field2) FROM tableNonExist GROUP BY field1", httptest.NewRecorder())
+		qc := NewQueryContext(&common.AQLQuery{
+			Table: "table1",
+			Joins: nil,
+			Dimensions: []common.Dimension{
+				{
+					Expr: "dim1",
+				},
+			},
+			Measures: []common.Measure{
+				{
+					Expr: "measure1",
+				},
+				{
+					Expr: "measure2",
+				},
+			},
+			Limit: nonAggregationQueryLimit,
+		}, httptest.NewRecorder())
 		qc.Compile(&mockMutator)
 		Ω(qc.Error).ShouldNot(BeNil())
 	})

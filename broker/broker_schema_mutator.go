@@ -51,6 +51,7 @@ func (b *BrokerSchemaMutator) GetTable(name string) (table *common.Table, err er
 	tableSchema, ok := b.tables[name]
 	if !ok {
 		err = metastore.ErrTableDoesNotExist
+		return
 	}
 	table = &tableSchema.Schema
 	return

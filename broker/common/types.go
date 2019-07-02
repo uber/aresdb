@@ -29,10 +29,14 @@ type SchemaManager interface {
 	GetTableSchemaReader(namespace string) (memCom.TableSchemaReader, error)
 }
 
+// QueryContext defines query context
+type QueryContext interface {
+}
+
 // QueryExecutor defines query executor
 type QueryExecutor interface {
 	// Execute executes query and flush result to connection
-	Execute(ctx context.Context, sqlQuery string, w http.ResponseWriter) (err error)
+	Execute(ctx context.Context, aql *queryCom.AQLQuery, w http.ResponseWriter) (err error)
 }
 
 // BlockingPlanNode defines query plan nodes that waits for children to finish

@@ -41,11 +41,11 @@ type queryExecutorImpl struct {
 	dataNodeClient    dataCli.DataNodeQueryClient
 }
 
-func (qe *queryExecutorImpl) Execute(ctx context.Context, sqlQuery string, w http.ResponseWriter) (err error) {
+func (qe *queryExecutorImpl) Execute(ctx context.Context, aql *queryCom.AQLQuery, w http.ResponseWriter) (err error) {
 	// TODO: add timeout
 
 	// compile
-	qc := NewQueryContext(sqlQuery, w)
+	qc := NewQueryContext(aql, w)
 	qc.Compile(qe.tableSchemaReader)
 	if qc.Error != nil {
 		err = qc.Error
