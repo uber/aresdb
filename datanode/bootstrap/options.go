@@ -6,8 +6,8 @@ import (
 
 const (
 	defaultBootstrapSessionTTL              = int64(5 * time.Minute)
-	defaultMaxConcurrentTableShards         = 2
-	defaultMaxCocurrentSessionPerTableShard = 8
+	defaultMaxConcurrentTableShards         = 8
+	defaultMaxCocurrentSessionPerTableShard = 2
 )
 
 // options implements bootstrap Options

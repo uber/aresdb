@@ -208,10 +208,10 @@ func (k *kafkaRedoLogManager) Iterator() (NextUpsertFunc, error) {
 	}
 
 	if k.includeRecovery {
-		utils.GetLogger().With("action", "recover", "table", k.TableName, "shard", k.Shard, "offset", offsetFrom).
+		utils.GetLogger().With("action", "recover", "table", k.TableName, "shard", k.Shard, "offsetFrom", offsetFrom, "offsetTo", offsetTo).
 			Info("start recover from kafka")
 	} else {
-		utils.GetLogger().With("action", "ingestion", "table", k.TableName, "shard", k.Shard, "offset", offsetFrom).
+		utils.GetLogger().With("action", "ingestion", "table", k.TableName, "shard", k.Shard, "offsetFrom", offsetFrom).
 			Info("start play redolog from kafka")
 	}
 
@@ -219,6 +219,9 @@ func (k *kafkaRedoLogManager) Iterator() (NextUpsertFunc, error) {
 		if k.partitionConsumer == nil {
 			// partition consumer closed
 			return nil
+		}
+		if !k.recoveryDone && (offsetTo == 0 || offsetTo <= offsetFrom) {
+			k.setRecoveryDone()
 		}
 		for {
 			select {
