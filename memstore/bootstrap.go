@@ -76,8 +76,11 @@ func (shard *TableShard) Bootstrap(
 	if atomic.LoadUint32(&shard.needPeerCopy) == 1 {
 		// find peer node for copy metadata and raw data
 		peerNode := shard.findBootstrapSource(origin, topo, topoState)
-		var dataStreamErr error
+		if peerNode == nil {
+			return utils.StackError(nil, "no peer node available")
+		}
 
+		var dataStreamErr error
 		borrowErr := peerSource.BorrowConnection(peerNode.ID(), func(nodeClient rpc.PeerDataNodeClient) {
 			dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient, options)
 		})
@@ -486,13 +489,13 @@ func (shard *TableShard) findBootstrapSource(
 			With("origin", origin).
 			With("source", "").
 			Info("no available bootstrap sorce")
-	} else {
-
-		utils.GetLogger().
-			With("table", shard.Schema.Schema.Name).
-			With("shardID", shard.ShardID).
-			Info("bootstrap peers")
+		return nil
 	}
+
+	utils.GetLogger().
+		With("table", shard.Schema.Schema.Name).
+		With("shardID", shard.ShardID).
+		Info("bootstrap peers")
 	//TODO: add consideration on connection count for choosing peer candidate
 	idx := rand.Intn(len(peers))
 	return peers[idx]
