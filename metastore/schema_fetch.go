@@ -68,13 +68,13 @@ func (j *SchemaFetchJob) Stop() {
 func (j *SchemaFetchJob) FetchSchema() {
 	newHash, err := j.controllerClient.GetSchemaHash(j.clusterName)
 	if err != nil {
-		reportError(err)
+		reportError(err, "hash")
 		return
 	}
 	if newHash != j.hash {
 		newSchemas, err := j.controllerClient.GetAllSchema(j.clusterName)
 		if err != nil {
-			reportError(err)
+			reportError(err, "allSchema")
 			return
 		}
 		err = j.applySchemaChange(newSchemas)
@@ -170,7 +170,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 	return
 }
 
-func reportError(err error, tableName string) {
+func reportError(err error, extraInfo string) {
 	utils.GetRootReporter().GetCounter(utils.SchemaFetchFailure).Inc(1)
-	utils.GetLogger().With("table", tableName).Error(utils.StackError(err, "err running schema fetch job"))
+	utils.GetLogger().With("extraInfo", extraInfo).Error(utils.StackError(err, "err running schema fetch job"))
 }
