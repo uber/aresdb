@@ -17,6 +17,7 @@ package datanode
 import (
 	"errors"
 	"fmt"
+	"github.com/m3db/m3/src/x/instrument"
 	controllerCli "github.com/uber/aresdb/controller/client"
 	"net/http"
 	"net/http/pprof"
@@ -139,10 +140,19 @@ func NewDataNode(
 		metrics:              newDatanodeMetrics(scope),
 		grpcServer:           grpcServer,
 		redoLogManagerMaster: redoLogManagerMaster,
+		shardSet:             shard.NewShardSet(nil),
+		close:                make(chan struct{}),
 	}
 	d.handlers = d.newHandlers()
 	d.bootstrapManager = NewBootstrapManager(d, opts, topo)
-
+	clusterClient, err := d.opts.ServerConfig().InstanceConfig.Etcd.NewClient(instrument.NewOptions())
+	if err != nil {
+		return nil, utils.StackError(err, "failed to create etcd client")
+	}
+	d.clusterServices, err = clusterClient.Services(nil)
+	if err != nil {
+		return nil, utils.StackError(err, "failed to create cluster services client")
+	}
 	return d, nil
 }
 
@@ -171,12 +181,9 @@ func (d *dataNode) Open() error {
 	select {
 	case <-d.mapWatch.C():
 		hostShardSet, ok := d.mapWatch.Get().LookupHostShardSet(d.hostID)
-		if !ok {
-			d.shardSet = shard.NewShardSet(nil)
-		} else {
-			d.shardSet = hostShardSet.ShardSet()
+		if ok {
+			d.AssignShardSet(hostShardSet.ShardSet())
 		}
-		d.AssignShardSet(d.shardSet)
 	default:
 	}
 
@@ -184,7 +191,7 @@ func (d *dataNode) Open() error {
 
 	// 5. start scheduler
 	if !d.opts.ServerConfig().SchedulerOff {
-		d.opts.InstrumentOptions().Logger().Info("starting archiving scheduler")
+		d.opts.InstrumentOptions().Logger().Info("starting scheduler")
 		// disable archiving during redolog replay
 		d.memStore.GetScheduler().EnableJobType(memCom.ArchivingJobType, false)
 		// this will start scheduler of all jobs except archiving, archiving will be started individually
@@ -203,7 +210,7 @@ func (d *dataNode) Open() error {
 
 func (d *dataNode) startSchemaWatch() {
 	if d.opts.ServerConfig().Cluster.Enable {
-		// TODO better to reuse the code direcly in controller to talk to etcd
+		// TODO better to reuse the code directly in controller to talk to etcd
 		if d.opts.ServerConfig().Cluster.ClusterName == "" {
 			d.logger.Fatal("Missing cluster name")
 		}
@@ -225,7 +232,10 @@ func (d *dataNode) startSchemaWatch() {
 
 func (d *dataNode) Close() {
 	close(d.close)
-	d.mapWatch.Close()
+	if d.mapWatch != nil {
+		d.mapWatch.Close()
+		d.mapWatch = nil
+	}
 	d.grpcServer.Stop()
 	d.redoLogManagerMaster.Stop()
 }
@@ -251,7 +261,7 @@ func (d *dataNode) startActiveTopologyWatch() {
 	for {
 		select {
 		case <-d.close:
-			d.mapWatch.Close()
+			return
 		case <-d.mapWatch.C():
 			topoMap := d.mapWatch.Get()
 			hostShardSet, ok := topoMap.LookupHostShardSet(d.hostID)
@@ -263,7 +273,7 @@ func (d *dataNode) startActiveTopologyWatch() {
 }
 
 func (d *dataNode) startAnalyzingShardAvailability() {
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -305,6 +315,7 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 						zap.Error(err),
 						zap.String("table", table),
 						zap.Uint32("shard", shardID))
+					continue
 				}
 				if tableShard.IsBootstrapped() {
 					numTablesBootstrapped++
@@ -339,6 +350,8 @@ func (d *dataNode) ShardSet() shard.ShardSet {
 
 // Tables returns the actual tables owned by datanode
 func (d *dataNode) Tables() (tables []string) {
+	d.memStore.RLock()
+	defer d.memStore.RUnlock()
 	schemas := d.memStore.GetSchemas()
 	for name := range schemas {
 		tables = append(tables, name)
@@ -399,16 +412,21 @@ func (d *dataNode) advertise() {
 		SetZone(d.opts.ServerConfig().InstanceConfig.Etcd.Zone).
 		SetName(utils.DataNodeServiceName(d.opts.ServerConfig().InstanceConfig.Namespace))
 
-	d.clusterServices.SetMetadata(serviceID, services.NewMetadata().
+	err := d.clusterServices.SetMetadata(serviceID, services.NewMetadata().
 		SetHeartbeatInterval(time.Duration(d.opts.ServerConfig().InstanceConfig.HeartbeatConfig.Interval)*time.Second).
 		SetLivenessInterval(time.Duration(d.opts.ServerConfig().InstanceConfig.HeartbeatConfig.Timeout)*time.Second))
+	if err != nil {
+		d.opts.InstrumentOptions().Logger().Fatalf("failed to set heart beat metadata",
+			zap.String("id", d.hostID),
+			zap.Error(err))
+	}
 
 	placementInstance := placement.NewInstance().SetID(d.hostID)
 	ad := services.NewAdvertisement().
 		SetServiceID(serviceID).
 		SetPlacementInstance(placementInstance)
 
-	err := d.clusterServices.Advertise(ad)
+	err = d.clusterServices.Advertise(ad)
 	if err != nil {
 		d.opts.InstrumentOptions().Logger().Fatalf("failed to advertise data node",
 			zap.String("id", d.hostID),
@@ -440,7 +458,7 @@ func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
 		incoming[shard.ID()] = shard
 	}
 
-	for shardID := range incoming {
+	for _, shardID := range d.shardSet.AllIDs() {
 		existing[shardID] = struct{}{}
 	}
 
@@ -455,7 +473,6 @@ func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
 			adding = append(adding, shard)
 		}
 	}
-	d.shardSet = shardSet
 
 	for _, shardID := range removing {
 		for _, table := range tables {
@@ -468,9 +485,9 @@ func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
 			d.memStore.AddTableShard(table, int(shard.ID()), shard.State() == m3Shard.Initializing)
 		}
 	}
+	d.shardSet = shardSet
 
 	// only kick off bootstrap when the first bootstrap is done during shard assignment
-	d.RLock()
 	if d.bootstraps > 0 {
 		go func() {
 			if err := d.bootstrapManager.Bootstrap(); err != nil {

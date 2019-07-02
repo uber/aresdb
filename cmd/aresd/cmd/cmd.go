@@ -263,7 +263,13 @@ func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tall
 		logger.Fatal("Failed to create etcd client,", err)
 	}
 
-	dynamicOptions := topology.NewDynamicOptions().SetConfigServiceClient(configServiceCli).SetServiceID(services.NewServiceID().SetZone(etcdCfg.Zone).SetName(etcdCfg.Service).SetEnvironment(etcdCfg.Env))
+	dynamicOptions := topology.NewDynamicOptions().
+		SetConfigServiceClient(configServiceCli).
+		SetQueryOptions(services.NewQueryOptions().SetIncludeUnhealthy(true)).
+		SetServiceID(services.NewServiceID().
+			SetZone(etcdCfg.Zone).
+			SetName(etcdCfg.Service).
+			SetEnvironment(etcdCfg.Env))
 	topo, err = topology.NewDynamicInitializer(dynamicOptions).Init()
 	if err != nil {
 		logger.Fatal("Failed to initialize dynamic topology,", err)

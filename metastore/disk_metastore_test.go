@@ -163,14 +163,12 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("Stat", "base/read_fail/schema").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/unknown/schema").Return(nil, os.ErrNotExist)
 	mockFileSystem.On("Stat", "base/error/schema").Return(nil, os.ErrPermission)
-	mockFileSystem.On("Stat", "base/unknown_shard/schema").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/error_shard/schema").Return(nil, nil)
 
 	mockFileSystem.On("Stat", "base/c/shards/0").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/a/shards/0").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/b/shards/0").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/read_fail/shards/0").Return(&mocks.FileInfo{}, nil)
-	mockFileSystem.On("Stat", "base/unknown_shard/shards/0").Return(nil, os.ErrNotExist)
 	mockFileSystem.On("Stat", "base/error_shard/shards/0").Return(nil, os.ErrPermission)
 
 	mockFileSystem.On("ReadFile", "base/a/schema").Return(testTableABytes, nil)
@@ -231,7 +229,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 			writeLock:        sync.Mutex{},
 			basePath:         basepath,
 			enumDictWatchers: make(map[string]map[string]chan<- string),
-			enumDictDone: make(map[string]map[string]<-chan struct{}),
+			enumDictDone:     make(map[string]map[string]<-chan struct{}),
 		}
 		return diskMetaStore
 	}
@@ -298,8 +296,6 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 		err = diskMetastore.UpdateArchivingCutoff("unknown", 0, 1)
 		Ω(err).ShouldNot(BeNil())
-		err = diskMetastore.UpdateArchivingCutoff("unknown_shard", 0, 1)
-		Ω(err).ShouldNot(BeNil())
 		err = diskMetastore.UpdateArchivingCutoff("read_fail", 0, 1)
 		Ω(err).ShouldNot(BeNil())
 		err = diskMetastore.UpdateArchivingCutoff("b", 0, 1)
@@ -314,8 +310,6 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 		err = diskMetastore.UpdateSnapshotProgress("unknown", 0, 1, 0, 1, 1)
 		Ω(err).ShouldNot(BeNil())
-		err = diskMetastore.UpdateSnapshotProgress("unknown_shard", 0, 1, 0, 1, 1)
-		Ω(err).ShouldNot(BeNil())
 		err = diskMetastore.UpdateSnapshotProgress("read_fail", 0, 1, 0, 1, 1)
 		Ω(err).ShouldNot(BeNil())
 		err = diskMetastore.UpdateSnapshotProgress("a", 0, 1, 0, 1, 1)
@@ -324,9 +318,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 	ginkgo.It("UpdateBackfillProgress", func() {
 		diskMetastore := createDiskMetastore("base")
-		err := diskMetastore.UpdateBackfillProgress("unknown_shard", 0, 1, 0)
-		Ω(err).ShouldNot(BeNil())
-		err = diskMetastore.UpdateBackfillProgress("read_fail", 0, 1, 0)
+		err := diskMetastore.UpdateBackfillProgress("read_fail", 0, 1, 0)
 		Ω(err).ShouldNot(BeNil())
 		err = diskMetastore.UpdateBackfillProgress("b", 0, 1, 0)
 		Ω(err).ShouldNot(BeNil())
@@ -342,9 +334,6 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(BeNil())
 		Ω(redoLogFile).Should(Equal(int64(1)))
 		Ω(offset).Should(Equal(uint32(0)))
-
-		_, _, err = diskMetastore.GetBackfillProgressInfo("unknown_shard", 0)
-		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("GetRedoLogCommitOffset", func() {
@@ -809,34 +798,6 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).ShouldNot(BeNil())
 	})
 
-	ginkgo.It("shardExists", func() {
-		diskMetaStore := createDiskMetastore("base")
-		err := diskMetaStore.shardExists("a", 0)
-		Ω(err).Should(BeNil())
-
-		err = diskMetaStore.shardExists("unknown", 0)
-		Ω(err).ShouldNot(BeNil())
-
-		err = diskMetaStore.shardExists("error", 0)
-		Ω(err).ShouldNot(BeNil())
-
-		err = diskMetaStore.shardExists("unknown_shard", 0)
-		Ω(err).ShouldNot(BeNil())
-
-		err = diskMetaStore.shardExists("error_shard", 0)
-		Ω(err).ShouldNot(BeNil())
-	})
-
-	ginkgo.It("CreateShard", func() {
-		diskMetaStore := createDiskMetastore("base")
-		err := diskMetaStore.createShard("c", true, 0)
-		Ω(err).Should(BeNil())
-		err = diskMetaStore.createShard("b", false, 0)
-		Ω(err).Should(BeNil())
-		err = diskMetaStore.createShard("d", false, 0)
-		Ω(err).ShouldNot(BeNil())
-	})
-
 	ginkgo.It("NewDiskMetaStore", func() {
 		diskMetaStore, err := NewDiskMetaStore("/tmp/ares_testdir")
 		Ω(err).Should(BeNil())
@@ -857,7 +818,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		mockBatch2.On("Name").Return("2")
 		mockFileSystem.On("ReadDir", "base/c/shards/0/batches").Return([]os.FileInfo{mockBatch1, mockBatch2}, nil).Once()
 
-		batches, err :=diskMetaStore.GetArchiveBatches("c", 0, 0, 0)
+		batches, err := diskMetaStore.GetArchiveBatches("c", 0, 0, 0)
 		Ω(err).Should(BeNil())
 		Ω(len(batches)).Should(Equal(2))
 		Ω(batches[0]).Should(Equal(1))

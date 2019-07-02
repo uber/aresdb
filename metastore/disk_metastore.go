@@ -151,7 +151,7 @@ func (dm *diskMetaStore) GetEnumDict(tableName, columnName string) ([]string, er
 func (dm *diskMetaStore) GetArchivingCutoff(tableName string, shard int) (uint32, error) {
 	dm.RLock()
 	defer dm.RUnlock()
-	err := dm.shardExists(tableName, shard)
+	err := dm.tableExists(tableName)
 	if err != nil {
 		return 0, err
 	}
@@ -163,7 +163,7 @@ func (dm *diskMetaStore) GetArchivingCutoff(tableName string, shard int) (uint32
 func (dm *diskMetaStore) GetSnapshotProgress(tableName string, shard int) (int64, uint32, int32, uint32, error) {
 	dm.RLock()
 	defer dm.RUnlock()
-	if err := dm.shardExists(tableName, shard); err != nil {
+	if err := dm.tableExists(tableName); err != nil {
 		return 0, 0, 0, 0, err
 	}
 	file := dm.getSnapshotRedoLogVersionAndOffsetFilePath(tableName, shard)
@@ -174,7 +174,7 @@ func (dm *diskMetaStore) GetSnapshotProgress(tableName string, shard int) (int64
 func (dm *diskMetaStore) UpdateArchivingCutoff(tableName string, shard int, cutoff uint32) error {
 	dm.Lock()
 	defer dm.Unlock()
-	if err := dm.shardExists(tableName, shard); err != nil {
+	if err := dm.tableExists(tableName); err != nil {
 		return err
 	}
 
@@ -195,7 +195,7 @@ func (dm *diskMetaStore) UpdateArchivingCutoff(tableName string, shard int, cuto
 func (dm *diskMetaStore) UpdateSnapshotProgress(tableName string, shard int, redoLogFile int64, upsertBatchOffset uint32, lastReadBatchID int32, lastReadBatchOffset uint32) error {
 	dm.Lock()
 	defer dm.Unlock()
-	if err := dm.shardExists(tableName, shard); err != nil {
+	if err := dm.tableExists(tableName); err != nil {
 		return err
 	}
 
@@ -218,7 +218,7 @@ func (dm *diskMetaStore) UpdateBackfillProgress(table string, shard int, redoFil
 
 	dm.Lock()
 	defer dm.Unlock()
-	if err := dm.shardExists(table, shard); err != nil {
+	if err := dm.tableExists(table); err != nil {
 		return err
 	}
 
@@ -239,7 +239,7 @@ func (dm *diskMetaStore) UpdateBackfillProgress(table string, shard int, redoFil
 func (dm *diskMetaStore) GetBackfillProgressInfo(table string, shard int) (int64, uint32, error) {
 	dm.RLock()
 	defer dm.RUnlock()
-	if err := dm.shardExists(table, shard); err != nil {
+	if err := dm.tableExists(table); err != nil {
 		return 0, 0, err
 	}
 
@@ -254,6 +254,10 @@ func (dm *diskMetaStore) UpdateRedoLogCommitOffset(table string, shard int, offs
 
 	// No sanity check here for schema/fact table/directory, assuming all should be passed before calling this func
 	file := dm.getIngestionCommitOffsetFilePath(table, shard)
+	err := dm.MkdirAll(filepath.Dir(file), 0755)
+	if err != nil {
+		return utils.StackError(err, "Failed to create directory for redolog commit offset")
+	}
 
 	writer, err := dm.OpenFileForWrite(
 		file,
@@ -301,6 +305,10 @@ func (dm *diskMetaStore) UpdateRedoLogCheckpointOffset(table string, shard int, 
 
 	// No sanity check here for schema/fact table/directory, assuming all should be passed before calling this func
 	file := dm.getIngestionCheckpointOffsetFilePath(table, shard)
+	err := dm.MkdirAll(filepath.Dir(file), 0755)
+	if err != nil {
+		return utils.StackError(err, "Failed to create directory for redolog checkpoint offset")
+	}
 
 	writer, err := dm.OpenFileForWrite(
 		file,
@@ -479,8 +487,7 @@ func (dm *diskMetaStore) CreateTable(table *common.Table) (err error) {
 		}
 	}
 
-	// for single instance version, when creating table, create shard zero as well
-	return dm.createShard(table.Name, table.IsFactTable, 0)
+	return nil
 }
 
 // UpdateTable update table configurations
@@ -734,7 +741,7 @@ func (dm *diskMetaStore) PurgeArchiveBatches(tableName string, shard, batchIDSta
 	dm.Lock()
 	defer dm.Unlock()
 
-	if err := dm.shardExists(tableName, shard); err != nil {
+	if err := dm.tableExists(tableName); err != nil {
 		return err
 	}
 
@@ -780,12 +787,11 @@ func (dm *diskMetaStore) writeArchiveBatchVersionWithMode(tableName string, shar
 	dm.Lock()
 	defer dm.Unlock()
 
-	if err := dm.shardExists(tableName, shard); err != nil {
+	if err := dm.tableExists(tableName); err != nil {
 		return err
 	}
 
 	path := dm.getArchiveBatchVersionFilePath(tableName, shard, batchID)
-
 	if err := dm.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return utils.StackError(err, "Failed to create archive batch version directory")
 	}
@@ -871,7 +877,7 @@ func (dm *diskMetaStore) GetArchiveBatchVersion(table string, shard, batchID int
 	dm.RLock()
 	defer dm.RUnlock()
 
-	if err := dm.shardExists(table, shard); err != nil {
+	if err := dm.tableExists(table); err != nil {
 		return 0, 0, 0, err
 	}
 
@@ -1148,6 +1154,7 @@ func (dm *diskMetaStore) writeEnumFile(tableName, columnName string, enumCases [
 	if len(enumCases) == 0 {
 		return nil
 	}
+
 	err := dm.MkdirAll(dm.getEnumDirPath(tableName), 0755)
 	if err != nil {
 		return utils.StackError(err, "Failed to create enums directory")
@@ -1432,38 +1439,6 @@ func (dm *diskMetaStore) enumColumnExists(tableName string, columnName string) e
 		}
 	}
 	return ErrColumnDoesNotExist
-}
-
-// shardExists checks whether shard exists,
-// return ErrShardDoesNotExist.
-func (dm *diskMetaStore) shardExists(tableName string, shard int) error {
-	if err := dm.tableExists(tableName); err != nil {
-		return err
-	}
-
-	_, err := dm.Stat(dm.getShardDirPath(tableName, shard))
-	if os.IsNotExist(err) {
-		return ErrShardDoesNotExist
-	} else if err != nil {
-		return utils.StackError(err, "Failed to read directory, table: %s, shard: %d", tableName, shard)
-	}
-
-	return nil
-}
-
-// createShard assume table is created already
-func (dm *diskMetaStore) createShard(tableName string, isFactTable bool, shard int) error {
-	var err error
-	if isFactTable {
-		// only fact table have archive batches directory
-		err = dm.MkdirAll(filepath.Join(dm.getShardDirPath(tableName, 0), "batches"), 0755)
-	} else {
-		err = dm.MkdirAll(dm.getShardDirPath(tableName, 0), 0755)
-	}
-	if err != nil {
-		return utils.StackError(err, "Failed to create shard directory, table: %s, shard: %d", tableName, shard)
-	}
-	return nil
 }
 
 // NewDiskMetaStore creates a new disk based metastore

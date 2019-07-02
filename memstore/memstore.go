@@ -95,9 +95,9 @@ type memStoreImpl struct {
 
 	// reference to metaStore for registering watchers,
 	// fetch latest schema and store Shard versions.
-	metaStore            metaCom.MetaStore
-	diskStore            diskstore.DiskStore
-	options              Options
+	metaStore metaCom.MetaStore
+	diskStore diskstore.DiskStore
+	options   Options
 
 	// each MemStore should only have one scheduler instance.
 	scheduler Scheduler
@@ -110,11 +110,11 @@ func getTableShardKey(tableName string, shardID int) string {
 // NewMemStore creates a MemStore from the specified MetaStore.
 func NewMemStore(metaStore metaCom.MetaStore, diskStore diskstore.DiskStore, options Options) MemStore {
 	memStore := &memStoreImpl{
-		TableShards:          make(map[string]map[int]*TableShard),
-		TableSchemas:         make(map[string]*common.TableSchema),
-		metaStore:            metaStore,
-		diskStore:            diskStore,
-		options:              options,
+		TableShards:  make(map[string]map[int]*TableShard),
+		TableSchemas: make(map[string]*common.TableSchema),
+		metaStore:    metaStore,
+		diskStore:    diskStore,
+		options:      options,
 	}
 	// Create HostMemoryManager
 	memStore.HostMemManager = NewHostMemoryManager(memStore, utils.GetConfig().TotalMemorySize)
@@ -264,7 +264,7 @@ func (m *memStoreImpl) AddTableShard(table string, shardID int, needPeerCopy boo
 	defer m.Unlock()
 
 	schema := m.TableSchemas[table]
-	if schema != nil {
+	if schema == nil {
 		// table might get deleted at this point
 		return
 	}
