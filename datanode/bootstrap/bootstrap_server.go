@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	chunkSize  = 32 * 1024
-	bufferSize = 32 * 1024
+	chunkSize       = 32 * 1024
+	bufferSize      = 32 * 1024
 	recycleInterval = 5 * time.Second
 )
 
@@ -557,7 +557,7 @@ func (p *PeerDataNodeServerImpl) addSession(session *sessionInfo) {
 }
 
 // closeSession remove session from memory
-func (p* PeerDataNodeServerImpl) cleanSession(sessionID int64, needLock bool) {
+func (p *PeerDataNodeServerImpl) cleanSession(sessionID int64, needLock bool) {
 	if needLock {
 		p.Lock()
 		defer p.Unlock()

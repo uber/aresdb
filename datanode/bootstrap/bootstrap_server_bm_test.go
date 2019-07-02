@@ -30,7 +30,6 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-
 func TestFileTransfer(t *testing.T) {
 	testFile := "/tmp/file32k"
 	bigBuff := make([]byte, 32*1024)
@@ -93,7 +92,7 @@ func fileTransfer(testName string, addr string, fileName string, chunkSize, buff
 
 func BenchmarkFileTransfer(b *testing.B) {
 	testFile := "/tmp/file2m"
-	fileSize := 2*1024*1024
+	fileSize := 2 * 1024 * 1024
 
 	bigBuff := make([]byte, fileSize)
 	ioutil.WriteFile(testFile, bigBuff, 0666)

@@ -27,8 +27,6 @@ import (
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/utils"
-	"go.uber.org/zap"
-
 	"sync"
 	"time"
 
@@ -175,12 +173,16 @@ func (m *bootstrapManagerImpl) bootstrap() error {
 	wg.Wait()
 
 	err := multiErr.FinalError()
+	if err != nil {
+		return err
+	}
+
 	took := utils.Now().Sub(starDatanodeBootstrap)
-	m.log.Info("bootstrap finished",
-		zap.String("datanode", m.datanode.ID()),
-		zap.Duration("duration", took),
-	)
-	return err
+	m.log.With("datanode", m.datanode.ID()).
+		With("duration", took).
+		Info("bootstrap finished")
+
+	return nil
 }
 
 func newInitialTopologyState(topo topology.Topology) *topology.StateSnapshot {
