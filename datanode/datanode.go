@@ -349,6 +349,8 @@ func (d *dataNode) ShardSet() shard.ShardSet {
 
 // Tables returns the actual tables owned by datanode
 func (d *dataNode) Tables() (tables []string) {
+	d.memStore.RLock()
+	defer d.memStore.RUnlock()
 	schemas := d.memStore.GetSchemas()
 	for name := range schemas {
 		tables = append(tables, name)
