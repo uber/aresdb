@@ -412,43 +412,6 @@ var _ = ginkgo.Describe("Validator", func() {
 		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
 	})
 
-	ginkgo.It("should fail for adding deleted columns", func() {
-		oldTable := common.Table{
-			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Uint32",
-				},
-			},
-			PrimaryKeyColumns: []int{0},
-			Version:           0,
-			Config:            DefaultTableConfig,
-		}
-		newTable := common.Table{
-			Name: "testTable",
-			Columns: []common.Column{
-				{
-					Name: "col1",
-					Type: "Uint32",
-				},
-				{
-					Name:    "col2",
-					Type:    "Uint32",
-					Deleted: true,
-				},
-			},
-			PrimaryKeyColumns: []int{0},
-			Version:           1,
-			Config:            DefaultTableConfig,
-		}
-		validator := NewTableSchameValidator()
-		validator.SetNewTable(newTable)
-		validator.SetOldTable(oldTable)
-		err := validator.Validate()
-		Ω(err).Should(Equal(ErrNewColumnWithDeletion))
-	})
-
 	ginkgo.It("should fail for changing pk cloumns", func() {
 		oldTable := common.Table{
 			Name: "testTable",
