@@ -29,10 +29,6 @@ type SchemaManager interface {
 	GetTableSchemaReader(namespace string) (memCom.TableSchemaReader, error)
 }
 
-// QueryContext defines query context
-type QueryContext interface {
-}
-
 // QueryExecutor defines query executor
 type QueryExecutor interface {
 	// Execute executes query and flush result to connection
