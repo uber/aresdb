@@ -104,7 +104,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 			// found new table
 			err = j.schemaMutator.CreateTable(&table)
 			if err != nil {
-				reportError(err)
+				reportError(err, table.Name)
 				continue
 			}
 			utils.GetRootReporter().GetCounter(utils.SchemaCreationCount).Inc(1)
@@ -114,7 +114,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 			var oldTable *common.Table
 			oldTable, err = j.schemaMutator.GetTable(table.Name)
 			if err != nil {
-				reportError(err)
+				reportError(err, table.Name)
 				continue
 			}
 			if oldTable.Incarnation < table.Incarnation {
@@ -122,14 +122,14 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 				// then create new table
 				err := j.schemaMutator.DeleteTable(table.Name)
 				if err != nil {
-					reportError(err)
+					reportError(err, table.Name)
 					continue
 				}
 				utils.GetRootReporter().GetCounter(utils.SchemaDeletionCount).Inc(1)
 				utils.GetLogger().With("table", table.Name).Debug("deleted table")
 				err = j.schemaMutator.CreateTable(&table)
 				if err != nil {
-					reportError(err)
+					reportError(err, table.Name)
 					continue
 				}
 				utils.GetRootReporter().GetCounter(utils.SchemaCreationCount).Inc(1)
@@ -141,12 +141,12 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 				j.schemaValidator.SetOldTable(*oldTable)
 				err = j.schemaValidator.Validate()
 				if err != nil {
-					reportError(err)
+					reportError(err, table.Name)
 					continue
 				}
 				err = j.schemaMutator.UpdateTable(table)
 				if err != nil {
-					reportError(err)
+					reportError(err, table.Name)
 					continue
 				}
 				utils.GetRootReporter().GetCounter(utils.SchemaUpdateCount).Inc(1)
@@ -160,7 +160,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 			// found table deletion
 			err = j.schemaMutator.DeleteTable(oldTableName)
 			if err != nil {
-				reportError(err)
+				reportError(err, oldTableName)
 				continue
 			}
 			utils.GetRootReporter().GetCounter(utils.SchemaDeletionCount).Inc(1)
@@ -170,7 +170,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 	return
 }
 
-func reportError(err error) {
+func reportError(err error, tableName string) {
 	utils.GetRootReporter().GetCounter(utils.SchemaFetchFailure).Inc(1)
-	utils.GetLogger().Error(utils.StackError(err, "err running schema fetch job"))
+	utils.GetLogger().With("table", tableName).Error(utils.StackError(err, "err running schema fetch job"))
 }
