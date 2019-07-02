@@ -163,14 +163,12 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("Stat", "base/read_fail/schema").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/unknown/schema").Return(nil, os.ErrNotExist)
 	mockFileSystem.On("Stat", "base/error/schema").Return(nil, os.ErrPermission)
-	mockFileSystem.On("Stat", "base/unknown_shard/schema").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/error_shard/schema").Return(nil, nil)
 
 	mockFileSystem.On("Stat", "base/c/shards/0").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/a/shards/0").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/b/shards/0").Return(&mocks.FileInfo{}, nil)
 	mockFileSystem.On("Stat", "base/read_fail/shards/0").Return(&mocks.FileInfo{}, nil)
-	mockFileSystem.On("Stat", "base/unknown_shard/shards/0").Return(nil, os.ErrNotExist)
 	mockFileSystem.On("Stat", "base/error_shard/shards/0").Return(nil, os.ErrPermission)
 
 	mockFileSystem.On("ReadFile", "base/a/schema").Return(testTableABytes, nil)
