@@ -75,17 +75,17 @@ var _ = ginkgo.Describe("Purge", func() {
 			TableSchemas: map[string]*memCom.TableSchema{
 				testTable: tableSchema,
 			},
-			diskStore:            diskStore,
-			metaStore:            metaStore,
-			HostMemManager:       hostMemoryManager,
-			options:              options,
+			diskStore:      diskStore,
+			metaStore:      metaStore,
+			HostMemManager: hostMemoryManager,
+			options:        options,
 		}
 		hostMemoryManager = NewHostMemoryManager(memStore, 1<<10)
 		tableShard = NewTableShard(tableSchema, metaStore, diskStore, hostMemoryManager, testShardID, options)
 
-		archiveBatch0, err := testFactory.ReadArchiveBatch("archiving/archiveBatch0")
+		archiveBatch0, err := GetFactory().ReadArchiveBatch("archiving/archiveBatch0")
 		Ω(err).Should(BeNil())
-		archiveBatch1, err := testFactory.ReadArchiveBatch("archiving/archiveBatch0")
+		archiveBatch1, err := GetFactory().ReadArchiveBatch("archiving/archiveBatch0")
 		Ω(err).Should(BeNil())
 
 		archivestore := NewArchiveStore(tableShard)
@@ -120,8 +120,8 @@ var _ = ginkgo.Describe("Purge", func() {
 
 		diskStore.On("DeleteBatches", testTable, testShardID, 0, 2).
 			Return(1, nil).Once()
-		bootstrapToken.On("AcquireToken",  mock.Anything, mock.Anything).Return(true).Once()
-		bootstrapToken.On("ReleaseToken",  mock.Anything, mock.Anything).Return().Once()
+		bootstrapToken.On("AcquireToken", mock.Anything, mock.Anything).Return(true).Once()
+		bootstrapToken.On("ReleaseToken", mock.Anything, mock.Anything).Return().Once()
 
 		err := memStore.Purge(testTable, testShardID, 0, 2, mockReporter)
 		Ω(err).Should(BeNil())
@@ -143,8 +143,8 @@ var _ = ginkgo.Describe("Purge", func() {
 		Ω(tableShard.ArchiveStore.CurrentVersion.Batches).Should(HaveKey(int32(1)))
 		Ω(tableShard.ArchiveStore.CurrentVersion.Batches).Should(HaveKey(int32(2)))
 
-		bootstrapToken.On("AcquireToken",  mock.Anything, mock.Anything).Return(false).Once()
-		bootstrapToken.On("ReleaseToken",  mock.Anything, mock.Anything).Return().Once()
+		bootstrapToken.On("AcquireToken", mock.Anything, mock.Anything).Return(false).Once()
+		bootstrapToken.On("ReleaseToken", mock.Anything, mock.Anything).Return().Once()
 
 		err := memStore.Purge(testTable, testShardID, 0, 2, mockReporter)
 		// purge should always be no err, but here since no mock added, if not disabled, there will be mock error

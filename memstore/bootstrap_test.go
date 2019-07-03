@@ -117,7 +117,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			})
 			defer utils.ResetClockImplementation()
 
-			sorted, _ := getFactory().ReadArchiveBatch("archiving/archiveBatch0")
+			sorted, _ := GetFactory().ReadArchiveBatch("archiving/archiveBatch0")
 
 			vp0BufferSorted := &bytes.Buffer{}
 			vp1BufferSorted := &bytes.Buffer{}
@@ -268,7 +268,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			lastReadBatchID := -110
 			lastBatchSize := 6
 
-			unsorted, _ := getFactory().ReadLiveBatch("archiving/batch-110")
+			unsorted, _ := GetFactory().ReadLiveBatch("archiving/batch-110")
 
 			vp0BufferUnsorted := &bytes.Buffer{}
 			vp1BufferUnsorted := &bytes.Buffer{}

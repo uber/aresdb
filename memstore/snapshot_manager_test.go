@@ -30,7 +30,7 @@ var _ = ginkgo.Describe("snapshot manager", func() {
 	table := "table1"
 	shardID := 0
 
-	m := getFactory().NewMockMemStore()
+	m := GetFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
 	shard := NewTableShard(&memCom.TableSchema{
 		Schema: metaCom.Table{

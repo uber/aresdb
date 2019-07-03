@@ -50,12 +50,13 @@ import (
 // counts, nulls and values will be stored in a continuous memory space.
 func readDeviceVPSlice(factory memstore.TestFactoryT, name string, stream unsafe.Pointer,
 	device int) (deviceVectorPartySlice, error) {
-	sourceVP, err := factory.ReadArchiveVectorParty(name, &sync.RWMutex{})
+	sourceArchiveVP, err := factory.ReadArchiveVectorParty(name, &sync.RWMutex{})
 	if err != nil {
 		return deviceVectorPartySlice{}, err
 	}
-
-	hostVPSlice := sourceVP.GetHostVectorPartySlice(0, sourceVP.GetLength())
+	transferableVP := sourceArchiveVP.(memstore.TransferableVectorParty)
+	hostVPSlice := transferableVP.GetHostVectorPartySlice(
+		0, sourceArchiveVP.GetLength())
 	deviceVPSlice := hostToDeviceColumn(hostVPSlice, device)
 	copyHostToDevice(hostVPSlice, deviceVPSlice, stream, device)
 	return deviceVPSlice, nil
@@ -1419,7 +1420,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		shapeLiveVP := memstore.NewLiveVectorParty(3, memCom.GeoShape, memCom.NullDataValue, mockMemoryManager)
 		shapeLiveVP.Allocate(false)
 
-		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager,1, options)
+		geoFenceTableShard := memstore.NewTableShard(geofenceSchema, metaStore, diskStore, mockMemoryManager, 1, options)
 		geoFenceLiveStore := geoFenceTableShard.LiveStore
 
 		geoFenceLiveStore.Batches = map[int32]*memstore.LiveBatch{

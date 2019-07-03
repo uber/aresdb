@@ -25,7 +25,7 @@ import (
 
 var _ = ginkgo.Describe("test factory", func() {
 	ginkgo.It("test read vector", func() {
-		v, err := getFactory().ReadVector("v0")
+		v, err := GetFactory().ReadVector("v0")
 		Ω(err).Should(BeNil())
 		Ω(v.Size).Should(BeEquivalentTo(6))
 
@@ -38,19 +38,20 @@ var _ = ginkgo.Describe("test factory", func() {
 		// null
 		Ω(v.GetBool(5)).Should(BeFalse())
 
-		_, err = getFactory().ReadVector("not_exist")
+		_, err = GetFactory().ReadVector("not_exist")
 		Ω(err).ShouldNot(BeNil())
 
 		// invalid bool value
-		_, err = getFactory().ReadVector("invalid_bool_value")
+		_, err = GetFactory().ReadVector("invalid_bool_value")
 		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("test read vector party", func() {
 		// test vector party
 		locker := &sync.RWMutex{}
-		vp, err := getFactory().ReadArchiveVectorParty("sortedVP0", locker)
+		archiveVP, err := GetFactory().ReadArchiveVectorParty("sortedVP0", locker)
 		Ω(err).Should(BeNil())
+		vp := archiveVP.(*archiveVectorParty)
 		Ω(vp.GetLength()).Should(BeEquivalentTo(5))
 
 		Ω(*(*uint32)(vp.values.GetValue(0))).Should(BeEquivalentTo(0))
@@ -61,13 +62,15 @@ var _ = ginkgo.Describe("test factory", func() {
 
 		// test vector party with counts
 		// test vector party
-		vp, err = getFactory().ReadArchiveVectorParty("mergedVP1", locker)
+		archiveVP, err = GetFactory().ReadArchiveVectorParty("mergedVP1", locker)
 		Ω(err).Should(BeNil())
+		vp = archiveVP.(*archiveVectorParty)
 		Ω(vp.GetLength()).Should(BeEquivalentTo(3))
 		Ω(vp.nonDefaultValueCount).Should(BeEquivalentTo(6))
 
-		vp, err = getFactory().ReadArchiveVectorParty("sortedVP1", locker)
+		archiveVP, err = GetFactory().ReadArchiveVectorParty("sortedVP1", locker)
 		Ω(err).Should(BeNil())
+		vp = archiveVP.(*archiveVectorParty)
 		Ω(vp.GetLength()).Should(BeEquivalentTo(3))
 		Ω(vp.nonDefaultValueCount).Should(BeEquivalentTo(2))
 
@@ -83,12 +86,12 @@ var _ = ginkgo.Describe("test factory", func() {
 		Ω(*(*uint32)(vp.counts.GetValue(3))).Should(BeEquivalentTo(5))
 
 		// invalid value length (counts length is not equal to values length+1)
-		_, err = getFactory().ReadArchiveVectorParty("invalid_value_length", locker)
+		_, err = GetFactory().ReadArchiveVectorParty("invalid_value_length", locker)
 		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("test read batch", func() {
-		batch, err := getFactory().ReadArchiveBatch("archiveBatch")
+		batch, err := GetFactory().ReadArchiveBatch("archiveBatch")
 		Ω(err).Should(BeNil())
 		Ω(len(batch.Columns)).Should(BeEquivalentTo(6))
 		Ω(batch.Columns[0].(*archiveVectorParty).length).Should(BeEquivalentTo(5))
@@ -100,14 +103,14 @@ var _ = ginkgo.Describe("test factory", func() {
 	})
 
 	ginkgo.It("test new mock memStoreImpl", func() {
-		m := getFactory().NewMockMemStore()
+		m := GetFactory().NewMockMemStore()
 		Ω(m).ShouldNot(BeNil())
 		Ω(m.diskStore).Should(BeAssignableToTypeOf(new(diskMocks.DiskStore)))
 		Ω(m.metaStore).Should(BeAssignableToTypeOf(new(metaMocks.MetaStore)))
 	})
 
 	ginkgo.It("test read upsert batch", func() {
-		ub, err := getFactory().ReadUpsertBatch("testReadUpsertBatch")
+		ub, err := GetFactory().ReadUpsertBatch("testReadUpsertBatch")
 		Ω(err).Should(BeNil())
 		Ω(ub).ShouldNot(BeNil())
 		Ω(ub.NumColumns).Should(Equal(2))

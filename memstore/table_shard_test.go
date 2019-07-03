@@ -58,7 +58,7 @@ var _ = ginkgo.Describe("table Shard", func() {
 			schema.SetDefaultValue(columnID)
 		}
 
-		m := getFactory().NewMockMemStore()
+		m := GetFactory().NewMockMemStore()
 		shard := NewTableShard(schema, nil, diskStore,
 			NewHostMemoryManager(m, 1<<32), 0, m.options)
 
@@ -80,7 +80,7 @@ var _ = ginkgo.Describe("table Shard", func() {
 			BatchID: 100,
 			Shard:   shard,
 		}
-		aBatch.Columns = []common.VectorParty{nil, nil, &archiveVectorParty{allUsersDone: sync.NewCond(aBatch)}}
+		aBatch.Columns = []common.VectorParty{nil, nil, &archiveVectorParty{Pinnable: Pinnable{AllUsersDone: sync.NewCond(aBatch)}}}
 		shard.ArchiveStore.CurrentVersion.Batches[100] = aBatch
 
 		// Test!

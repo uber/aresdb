@@ -17,20 +17,18 @@
 package memstore
 
 import (
-	"path/filepath"
-
-	"github.com/uber/aresdb/utils"
-
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/common"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/redolog"
+	"github.com/uber/aresdb/utils"
 	"gopkg.in/yaml.v2"
+	"path/filepath"
 	"strings"
 	"sync"
-	"github.com/stretchr/testify/mock"
 )
 
 const (
@@ -56,8 +54,8 @@ func (t TestFactoryT) NewMockMemStore() *memStoreImpl {
 	diskStore := new(diskMocks.DiskStore)
 	redoLogManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
 	bootstrapToken := new(memComMocks.BootStrapToken)
-	bootstrapToken.On("AcquireToken",  mock.Anything, mock.Anything).Return(true)
-	bootstrapToken.On("ReleaseToken",  mock.Anything, mock.Anything).Return()
+	bootstrapToken.On("AcquireToken", mock.Anything, mock.Anything).Return(true)
+	bootstrapToken.On("ReleaseToken", mock.Anything, mock.Anything).Return()
 
 	return NewMemStore(metaStore, diskStore, NewOptions(bootstrapToken, redoLogManagerMaster)).(*memStoreImpl)
 }
@@ -88,7 +86,7 @@ func convertToArchiveVectorParty(vp *cVectorParty, locker sync.Locker) *archiveV
 	archiveColumn := &archiveVectorParty{
 		cVectorParty: *vp,
 	}
-	archiveColumn.allUsersDone = sync.NewCond(locker)
+	archiveColumn.AllUsersDone = sync.NewCond(locker)
 	archiveColumn.Prune()
 	return archiveColumn
 }
@@ -155,7 +153,7 @@ func (rb *rawBatch) toBatch(t TestFactoryT) (*Batch, error) {
 }
 
 // ReadArchiveVectorParty loads a vector party and prune it after construction.
-func (t TestFactoryT) ReadArchiveVectorParty(name string, locker sync.Locker) (*archiveVectorParty, error) {
+func (t TestFactoryT) ReadArchiveVectorParty(name string, locker sync.Locker) (memCom.ArchiveVectorParty, error) {
 	vp, err := t.ReadVectorParty(name)
 	if err != nil {
 		return nil, err
@@ -164,7 +162,7 @@ func (t TestFactoryT) ReadArchiveVectorParty(name string, locker sync.Locker) (*
 }
 
 // ReadLiveVectorParty loads a vector party and skip pruning.
-func (t TestFactoryT) ReadLiveVectorParty(name string) (*cLiveVectorParty, error) {
+func (t TestFactoryT) ReadLiveVectorParty(name string) (memCom.LiveVectorParty, error) {
 	vp, err := t.ReadVectorParty(name)
 	if err != nil {
 		return nil, err
@@ -182,9 +180,9 @@ func (t TestFactoryT) ReadVectorParty(name string) (*cVectorParty, error) {
 
 type rawVectorParty struct {
 	DataType  string   `yaml:"data_type"`
-	HasCounts bool     `yaml:"has_counts"`
 	Length    int      `yaml:"length"`
 	Values    []string `yaml:"values"`
+	HasCounts bool     `yaml:"has_counts"`
 }
 
 func (t TestFactoryT) readVectorPartyFromFile(path string) (*cVectorParty, error) {
@@ -427,6 +425,6 @@ func (t TestFactoryT) readUpsertBatchFromFile(path string) (*memCom.UpsertBatch,
 	return ru.toUpsertBatch()
 }
 
-func getFactory() TestFactoryT {
+func GetFactory() TestFactoryT {
 	return testFactory
 }

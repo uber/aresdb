@@ -15,19 +15,19 @@
 package memstore
 
 import (
-	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/redolog"
 )
 
 // class to hold all necessary context objects used in memstore
 type Options struct {
-	bootstrapToken  common.BootStrapToken
+	bootstrapToken common.BootStrapToken
 	redoLogMaster  *redolog.RedoLogManagerMaster
 }
 
 // NewOptions create new options instance
 func NewOptions(bootstrapToken common.BootStrapToken, redoLogMaster *redolog.RedoLogManagerMaster) Options {
-	return Options {
+	return Options{
 		bootstrapToken: bootstrapToken,
 		redoLogMaster:  redoLogMaster,
 	}

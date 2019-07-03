@@ -16,11 +16,9 @@ package memstore
 
 import (
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"testing"
-
 	"github.com/onsi/ginkgo/reporters"
+	. "github.com/onsi/gomega"
+	"testing"
 )
 
 func TestMemStore(t *testing.T) {
