@@ -25,6 +25,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	. "io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 func NewDataNodeQueryClient() DataNodeQueryClient {
@@ -87,7 +88,17 @@ func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, host topology.H
 }
 
 func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery, hll bool) (bs []byte, err error) {
-	url := fmt.Sprintf("http://%s/query/aql?dataonly=1", host.Address())
+	var u *url.URL
+	u, err = url.Parse(host.Address())
+	if err != nil {
+		return
+	}
+	u.Scheme = "http"
+	u.Path = "/query/aql"
+	q := u.Query()
+	q.Set("dataonly", "1")
+	u.RawQuery = q.Encode()
+
 	aqlRequestBody := aqlRequestBody{
 		[]queryCom.AQLQuery{query},
 	}
@@ -97,7 +108,7 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.H
 		return
 	}
 	var req *http.Request
-	req, err = http.NewRequest(http.MethodPost, url, bytes.NewBuffer(bodyBytes))
+	req, err = http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return
 	}
