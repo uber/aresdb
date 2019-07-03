@@ -667,8 +667,8 @@ func (vp *cVectorParty) Allocate(hasCount bool) {
 	}
 }
 
-// PinnableVectorParty implements a vector party that support pin and release operations.
-type PinnableVectorParty struct {
+// Pinnable implements a vector party that support pin and release operations.
+type Pinnable struct {
 	// Used in archive batches to allow requesters to wait until the vector party
 	// is fully loaded from disk.
 	Loader sync.WaitGroup
@@ -681,7 +681,7 @@ type PinnableVectorParty struct {
 
 // Release releases the vector party from the archive store
 // so that it can be evicted or deleted.
-func (vp *PinnableVectorParty) Release() {
+func (vp *Pinnable) Release() {
 	vp.AllUsersDone.L.Lock()
 	vp.Pins--
 	if vp.Pins == 0 {
@@ -691,12 +691,12 @@ func (vp *PinnableVectorParty) Release() {
 }
 
 // Pin vector party for use, caller should lock archive batch before calling
-func (vp *PinnableVectorParty) Pin() {
+func (vp *Pinnable) Pin() {
 	vp.Pins++
 }
 
 // WaitForUsers wait for vector party user to finish and return true when all users are done
-func (vp *PinnableVectorParty) WaitForUsers(blocking bool) (userDone bool) {
+func (vp *Pinnable) WaitForUsers(blocking bool) bool {
 	if blocking {
 		for vp.Pins > 0 {
 			vp.AllUsersDone.Wait()
@@ -707,6 +707,6 @@ func (vp *PinnableVectorParty) WaitForUsers(blocking bool) (userDone bool) {
 }
 
 // WaitForDiskLoad waits for vector party disk load to finish
-func (vp *PinnableVectorParty) WaitForDiskLoad() {
+func (vp *Pinnable) WaitForDiskLoad() {
 	vp.Loader.Wait()
 }

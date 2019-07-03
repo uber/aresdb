@@ -25,7 +25,7 @@ import (
 // archiveVectorParty is the implementation of ArchiveVectorParty
 type archiveVectorParty struct {
 	cVectorParty
-	PinnableVectorParty
+	Pinnable
 }
 
 // Prune judges column mode first and sets the mode to vector party.
@@ -111,7 +111,7 @@ func newArchiveVectorParty(length int, dataType common.DataType, defaultValue co
 				defaultValue: defaultValue,
 			},
 		},
-		PinnableVectorParty: PinnableVectorParty{
+		Pinnable: Pinnable{
 			AllUsersDone: sync.NewCond(locker),
 		},
 	}

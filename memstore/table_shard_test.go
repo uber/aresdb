@@ -80,7 +80,7 @@ var _ = ginkgo.Describe("table Shard", func() {
 			BatchID: 100,
 			Shard:   shard,
 		}
-		aBatch.Columns = []common.VectorParty{nil, nil, &archiveVectorParty{PinnableVectorParty: PinnableVectorParty{AllUsersDone: sync.NewCond(aBatch)}}}
+		aBatch.Columns = []common.VectorParty{nil, nil, &archiveVectorParty{Pinnable: Pinnable{AllUsersDone: sync.NewCond(aBatch)}}}
 		shard.ArchiveStore.CurrentVersion.Batches[100] = aBatch
 
 		// Test!

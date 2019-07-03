@@ -384,7 +384,7 @@ func NewLiveVectorParty(length int, dataType common.DataType,
 // in memory representation except archiving vp does not have cap vector.
 type ArchiveVectorParty struct {
 	baseVectorParty
-	memstore.PinnableVectorParty
+	memstore.Pinnable
 	values *memstore.Vector
 	// bytesWritten should only be used when archiving or backfilling. It's used to record the current position
 	// in values vector.
@@ -412,7 +412,7 @@ func NewArchiveVectorParty(length int, dataType common.DataType,
 			length:   length,
 			dataType: dataType,
 		},
-		PinnableVectorParty: memstore.PinnableVectorParty{
+		Pinnable: memstore.Pinnable{
 			AllUsersDone: sync.NewCond(locker),
 		},
 		totalValueBytes: totalValueBytes,
