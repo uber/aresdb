@@ -66,7 +66,7 @@ function initSummaryViewer() {
     // Init shard selector.
     $('#shard-selector').select2({
         ajax: {
-            url: "/shards",
+            url: "/dbg/shards",
             dataType: 'json',
             quietMillis: 50,
             processResults: function (data) {
