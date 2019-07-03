@@ -533,7 +533,7 @@ func (d *dataNode) newHandlers() datanodeHandlers {
 		debugStaticHandler: http.StripPrefix("/static/", utils.NoCache(http.FileServer(http.Dir("./api/ui/debug/")))),
 		swaggerHandler:     http.StripPrefix("/swagger/", http.FileServer(http.Dir("./api/ui/swagger/"))),
 		healthCheckHandler: healthCheckHandler,
-		debugHandler:       api.NewDebugHandler(d.memStore, d.metaStore, d.handlers.queryHandler, healthCheckHandler),
+		debugHandler:       api.NewDebugHandler(d.memStore, d.metaStore, d.handlers.queryHandler, healthCheckHandler, d),
 	}
 }
 

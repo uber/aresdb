@@ -64,6 +64,13 @@ function renderTables(tables) {
     });
 }
 
+function renderShards(shards) {
+    var shardSelect = $('#shard-select');
+    shards.forEach(function (shard, id) {
+        shardSelect.append('<option value' + '=' + id + '>' + shard + '</option>');
+    });
+}
+
 function getBatchSize(shard, id) {
     var batch = shard.liveStore.batches[id];
     if (shard.liveStore.lastReadRecord.batchID == id) {
@@ -295,6 +302,14 @@ function listTables() {
     );
 }
 
+function listShards() {
+    $.getJSON(
+        '/dbg/shards',
+        {},
+        renderShards
+    );
+}
+
 function getTableSchema(table) {
     $.getJSON(
         '/schema/tables/{0}'.format(table),
@@ -319,6 +334,7 @@ $(document).ready(function () {
     initShardPicker();
     initBatchLoader();
     listTables();
+    listShards();
 });
 
 function initShardPicker() {
@@ -326,7 +342,7 @@ function initShardPicker() {
     shardPicker.append('<label for="table-select">Table: </label>');
     shardPicker.append('<select id="table-select"></select>');
     shardPicker.append('<label for="shard-select">Shard: </label>');
-    shardPicker.append('<select id="shard-select" disabled><option>0</option></select>');
+    shardPicker.append('<select id="shard-select" ></select>');
     var shardPickButton = $('<button class="medium-button">Submit</button>');
     shardPickButton.click(function (event) {
         currentTableName = $('#table-select').find(":selected").text();
