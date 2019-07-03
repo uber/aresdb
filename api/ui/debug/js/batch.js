@@ -342,7 +342,7 @@ function initShardPicker() {
     shardPicker.append('<label for="table-select">Table: </label>');
     shardPicker.append('<select id="table-select"></select>');
     shardPicker.append('<label for="shard-select">Shard: </label>');
-    shardPicker.append('<select id="shard-select" ></select>');
+    shardPicker.append('<select id="shard-select"></select>');
     var shardPickButton = $('<button class="medium-button">Submit</button>');
     shardPickButton.click(function (event) {
         currentTableName = $('#table-select').find(":selected").text();

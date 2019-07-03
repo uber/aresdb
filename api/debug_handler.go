@@ -36,7 +36,7 @@ import (
 // DebugHandler handles debug operations.
 type DebugHandler struct {
 	shardOwner topology.ShardOwner
-	memStore memstore.MemStore
+	memStore   memstore.MemStore
 	// For getting cutoff of a shard.
 	metaStore          metaCom.MetaStore
 	queryHandler       *QueryHandler
@@ -51,7 +51,7 @@ func NewDebugHandler(memStore memstore.MemStore,
 	shardOwner topology.ShardOwner,
 ) *DebugHandler {
 	return &DebugHandler{
-		shardOwner:			shardOwner,
+		shardOwner:         shardOwner,
 		memStore:           memStore,
 		metaStore:          metaStore,
 		queryHandler:       queryHandler,
@@ -440,11 +440,6 @@ func (handler *DebugHandler) Purge(w http.ResponseWriter, r *http.Request) {
 
 		common.RespondJSONObjectWithCode(w, http.StatusOK, "Purge job submitted")
 	}
-}
-
-func (handler *DebugHandler) ShowShards(w http.ResponseWriter, r *http.Request) {
-	var
-
 }
 
 // ShowShardMeta shows the metadata for a table shard. It won't show the underlying data.
