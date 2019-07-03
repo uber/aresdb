@@ -44,7 +44,7 @@ var _ = ginkgo.Describe("datanode query client", func() {
 			bs, _ := json.Marshal(aqlResponseGood)
 			rw.Write(bs)
 		}))
-		add := server.Listener.Addr().String()
+		add := "http://" + server.Listener.Addr().String()
 		mockHost := topoMocks.Host{}
 		mockHost.On("Address").Return(add)
 
@@ -58,7 +58,7 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			rw.WriteHeader(500)
 		}))
-		add := server.Listener.Addr().String()
+		add := "http://" + server.Listener.Addr().String()
 		mockHost := topoMocks.Host{}
 		mockHost.On("Address").Return(add)
 
@@ -77,7 +77,7 @@ var _ = ginkgo.Describe("datanode query client", func() {
 			bs, _ := json.Marshal(aqlResponseBad)
 			rw.Write(bs)
 		}))
-		add := server.Listener.Addr().String()
+		add := "http://" + server.Listener.Addr().String()
 		mockHost := topoMocks.Host{}
 		mockHost.On("Address").Return(add)
 
