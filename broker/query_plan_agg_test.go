@@ -151,9 +151,12 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		Ω(ok).Should(BeTrue())
 		Ω(mn.aggType).Should(Equal(common.Count))
 		Ω(mn.children).Should(HaveLen(len(mockHosts)))
-		sn, ok := mn.children[0].(*BlockingScanNode)
+		sn1, ok := mn.children[0].(*BlockingScanNode)
 		Ω(ok).Should(BeTrue())
-		Ω(sn.query.Shards).Should(HaveLen(2))
+		Ω(sn1.query.Shards).Should(HaveLen(2))
+		sn2, ok := mn.children[1].(*BlockingScanNode)
+		Ω(ok).Should(BeTrue())
+		Ω(sn2.query.Shards).Should(HaveLen(2))
 	})
 
 	ginkgo.It("NewAggQueryPlan should work for avg query", func() {
