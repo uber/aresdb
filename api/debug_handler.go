@@ -18,7 +18,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/aresdb/cluster/topology"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -33,7 +35,8 @@ import (
 
 // DebugHandler handles debug operations.
 type DebugHandler struct {
-	memStore memstore.MemStore
+	shardOwner topology.ShardOwner
+	memStore   memstore.MemStore
 	// For getting cutoff of a shard.
 	metaStore          metaCom.MetaStore
 	queryHandler       *QueryHandler
@@ -41,8 +44,14 @@ type DebugHandler struct {
 }
 
 // NewDebugHandler returns a new DebugHandler.
-func NewDebugHandler(memStore memstore.MemStore, metaStore metaCom.MetaStore, queryHandler *QueryHandler, healthCheckHandler *HealthCheckHandler) *DebugHandler {
+func NewDebugHandler(memStore memstore.MemStore,
+	metaStore metaCom.MetaStore,
+	queryHandler *QueryHandler,
+	healthCheckHandler *HealthCheckHandler,
+	shardOwner topology.ShardOwner,
+) *DebugHandler {
 	return &DebugHandler{
+		shardOwner:         shardOwner,
 		memStore:           memStore,
 		metaStore:          metaStore,
 		queryHandler:       queryHandler,
@@ -57,6 +66,7 @@ func (handler *DebugHandler) Register(router *mux.Router) {
 	router.HandleFunc("/jobs/{jobType}", handler.ShowJobStatus).Methods(http.MethodGet)
 	router.HandleFunc("/devices", handler.ShowDeviceStatus).Methods(http.MethodGet)
 	router.HandleFunc("/host-memory", handler.ShowHostMemory).Methods(http.MethodGet)
+	router.HandleFunc("/shards", handler.ShowShardSet).Methods(http.MethodGet)
 	router.HandleFunc("/{table}/{shard}", handler.ShowShardMeta).Methods(http.MethodGet)
 	router.HandleFunc("/{table}/{shard}/archive", handler.Archive).Methods(http.MethodPost)
 	router.HandleFunc("/{table}/{shard}/backfill", handler.Backfill).Methods(http.MethodPost)
@@ -73,6 +83,13 @@ func (handler *DebugHandler) Register(router *mux.Router) {
 	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches/{offset}", handler.ReadUpsertBatch).
 		Methods(http.MethodGet)
 	router.HandleFunc("/{table}/{shard}/backfill-manager/upsertbatches/{offset}", handler.ReadBackfillQueueUpsertBatch).Methods(http.MethodGet)
+}
+
+// ShowShardSet shows the shard set owned by the server
+func (handler *DebugHandler) ShowShardSet(w http.ResponseWriter, r *http.Request) {
+	shards := handler.shardOwner.GetOwnedShards()
+	sort.Ints(shards)
+	common.Respond(w, shards)
 }
 
 // Health returns whether the health check is on or off

@@ -179,7 +179,8 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	// create query hanlder.
 	// static shard owner with non distributed version
-	queryHandler := api.NewQueryHandler(memStore, topology.NewStaticShardOwner([]int{0}), cfg.Query)
+	staticShardOwner := topology.NewStaticShardOwner([]int{0})
+	queryHandler := api.NewQueryHandler(memStore, staticShardOwner, cfg.Query)
 
 	// create health check handler.
 	healthCheckHandler := api.NewHealthCheckHandler()
@@ -188,7 +189,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	// Start HTTP server for debugging.
 	go func() {
-		debugHandler := api.NewDebugHandler(memStore, metaStore, queryHandler, healthCheckHandler)
+		debugHandler := api.NewDebugHandler(memStore, metaStore, queryHandler, healthCheckHandler, staticShardOwner)
 
 		debugStaticHandler := http.StripPrefix("/static/", utils.NoCache(
 			http.FileServer(http.Dir("./api/ui/debug/"))))
