@@ -25,6 +25,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	. "io/ioutil"
 	"net/http"
+	"strings"
 )
 
 func NewDataNodeQueryClient() DataNodeQueryClient {
@@ -87,7 +88,12 @@ func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, host topology.H
 }
 
 func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery, hll bool) (bs []byte, err error) {
-	url := fmt.Sprintf("http://%s/query/aql?dataonly=1", host.Address())
+	// TODO: @shz remove this hack when we get proper address from host.Address()
+	address := host.Address()
+	if strings.HasPrefix(address, "http://") {
+		address = address[7:]
+	}
+	url := fmt.Sprintf("http://%s/query/aql?dataonly=1", address)
 	aqlRequestBody := aqlRequestBody{
 		[]queryCom.AQLQuery{query},
 	}
