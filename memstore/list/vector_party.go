@@ -19,7 +19,7 @@ import (
 type baseVectorParty struct {
 	// offset is a pair of uint32 [offset, length]. therefore its length is 2 * length of vp.
 	offsets *memstore.Vector
-	// storing the offset to slab footer offset for each row.
+	// length of vp.
 	length int
 	// DataType of values. We need it since for mode 0 vector party, we cannot
 	// get data type from values vector. Also we store it on disk anyway.
@@ -458,7 +458,7 @@ func (vp *ArchiveVectorParty) Write(writer io.Writer) error {
 }
 
 // Read deserialize vector party
-// TODO(lucafuji): implement live vp serialization (in snapshot).
+// TODO(lucafuji): implement live vp deserialization (in snapshot).
 func (vp *ArchiveVectorParty) Read(reader io.Reader, serializer common.VectorPartySerializer) error {
 	return nil
 }
