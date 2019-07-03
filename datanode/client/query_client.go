@@ -25,7 +25,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	. "io/ioutil"
 	"net/http"
-	url "net/url"
+	"net/url"
 )
 
 func NewDataNodeQueryClient() DataNodeQueryClient {
