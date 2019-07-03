@@ -69,6 +69,7 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli
 	plan.headers = headers
 	plan.w = w
 	plan.resultChan = make(chan streamingScanNoderesult)
+	plan.limit = qc.AQLQuery.Limit
 
 	var assignment map[topology.Host][]uint32
 	assignment, err = util.CalculateShardAssignment(topo)
@@ -106,6 +107,7 @@ type NonAggQueryPlan struct {
 	resultChan chan streamingScanNoderesult
 	headers    []string
 	nodes      []*StreamingScanNode
+	limit      int
 }
 
 func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {

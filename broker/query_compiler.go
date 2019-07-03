@@ -99,8 +99,6 @@ func (c *QueryContext) proessMeasures() {
 		return
 	}
 
-	// TODO: handle limit properly
-
 	aggregate, ok := c.AQLQuery.Measures[0].ExprParsed.(*expr.Call)
 	if !ok {
 		c.Error = utils.StackError(nil, "expect aggregate function, but got %s",
