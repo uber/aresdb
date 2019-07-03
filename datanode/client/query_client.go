@@ -25,7 +25,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	. "io/ioutil"
 	"net/http"
-	url2 "net/url"
+	url "net/url"
 )
 
 func NewDataNodeQueryClient() DataNodeQueryClient {
@@ -88,8 +88,8 @@ func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, host topology.H
 }
 
 func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery, hll bool) (bs []byte, err error) {
-	var u *url2.URL
-	u, err = url2.Parse(host.Address())
+	var u *url.URL
+	u, err = url.Parse(host.Address())
 	if err != nil {
 		return
 	}
