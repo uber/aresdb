@@ -266,18 +266,34 @@ func (ia *ingestionAssignmentTask) readCurrentState(namespace string) (jobSubscr
 		})
 	}
 
+	datanodeServiceID := services.NewServiceID().
+		SetName(utils.DataNodeServiceName(namespace)).
+		SetZone(ia.zone).
+		SetEnvironment(ia.environment)
+	placementService, err := ia.etcdServices.PlacementService(datanodeServiceID, nil)
+	if err != nil {
+		return state, err
+	}
+	placement, err := placementService.Placement()
+	if err != nil {
+		return state, err
+	}
+	numShards := placement.NumShards()
+
 	state.jobs, err = ia.jobMutator.GetJobs(namespace)
 	if err != nil {
 		return state, err
 	}
 
-	for _, job := range state.jobs {
+	for i, job := range state.jobs {
 		var table *metaCom.Table
 		table, err = ia.schemaMutator.GetTable(namespace, job.AresTableConfig.Name)
 		if err != nil {
 			return state, err
 		}
 		job.AresTableConfig.Table = table
+		job.NumShards = numShards
+		state.jobs[i] = job
 	}
 
 	if len(state.subscribers) == 0 {
