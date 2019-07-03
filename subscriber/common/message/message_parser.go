@@ -90,7 +90,7 @@ func (mp *Parser) populateDestination(jobConfig *rules.JobConfig) {
 		PrimaryKeys:         primaryKeys,
 		PrimaryKeysInSchema: primaryKeysInSchema,
 		AresUpdateModes:     updateModes,
-		NumShards:           jobConfig.NumShards,
+		NumShards:           uint32(jobConfig.NumShards),
 	}
 }
 
