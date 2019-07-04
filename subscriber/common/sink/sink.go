@@ -25,6 +25,11 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
+const (
+	// random hash seed, the default 0 is not well balanced
+	hashSeed = 115522763
+)
+
 // Sink is abstraction for interactions with downstream storage layer
 type Sink interface {
 	// Cluster returns the DB cluster name
@@ -83,7 +88,7 @@ func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfi
 }
 
 func shardFn(key []byte, numShards uint32) uint32 {
-	return utils.Murmur3Sum32(unsafe.Pointer(&key[0]), len(key), 0) % numShards
+	return utils.Murmur3Sum32(unsafe.Pointer(&key[0]), len(key), hashSeed) % numShards
 }
 
 func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rules.JobConfig, keyLength int) ([]byte, error) {
