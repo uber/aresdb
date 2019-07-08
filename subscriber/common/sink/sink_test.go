@@ -8,8 +8,8 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
-	"fmt"
 	"github.com/uber/aresdb/utils"
+	"math"
 	"unsafe"
 )
 
@@ -80,11 +80,11 @@ var _ = Describe("Sink", func() {
 	})
 
 	It("ShardFunc test", func() {
-		jobConfig := &rules.JobConfig {
-			JobConfig: models.JobConfig {
-				AresTableConfig: models.TableConfig {
-					Table: &metaCom.Table {
-						Columns: []metaCom.Column {
+		jobConfig := &rules.JobConfig{
+			JobConfig: models.JobConfig{
+				AresTableConfig: models.TableConfig{
+					Table: &metaCom.Table{
+						Columns: []metaCom.Column{
 							{
 								Name: "ts",
 								Type: metaCom.Uint32,
@@ -99,7 +99,7 @@ var _ = Describe("Sink", func() {
 			},
 		}
 		primaryKeyValues := make([]memCom.DataValue, 1)
-		keyVals := []string {
+		keyVals := []string{
 			"1e88a975-3d26-4277-ace9-bea91b072977",
 			"98ba8df9-de8a-46b9-a101-c1a5313d8a97",
 			"27fc581b-6df8-48e5-b1cc-3a8123efee5b",
@@ -126,17 +126,16 @@ var _ = Describe("Sink", func() {
 			Ω(val.DataType).Should(Equal(memCom.UUID))
 			Ω(val.ConvertToHumanReadable(memCom.UUID).(string)).Should(Equal(keyVal))
 			primaryKeyValues[0] = val
-			keyLen := memCom.DataTypeBits(val.DataType)/8
-			pk, err := memCom.GetPrimaryKeyBytes(primaryKeyValues, keyLen);
+			keyLen := memCom.DataTypeBits(val.DataType) / 8
+			pk, err := memCom.GetPrimaryKeyBytes(primaryKeyValues, keyLen)
 			Ω(err).Should(BeNil())
-			shardID1 := utils.Murmur3Sum32(unsafe.Pointer(&pk[0]), len(pk), hashSeed) % numShards
+			shardID1 := utils.Murmur3Sum32(unsafe.Pointer(&pk[0]), len(pk), 0) / (math.MaxUint32 / numShards)
 			shardID2 := utils.Murmur3Sum32(unsafe.Pointer(&pk[0]), len(pk), 0) % numShards
 
-			fmt.Printf("new shard id: %d, old shard id: %d\n", shardID1, shardID2)
 			shardMap1[shardID1] = struct{}{}
 			shardMap2[shardID2] = struct{}{}
 		}
-		Ω(len(shardMap1)).Should(Equal(int(numShards)))
+		Ω(len(shardMap1)).Should(Equal(int(7)))
 		Ω(len(shardMap2)).Should(Equal(int(2)))
 	})
 })
