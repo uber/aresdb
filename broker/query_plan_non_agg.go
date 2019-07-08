@@ -107,7 +107,10 @@ type NonAggQueryPlan struct {
 	resultChan chan streamingScanNoderesult
 	headers    []string
 	nodes      []*StreamingScanNode
-	limit      int
+	// number of rows needed
+	limit int
+	// number of rows flushed
+	flushed int
 }
 
 func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
@@ -142,6 +145,10 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 	}
 
 	for i := 0; i < len(nqp.nodes); i++ {
+		if nqp.getRowsWanted() == 0 {
+			utils.GetLogger().Debug("got enough rows, exiting")
+			break
+		}
 		utils.GetLogger().With("node", i).Debug("waiting for response from StreamingScanNode")
 		res := <-nqp.resultChan
 		utils.GetLogger().With("node", i).Debug("got response from StreamingScanNode")
@@ -150,12 +157,46 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 			return
 		}
 		// write rows
-		nqp.w.Write(res.data)
-		if i != len(nqp.nodes)-1 {
+		if nqp.limit < 0 {
+			// when no limit, flush data directly
+			nqp.w.Write(res.data)
+		} else {
+			res.data = append([]byte("["), res.data[:]...)
+			res.data = append(res.data, byte(']'))
+			// with limit, we have to deserialize
+			var resultData [][]interface{}
+			err = json.Unmarshal(res.data, &resultData)
+			if err != nil {
+				return
+			}
+
+			if len(resultData) <= nqp.getRowsWanted() {
+				nqp.w.Write(res.data[1 : len(res.data)-1])
+				nqp.flushed += len(resultData)
+				utils.GetLogger().With("nrows", len(resultData)).Debug("flushed batch")
+			} else {
+				rowsToFlush := nqp.getRowsWanted()
+				dataToFlush := resultData[:rowsToFlush]
+				var bs []byte
+				bs, err = json.Marshal(dataToFlush)
+				if err != nil {
+					return
+				}
+				nqp.w.Write(bs[1 : len(bs)-1])
+				nqp.flushed += rowsToFlush
+				utils.GetLogger().With("nrows", rowsToFlush).Debug("flushed rows")
+
+			}
+		}
+		if !(nqp.getRowsWanted() == 0) && i != len(nqp.nodes)-1 {
 			nqp.w.Write([]byte(`,`))
 		}
 	}
 
 	_, err = nqp.w.Write([]byte(`]}`))
 	return
+}
+
+func (nqp *NonAggQueryPlan) getRowsWanted() int {
+	return nqp.limit - nqp.flushed
 }

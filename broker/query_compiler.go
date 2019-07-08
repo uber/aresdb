@@ -33,6 +33,7 @@ type QueryContext struct {
 	IsNonAggregationQuery bool
 	Writer                http.ResponseWriter
 	Error                 error
+	MainTable             *metaCom.Table
 }
 
 // NewQueryContext creates new query context
@@ -50,7 +51,7 @@ func (c *QueryContext) Compile(schemaReader metaCom.TableSchemaReader) {
 	// validate main table
 	var err error
 	mainTableName := c.AQLQuery.Table
-	_, err = schemaReader.GetTable(mainTableName)
+	c.MainTable, err = schemaReader.GetTable(mainTableName)
 	if err != nil {
 		c.Error = utils.StackError(err, fmt.Sprintf("err finding main table %s", mainTableName))
 		return
@@ -64,12 +65,13 @@ func (c *QueryContext) Compile(schemaReader metaCom.TableSchemaReader) {
 		}
 	}
 
-	c.proessMeasures()
+	c.processMeasures()
+	c.processDimensions()
 
 	return
 }
 
-func (c *QueryContext) proessMeasures() {
+func (c *QueryContext) processMeasures() {
 	var err error
 
 	// Measures.
@@ -112,4 +114,36 @@ func (c *QueryContext) proessMeasures() {
 			aggregate.Name, len(aggregate.Args))
 		return
 	}
+}
+
+func (c *QueryContext) processDimensions() {
+	if c.IsNonAggregationQuery {
+		rawDims := c.AQLQuery.Dimensions
+		c.AQLQuery.Dimensions = []common.Dimension{}
+		for _, dim := range rawDims {
+			var err error
+			dim.ExprParsed, err = expr.ParseExpr(dim.Expr)
+			if err != nil {
+				c.Error = utils.StackError(err, "Failed to parse dimension: %s", dim.Expr)
+				return
+			}
+			if _, ok := dim.ExprParsed.(*expr.Wildcard); ok {
+				c.AQLQuery.Dimensions = append(c.AQLQuery.Dimensions, c.getAllColumnsDimension()...)
+			} else {
+				c.AQLQuery.Dimensions = append(c.AQLQuery.Dimensions, dim)
+			}
+		}
+	}
+}
+
+func (c *QueryContext) getAllColumnsDimension() (columns []common.Dimension) {
+	// only main table columns wildcard match supported
+	for _, column := range c.MainTable.Columns {
+		if !column.Deleted && column.Type != metaCom.GeoShape {
+			columns = append(columns, common.Dimension{
+				Expr: column.Name,
+			})
+		}
+	}
+	return
 }
