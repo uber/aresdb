@@ -10,20 +10,21 @@ import (
 )
 
 var (
-	nativeChunkSize                    = 1 << 25 // 32MB
-	defaultStartSlabAllocatorChunkSize = 16
-	defaultSlabSize                    = 1024
-	defaultSlabGrowthFactor            = 1.5
+	nativeChunkSize                    int64 = 1 << 25 // 32MB
+	defaultStartSlabAllocatorChunkSize       = 16
+	defaultSlabSize                          = 1 << 12 // 4096 bytes
+	defaultSlabGrowthFactor                  = 1.5
 )
 
-type HostMemoryReporter func(bytes int64);
+type HostMemoryChangeReporter func(bytesChanged int64)
 
 // HighLevelMemoryPool manages memory requests on pooled memory. It underlying uses a
 // slab allocator to manage free memory chunks. When it no longer can satisfy memory
 // allocation request from customer, it will request more memory from underlying
 // NativeMemoryPool. All address returned back to client are an 2 element array of offset
 // where the first offset is the memory allocated to the caller and second offset is the
-// footer offset to current slab. Note that allocate a memory chunk larger than slabSize
+// footer offset to current slab. Note that allocate a
+// memory chunk larger than slabSize
 // will fail. For more information related how slab allocator works, please refer to
 // https://github.com/couchbase/go-slab.
 type HighLevelMemoryPool interface {
@@ -39,6 +40,8 @@ type HighLevelMemoryPool interface {
 	Free(buf [2]uintptr)
 	// Return the actual memory address given offset.
 	Interpret(offset uintptr) uintptr
+	// Return the underlying native memory pool allocator.
+	GetNativeMemoryAllocator() NativeMemoryPool
 	// Release the underlying memory.
 	Destroy()
 }
@@ -50,7 +53,7 @@ type slabMemoryPool struct {
 }
 
 // NewHighLevelMemoryPool returns a default implementation of HighLevelMemoryPool.
-func NewHighLevelMemoryPool(reporter HostMemoryReporter) HighLevelMemoryPool {
+func NewHighLevelMemoryPool(reporter HostMemoryChangeReporter) HighLevelMemoryPool {
 	nativeMP := NewNativeMemoryPool(reporter)
 	slabAllocator :=
 		NewArena(defaultStartSlabAllocatorChunkSize, defaultSlabSize, defaultSlabGrowthFactor, nativeMP)
@@ -99,6 +102,11 @@ func (mp slabMemoryPool) Destroy() {
 	mp.nativeMemoryPool = nil
 }
 
+// GetNativeMemoryAllocator is the implementation of GetNativeMemoryAllocator in HighLevelMemoryPool interface.
+func (mp slabMemoryPool) GetNativeMemoryAllocator() NativeMemoryPool {
+	return mp.nativeMemoryPool
+}
+
 // NativeMemoryPool is the interface to manage system memory to support high level memory pool
 // allocation requests. All the pointer/address returned by this memory pool is relative to the
 // base address fetched via GetBaseAddr.
@@ -111,6 +119,8 @@ type NativeMemoryPool interface {
 	Destroy()
 	// GetBaseAddr returns the base address managed by this pool.
 	GetBaseAddr() uintptr
+	// GetTotalBytes returns the total bytes occupied by this memory pool.
+	GetTotalBytes() int64
 }
 
 // singleChunkNativeMemoryPool manages the system memory as a single chunk of continuous memory address.
@@ -119,10 +129,10 @@ type NativeMemoryPool interface {
 // to move the old data into the new location. A small performance penalty will be paid during this period.
 type singleChunkNativeMemoryPool struct {
 	block              uintptr
-	allocatedSize      int
-	totalSize          int
-	nChunks            int
-	hostMemoryReporter HostMemoryReporter
+	allocatedSize      int64
+	totalSize          int64
+	nChunks            int64
+	hostMemoryReporter HostMemoryChangeReporter
 }
 
 // GetBaseAddr is the implementation of GetBaseAddr in NativeMemoryPool interface.
@@ -132,16 +142,18 @@ func (mp *singleChunkNativeMemoryPool) GetBaseAddr() uintptr {
 
 // Malloc is the implementation of Malloc in NativeMemoryPool interface.
 func (mp *singleChunkNativeMemoryPool) Malloc(size int) uintptr {
+	sizeCasted := int64(size)
 	remainingSize := mp.totalSize - mp.allocatedSize
-	if size > remainingSize {
-		newSize := (mp.allocatedSize + size + nativeChunkSize - 1) / nativeChunkSize * nativeChunkSize
+	if sizeCasted > remainingSize {
+		newSize := (mp.allocatedSize + sizeCasted + nativeChunkSize - 1) / nativeChunkSize * nativeChunkSize
 		if mp.hostMemoryReporter != nil {
-			mp.hostMemoryReporter(int64(newSize))
+			// report memory change.
+			mp.hostMemoryReporter(int64(newSize) - int64(mp.totalSize))
 		}
-		newBlock := uintptr(cgoutils.HostAlloc(newSize))
+		newBlock := uintptr(cgoutils.HostAlloc(int(newSize)))
 		// copy old content.
 		if mp.block != 0 {
-			cgoutils.HostMemCpy(unsafe.Pointer(newBlock), unsafe.Pointer(mp.block), mp.totalSize)
+			cgoutils.HostMemCpy(unsafe.Pointer(newBlock), unsafe.Pointer(mp.block), int(mp.totalSize))
 			cgoutils.HostFree(unsafe.Pointer(mp.block))
 		}
 		mp.block = newBlock
@@ -149,7 +161,7 @@ func (mp *singleChunkNativeMemoryPool) Malloc(size int) uintptr {
 		mp.nChunks = mp.totalSize / nativeChunkSize
 	}
 	addr := uintptr(mp.allocatedSize)
-	mp.allocatedSize += size
+	mp.allocatedSize += sizeCasted
 	return addr
 }
 
@@ -157,7 +169,7 @@ func (mp *singleChunkNativeMemoryPool) Malloc(size int) uintptr {
 func (mp *singleChunkNativeMemoryPool) Destroy() {
 	cgoutils.HostFree(unsafe.Pointer(mp.block))
 	if mp.hostMemoryReporter != nil {
-		mp.hostMemoryReporter(0)
+		mp.hostMemoryReporter(int64(-mp.totalSize))
 	}
 	mp.block = 0
 	mp.totalSize = 0
@@ -165,8 +177,13 @@ func (mp *singleChunkNativeMemoryPool) Destroy() {
 	mp.nChunks = 0
 }
 
+// GetTotalBytes is the implementation of GetTotalBytes in NativeMemoryPool interface.
+func (mp *singleChunkNativeMemoryPool) GetTotalBytes() int64 {
+	return mp.totalSize
+}
+
 // NewNativeMemoryPool returns a default implementation of NativeMemoryPool.
-func NewNativeMemoryPool(reporter HostMemoryReporter) NativeMemoryPool {
+func NewNativeMemoryPool(reporter HostMemoryChangeReporter) NativeMemoryPool {
 	return &singleChunkNativeMemoryPool{
 		hostMemoryReporter: reporter,
 	}

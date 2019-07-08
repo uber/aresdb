@@ -31,7 +31,6 @@ var _ = ginkgo.Describe("slab tests", func() {
 		s := NewArena(1, 1024, 2, nativeMP)
 		Ω(s).ShouldNot(BeNil(), "expected new slab arena to work")
 		a := s.Alloc(1)
-		fmt.Println(a)
 		Ω(IsNilAddr(a)).ShouldNot(BeTrue(), "expected alloc to work")
 		Ω(a[0]).ShouldNot(Equal(a[1]), "expected alloc to give right size buf")
 		Ω(a[0]+uintptr(1+slabMemoryFooterLen)).Should(Equal(a[1]),

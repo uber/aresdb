@@ -34,9 +34,9 @@ type TableShard struct {
 	Schema *common.TableSchema `json:"schema"`
 
 	// For convenience.
-	metaStore            metaCom.MetaStore
-	diskStore            diskstore.DiskStore
-	options              Options
+	metaStore metaCom.MetaStore
+	diskStore diskstore.DiskStore
+	options   Options
 
 	// Live store. Its locks also cover the primary key.
 	LiveStore *LiveStore `json:"liveStore"`
@@ -64,12 +64,12 @@ type TableShard struct {
 func NewTableShard(schema *common.TableSchema, metaStore metaCom.MetaStore,
 	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int, options Options) *TableShard {
 	tableShard := &TableShard{
-		ShardID:              shard,
-		Schema:               schema,
-		diskStore:            diskStore,
-		metaStore:            metaStore,
-		HostMemoryManager:    hostMemoryManager,
-		options:              options,
+		ShardID:           shard,
+		Schema:            schema,
+		diskStore:         diskStore,
+		metaStore:         metaStore,
+		HostMemoryManager: hostMemoryManager,
+		options:           options,
 	}
 
 	archiveStore := NewArchiveStore(tableShard)

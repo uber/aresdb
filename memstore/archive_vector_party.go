@@ -25,15 +25,7 @@ import (
 // archiveVectorParty is the implementation of ArchiveVectorParty
 type archiveVectorParty struct {
 	cVectorParty
-
-	// Used in archive batches to allow requesters to wait until the vector party
-	// is fully loaded from disk.
-	Loader sync.WaitGroup
-	// For archive store only. Number of users currently using this vector party.
-	// This field is protected by the batch lock.
-	pins int
-	// For archive store only. The condition for pins to drop down to 0.
-	allUsersDone *sync.Cond
+	Pinnable
 }
 
 // Prune judges column mode first and sets the mode to vector party.
@@ -72,7 +64,7 @@ func (vp *archiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorPar
 	}
 
 	// archive vector party should always have allUsersDone initialized correctly with batch rwlock
-	newVP := newArchiveVectorParty(batchSize, vp.dataType, vp.defaultValue, vp.allUsersDone.L)
+	newVP := newArchiveVectorParty(batchSize, vp.dataType, vp.defaultValue, vp.AllUsersDone.L)
 	newVP.Allocate(false)
 	newVP.nonDefaultValueCount = vp.nonDefaultValueCount
 
@@ -94,22 +86,6 @@ func (vp *archiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorPar
 	return newVP
 }
 
-// Release releases the vector party from the archive store
-// so that it can be evicted or deleted.
-func (vp *archiveVectorParty) Release() {
-	vp.allUsersDone.L.Lock()
-	vp.pins--
-	if vp.pins == 0 {
-		vp.allUsersDone.Broadcast()
-	}
-	vp.allUsersDone.L.Unlock()
-}
-
-// Pin vector party for use, caller should lock archive batch before calling
-func (vp *archiveVectorParty) Pin() {
-	vp.pins++
-}
-
 // LoadFromDisk load archive vector party from disk
 // caller should lock archive batch before using
 func (vp *archiveVectorParty) LoadFromDisk(hostMemManager common.HostMemoryManager, diskStore diskstore.DiskStore, table string, shardID int, columnID, batchID int, batchVersion uint32, seqNum uint32) {
@@ -124,22 +100,6 @@ func (vp *archiveVectorParty) LoadFromDisk(hostMemManager common.HostMemoryManag
 	}()
 }
 
-// WaitForUsers wait for vector party user to finish and return true when all users are done
-func (vp *archiveVectorParty) WaitForUsers(blocking bool) (userDone bool) {
-	if blocking {
-		for vp.pins > 0 {
-			vp.allUsersDone.Wait()
-		}
-		return true
-	}
-	return vp.pins == 0
-}
-
-// WaitForDiskLoad waits for vector party disk load to finish
-func (vp *archiveVectorParty) WaitForDiskLoad() {
-	vp.Loader.Wait()
-}
-
 // newArchiveVectorParty creates a archive store vector party,
 // archiveVectorParty use c allocated memory
 func newArchiveVectorParty(length int, dataType common.DataType, defaultValue common.DataValue, locker sync.Locker) *archiveVectorParty {
@@ -151,7 +111,9 @@ func newArchiveVectorParty(length int, dataType common.DataType, defaultValue co
 				defaultValue: defaultValue,
 			},
 		},
-		allUsersDone: sync.NewCond(locker),
+		Pinnable: Pinnable{
+			AllUsersDone: sync.NewCond(locker),
+		},
 	}
 	return vp
 }

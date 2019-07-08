@@ -46,7 +46,7 @@ var _ = ginkgo.Describe("job manager", func() {
 	})
 
 	mockErr := errors.New("UpdateArchivingCutoff fails")
-	m := getFactory().NewMockMemStore()
+	m := GetFactory().NewMockMemStore()
 	(m.metaStore).(*metaMocks.MetaStore).On(
 		"UpdateArchivingCutoff", sysmock.Anything, sysmock.Anything, sysmock.Anything).Return(mockErr)
 

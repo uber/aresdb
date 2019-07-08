@@ -88,7 +88,7 @@ type VectorPartySerializer interface {
 
 // VectorParty interface
 type VectorParty interface {
-	// Allocate allocate underlying storage for vector party
+	//   allocate underlying storage for vector party
 	Allocate(hasCount bool)
 
 	// GetValidity get validity of given offset.
@@ -128,6 +128,12 @@ type VectorParty interface {
 	Equals(other VectorParty) bool
 	// GetNonDefaultValueCount get Number of non-default values stored
 	GetNonDefaultValueCount() int
+	// IsList tells whether it's a list vector party or not
+	IsList() bool
+	// AsList returns ListVectorParty representation of this vector party.
+	// Caller should always call IsList before conversion, otherwise panic may happens
+	// for incompatible vps.
+	AsList() ListVectorParty
 }
 
 // CVectorParty is vector party that is backed by c
@@ -193,4 +199,19 @@ type ArchiveVectorParty interface {
 	SliceByValue(lowerBoundRow, upperBoundRow int, value unsafe.Pointer) (startRow int, endRow int, startIndex int, endIndex int)
 	// Slice vector party to get [startIndex, endIndex) based on [lowerBoundRow, upperBoundRow)
 	SliceIndex(lowerBoundRow, upperBoundRow int) (startIndex, endIndex int)
+}
+
+// ListDataValueReader defines how to read ith element in jth row from a data source.
+// Out of boundary access will panic.
+type ListDataValueReader interface {
+	ReadElementValue(row int, i int) unsafe.Pointer
+	ReadElementBool(row int, i int) bool
+	ReadElementValidity(row int, i int) bool
+	GetElementLength(row int) int
+}
+
+// ListVectorParty is the interface for list vector party to read and write list value.
+type ListVectorParty interface {
+	ListDataValueReader
+	SetListValue(row int, reader ListDataValueReader)
 }

@@ -15,7 +15,6 @@
 package memstore
 
 import (
-	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
@@ -654,12 +653,10 @@ var _ = ginkgo.Describe("ingestion", func() {
 		builder.SetValue(0, 1, uint8(1))
 		buffer, _ := builder.ToByteArray()
 		upsertBatch, _ := common.NewUpsertBatch(buffer)
-		fmt.Println("HandleIngestion")
 
 		err := memstore.HandleIngestion("abc", 0, upsertBatch)
 		Ω(err).Should(BeNil())
 
-		fmt.Println("test here")
 		shard, err := memstore.GetTableShard("abc", 0)
 		Ω(shard.LiveStore.LastReadRecord.BatchID).Should(Equal(BaseBatchID))
 		Ω(shard.LiveStore.lastModifiedTimePerColumn).Should(BeNil())

@@ -1,0 +1,7 @@
+data_type: Uint32
+length: 5
+values:
+  - 1
+  - 1,null,3
+  -
+  - null

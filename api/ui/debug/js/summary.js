@@ -65,12 +65,22 @@ function initSummaryViewer() {
 
     // Init shard selector.
     $('#shard-selector').select2({
-        data: [
-            {
-                "id": 0,
-                "text": 0,
+        ajax: {
+            url: "/dbg/shards",
+            dataType: 'json',
+            quietMillis: 50,
+            processResults: function (data) {
+                return {
+                    results: $.map(data, function (item, idx) {
+                        return {
+                            text: item,
+                            id: idx + 1,
+                        };
+                    })
+                };
             }
-        ]
+        },
+        width: 'resolve'
     }).on('change', function (e) {
         refreshShardViewer();
     });

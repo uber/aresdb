@@ -29,7 +29,7 @@ import (
 
 var _ = ginkgo.Describe("json marshaller", func() {
 
-	m := getFactory().NewMockMemStore()
+	m := GetFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
 
 	liveBatch := LiveBatch{Batch: Batch{

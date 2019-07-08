@@ -192,10 +192,10 @@ func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.Da
 		root = NewMergeNode(common.Avg)
 		sumQuery, countQuery := splitAvgQuery(*qc.AQLQuery)
 		root.Add(
-			buildSubPlan(common.Sum, sumQuery, assignments, topo, client),
-			buildSubPlan(common.Count, countQuery, assignments, topo, client))
+			buildSubPlan(common.Sum, &sumQuery, assignments, topo, client),
+			buildSubPlan(common.Count, &countQuery, assignments, topo, client))
 	default:
-		root = buildSubPlan(agg, *qc.AQLQuery, assignments, topo, client)
+		root = buildSubPlan(agg, qc.AQLQuery, assignments, topo, client)
 	}
 
 	plan = AggQueryPlan{
@@ -236,15 +236,16 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 	return
 }
 
-func buildSubPlan(agg common.AggType, q queryCom.AQLQuery, assignments map[topology.Host][]uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
+func buildSubPlan(agg common.AggType, q *queryCom.AQLQuery, assignments map[topology.Host][]uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
 	for host, shardIDs := range assignments {
 		// make deep copy
+		newQ := *q
 		for _, shard := range shardIDs {
-			q.Shards = append(q.Shards, int(shard))
+			newQ.Shards = append(newQ.Shards, int(shard))
 		}
 		root.Add(&BlockingScanNode{
-			query:          q,
+			query:          newQ,
 			host:           host,
 			dataNodeClient: client,
 		})

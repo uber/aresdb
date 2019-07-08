@@ -107,6 +107,11 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
+		placementService := placement.NewMockService(ctrl)
+		mockPlacement := placement.NewMockPlacement(ctrl)
+		placementService.EXPECT().Placement().Return(mockPlacement, nil)
+		mockPlacement.EXPECT().NumShards().Return(8)
+
 		subscribers := []string{subInstance1.ID(), subInstance2.ID(), subInstance3.ID()}
 		heartBeatChangeEvent1 := make(chan struct{}, 1)
 		heartBeatChangeEvent1 <- struct{}{}
@@ -181,6 +186,7 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		clusterServices1 := services.NewMockServices(ctrl)
 		leaderService1 := services.NewMockLeaderService(ctrl)
 		clusterServices1.EXPECT().HeartbeatService(gomock.Any()).Return(heartBeatService1, nil).AnyTimes()
+		clusterServices1.EXPECT().PlacementService(gomock.Any(), gomock.Any()).Return(placementService, nil).AnyTimes()
 		statusChan1 := make(chan campaign.Status, 1)
 		statusChan1 <- campaign.NewStatus(campaign.Leader)
 		leaderService1.EXPECT().Campaign("", gomock.Any()).Return(statusChan1, nil)
@@ -219,6 +225,7 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		clusterServices2 := services.NewMockServices(ctrl)
 		leaderService2 := services.NewMockLeaderService(ctrl)
 		clusterServices2.EXPECT().HeartbeatService(gomock.Any()).Return(heartBeatService2, nil).AnyTimes()
+		clusterServices2.EXPECT().PlacementService(gomock.Any(), gomock.Any()).Return(placementService, nil).AnyTimes()
 		statusChan2 := make(chan campaign.Status, 1)
 		statusChan2 <- campaign.NewStatus(campaign.Follower)
 		leaderService2.EXPECT().Campaign("", gomock.Any()).Return(statusChan2, nil)
@@ -274,7 +281,72 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		as2, _ := assignmentMutator.GetIngestionAssignment("ns1", assignments[0].Subscriber)
 		job1Assigned := job1
 		job1Assigned.StreamingConfig.ProcessorCount = 1
-		assert.Equal(t, []models.JobConfig{job1Assigned}, as2.Jobs)
+		assert.Len(t, as2.Jobs, 1)
+		expectedAssignments := `
+[
+  {
+    "job": "job1",
+    "version": 1,
+    "numShards": 8,
+    "aresTableConfig": {
+      "name": "table1",
+      "cluster": "",
+      "schema": {
+        "name": "table1",
+        "columns": null,
+        "primaryKeyColumns": null,
+        "isFactTable": false,
+        "config": {
+          "batchSize": 2097152,
+          "redoLogRotationInterval": 10800,
+          "maxRedoLogFileSize": 1073741824,
+          "archivingDelayMinutes": 1440,
+          "archivingIntervalMinutes": 180,
+          "backfillIntervalMinutes": 60,
+          "backfillMaxBufferSize": 4294967296,
+          "backfillThresholdInBytes": 2097152,
+          "backfillStoreBatchSize": 20000,
+          "recordRetentionInDays": 90,
+          "snapshotThreshold": 6291456,
+          "snapshotIntervalMinutes": 360
+        },
+        "incarnation": 0,
+        "version": 0
+      }
+    },
+    "streamConfig": {
+      "topic": "",
+      "kafkaClusterName": "",
+      "kafkaVersion": "",
+      "topicType": "json",
+      "latestOffset": true,
+      "errorThreshold": 10,
+      "statusCheckInterval": 60,
+      "autoRecoveryThreshold": 8,
+      "processorCount": 1,
+      "batchSize": 32768,
+      "maxBatchDelayMS": 10000,
+      "megaBytePerSec": 600,
+      "restartOnFailure": true,
+      "restartInterval": 300,
+      "failureHandler": {
+        "type": "retry",
+        "config": {
+          "initRetryIntervalInSeconds": 60,
+          "multiplier": 1,
+          "maxRetryMinutes": 525600
+        }
+      },
+      "kafkaBroker": "",
+      "maxPollIntervalMs": 0,
+      "sessionTimeoutNs": 0,
+      "channelBufferSize": 0
+    }
+  }
+]`
+		actualJsonBytes, err := json.Marshal(as2.Jobs)
+		assert.NoError(t, err)
+		assert.JSONEq(t, expectedAssignments, string(actualJsonBytes))
 		assert.Len(t, assignments[1].Jobs, 1)
 		assert.Len(t, assignments[2].Jobs, 0)
 		task1.Done()

@@ -81,6 +81,9 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		bs := []byte(`["foo", "1"],["bar", "2"']`)
 		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
 
+		Ω(plan.nodes[0].query.Shards).Should(HaveLen(2))
+		Ω(plan.nodes[1].query.Shards).Should(HaveLen(2))
+
 		err = plan.Execute(context.TODO())
 		Ω(err).Should(BeNil())
 
