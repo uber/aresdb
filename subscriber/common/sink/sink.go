@@ -23,6 +23,7 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/utils"
+	"math"
 )
 
 // Sink is abstraction for interactions with downstream storage layer
@@ -83,7 +84,7 @@ func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfi
 }
 
 func shardFn(key []byte, numShards uint32) uint32 {
-	return utils.Murmur3Sum32(unsafe.Pointer(&key[0]), len(key), 0) % numShards
+	return utils.Murmur3Sum32(unsafe.Pointer(&key[0]), len(key), 0) / (math.MaxUint32 / numShards)
 }
 
 func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rules.JobConfig, keyLength int) ([]byte, error) {
