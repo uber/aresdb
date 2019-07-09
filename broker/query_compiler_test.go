@@ -19,6 +19,7 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	common2 "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
@@ -28,7 +29,13 @@ import (
 var _ = ginkgo.Describe("query compiler", func() {
 	ginkgo.It("should work happy path", func() {
 		mockMutator := metaMocks.TableSchemaReader{}
-		mockMutator.On("GetTable", "table1").Return(nil, nil)
+		mockMutator.On("GetTable", "table1").Return(&common2.Table{
+			Name: "table1",
+			Columns: []common2.Column{
+				{Name: "field1"},
+				{Name: "field2"},
+			},
+		}, nil)
 
 		qc := NewQueryContext(&common.AQLQuery{
 			Table: "table1",
@@ -87,9 +94,8 @@ var _ = ginkgo.Describe("query compiler", func() {
 			Table: "table1",
 			Joins: nil,
 			Dimensions: []common.Dimension{
-				{
-					Expr: "*",
-				},
+				{Expr: "field1"},
+				{Expr: "field2"},
 			},
 			Measures: []common.Measure{
 				{

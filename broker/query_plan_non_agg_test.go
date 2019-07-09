@@ -38,6 +38,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 				{Expr: "field1"},
 				{Expr: "field2"},
 			},
+			Limit: -1,
 		}
 		qc := QueryContext{
 			AQLQuery:              &q,
@@ -71,6 +72,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
+		// test negative limit (no limit)
 		w := httptest.NewRecorder()
 		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
 		Ω(err).Should(BeNil())
@@ -78,7 +80,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		Ω(plan.nodes).Should(HaveLen(len(mockHosts)))
 		Ω(plan.headers).Should(Equal([]string{"field1", "field2"}))
 
-		bs := []byte(`["foo", "1"],["bar", "2"']`)
+		bs := []byte(`["foo","1"],["bar","2"]`)
 		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
 
 		Ω(plan.nodes[0].query.Shards).Should(HaveLen(2))
@@ -87,6 +89,17 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		err = plan.Execute(context.TODO())
 		Ω(err).Should(BeNil())
 
-		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo", "1"],["bar", "2"'],["foo", "1"],["bar", "2"'],["foo", "1"],["bar", "2"']]}`))
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"],["bar","2"],["foo","1"],["bar","2"]]}`))
+
+		// test limit
+		qc.AQLQuery.Limit = 3
+		w = httptest.NewRecorder()
+		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
+		Ω(err).Should(BeNil())
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
+		err = plan.Execute(context.TODO())
+		Ω(err).Should(BeNil())
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))
+
 	})
 })
