@@ -41,15 +41,35 @@ func (handler *QueryHandler) Register(router *mux.Router, wrappers ...utils.HTTP
 }
 
 func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
+	utils.GetRootReporter().GetCounter(utils.QueryReceivedBroker).Inc(1)
 	var queryReqeust BrokerSQLRequest
-	err := apiCom.ReadRequest(r, &queryReqeust)
+
+	start := utils.Now()
+	var err error
+	defer func() {
+		duration := utils.Now().Sub(start)
+		utils.GetRootReporter().GetTimer(utils.QueryLatencyBroker).Record(duration)
+		if err != nil {
+			utils.GetRootReporter().GetCounter(utils.QueryFailedBroker).Inc(1)
+			utils.GetLogger().With(
+				"error", err,
+				"request", queryReqeust).Error("Error happened when processing request")
+		} else {
+			utils.GetRootReporter().GetCounter(utils.QuerySucceededBroker).Inc(1)
+			utils.GetLogger().With("request", queryReqeust).Info("Request succeeded")
+		}
+	}()
+
+	err = apiCom.ReadRequest(r, &queryReqeust)
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return
 	}
 
+	sqlParseStart := utils.Now()
 	var aql *queryCom.AQLQuery
 	aql, err = sql.Parse(queryReqeust.Body.Query, utils.GetLogger())
+	utils.GetRootReporter().GetTimer(utils.SQLParsingLatencyBroker).Record(utils.Now().Sub(sqlParseStart))
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return
@@ -60,7 +80,6 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		apiCom.RespondWithError(w, err)
 		return
 	}
-	// TODO: logging and metrics
 	return
 }
 
