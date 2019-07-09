@@ -62,7 +62,13 @@ func (shard *TableShard) Bootstrap(
 	shard.bootstrapState = bootstrap.Bootstrapping
 	shard.bootstrapLock.Unlock()
 
+	shard.Schema.RLock()
+	numColumns := len(shard.Schema.GetValueTypeByColumn())
+	schema := shard.Schema.Schema
+	shard.Schema.RUnlock()
+
 	shard.BootstrapDetails.Clear()
+	shard.BootstrapDetails.SetNumColumns(numColumns)
 	success := false
 	defer func() {
 		shard.bootstrapLock.Lock()
@@ -104,9 +110,6 @@ func (shard *TableShard) Bootstrap(
 
 	shard.BootstrapDetails.SetBootstrapStage(bootstrap.Preload)
 	// preload snapshot or archive batches into memory
-	shard.Schema.RLock()
-	schema := shard.Schema.Schema
-	shard.Schema.RUnlock()
 	if schema.IsFactTable {
 		// preload all columns for fact table
 		endDay := int(utils.Now().Unix() / 86400)
