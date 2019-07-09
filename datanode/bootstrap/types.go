@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"encoding/json"
 	"errors"
 )
 
@@ -41,11 +42,27 @@ var (
 	ErrBootstrapEnqueued = errors.New("database bootstrapping enqueued bootstrap")
 )
 
-// TableShardsBootstrapStates stores a snapshot of the bootstrap state for all table shards for a given datanode.
-type TableShardsBootstrapState map[string]map[uint32]BootstrapState
+// BootstrapStage represents stages of bootstrap
+type BootstrapStage string
 
-// ShardsBootstrapState stores a snapshot of the bootstrap state for all shards for a given datanode.
-type ShardsBootstrapState map[uint32]BootstrapState
+const (
+	Waiting  BootstrapStage = "waiting"
+	PeerCopy BootstrapStage = "peercopy"
+	Preload  BootstrapStage = "preload"
+	Recovery BootstrapStage = "recovery"
+	Finished BootstrapStage = "finished"
+)
+
+// BootstrapDetail describes details for bootstrap
+type BootstrapDetails interface {
+	json.Marshaler
+
+	SetNumColumns(numColumns int)
+	SetBootstrapStage(stage BootstrapStage)
+	AddVPToCopy(batch int32, columnID uint32)
+	MarkVPFinished(batch int32, columnID uint32)
+	Clear()
+}
 
 // BootstrapState is an enum representing the possible bootstrap states for a shard.
 type BootstrapState int
