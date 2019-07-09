@@ -546,7 +546,6 @@ func (qc *AQLQueryContext) readSchema(tableSchemaReader memCom.TableSchemaReader
 			qc.TableScanners[1+i].Shards = []int{0}
 		}
 
-
 		alias := join.Alias
 		if alias == "" {
 			alias = join.Table

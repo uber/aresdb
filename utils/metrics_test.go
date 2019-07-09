@@ -23,7 +23,7 @@ import (
 var _ = ginkgo.Describe("metrics", func() {
 	ginkgo.It("all cached metrics definitions should be properly initialized", func() {
 		reporter := GetRootReporter()
-		Ω(reporter.cachedDefinitions).Should(HaveLen(int(NumMetricNames)))
+		Ω(reporter.cachedDefinitions).Should(HaveLen(int(DataNodeMetricNamesSentinel)))
 		for _, def := range reporter.cachedDefinitions {
 			Ω(def).ShouldNot(BeNil())
 			switch def.metricType {
@@ -39,7 +39,7 @@ var _ = ginkgo.Describe("metrics", func() {
 
 	ginkgo.It("NewReporterFactory should work", func() {
 		scope := tally.NewTestScope("test", nil)
-		rf := NewReporterFactory(scope)
+		rf := NewReporterFactory(scope, ReporterTypeDataNode)
 		Ω(rf.GetRootReporter().GetRootScope()).Should(Equal(scope))
 		// since we've not add any table shard yet, we should get a root reporter back.
 		Ω(rf.GetReporter("test", 1)).Should(Equal(rf.GetRootReporter()))
@@ -47,7 +47,7 @@ var _ = ginkgo.Describe("metrics", func() {
 
 	ginkgo.It("AddTableShard should work", func() {
 		scope := tally.NewTestScope("test", nil)
-		rf := NewReporterFactory(scope)
+		rf := NewReporterFactory(scope, ReporterTypeDataNode)
 		tableName := "test"
 		shardID := 1
 		rf.AddTableShard(tableName, shardID)
@@ -58,7 +58,7 @@ var _ = ginkgo.Describe("metrics", func() {
 
 	ginkgo.It("DeleteTableShard should work", func() {
 		scope := tally.NewTestScope("test", nil)
-		rf := NewReporterFactory(scope)
+		rf := NewReporterFactory(scope, ReporterTypeDataNode)
 		tableName := "test"
 		shardID := 1
 		rf.AddTableShard(tableName, shardID)
@@ -69,13 +69,13 @@ var _ = ginkgo.Describe("metrics", func() {
 
 	ginkgo.It("NewReporter should work", func() {
 		scope := tally.NewTestScope("test", nil)
-		r := NewReporter(scope)
+		r := NewReporter(scope, ReporterTypeDataNode)
 		Ω(r.GetRootScope()).Should(Equal(scope))
 	})
 
 	ginkgo.It("GetCounter should work", func() {
 		scope := tally.NewTestScope("test", nil)
-		r := NewReporter(scope)
+		r := NewReporter(scope, ReporterTypeDataNode)
 		counter := r.GetCounter(BackfillCount)
 		Ω(counter).ShouldNot(BeNil())
 
@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("metrics", func() {
 
 	ginkgo.It("GetGauge should work", func() {
 		scope := tally.NewTestScope("test", nil)
-		r := NewReporter(scope)
+		r := NewReporter(scope, ReporterTypeDataNode)
 		gauge := r.GetGauge(ArchivingLowWatermark)
 		Ω(gauge).ShouldNot(BeNil())
 
@@ -95,7 +95,7 @@ var _ = ginkgo.Describe("metrics", func() {
 
 	ginkgo.It("GetTimer should work", func() {
 		scope := tally.NewTestScope("test", nil)
-		r := NewReporter(scope)
+		r := NewReporter(scope, ReporterTypeDataNode)
 		timer := r.GetTimer(BackfillLockTiming)
 		Ω(timer).ShouldNot(BeNil())
 
@@ -105,7 +105,7 @@ var _ = ginkgo.Describe("metrics", func() {
 
 	ginkgo.It("GetChildGauge should work", func() {
 		scope := tally.NewTestScope("test", nil)
-		r := NewReporter(scope)
+		r := NewReporter(scope, ReporterTypeDataNode)
 		gauge := r.GetChildGauge(map[string]string{
 			"test_field": "test_value",
 		}, ArchivingLowWatermark)

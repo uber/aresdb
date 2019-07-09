@@ -84,7 +84,7 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	defer closer.Close()
 
 	// Init common components.
-	utils.Init(common.AresServerConfig{}, logger, queryLogger, scope)
+	utils.Init(common.AresServerConfig{}, logger, queryLogger, scope, utils.ReporterTypeBroker)
 
 	scope.Counter("restart").Inc(1)
 	serverRestartTimer := scope.Timer("restart").Start()
