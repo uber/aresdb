@@ -21,11 +21,21 @@ import (
 	"sync"
 )
 
+// ReporterType is the type of reporter
+type ReporterType int
+
+// List of reporter types
+const (
+	ReporterTypeDataNode ReporterType = iota
+	ReporterTypeBroker
+)
+
 // MetricName is the type of the metric.
 type MetricName int
 
 // List of supported metric names.
 const (
+	// DataNode metrics
 	AllocatedDeviceMemory MetricName = iota
 	ArchivingIgnoredRecords
 	ArchivingRecords
@@ -110,8 +120,12 @@ const (
 	SchemaUpdateCount
 	SchemaDeletionCount
 	SchemaCreationCount
-	// Enum sentinel.
-	NumMetricNames
+
+	DataNodeMetricNamesSentinel
+
+	// Broker metrics
+
+	BrokerMetricNamesSentinel
 )
 
 // MetricType is the supported metric type.
@@ -256,7 +270,7 @@ const (
 	metricsOperationPurge     = "purge"
 )
 
-var metricsDefs = map[MetricName]metricDefinition{
+var dataNodeMetricsDefs = map[MetricName]metricDefinition{
 	AllocatedDeviceMemory: {
 		name:       scopeNameAllocatedDeviceMemory,
 		metricType: Gauge,
@@ -892,6 +906,8 @@ var metricsDefs = map[MetricName]metricDefinition{
 	},
 }
 
+var brokerMetricsDefs = map[MetricName]metricDefinition{}
+
 func (def *metricDefinition) init(rootScope tally.Scope) {
 	switch def.metricType {
 	case Counter:
@@ -910,13 +926,15 @@ type ReporterFactory struct {
 	sync.RWMutex
 	rootReporter *Reporter
 	reporters    map[string]*Reporter
+	reporterType ReporterType
 }
 
 // NewReporterFactory returns a new report factory.
-func NewReporterFactory(rootScope tally.Scope) *ReporterFactory {
+func NewReporterFactory(rootScope tally.Scope, t ReporterType) *ReporterFactory {
 	return &ReporterFactory{
-		rootReporter: NewReporter(rootScope),
+		rootReporter: NewReporter(rootScope, t),
 		reporters:    make(map[string]*Reporter),
+		reporterType: t,
 	}
 }
 
@@ -931,7 +949,7 @@ func (f *ReporterFactory) AddTableShard(tableName string, shardID int) {
 		f.reporters[key] = NewReporter(f.rootReporter.GetRootScope().Tagged(map[string]string{
 			metricsTagTable: tableName,
 			metricsTagShard: strconv.Itoa(shardID),
-		}))
+		}), f.reporterType)
 	}
 }
 
@@ -962,6 +980,11 @@ func (f *ReporterFactory) GetRootReporter() *Reporter {
 	return f.rootReporter
 }
 
+// Reset resets, used for test env only
+func (f *ReporterFactory) Reset() *ReporterFactory {
+	return NewReporterFactory(tally.NewTestScope("test", nil), f.reporterType)
+}
+
 // Reporter is the the interface used to report stats,
 type Reporter struct {
 	rootScope         tally.Scope
@@ -969,9 +992,22 @@ type Reporter struct {
 }
 
 // NewReporter returns a new reporter with supplied root scope.
-func NewReporter(rootScope tally.Scope) *Reporter {
-	defs := make([]metricDefinition, NumMetricNames)
-	for key, metricDefinition := range metricsDefs {
+func NewReporter(rootScope tally.Scope, t ReporterType) *Reporter {
+	var metricDefs map[MetricName]metricDefinition
+	var numMetrics int
+	switch t {
+	case ReporterTypeDataNode:
+		numMetrics = int(DataNodeMetricNamesSentinel)
+		metricDefs = dataNodeMetricsDefs
+	case ReporterTypeBroker:
+		numMetrics = int(BrokerMetricNamesSentinel) - int(DataNodeMetricNamesSentinel)
+		metricDefs = brokerMetricsDefs
+	default:
+		GetLogger().Panicf("Unknown reporter type: %d", t)
+	}
+
+	defs := make([]metricDefinition, numMetrics)
+	for key, metricDefinition := range metricDefs {
 		metricDefinition.init(rootScope)
 		defs[key] = metricDefinition
 	}

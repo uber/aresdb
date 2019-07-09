@@ -110,7 +110,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	defer closer.Close()
 
 	// Init common components.
-	utils.Init(cfg, logger, queryLogger, scope)
+	utils.Init(cfg, logger, queryLogger, scope, utils.ReporterTypeDataNode)
 
 	scope.Counter("restart").Inc(1)
 
