@@ -267,6 +267,10 @@ func (d *dataNode) startActiveTopologyWatch() {
 			hostShardSet, ok := topoMap.LookupHostShardSet(d.hostID)
 			if ok {
 				d.AssignShardSet(hostShardSet.ShardSet())
+			} else {
+				// assign empty shard set when host does not appear in placement
+				d.AssignShardSet(shard.NewShardSet(nil))
+
 			}
 		}
 	}
@@ -476,12 +480,14 @@ func (d *dataNode) AssignShardSet(shardSet shard.ShardSet) {
 
 	for _, shardID := range removing {
 		for _, table := range tables {
+			d.logger.With("table", table, "shard", shardID).Info("removing table shard on placement change")
 			d.memStore.RemoveTableShard(table, int(shardID))
 		}
 	}
 
 	for _, shard := range adding {
 		for _, table := range tables {
+			d.logger.With("table", table, "shard", shard.ID(), "state", shard.State()).Info("adding table shard on placement change")
 			d.memStore.AddTableShard(table, int(shard.ID()), shard.State() == m3Shard.Initializing)
 		}
 	}
