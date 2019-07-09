@@ -87,10 +87,15 @@ func (shard *TableShard) Bootstrap(
 		if peerNode == nil {
 			return utils.StackError(nil, "no peer node available")
 		}
+		utils.GetLogger().
+			With("table", shard.Schema.Schema.Name).
+			With("shardID", shard.ShardID).
+			With("peer", peerNode.String()).
+			Info("found peer to bootstrap from")
 
 		var dataStreamErr error
 		borrowErr := peerSource.BorrowConnection(peerNode.ID(), func(nodeClient rpc.PeerDataNodeClient) {
-			dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient, options)
+			dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient, origin, options)
 		})
 
 		if borrowErr != nil {
@@ -145,17 +150,18 @@ type vpRawDataRequest struct {
 func (shard *TableShard) fetchDataFromPeer(
 	peerHost topology.Host,
 	client rpc.PeerDataNodeClient,
+	origin string,
 	options bootstrap.Options,
 ) error {
 
-	doneFn, err := shard.startStreamSession(peerHost, client, options)
+	sessionID, doneFn, err := shard.startStreamSession(peerHost, client, origin, options)
 	if err != nil {
 		return err
 	}
 	defer doneFn()
 
 	// 1. fetch meta data
-	tableShardMeta, err := shard.fetchBatchMetaDataFromPeer(client)
+	tableShardMeta, err := shard.fetchBatchMetaDataFromPeer(origin, sessionID, client)
 	if err != nil {
 		return err
 	}
@@ -200,7 +206,7 @@ func (shard *TableShard) fetchDataFromPeer(
 				attempts := 0
 				err = retrier.Attempt(func() error {
 					attempts++
-					request, vpWriter, err := shard.createVectorPartyRawDataRequest(tableShardMeta, batchMeta, vpMeta)
+					request, vpWriter, err := shard.createVectorPartyRawDataRequest(origin, sessionID, tableShardMeta, batchMeta, vpMeta)
 					if err != nil {
 						utils.GetLogger().
 							With("peer", peerHost.String(), "table", shard.Schema.Schema.Name, "shard", shard.ShardID, "batch", batchMeta.GetBatchID(), "column", vpMeta.GetColumnID(), "request", request, "error", err.Error()).
@@ -221,7 +227,7 @@ func (shard *TableShard) fetchDataFromPeer(
 					duration := utils.Now().Sub(fetchStart)
 					utils.GetLogger().
 						With("peer", peerHost.String(), "table", shard.Schema.Schema.Name, "shard", shard.ShardID, "batch", batchMeta.GetBatchID(), "column", vpMeta.GetColumnID(), "request", request).
-						Infof("successfully fetched data (%d bytes) from peer, took %d seconds, attempt %d", bytesFetched, duration.Seconds(), attempts)
+						Infof("successfully fetched data (%d bytes) from peer, took %f seconds, attempt %d", bytesFetched, duration.Seconds(), attempts)
 
 					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).
 						GetChildTimer(map[string]string{
@@ -264,7 +270,7 @@ func (shard *TableShard) fetchDataFromPeer(
 	return nil
 }
 
-func (shard *TableShard) fetchBatchMetaDataFromPeer(client rpc.PeerDataNodeClient) (*rpc.TableShardMetaData, error) {
+func (shard *TableShard) fetchBatchMetaDataFromPeer(origin string, sessionID int64, client rpc.PeerDataNodeClient) (*rpc.TableShardMetaData, error) {
 	var (
 		endBatchID   int32 = math.MaxInt32
 		startBatchID int32 = math.MinInt32
@@ -284,12 +290,16 @@ func (shard *TableShard) fetchBatchMetaDataFromPeer(client rpc.PeerDataNodeClien
 		Incarnation:  int32(shard.Schema.Schema.Incarnation),
 		Shard:        uint32(shard.ShardID),
 		StartBatchID: startBatchID,
+		SessionID:    sessionID,
+		NodeID:       origin,
 		EndBatchID:   endBatchID,
 	}
 	return client.FetchTableShardMetaData(context.Background(), req)
 }
 
 func (shard *TableShard) createVectorPartyRawDataRequest(
+	origin string,
+	sessionID int64,
 	tableMeta *rpc.TableShardMetaData,
 	batchMeta *rpc.BatchMetaData,
 	vpMeta *rpc.VectorPartyMetaData,
@@ -303,6 +313,8 @@ func (shard *TableShard) createVectorPartyRawDataRequest(
 			batchMeta.GetArchiveVersion().GetBackfillSeq())
 
 		rawVPDataRequest = &rpc.VectorPartyRawDataRequest{
+			SessionID:   sessionID,
+			NodeID:      origin,
 			Table:       tableMeta.GetTable(),
 			Shard:       tableMeta.GetShard(),
 			Incarnation: tableMeta.GetIncarnation(),
@@ -326,6 +338,8 @@ func (shard *TableShard) createVectorPartyRawDataRequest(
 			int(vpMeta.GetColumnID()))
 
 		rawVPDataRequest = &rpc.VectorPartyRawDataRequest{
+			SessionID:   sessionID,
+			NodeID:      origin,
 			Table:       tableMeta.GetTable(),
 			Shard:       tableMeta.GetShard(),
 			Incarnation: tableMeta.GetIncarnation(),
@@ -419,23 +433,24 @@ func (shard *TableShard) setTableShardMetadata(tableShardMeta *rpc.TableShardMet
 	return nil
 }
 
-func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.PeerDataNodeClient, options bootstrap.Options) (doneFn func(), err error) {
+func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.PeerDataNodeClient, origin string, options bootstrap.Options) (sessionID int64, doneFn func(), err error) {
 	done := make(chan struct{})
 	ttl := int64(options.BootstrapSessionTTL())
 	startSessionRequest := &rpc.StartSessionRequest{
 		Table: shard.Schema.Schema.Name,
 		Shard: uint32(shard.ShardID),
+		NodeID: origin,
 		Ttl:   ttl,
 	}
 
 	session, err := client.StartSession(context.Background(), startSessionRequest)
 	if err != nil {
-		return nil, utils.StackError(err, "failed to start session")
+		return 0, nil, utils.StackError(err, "failed to start session")
 	}
 
 	stream, err := client.KeepAlive(context.Background())
 	if err != nil {
-		return nil, utils.StackError(err, "failed to create keep alive stream")
+		return 0, nil, utils.StackError(err, "failed to create keep alive stream")
 	}
 
 	// send loop
@@ -491,7 +506,7 @@ func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.P
 		}
 	}(stream)
 
-	return func() {
+	return session.ID, func() {
 		close(done)
 	}, nil
 }
@@ -538,11 +553,6 @@ func (shard *TableShard) findBootstrapSource(
 			Info("no available bootstrap sorce")
 		return nil
 	}
-
-	utils.GetLogger().
-		With("table", shard.Schema.Schema.Name).
-		With("shardID", shard.ShardID).
-		Info("bootstrap peers")
 	//TODO: add consideration on connection count for choosing peer candidate
 	idx := rand.Intn(len(peers))
 	return peers[idx]

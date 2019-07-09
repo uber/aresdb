@@ -540,7 +540,7 @@ func (d *dataNode) newHandlers() datanodeHandlers {
 // mixed handler for both grpc and traditional http
 func mixedHandler(grpcServer *grpc.Server, httpHandler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if grpcServer != nil && r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+		if grpcServer != nil && r.ProtoMajor == 2 && strings.Contains(r.Header.Get(utils.HTTPContentTypeHeaderKey), utils.HTTPContentTypeApplicationGRPC) {
 			grpcServer.ServeHTTP(w, r)
 		} else {
 			httpHandler.ServeHTTP(w, r)
