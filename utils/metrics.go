@@ -982,7 +982,11 @@ func (f *ReporterFactory) GetRootReporter() *Reporter {
 
 // Reset resets, used for test env only
 func (f *ReporterFactory) Reset() *ReporterFactory {
-	return NewReporterFactory(tally.NewTestScope("test", nil), f.reporterType)
+	reporterType := ReporterTypeDataNode
+	if f != nil {
+		reporterType = f.reporterType
+	}
+	return NewReporterFactory(tally.NewTestScope("test", nil), reporterType)
 }
 
 // Reporter is the the interface used to report stats,
