@@ -54,10 +54,13 @@ type TableShard struct {
 	// bootstrapLock protects bootstrapState
 	bootstrapLock  sync.RWMutex
 	bootstrapState bootstrap.BootstrapState
+
+	// BootstrapDetails shows the details of bootstrap
+	BootstrapDetails bootstrap.BootstrapDetails `json:"bootstrapDetails,omitempty"`
 	// needPeerCopy mark whether the table shard need to copy data from peer
 	// before own disk data is available for serve
 	// default to 0 (no need for peer copy)
-	needPeerCopy   uint32
+	needPeerCopy uint32
 }
 
 // NewTableShard creates and initiates a table shard based on the schema.
@@ -70,6 +73,7 @@ func NewTableShard(schema *common.TableSchema, metaStore metaCom.MetaStore,
 		metaStore:         metaStore,
 		HostMemoryManager: hostMemoryManager,
 		options:           options,
+		BootstrapDetails:  bootstrap.NewBootstrapDetails(),
 	}
 
 	archiveStore := NewArchiveStore(tableShard)

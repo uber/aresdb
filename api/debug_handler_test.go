@@ -596,6 +596,11 @@ var _ = ginkgo.Describe("DebugHandler", func() {
     "primaryKeyBytes": 0,
     "primaryKeyColumnTypes": []
   },
+  "bootstrapDetails": {
+    "stage": "waiting",
+    "numColumns": 0,
+    "batches": {}
+  },
   "liveStore": {
     "backfillManager": {
       "numRecords": 0,
