@@ -85,7 +85,25 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 
 func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 	var queryReqeust BrokerAQLRequest
-	err := apiCom.ReadRequest(r, &queryReqeust)
+	utils.GetRootReporter().GetCounter(utils.QueryReceivedBroker).Inc(1)
+
+	start := utils.Now()
+	var err error
+	defer func() {
+		duration := utils.Now().Sub(start)
+		utils.GetRootReporter().GetTimer(utils.QueryLatencyBroker).Record(duration)
+		if err != nil {
+			utils.GetRootReporter().GetCounter(utils.QueryFailedBroker).Inc(1)
+			utils.GetLogger().With(
+				"error", err,
+				"request", queryReqeust).Error("Error happened when processing request")
+		} else {
+			utils.GetRootReporter().GetCounter(utils.QuerySucceededBroker).Inc(1)
+			utils.GetLogger().With("request", queryReqeust).Info("Request succeeded")
+		}
+	}()
+
+	err = apiCom.ReadRequest(r, &queryReqeust)
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return
