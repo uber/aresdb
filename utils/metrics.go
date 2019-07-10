@@ -139,7 +139,7 @@ const (
 	DataNodeQueryFailures
 	TimeWaitedForDataNode
 	TimeSerDeDataNodeResponse
-  
+
 	BrokerMetricNamesSentinel
 )
 
