@@ -1,12 +1,14 @@
 package datanode
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
 	"github.com/uber/aresdb/utils"
 	"google.golang.org/grpc"
+	"net/url"
 	"sync"
 )
 
@@ -38,7 +40,13 @@ func (p *peer) BorrowConnection(fn client.WithConnectionFn) (err error) {
 	}
 
 	if p.conn == nil {
-		p.conn, err = grpc.Dial(p.host.Address(), grpc.WithInsecure())
+		parsedURL, err := url.Parse(p.host.Address())
+		if err != nil {
+			p.Unlock()
+			return err
+		}
+
+		p.conn, err = grpc.Dial(fmt.Sprintf("%s:%s", parsedURL.Hostname(), parsedURL.Port()), grpc.WithInsecure())
 		if err != nil {
 			p.Unlock()
 			return err
