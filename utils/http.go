@@ -17,6 +17,8 @@ package utils
 import (
 	"fmt"
 	"github.com/uber/aresdb/common"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"golang.org/x/net/netutil"
 	"net"
 	"net/http"
@@ -28,6 +30,7 @@ const (
 	HTTPContentTypeHeaderKey       = "content-type"
 	HTTPAcceptTypeHeaderKey        = "accept"
 	HTTPContentTypeApplicationJson = "application/json"
+	HTTPContentTypeApplicationGRPC = "application/grpc"
 	// HTTPContentTypeUpsertBatch defines the upsert data content type.
 	HTTPContentTypeUpsertBatch = "application/upsert-data"
 	// HTTPContentTypeHyperLogLog defines the hyperloglog query result content type.
@@ -153,7 +156,7 @@ func LimitServe(port int, handler http.Handler, httpCfg common.HTTPConfig) {
 	server := &http.Server{
 		ReadTimeout:  time.Duration(httpCfg.ReadTimeOutInSeconds) * time.Second,
 		WriteTimeout: time.Duration(httpCfg.WriteTimeOutInSeconds) * time.Second,
-		Handler:      handler,
+		Handler:      h2c.NewHandler(handler, &http2.Server{}),
 	}
 	GetLogger().Fatal(server.Serve(listener))
 }

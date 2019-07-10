@@ -62,6 +62,13 @@ func (shard *TableShard) Bootstrap(
 	shard.bootstrapState = bootstrap.Bootstrapping
 	shard.bootstrapLock.Unlock()
 
+	shard.Schema.RLock()
+	numColumns := len(shard.Schema.GetValueTypeByColumn())
+	schema := shard.Schema.Schema
+	shard.Schema.RUnlock()
+
+	shard.BootstrapDetails.Clear()
+	shard.BootstrapDetails.SetNumColumns(numColumns)
 	success := false
 	defer func() {
 		shard.bootstrapLock.Lock()
@@ -74,15 +81,21 @@ func (shard *TableShard) Bootstrap(
 	}()
 
 	if atomic.LoadUint32(&shard.needPeerCopy) == 1 {
+		shard.BootstrapDetails.SetBootstrapStage(bootstrap.PeerCopy)
 		// find peer node for copy metadata and raw data
 		peerNode := shard.findBootstrapSource(origin, topo, topoState)
 		if peerNode == nil {
 			return utils.StackError(nil, "no peer node available")
 		}
+		utils.GetLogger().
+			With("table", shard.Schema.Schema.Name).
+			With("shardID", shard.ShardID).
+			With("peer", peerNode.String()).
+			Info("found peer to bootstrap from")
 
 		var dataStreamErr error
 		borrowErr := peerSource.BorrowConnection(peerNode.ID(), func(nodeClient rpc.PeerDataNodeClient) {
-			dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient, options)
+			dataStreamErr = shard.fetchDataFromPeer(peerNode, nodeClient, origin, options)
 		})
 
 		if borrowErr != nil {
@@ -100,10 +113,8 @@ func (shard *TableShard) Bootstrap(
 		return err
 	}
 
+	shard.BootstrapDetails.SetBootstrapStage(bootstrap.Preload)
 	// preload snapshot or archive batches into memory
-	shard.Schema.RLock()
-	schema := shard.Schema.Schema
-	shard.Schema.RUnlock()
 	if schema.IsFactTable {
 		// preload all columns for fact table
 		endDay := int(utils.Now().Unix() / 86400)
@@ -121,9 +132,11 @@ func (shard *TableShard) Bootstrap(
 		}
 	}
 
+	shard.BootstrapDetails.SetBootstrapStage(bootstrap.Recovery)
 	// start play redolog
 	shard.PlayRedoLog()
 	success = true
+	shard.BootstrapDetails.SetBootstrapStage(bootstrap.Finished)
 	return nil
 }
 
@@ -137,17 +150,18 @@ type vpRawDataRequest struct {
 func (shard *TableShard) fetchDataFromPeer(
 	peerHost topology.Host,
 	client rpc.PeerDataNodeClient,
+	origin string,
 	options bootstrap.Options,
 ) error {
 
-	doneFn, err := shard.startStreamSession(peerHost, client, options)
+	sessionID, doneFn, err := shard.startStreamSession(peerHost, client, origin, options)
 	if err != nil {
 		return err
 	}
 	defer doneFn()
 
 	// 1. fetch meta data
-	tableShardMeta, err := shard.fetchBatchMetaDataFromPeer(client)
+	tableShardMeta, err := shard.fetchBatchMetaDataFromPeer(origin, sessionID, client)
 	if err != nil {
 		return err
 	}
@@ -161,11 +175,11 @@ func (shard *TableShard) fetchDataFromPeer(
 	workerPool := xsync.NewWorkerPool(options.MaxConcurrentStreamsPerTableShards())
 	workerPool.Init()
 
+	retrier := xretry.NewRetrier(xretry.NewOptions().SetMaxRetries(3))
 	var (
-		mutex           sync.Mutex
-		retryVPRequests []vpRawDataRequest
-		errors          xerrors.MultiError
-		wg              sync.WaitGroup
+		mutex  sync.Mutex
+		errors xerrors.MultiError
+		wg     sync.WaitGroup
 	)
 
 	for _, batchMeta := range tableShardMeta.Batches {
@@ -175,6 +189,13 @@ func (shard *TableShard) fetchDataFromPeer(
 		}
 
 		for _, vpMeta := range batchMeta.Vps {
+			shard.BootstrapDetails.AddVPToCopy(batchMeta.GetBatchID(), vpMeta.GetColumnID())
+		}
+	}
+
+	fetchStart := utils.Now()
+	for _, batchMeta := range tableShardMeta.Batches {
+		for _, vpMeta := range batchMeta.Vps {
 			// capture batchMeta and vpMeta
 			batchMeta := batchMeta
 			vpMeta := vpMeta
@@ -182,42 +203,74 @@ func (shard *TableShard) fetchDataFromPeer(
 			// TODO: add checksum to vp file and vpMeta to avoid copying existing data on disk
 			workerPool.Go(func() {
 				defer wg.Done()
-				request, vpWriter, err := shard.createVectorPartyRawDataRequest(tableShardMeta, batchMeta, vpMeta)
-				if err != nil {
-					mutex.Lock()
-					retryVPRequests = append(retryVPRequests, vpRawDataRequest{tableShardMeta, batchMeta, vpMeta})
-					errors = errors.Add(err)
-					mutex.Unlock()
-				}
-				defer vpWriter.Close()
+				attempts := 0
+				err = retrier.Attempt(func() error {
+					attempts++
+					request, vpWriter, err := shard.createVectorPartyRawDataRequest(origin, sessionID, tableShardMeta, batchMeta, vpMeta)
+					if err != nil {
+						utils.GetLogger().
+							With("peer", peerHost.String(), "table", shard.Schema.Schema.Name, "shard", shard.ShardID, "batch", batchMeta.GetBatchID(), "column", vpMeta.GetColumnID(), "request", request, "error", err.Error()).
+							Errorf("failed to create vector party raw data request, attempt %d", attempts)
+						return err
+					}
+					defer vpWriter.Close()
 
-				bytesFetched, err := shard.fetchVectorPartyRawDataFromPeer(peerHost, client, vpWriter, request)
-				if err != nil {
-					utils.GetLogger().
-						With("peer", peerHost.String(), "table", shard.Schema.Schema.Name, "shard", shard.ShardID, "batch", batchMeta.GetBatchID(), "column", vpMeta.GetColumnID(), "request", request, "error", err.Error()).
-						Errorf("failed fetching data from peer")
-					mutex.Lock()
-					retryVPRequests = append(retryVPRequests, vpRawDataRequest{tableShardMeta, batchMeta, vpMeta})
-					errors = errors.Add(err)
-					mutex.Unlock()
-				} else {
+					fetchStart := utils.Now()
+					bytesFetched, err := shard.fetchVectorPartyRawDataFromPeer(peerHost, client, vpWriter, request)
+					if err != nil {
+						utils.GetLogger().
+							With("peer", peerHost.String(), "table", shard.Schema.Schema.Name, "shard", shard.ShardID, "batch", batchMeta.GetBatchID(), "column", vpMeta.GetColumnID(), "request", request, "error", err.Error()).
+							Errorf("failed to fetch data from peer, attempt %d", attempts)
+						return err
+					}
+
+					duration := utils.Now().Sub(fetchStart)
 					utils.GetLogger().
 						With("peer", peerHost.String(), "table", shard.Schema.Schema.Name, "shard", shard.ShardID, "batch", batchMeta.GetBatchID(), "column", vpMeta.GetColumnID(), "request", request).
-						Infof("successfully fetched data (%d bytes) from peer", bytesFetched)
+						Infof("successfully fetched data (%d bytes) from peer, took %f seconds, attempt %d", bytesFetched, duration.Seconds(), attempts)
+
+					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).
+						GetChildTimer(map[string]string{
+							"batch":  string(batchMeta.GetBatchID()),
+							"column": string(vpMeta.GetColumnID()),
+						}, utils.RawVPFetchTime).Record(duration)
+
+					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).GetChildCounter(
+						map[string]string{
+							"batch":  string(batchMeta.GetBatchID()),
+							"column": string(vpMeta.GetColumnID()),
+						}, utils.RawVPBytesFetched).Inc(int64(bytesFetched))
+
+					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).
+						GetChildGauge(map[string]string{
+							"batch":  string(batchMeta.GetBatchID()),
+							"column": string(vpMeta.GetColumnID()),
+						}, utils.RawVPFetchBytesPerSec).Update(float64(bytesFetched) / duration.Seconds())
+
+					shard.BootstrapDetails.MarkVPFinished(batchMeta.GetBatchID(), vpMeta.GetColumnID())
+					return nil
+				})
+
+				if err != nil {
+					mutex.Lock()
+					errors = errors.Add(err)
+					mutex.Unlock()
+					utils.GetReporter(tableShardMeta.GetTable(), int(tableShardMeta.GetShard())).GetCounter(utils.RawVPFetchFailure).Inc(1)
+				} else {
+					utils.GetReporter(tableShardMeta.GetTable(), int(tableShardMeta.GetShard())).GetCounter(utils.RawVPFetchSuccess).Inc(1)
 				}
 			})
 		}
 	}
 	wg.Wait()
-	// TODO: add retry for failed vps
-	// 4. retry for failed vector parties
 	if !errors.Empty() {
 		return errors.FinalError()
 	}
+	utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).GetTimer(utils.TotalRawVPFetchTime).Record(utils.Now().Sub(fetchStart))
 	return nil
 }
 
-func (shard *TableShard) fetchBatchMetaDataFromPeer(client rpc.PeerDataNodeClient) (*rpc.TableShardMetaData, error) {
+func (shard *TableShard) fetchBatchMetaDataFromPeer(origin string, sessionID int64, client rpc.PeerDataNodeClient) (*rpc.TableShardMetaData, error) {
 	var (
 		endBatchID   int32 = math.MaxInt32
 		startBatchID int32 = math.MinInt32
@@ -237,12 +290,16 @@ func (shard *TableShard) fetchBatchMetaDataFromPeer(client rpc.PeerDataNodeClien
 		Incarnation:  int32(shard.Schema.Schema.Incarnation),
 		Shard:        uint32(shard.ShardID),
 		StartBatchID: startBatchID,
+		SessionID:    sessionID,
+		NodeID:       origin,
 		EndBatchID:   endBatchID,
 	}
 	return client.FetchTableShardMetaData(context.Background(), req)
 }
 
 func (shard *TableShard) createVectorPartyRawDataRequest(
+	origin string,
+	sessionID int64,
 	tableMeta *rpc.TableShardMetaData,
 	batchMeta *rpc.BatchMetaData,
 	vpMeta *rpc.VectorPartyMetaData,
@@ -256,6 +313,8 @@ func (shard *TableShard) createVectorPartyRawDataRequest(
 			batchMeta.GetArchiveVersion().GetBackfillSeq())
 
 		rawVPDataRequest = &rpc.VectorPartyRawDataRequest{
+			SessionID:   sessionID,
+			NodeID:      origin,
 			Table:       tableMeta.GetTable(),
 			Shard:       tableMeta.GetShard(),
 			Incarnation: tableMeta.GetIncarnation(),
@@ -279,6 +338,8 @@ func (shard *TableShard) createVectorPartyRawDataRequest(
 			int(vpMeta.GetColumnID()))
 
 		rawVPDataRequest = &rpc.VectorPartyRawDataRequest{
+			SessionID:   sessionID,
+			NodeID:      origin,
 			Table:       tableMeta.GetTable(),
 			Shard:       tableMeta.GetShard(),
 			Incarnation: tableMeta.GetIncarnation(),
@@ -372,23 +433,24 @@ func (shard *TableShard) setTableShardMetadata(tableShardMeta *rpc.TableShardMet
 	return nil
 }
 
-func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.PeerDataNodeClient, options bootstrap.Options) (doneFn func(), err error) {
+func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.PeerDataNodeClient, origin string, options bootstrap.Options) (sessionID int64, doneFn func(), err error) {
 	done := make(chan struct{})
 	ttl := int64(options.BootstrapSessionTTL())
 	startSessionRequest := &rpc.StartSessionRequest{
 		Table: shard.Schema.Schema.Name,
 		Shard: uint32(shard.ShardID),
+		NodeID: origin,
 		Ttl:   ttl,
 	}
 
 	session, err := client.StartSession(context.Background(), startSessionRequest)
 	if err != nil {
-		return nil, utils.StackError(err, "failed to start session")
+		return 0, nil, utils.StackError(err, "failed to start session")
 	}
 
 	stream, err := client.KeepAlive(context.Background())
 	if err != nil {
-		return nil, utils.StackError(err, "failed to create keep alive stream")
+		return 0, nil, utils.StackError(err, "failed to create keep alive stream")
 	}
 
 	// send loop
@@ -444,7 +506,7 @@ func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.P
 		}
 	}(stream)
 
-	return func() {
+	return session.ID, func() {
 		close(done)
 	}, nil
 }
@@ -491,11 +553,6 @@ func (shard *TableShard) findBootstrapSource(
 			Info("no available bootstrap sorce")
 		return nil
 	}
-
-	utils.GetLogger().
-		With("table", shard.Schema.Schema.Name).
-		With("shardID", shard.ShardID).
-		Info("bootstrap peers")
 	//TODO: add consideration on connection count for choosing peer candidate
 	idx := rand.Intn(len(peers))
 	return peers[idx]
