@@ -37,89 +37,95 @@ type MetricName int
 const (
 	// DataNode metrics
 	AllocatedDeviceMemory MetricName = iota
+	AppendedRecords
+	ArchivingCount
+	ArchivingHighWatermark
 	ArchivingIgnoredRecords
+	ArchivingLowWatermark
 	ArchivingRecords
 	ArchivingTimingTotal
-	ArchivingHighWatermark
-	ArchivingLowWatermark
-	ArchivingCount
-	BackfillTimingTotal
-	BackfillLockTiming
+	BackfillAffectedDays
+	BackfillBufferFillRatio
+	BackfillBufferNumRecords
+	BackfillBufferSize
 	BackfillCount
+	BackfillDeleteThenInsertRecords
+	BackfillInplaceUpdateRecords
+	BackfillLockTiming
+	BackfillNewRecords
+	BackfillNoEffectRecords
+	BackfillRecords
+	BackfillRecordsColumnRemoved
+	BackfillRecordsRatio
+	BackfillRecordsTimeDifference
+	BackfillTimingTotal
+	BatchSize
+	BatchSizeReportTime
+	CurrentRedologCreationTime
+	CurrentRedologSize
+	DuplicateRecordRatio
 	EstimatedDeviceMemory
 	HTTPHandlerCall
 	HTTPHandlerLatency
-	IngestedRecords
-	AppendedRecords
-	UpdatedRecords
 	IngestSkippedRecords
-	IngestedUpsertBatches
-	IngestedRecoveryBatches
 	IngestedErrorBatches
-	UpsertBatchSize
-	RecoveryUpsertBatchSize
-	PrimaryKeyMissing
-	TimeColumnMissing
-	BackfillRecords
-	BackfillAffectedDays
-	BackfillNewRecords
-	BackfillNoEffectRecords
-	BackfillInplaceUpdateRecords
-	BackfillDeleteThenInsertRecords
-	BackfillRecordsTimeDifference
-	BackfillRecordsRatio
-	BackfillRecordsColumnRemoved
-	DuplicateRecordRatio
-	RecoveryIgnoredRecordsTimeDifference
-	RecoveryIgnoredRecords
-	RecoveryLatency
-	TotalMemorySize
-	UnmanagedMemorySize
-	ManagedMemorySize
-	BackfillBufferFillRatio
-	BackfillBufferSize
-	BackfillBufferNumRecords
+	IngestedRecords
+	IngestedRecoveryBatches
+	IngestedUpsertBatches
 	IngestionLagPerColumn
-	NumberOfEnumCasesPerColumn
-	CurrentRedologCreationTime
-	CurrentRedologSize
-	NumberOfRedologs
-	SizeOfRedologs
-	QueryFailed
-	QuerySucceeded
-	QueryLatency
-	QuerySQLParsingLatency
-	QueryDimReadLatency
-	QueryWaitForMemoryDuration
-	QueryReceived
-	QueryLiveRecordsProcessed
-	QueryArchiveRecordsProcessed
-	QueryLiveBatchProcessed
-	QueryArchiveBatchProcessed
-	QueryLiveBytesTransferred
-	QueryArchiveBytesTransferred
-	QueryRowsReturned
-	RecordsOutOfRetention
-	SnapshotTimingTotal
-	SnapshotTimingLoad
-	SnapshotTimingBuildIndex
-	SnapshotCount
-	TimezoneLookupTableCreationTime
-	RedoLogFileCorrupt
+	JobFailuresCount
+	ManagedMemorySize
 	MemoryOverflow
+	NumberOfEnumCasesPerColumn
+	NumberOfRedologs
 	PreloadingZoneEvicted
+	PrimaryKeyMissing
+	PurgeCount
 	PurgeTimingTotal
 	PurgedBatches
-	PurgeCount
-	JobFailuresCount
+	QueryArchiveBatchProcessed
+	QueryArchiveBytesTransferred
+	QueryArchiveRecordsProcessed
+	QueryDimReadLatency
+	QueryFailed
+	QueryLatency
+	QueryLiveBatchProcessed
+	QueryLiveBytesTransferred
+	QueryLiveRecordsProcessed
+	QueryReceived
+	QueryRowsReturned
+	QuerySQLParsingLatency
+	QuerySucceeded
+	QueryWaitForMemoryDuration
+	RawVPBytesFetched
+	RawVPFetchBytesPerSec
+	RawVPFetchFailure
+	RawVPFetchSuccess
+	RawVPFetchTime
 	RecordsFromFuture
-	BatchSize
-	BatchSizeReportTime
-	SchemaFetchSuccess
-	SchemaFetchFailure
-	SchemaUpdateCount
-	SchemaDeletionCount
+	RecordsOutOfRetention
+	RecoveryIgnoredRecords
+	RecoveryIgnoredRecordsTimeDifference
+	RecoveryLatency
+	RecoveryUpsertBatchSize
+	RedoLogFileCorrupt
 	SchemaCreationCount
+	SchemaDeletionCount
+	SchemaFetchFailure
+	SchemaFetchSuccess
+	SchemaUpdateCount
+	SizeOfRedologs
+	SnapshotCount
+	SnapshotTimingBuildIndex
+	SnapshotTimingLoad
+	SnapshotTimingTotal
+	TimeColumnMissing
+	TimezoneLookupTableCreationTime
+	TotalMemorySize
+	TotalRawVPFetchTime
+	UnmanagedMemorySize
+	UpdatedRecords
+	UpsertBatchSize
 
 	DataNodeMetricNamesSentinel
 
@@ -133,7 +139,7 @@ const (
 	DataNodeQueryFailures
 	TimeWaitedForDataNode
 	TimeSerDeDataNodeResponse
-
+  
 	BrokerMetricNamesSentinel
 )
 
@@ -230,6 +236,12 @@ const (
 	scopeNameTimezoneLookupTableCreationTime = "timezone_lookup_table_creation_time"
 	scopeNameRedoLogFileCorrupt              = "redo_log_file_corrupt"
 	scopeNameMemoryOverflow                  = "memory_overflow"
+	scopeNameRawVPBytesFetched               = "raw_vp_bytes_fetched"
+	scopeNameRawVPFetchBytesPerSec           = "raw_vp_fetch_bytes_per_sec"
+	scopeNameRawVPFetchFailure               = "raw_vp_fetch_failure"
+	scopeNameRawVPFetchSuccess               = "raw_vp_fetch_success"
+	scopeNameRawVPFetchTime                  = "raw_vp_fetch_time"
+	scopeNameTotalRawVPFetchTime             = "total_raw_vp_fetch_time"
 	scopeNamePreloadingZoneEvicted           = "preloading_zone_evicted"
 	scopeNameBatchesPurged                   = "purged_batches"
 	scopeNameFutureRecords                   = "records_from_future"
@@ -285,10 +297,11 @@ const (
 const (
 	metricsOperationArchiving = "archiving"
 	metricsOperationBackfill  = "backfill"
+	metricsOperationBootstrap = "bootstrap"
 	metricsOperationIngestion = "ingestion"
+	metricsOperationPurge     = "purge"
 	metricsOperationRecovery  = "recovery"
 	metricsOperationSnapshot  = "snapshot"
-	metricsOperationPurge     = "purge"
 )
 
 var dataNodeMetricsDefs = map[MetricName]metricDefinition{
@@ -830,6 +843,54 @@ var dataNodeMetricsDefs = map[MetricName]metricDefinition{
 		metricType: Counter,
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	RawVPFetchTime: {
+		name:       scopeNameRawVPFetchTime,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMemStore,
+			metricsTagOperation: metricsOperationBootstrap,
+		},
+	},
+	RawVPBytesFetched: {
+		name:       scopeNameRawVPBytesFetched,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMemStore,
+			metricsTagOperation: metricsOperationBootstrap,
+		},
+	},
+	RawVPFetchSuccess: {
+		name:       scopeNameRawVPFetchSuccess,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMemStore,
+			metricsTagOperation: metricsOperationBootstrap,
+		},
+	},
+	RawVPFetchFailure: {
+		name:       scopeNameRawVPFetchFailure,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMemStore,
+			metricsTagOperation: metricsOperationBootstrap,
+		},
+	},
+	TotalRawVPFetchTime: {
+		name:       scopeNameTotalRawVPFetchTime,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMemStore,
+			metricsTagOperation: metricsOperationBootstrap,
+		},
+	},
+	RawVPFetchBytesPerSec: {
+		name:       scopeNameRawVPFetchBytesPerSec,
+		metricType: Gauge,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMemStore,
+			metricsTagOperation: metricsOperationBootstrap,
 		},
 	},
 	PreloadingZoneEvicted: {

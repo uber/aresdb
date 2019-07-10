@@ -21,7 +21,6 @@
 package datanode
 
 import (
-	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
@@ -44,19 +43,23 @@ type bootstrapManagerImpl struct {
 	log                         common.Logger
 	state                       bootstrap.BootstrapState
 	hasPending                  bool
-	status                      tally.Gauge
+	bootstrapTableShards        map[string]bootstrap.BootstrapDetails
 	lastBootstrapCompletionTime time.Time
 	topo                        topology.Topology
 }
 
 // NewBootstrapManager creates bootstrap manager
 func NewBootstrapManager(datanode DataNode, opts Options, topo topology.Topology) BootstrapManager {
-	scope := opts.InstrumentOptions().MetricsScope()
+	peerSource, err := NewPeerSource(topo)
+	if err != nil {
+		opts.InstrumentOptions().Logger().With("error", err.Error()).Fatal("failed to initalize peer source")
+	}
+
 	return &bootstrapManagerImpl{
 		datanode: datanode,
 		opts:     opts,
 		log:      opts.InstrumentOptions().Logger(),
-		status:   scope.Gauge("bootstrapped"),
+		peerSource: peerSource,
 		topo:     topo,
 	}
 }
@@ -117,14 +120,6 @@ func (m *bootstrapManagerImpl) Bootstrap() error {
 	return multiErr.FinalError()
 }
 
-func (m *bootstrapManagerImpl) Report() {
-	if m.IsBootstrapped() {
-		m.status.Update(1)
-	} else {
-		m.status.Update(0)
-	}
-}
-
 func (m *bootstrapManagerImpl) bootstrap() error {
 	starDatanodeBootstrap := utils.Now()
 
@@ -146,9 +141,7 @@ func (m *bootstrapManagerImpl) bootstrap() error {
 		for _, table := range tables {
 			tableShard, err := m.datanode.GetTableShard(table, shardID)
 			if err != nil {
-				mutex.Lock()
 				multiErr = multiErr.Add(err)
-				mutex.Unlock()
 				continue
 			}
 
@@ -159,24 +152,20 @@ func (m *bootstrapManagerImpl) bootstrap() error {
 
 			wg.Add(1)
 			workers.Go(func() {
+				defer wg.Done()
 				err := tableShard.Bootstrap(m.peerSource, m.datanode.ID(), m.topo, topoStateSnapshot, m.opts.BootstrapOptions())
 				mutex.Lock()
 				multiErr = multiErr.Add(err)
 				mutex.Unlock()
-
 				// unpin table shard after use
 				tableShard.Users.Done()
-				wg.Done()
 			})
 		}
 	}
 	wg.Wait()
-
-	err := multiErr.FinalError()
-	if err != nil {
-		return err
+	if !multiErr.Empty() {
+		return multiErr.FinalError()
 	}
-
 	took := utils.Now().Sub(starDatanodeBootstrap)
 	m.log.With("datanode", m.datanode.ID()).
 		With("duration", took).

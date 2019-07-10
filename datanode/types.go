@@ -64,9 +64,6 @@ type BootstrapManager interface {
 
 	// Bootstrap performs bootstrapping for all namespaces and shards owned.
 	Bootstrap() error
-
-	// Report reports runtime information.
-	Report()
 }
 
 // Options represents the options for storage.
