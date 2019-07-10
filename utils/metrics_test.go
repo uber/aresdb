@@ -45,6 +45,14 @@ var _ = ginkgo.Describe("metrics", func() {
 		Ω(rf.GetReporter("test", 1)).Should(Equal(rf.GetRootReporter()))
 	})
 
+	ginkgo.It("NewReporterFactory should work for broker", func() {
+		scope := tally.NewTestScope("test", nil)
+		rf := NewReporterFactory(scope, ReporterTypeBroker)
+		Ω(rf.GetRootReporter().GetRootScope()).Should(Equal(scope))
+		// since we've not add any table shard yet, we should get a root reporter back.
+		Ω(rf.GetReporter("test", 1)).Should(Equal(rf.GetRootReporter()))
+	})
+
 	ginkgo.It("AddTableShard should work", func() {
 		scope := tally.NewTestScope("test", nil)
 		rf := NewReporterFactory(scope, ReporterTypeDataNode)

@@ -130,6 +130,16 @@ const (
 	DataNodeMetricNamesSentinel
 
 	// Broker metrics
+	AQLQueryReceivedBroker
+	SQLQueryReceivedBroker
+	QueryFailedBroker
+	QuerySucceededBroker
+	QueryLatencyBroker
+	SQLParsingLatencyBroker
+	DataNodeQueryFailures
+	TimeWaitedForDataNode
+	TimeSerDeDataNodeResponse
+
 	BrokerMetricNamesSentinel
 )
 
@@ -164,6 +174,7 @@ type metricDefinition struct {
 
 // Scope names .
 const (
+	// datanode metrics
 	scopeNameRecoveryLatency                 = "recovery_latency"
 	scopeNameAllocatedDeviceMemory           = "allocated_device_memory"
 	scopeNameArchivingRecords                = "archiving_records"
@@ -242,6 +253,17 @@ const (
 	scopeNameSchemaDeletionCount             = "schema_deletions"
 	scopeNameSchemaCreationCount             = "schema_creations"
 	scopeNameJobFailuresCount                = "job_failures_count"
+
+	// broker metrics
+	scopeNameAQLQueryReceivedBroker    = "aql_query_received_broker"
+	scopeNameSQLQueryReceivedBroker    = "sql_query_received_broker"
+	scopeNameQueryFailedBroker         = "query_failed_broker"
+	scopeNameQuerySucceededBroker      = "query_succeeded_broker"
+	scopeNameQueryLatencyBroker        = "query_latency_broker"
+	scopeNameSQLParsingLatencyBroker   = "sql_parsing_latency_broker"
+	scopeNameDataNodeQueryFailures     = "datanode_query_failures"
+	scopeNameTimeWaitedForDataNode     = "time_waited_for_datanodes"
+	scopeNameTimeSerDeDataNodeResponse = "time_serde_response"
 )
 
 // Metric tag names
@@ -966,7 +988,71 @@ var dataNodeMetricsDefs = map[MetricName]metricDefinition{
 	},
 }
 
-var brokerMetricsDefs = map[MetricName]metricDefinition{}
+var brokerMetricsDefs = map[MetricName]metricDefinition{
+	AQLQueryReceivedBroker: {
+		name:       scopeNameAQLQueryReceivedBroker,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	SQLQueryReceivedBroker: {
+		name:       scopeNameSQLQueryReceivedBroker,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	QueryFailedBroker: {
+		name:       scopeNameQueryFailedBroker,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	QuerySucceededBroker: {
+		name:       scopeNameQuerySucceededBroker,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	QueryLatencyBroker: {
+		name:       scopeNameQueryLatencyBroker,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	SQLParsingLatencyBroker: {
+		name:       scopeNameSQLParsingLatencyBroker,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	DataNodeQueryFailures: {
+		name:       scopeNameDataNodeQueryFailures,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	TimeWaitedForDataNode: {
+		name:       scopeNameTimeWaitedForDataNode,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	TimeSerDeDataNodeResponse: {
+		name:       scopeNameTimeSerDeDataNodeResponse,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+}
 
 func (def *metricDefinition) init(rootScope tally.Scope) {
 	switch def.metricType {
@@ -1052,18 +1138,25 @@ func (f *ReporterFactory) Reset() *ReporterFactory {
 // Reporter is the the interface used to report stats,
 type Reporter struct {
 	rootScope         tally.Scope
+	offset            int
 	cachedDefinitions []metricDefinition
 }
 
 // NewReporter returns a new reporter with supplied root scope.
 func NewReporter(rootScope tally.Scope, t ReporterType) *Reporter {
-	var metricDefs map[MetricName]metricDefinition
-	var numMetrics int
+	var (
+		metricDefs map[MetricName]metricDefinition
+		numMetrics int
+		offset     int
+	)
+
 	switch t {
 	case ReporterTypeDataNode:
+		offset = 0
 		numMetrics = int(DataNodeMetricNamesSentinel)
 		metricDefs = dataNodeMetricsDefs
 	case ReporterTypeBroker:
+		offset = int(DataNodeMetricNamesSentinel)
 		numMetrics = int(BrokerMetricNamesSentinel) - int(DataNodeMetricNamesSentinel)
 		metricDefs = brokerMetricsDefs
 	default:
@@ -1073,14 +1166,14 @@ func NewReporter(rootScope tally.Scope, t ReporterType) *Reporter {
 	defs := make([]metricDefinition, numMetrics)
 	for key, metricDefinition := range metricDefs {
 		metricDefinition.init(rootScope)
-		defs[key] = metricDefinition
+		defs[int(key)-offset] = metricDefinition
 	}
-	return &Reporter{rootScope: rootScope, cachedDefinitions: defs}
+	return &Reporter{rootScope: rootScope, cachedDefinitions: defs, offset: offset}
 }
 
 // GetCounter returns the tally counter with corresponding tags.
 func (r *Reporter) GetCounter(n MetricName) tally.Counter {
-	def := r.cachedDefinitions[n]
+	def := r.cachedDefinitions[int(n)-r.offset]
 	if def.metricType == Counter {
 		return def.counter
 	}
@@ -1090,7 +1183,7 @@ func (r *Reporter) GetCounter(n MetricName) tally.Counter {
 
 // GetGauge returns the tally gauge with corresponding tags.
 func (r *Reporter) GetGauge(n MetricName) tally.Gauge {
-	def := r.cachedDefinitions[n]
+	def := r.cachedDefinitions[int(n)-r.offset]
 	if def.metricType == Gauge {
 		return def.gauge
 	}
@@ -1100,7 +1193,7 @@ func (r *Reporter) GetGauge(n MetricName) tally.Gauge {
 
 // GetTimer returns the tally timer with corresponding tags.
 func (r *Reporter) GetTimer(n MetricName) tally.Timer {
-	def := r.cachedDefinitions[n]
+	def := r.cachedDefinitions[int(n)-r.offset]
 	if def.metricType == Timer {
 		return def.timer
 	}
@@ -1111,7 +1204,7 @@ func (r *Reporter) GetTimer(n MetricName) tally.Timer {
 // GetChildCounter create tagged child counter from reporter
 func (r *Reporter) GetChildCounter(tags map[string]string, n MetricName) tally.Counter {
 	childScope := r.rootScope.Tagged(tags)
-	def := r.cachedDefinitions[n]
+	def := r.cachedDefinitions[int(n)-r.offset]
 	if def.metricType == Counter {
 		return childScope.Tagged(def.tags).Counter(def.name)
 	}
@@ -1122,7 +1215,7 @@ func (r *Reporter) GetChildCounter(tags map[string]string, n MetricName) tally.C
 // GetChildGauge create tagged child gauge from reporter
 func (r *Reporter) GetChildGauge(tags map[string]string, n MetricName) tally.Gauge {
 	childScope := r.rootScope.Tagged(tags)
-	def := r.cachedDefinitions[n]
+	def := r.cachedDefinitions[int(n)-r.offset]
 	if def.metricType == Gauge {
 		return childScope.Tagged(def.tags).Gauge(def.name)
 	}
@@ -1133,7 +1226,7 @@ func (r *Reporter) GetChildGauge(tags map[string]string, n MetricName) tally.Gau
 // GetChildTimer create tagged child timer from reporter
 func (r *Reporter) GetChildTimer(tags map[string]string, n MetricName) tally.Timer {
 	childScope := r.rootScope.Tagged(tags)
-	def := r.cachedDefinitions[n]
+	def := r.cachedDefinitions[int(n)-r.offset]
 	if def.metricType == Timer {
 		return childScope.Tagged(def.tags).Timer(def.name)
 	}

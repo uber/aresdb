@@ -7,17 +7,22 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/broker/common/mocks"
 	shardMock "github.com/uber/aresdb/cluster/shard/mocks"
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
+	common3 "github.com/uber/aresdb/common"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
 	common2 "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
+	"github.com/uber/aresdb/utils"
 )
 
 var _ = ginkgo.Describe("agg query plan", func() {
+	utils.Init(common3.AresServerConfig{}, common3.NewLoggerFactory().GetDefaultLogger(), common3.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil), utils.ReporterTypeBroker)
+
 	ginkgo.It("splitAvgQuery should work", func() {
 		q := common2.AQLQuery{
 			Table: "foo",

@@ -42,6 +42,7 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 		utils.GetLogger().With("host", ssn.host, "query", ssn.query).Debug("sending query to datanode")
 		bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.host, ssn.query)
 		if fetchErr != nil {
+			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(
 				"error", fetchErr,
 				"host", ssn.host,
@@ -144,14 +145,20 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 		}(node)
 	}
 
+	dataNodeWaitStart := utils.Now()
+
 	for i := 0; i < len(nqp.nodes); i++ {
 		if nqp.getRowsWanted() == 0 {
 			utils.GetLogger().Debug("got enough rows, exiting")
 			break
 		}
-		utils.GetLogger().With("node", i).Debug("waiting for response from StreamingScanNode")
 		res := <-nqp.resultChan
-		utils.GetLogger().With("node", i).Debug("got response from StreamingScanNode")
+
+		if i == 0 {
+			// only log time waited for the fastest datanode for now
+			utils.GetRootReporter().GetTimer(utils.TimeWaitedForDataNode).Record(utils.Now().Sub(dataNodeWaitStart))
+		}
+
 		if res.err != nil {
 			err = res.err
 			return
@@ -161,11 +168,14 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 			// when no limit, flush data directly
 			nqp.w.Write(res.data)
 		} else {
+			// with limit, we have to deserialize
+			serDeStart := utils.Now()
+
 			res.data = append([]byte("["), res.data[:]...)
 			res.data = append(res.data, byte(']'))
-			// with limit, we have to deserialize
 			var resultData [][]interface{}
 			err = json.Unmarshal(res.data, &resultData)
+
 			if err != nil {
 				return
 			}
@@ -185,8 +195,8 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 				nqp.w.Write(bs[1 : len(bs)-1])
 				nqp.flushed += rowsToFlush
 				utils.GetLogger().With("nrows", rowsToFlush).Debug("flushed rows")
-
 			}
+			utils.GetRootReporter().GetTimer(utils.TimeSerDeDataNodeResponse).Record(utils.Now().Sub(serDeStart))
 		}
 		if !(nqp.getRowsWanted() == 0) && i != len(nqp.nodes)-1 {
 			nqp.w.Write([]byte(`,`))

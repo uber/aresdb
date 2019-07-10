@@ -19,16 +19,22 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	"github.com/uber-go/tally"
 	shardMock "github.com/uber/aresdb/cluster/shard/mocks"
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
+	common2 "github.com/uber/aresdb/common"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
 	"github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/utils"
 	"net/http/httptest"
 )
 
 var _ = ginkgo.Describe("non agg query plan", func() {
+	utils.Init(common2.AresServerConfig{}, common2.NewLoggerFactory().GetDefaultLogger(), common2.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil), utils.ReporterTypeBroker)
+
 	ginkgo.It("should work happy path", func() {
+
 		q := common.AQLQuery{
 			Table: "table1",
 			Measures: []common.Measure{

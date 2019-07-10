@@ -109,8 +109,10 @@ func (mn *mergeNodeImpl) Execute(ctx context.Context) (result queryCom.AQLQueryR
 		}(i, c)
 	}
 
+	dataNodeWaitStart := utils.Now()
 	// TODO early merge before all results come back
 	wg.Wait()
+	utils.GetRootReporter().GetTimer(utils.TimeWaitedForDataNode).Record(utils.Now().Sub(dataNodeWaitStart))
 
 	if nerrs > 0 {
 		err = utils.StackError(nil, fmt.Sprintf("%d errors happened executing merge node", nerrs))
@@ -149,6 +151,7 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 		utils.GetLogger().With("host", sn.host, "query", sn.query).Debug("sending query to datanode")
 		result, fetchErr = sn.dataNodeClient.Query(ctx, sn.host, sn.query, isHll)
 		if fetchErr != nil {
+			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(
 				"error", fetchErr,
 				"host", sn.host,
