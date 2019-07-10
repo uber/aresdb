@@ -124,7 +124,8 @@ const (
 	DataNodeMetricNamesSentinel
 
 	// Broker metrics
-	QueryReceivedBroker
+	AQLQueryReceivedBroker
+	SQLQueryReceivedBroker
 	QueryFailedBroker
 	QuerySucceededBroker
 	QueryLatencyBroker
@@ -242,7 +243,8 @@ const (
 	scopeNameJobFailuresCount                = "job_failures_count"
 
 	// broker metrics
-	scopeNameQueryReceivedBroker       = "query_received_broker"
+	scopeNameAQLQueryReceivedBroker    = "aql_query_received_broker"
+	scopeNameSQLQueryReceivedBroker    = "sql_query_received_broker"
 	scopeNameQueryFailedBroker         = "query_failed_broker"
 	scopeNameQuerySucceededBroker      = "query_succeeded_broker"
 	scopeNameQueryLatencyBroker        = "query_latency_broker"
@@ -926,8 +928,15 @@ var dataNodeMetricsDefs = map[MetricName]metricDefinition{
 }
 
 var brokerMetricsDefs = map[MetricName]metricDefinition{
-	QueryReceivedBroker: {
-		name:       scopeNameQueryReceivedBroker,
+	AQLQueryReceivedBroker: {
+		name:       scopeNameAQLQueryReceivedBroker,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	SQLQueryReceivedBroker: {
+		name:       scopeNameSQLQueryReceivedBroker,
 		metricType: Counter,
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentQuery,

@@ -41,7 +41,7 @@ func (handler *QueryHandler) Register(router *mux.Router, wrappers ...utils.HTTP
 }
 
 func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
-	utils.GetRootReporter().GetCounter(utils.QueryReceivedBroker).Inc(1)
+	utils.GetRootReporter().GetCounter(utils.SQLQueryReceivedBroker).Inc(1)
 	var queryReqeust BrokerSQLRequest
 
 	start := utils.Now()
@@ -85,7 +85,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 
 func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 	var queryReqeust BrokerAQLRequest
-	utils.GetRootReporter().GetCounter(utils.QueryReceivedBroker).Inc(1)
+	utils.GetRootReporter().GetCounter(utils.AQLQueryReceivedBroker).Inc(1)
 
 	start := utils.Now()
 	var err error
