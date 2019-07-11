@@ -37,7 +37,8 @@ func init() {
 func ResetDefaults() {
 	logger = common.NewLoggerFactory().GetDefaultLogger()
 	queryLogger = common.NewLoggerFactory().GetDefaultLogger()
-	reporterFactory = reporterFactory.Reset()
+	scope := tally.NewTestScope("test", nil)
+	reporterFactory = NewReporterFactory(scope)
 
 	BindEnvironments(viper.GetViper())
 	viper.ReadInConfig()
@@ -47,11 +48,11 @@ func ResetDefaults() {
 }
 
 // Init loads application specific common components settings.
-func Init(c common.AresServerConfig, l common.Logger, ql common.Logger, s tally.Scope, t ReporterType) {
+func Init(c common.AresServerConfig, l common.Logger, ql common.Logger, s tally.Scope) {
 	config = c
 	logger = l
 	queryLogger = ql
-	reporterFactory = NewReporterFactory(s, t)
+	reporterFactory = NewReporterFactory(s)
 }
 
 // GetLogger returns the logger.
