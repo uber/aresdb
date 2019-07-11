@@ -468,13 +468,12 @@ func (d *dataNode) addTable(table string) {
 
 	d.memStore.RLock()
 	schema := d.memStore.GetSchemas()[table]
-	isFactTable := schema.Schema.IsFactTable
+	d.memStore.RUnlock()
 	if schema == nil {
 		d.logger.With("table", table).Error("schema does not exist")
-		d.memStore.RUnlock()
 		return
 	}
-	d.memStore.RUnlock()
+	isFactTable := schema.Schema.IsFactTable
 
 	if !isFactTable {
 		d.logger.With("table", table, "shard", 0).Info("adding table shard on schema addition")
@@ -568,16 +567,19 @@ func (d *dataNode) assignShardSet(shardSet shard.ShardSet) {
 		}
 	}
 
-	// process dimension tables
-	// add dimension tables only if no previously existing shards owned by data node
-	// remove dimension tables only if no shard left for the node
+	// add/remove dimension tables with the following rules:
+	// 1. add dimension tables when first shard is assigned to the data node
+	// 2. remove dimension tables when the last shard is removed from the data node
+	// 3. copy dimension table data from peer when all assigned new shards are initializing shards
 	if noExistingShards && !noShardLeft {
-		allShardsInitializing := initializingShards > 0 && len(incoming) == initializingShards
+		// only need to copy data from peer when all new shards are initializing shards
+		// meaning no available/leaving shards ever owned by this data node
+		needPeerCopy := initializingShards > 0 && len(incoming) == initializingShards
 		for _, table := range dimensionTables {
 			d.logger.With("table", table, "shard", 0).Info("adding dimension table shard on placement change")
 			// only copy data from peer for dimension table
 			// when from zero shards to all initialing shards
-			d.memStore.AddTableShard(table, 0, allShardsInitializing)
+			d.memStore.AddTableShard(table, 0, needPeerCopy)
 		}
 	}
 
