@@ -30,17 +30,17 @@ import (
 	"time"
 
 	xerrors "github.com/m3db/m3/src/x/errors"
-	xsync "github.com/m3db/m3/src/x/sync"
 )
 
 // bootstrapManagerImpl is the implementation of the interface databaseBootstrapManager
 type bootstrapManagerImpl struct {
 	sync.RWMutex
 
-	datanode                    DataNode
-	peerSource                  client.PeerSource
 	opts                        Options
 	log                         common.Logger
+	origin                      string
+	peerSource                  client.PeerSource
+	bootstrapable               bootstrap.Bootstrapable
 	state                       bootstrap.BootstrapState
 	hasPending                  bool
 	bootstrapTableShards        map[string]bootstrap.BootstrapDetails
@@ -49,18 +49,19 @@ type bootstrapManagerImpl struct {
 }
 
 // NewBootstrapManager creates bootstrap manager
-func NewBootstrapManager(datanode DataNode, opts Options, topo topology.Topology) BootstrapManager {
+func NewBootstrapManager(origin string, bootstrappable bootstrap.Bootstrapable, opts Options, topo topology.Topology) BootstrapManager {
 	peerSource, err := NewPeerSource(topo)
 	if err != nil {
 		opts.InstrumentOptions().Logger().With("error", err.Error()).Fatal("failed to initalize peer source")
 	}
 
 	return &bootstrapManagerImpl{
-		datanode: datanode,
-		opts:     opts,
-		log:      opts.InstrumentOptions().Logger(),
-		peerSource: peerSource,
-		topo:     topo,
+		origin:        origin,
+		bootstrapable: bootstrappable,
+		opts:          opts,
+		log:           opts.InstrumentOptions().Logger(),
+		peerSource:    peerSource,
+		topo:          topo,
 	}
 }
 
@@ -87,7 +88,8 @@ func (m *bootstrapManagerImpl) Bootstrap() error {
 		// reshard occurs and we need to bootstrap more shards.
 		m.hasPending = true
 		m.Unlock()
-		return bootstrap.ErrBootstrapEnqueued
+		m.log.Info("bootstrap enqueued, datanode is in bootstrapping state")
+		return nil
 	default:
 		m.state = bootstrap.Bootstrapping
 	}
@@ -121,56 +123,20 @@ func (m *bootstrapManagerImpl) Bootstrap() error {
 }
 
 func (m *bootstrapManagerImpl) bootstrap() error {
-	starDatanodeBootstrap := utils.Now()
-
-	tables := m.datanode.Tables()
-	shardSet := m.datanode.ShardSet()
-
-	workers := xsync.NewWorkerPool(m.opts.BootstrapOptions().MaxConcurrentTableShards())
-	workers.Init()
-
-	var (
-		multiErr = xerrors.NewMultiError()
-		mutex    sync.Mutex
-		wg       sync.WaitGroup
-	)
-
+	startDatanodeBootstrap := utils.Now()
 	topoStateSnapshot := newInitialTopologyState(m.topo)
-	for _, shard := range shardSet.All() {
-		shardID := shard.ID()
-		for _, table := range tables {
-			tableShard, err := m.datanode.GetTableShard(table, shardID)
-			if err != nil {
-				multiErr = multiErr.Add(err)
-				continue
-			}
-
-			if tableShard.IsBootstrapped() {
-				tableShard.Users.Done()
-				continue
-			}
-
-			wg.Add(1)
-			workers.Go(func() {
-				defer wg.Done()
-				err := tableShard.Bootstrap(m.peerSource, m.datanode.ID(), m.topo, topoStateSnapshot, m.opts.BootstrapOptions())
-				mutex.Lock()
-				multiErr = multiErr.Add(err)
-				mutex.Unlock()
-				// unpin table shard after use
-				tableShard.Users.Done()
-			})
-		}
+	err := m.bootstrapable.Bootstrap(m.peerSource, m.origin, m.topo, topoStateSnapshot, m.opts.BootstrapOptions())
+	took := utils.Now().Sub(startDatanodeBootstrap)
+	if err != nil {
+		m.log.With("datanode", m.origin).
+			With("duration", took).
+			With("error", err.Error()).
+			Info("bootstrap finished with err")
+		return err
 	}
-	wg.Wait()
-	if !multiErr.Empty() {
-		return multiErr.FinalError()
-	}
-	took := utils.Now().Sub(starDatanodeBootstrap)
-	m.log.With("datanode", m.datanode.ID()).
+	m.log.With("datanode", m.origin).
 		With("duration", took).
 		Info("bootstrap finished")
-
 	return nil
 }
 

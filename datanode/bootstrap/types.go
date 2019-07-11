@@ -17,6 +17,8 @@ package bootstrap
 import (
 	"encoding/json"
 	"errors"
+	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/datanode/client"
 )
 
 var (
@@ -75,6 +77,11 @@ const (
 	// Bootstrapped indicates a bootstrap process has completed.
 	Bootstrapped
 )
+
+// Bootstrapable defines bootstrapable interface
+type Bootstrapable interface {
+	Bootstrap(peerSource client.PeerSource, origin string, topo topology.Topology, topoState *topology.StateSnapshot, options Options) error
+}
 
 // Options defines options for bootstrap
 type Options interface {

@@ -111,9 +111,9 @@ func (ps *peerSource) BorrowConnection(hostID string, fn client.WithConnectionFn
 func (ps *peerSource) watchTopoChange() {
 	for {
 		select {
-		case <- ps.watch.C():
+		case <-ps.watch.C():
 			ps.updateTopoMap(ps.watch.Get())
-		case <- ps.done:
+		case <-ps.done:
 			return
 		}
 	}
@@ -136,7 +136,7 @@ func (ps *peerSource) updateTopoMap(topoMap topology.Map) {
 	// unknown host
 	knownHosts := make(map[string]struct{})
 	for _, host := range topoMap.Hosts() {
-		knownHosts[host.ID()] = struct {}{}
+		knownHosts[host.ID()] = struct{}{}
 		if _, exist := ps.peers[host.ID()]; !exist {
 			ps.peers[host.ID()] = newPeer(host)
 		}

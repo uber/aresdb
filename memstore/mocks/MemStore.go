@@ -2,6 +2,8 @@
 
 package mocks
 
+import bootstrap "github.com/uber/aresdb/datanode/bootstrap"
+import client "github.com/uber/aresdb/datanode/client"
 import common "github.com/uber/aresdb/memstore/common"
 import memstore "github.com/uber/aresdb/memstore"
 import mock "github.com/stretchr/testify/mock"
@@ -38,6 +40,20 @@ func (_m *MemStore) Backfill(table string, shardID int, reporter memstore.Backfi
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, int, memstore.BackfillJobDetailReporter) error); ok {
 		r0 = rf(table, shardID, reporter)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Bootstrap provides a mock function with given fields: peerSource, origin, topo, topoState, options
+func (_m *MemStore) Bootstrap(peerSource client.PeerSource, origin string, topo topology.Topology, topoState *topology.StateSnapshot, options bootstrap.Options) error {
+	ret := _m.Called(peerSource, origin, topo, topoState, options)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(client.PeerSource, string, topology.Topology, *topology.StateSnapshot, bootstrap.Options) error); ok {
+		r0 = rf(peerSource, origin, topo, topoState, options)
 	} else {
 		r0 = ret.Error(0)
 	}
