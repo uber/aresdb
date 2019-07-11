@@ -31,7 +31,7 @@ import (
 )
 
 var _ = ginkgo.Describe("non agg query plan", func() {
-	utils.Init(common2.AresServerConfig{}, common2.NewLoggerFactory().GetDefaultLogger(), common2.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil), utils.ReporterTypeBroker)
+	utils.Init(common2.AresServerConfig{}, common2.NewLoggerFactory().GetDefaultLogger(), common2.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
 
 	ginkgo.It("should work happy path", func() {
 

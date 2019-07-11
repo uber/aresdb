@@ -21,7 +21,7 @@ import (
 )
 
 var _ = ginkgo.Describe("agg query plan", func() {
-	utils.Init(common3.AresServerConfig{}, common3.NewLoggerFactory().GetDefaultLogger(), common3.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil), utils.ReporterTypeBroker)
+	utils.Init(common3.AresServerConfig{}, common3.NewLoggerFactory().GetDefaultLogger(), common3.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
 
 	ginkgo.It("splitAvgQuery should work", func() {
 		q := common2.AQLQuery{
