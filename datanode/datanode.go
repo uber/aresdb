@@ -471,18 +471,20 @@ func (d *dataNode) addTable(table string) {
 	isFactTable := schema.Schema.IsFactTable
 	if schema == nil {
 		d.logger.With("table", table).Error("schema does not exist")
+		d.memStore.RUnlock()
 		return
 	}
 	d.memStore.RUnlock()
 
 	if !isFactTable {
 		d.logger.With("table", table, "shard", 0).Info("adding table shard on schema addition")
-		// since this is a new table, no peer will have data anyway
+		// dimension table defaults shard to zero
+		// new table does not need to copy data from peer
 		d.memStore.AddTableShard(table, 0, false)
 	} else {
 		for _, shardID := range d.shardSet.AllIDs() {
 			d.logger.With("table", table, "shard", shardID).Info("adding table shard on schema addition")
-			// since this is a new table, no peer will have data anyway
+			// new table does not need to copy data from peer
 			d.memStore.AddTableShard(table, int(shardID), false)
 		}
 	}
