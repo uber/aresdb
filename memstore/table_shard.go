@@ -53,7 +53,7 @@ type TableShard struct {
 
 	// bootstrapLock protects BootstrapState
 	bootstrapLock  sync.RWMutex
-	BootstrapState bootstrap.BootstrapState `json:"BootstrapState"`
+	BootstrapState bootstrap.BootstrapState `json:"BootstrapState,omitempty"`
 
 	// BootstrapDetails shows the details of bootstrap
 	BootstrapDetails bootstrap.BootstrapDetails `json:"bootstrapDetails,omitempty"`
