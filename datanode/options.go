@@ -25,7 +25,7 @@ type options struct {
 	instrumentOpts utils.Options
 	bootstrapOpts  bootstrap.Options
 	httpWrappers   []utils.HTTPHandlerWrapper
-	cfg      common.AresServerConfig
+	cfg            common.AresServerConfig
 }
 
 // NewOptions creates a new set of storage options with defaults
@@ -72,4 +72,3 @@ func (o *options) SetHTTPWrappers(wrappers []utils.HTTPHandlerWrapper) Options {
 	o.httpWrappers = wrappers
 	return o
 }
-

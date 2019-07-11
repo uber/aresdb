@@ -37,12 +37,58 @@ import (
 func (shard *TableShard) IsBootstrapped() bool {
 	shard.bootstrapLock.Lock()
 	defer shard.bootstrapLock.Unlock()
-	return shard.bootstrapState == bootstrap.Bootstrapped
+	return shard.BootstrapState == bootstrap.Bootstrapped
 }
 
 // IsDiskDataAvailable returns whether the data is available on disk for table shard
 func (shard *TableShard) IsDiskDataAvailable() bool {
 	return atomic.LoadUint32(&shard.needPeerCopy) != 1
+}
+
+func (m *memStoreImpl) Bootstrap(
+	peerSource client.PeerSource,
+	origin string,
+	topo topology.Topology,
+	topoState *topology.StateSnapshot,
+	options bootstrap.Options,
+) error {
+	// snapshot table shards not bootstrapped
+	m.RLock()
+	tableShards := make([]*TableShard, 0)
+	for _, shardMap := range m.TableShards {
+		for _, shard := range shardMap {
+			if !shard.IsBootstrapped() {
+				shard.Users.Add(1)
+				tableShards = append(tableShards, shard)
+			}
+		}
+	}
+	m.RUnlock()
+
+	workers := xsync.NewWorkerPool(options.MaxConcurrentTableShards())
+	workers.Init()
+	var (
+		multiErr = xerrors.NewMultiError()
+		mutex    sync.Mutex
+		wg       sync.WaitGroup
+	)
+
+	for _, shard := range tableShards {
+		shard := shard
+		wg.Add(1)
+		workers.Go(func() {
+			err := shard.Bootstrap(peerSource, origin, topo, topoState, options)
+			if err != nil {
+				mutex.Lock()
+				multiErr = multiErr.Add(err)
+				mutex.Unlock()
+			}
+			wg.Done()
+			shard.Users.Done()
+		})
+	}
+	wg.Wait()
+	return multiErr.FinalError()
 }
 
 // Bootstrap executes bootstrap for table shard
@@ -55,11 +101,11 @@ func (shard *TableShard) Bootstrap(
 ) error {
 	shard.bootstrapLock.Lock()
 	// check whether shard is already bootstrapping
-	if shard.bootstrapState == bootstrap.Bootstrapping {
+	if shard.BootstrapState == bootstrap.Bootstrapping {
 		shard.bootstrapLock.Unlock()
 		return bootstrap.ErrTableShardIsBootstrapping
 	}
-	shard.bootstrapState = bootstrap.Bootstrapping
+	shard.BootstrapState = bootstrap.Bootstrapping
 	shard.bootstrapLock.Unlock()
 
 	shard.Schema.RLock()
@@ -73,9 +119,9 @@ func (shard *TableShard) Bootstrap(
 	defer func() {
 		shard.bootstrapLock.Lock()
 		if success {
-			shard.bootstrapState = bootstrap.Bootstrapped
+			shard.BootstrapState = bootstrap.Bootstrapped
 		} else {
-			shard.bootstrapState = bootstrap.BootstrapNotStarted
+			shard.BootstrapState = bootstrap.BootstrapNotStarted
 		}
 		shard.bootstrapLock.Unlock()
 	}()

@@ -51,9 +51,9 @@ type TableShard struct {
 	// For convenience.
 	HostMemoryManager common.HostMemoryManager `json:"-"`
 
-	// bootstrapLock protects bootstrapState
+	// bootstrapLock protects BootstrapState
 	bootstrapLock  sync.RWMutex
-	bootstrapState bootstrap.BootstrapState
+	BootstrapState bootstrap.BootstrapState `json:"BootstrapState,omitempty"`
 
 	// BootstrapDetails shows the details of bootstrap
 	BootstrapDetails bootstrap.BootstrapDetails `json:"bootstrapDetails,omitempty"`

@@ -16,6 +16,7 @@ package memstore
 
 import (
 	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/datanode/bootstrap"
 	"sync"
 
 	"fmt"
@@ -35,6 +36,7 @@ type TableShardMemoryUsage struct {
 // in unit tests
 type MemStore interface {
 	common.TableSchemaReader
+	bootstrap.Bootstrapable
 
 	// GetMemoryUsageDetails
 	GetMemoryUsageDetails() (map[string]TableShardMemoryUsage, error)
