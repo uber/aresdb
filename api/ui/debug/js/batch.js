@@ -25,6 +25,8 @@ const maxRowsPerPage = 100;
 const pagesToShow = 10;
 const maxValueLength = 100;
 var currentTableName = "";
+var isFactTable = true;
+var ownedShards = [];
 var currentShardID = 0;
 var currentBatchID = 0;
 
@@ -60,14 +62,29 @@ Iterator.prototype.read = function () {
 function renderTables(tables) {
     var tableSelect = $('#table-select');
     tables.forEach(function (table, id) {
+        if (id == 0) {
+            listShards(function (shards) {
+                ownedShards = shards;
+                getTableSchema(table);
+            });
+        }
         tableSelect.append('<option value' + '=' + id + '>' + table + '</option>');
+    });
+
+    tableSelect.change(function () {
+        currentTableName = $(this).find(":selected").text();
+        getTableSchema(currentTableName);
     });
 }
 
 function renderShards(shards) {
     var shardSelect = $('#shard-select');
+    shardSelect.empty();
     shards.forEach(function (shard, id) {
         shardSelect.append('<option value' + '=' + id + '>' + shard + '</option>');
+    });
+    shardSelect.change(function() {
+        currentShardID = $(this).find(":selected").text();
     });
 }
 
@@ -302,11 +319,11 @@ function listTables() {
     );
 }
 
-function listShards() {
+function listShards(call) {
     $.getJSON(
         '/dbg/shards',
         {},
-        renderShards
+        call,
     );
 }
 
@@ -315,11 +332,17 @@ function getTableSchema(table) {
         '/schema/tables/{0}'.format(table),
         {},
         function (schema) {
+            isFactTable = schema.isFactTable;
             var columns = schema.columns.map(function (column) {
                 return column.name;
             });
             renderColumns(columns);
-        }
+            if (isFactTable) {
+                renderShards(ownedShards);
+            } else {
+                renderShards([0]);
+            }
+        },
     );
 }
 
@@ -334,7 +357,6 @@ $(document).ready(function () {
     initShardPicker();
     initBatchLoader();
     listTables();
-    listShards();
 });
 
 function initShardPicker() {
@@ -345,10 +367,7 @@ function initShardPicker() {
     shardPicker.append('<select id="shard-select"></select>');
     var shardPickButton = $('<button class="medium-button">Submit</button>');
     shardPickButton.click(function (event) {
-        currentTableName = $('#table-select').find(":selected").text();
-        currentShardID = $('#shard-select').find(":selected").text();
         listBatches();
-        getTableSchema(currentTableName);
     });
     shardPicker.append(shardPickButton);
 }
