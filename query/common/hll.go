@@ -702,9 +702,7 @@ func (hll *HLL) EncodeBinary() []byte {
 }
 
 func (hll *HLL) encodeSparse(padding bool) []byte {
-	var (
-		recordValueBytes = 3
-	)
+	recordValueBytes := 3
 	if padding {
 		recordValueBytes = 4
 	}
