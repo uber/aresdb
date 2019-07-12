@@ -220,7 +220,7 @@ var _ = ginkgo.Describe("hll", func() {
 			},
 			NonZeroRegisters: 1,
 		}
-		Ω(h1.EncodeBinary()).Should(Equal([]byte{0, 100, 0, 1}))
+		Ω(h1.EncodeBinary()).Should(Equal([]byte{0, 1, 0, 100}))
 	})
 
 	ginkgo.It("stores data in sparse or dense format", func() {

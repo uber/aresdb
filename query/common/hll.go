@@ -704,19 +704,22 @@ func (hll *HLL) EncodeBinary() []byte {
 func (hll *HLL) encodeSparse(padding bool) []byte {
 	var (
 		recordValueBytes = 3
-		paddingBytes     = 0
 	)
 	if padding {
-		paddingBytes = 1
+		recordValueBytes = 4
 	}
-	data := make([]byte, (recordValueBytes+paddingBytes)*len(hll.SparseData))
+	data := make([]byte, (recordValueBytes)*len(hll.SparseData))
 	for i, register := range hll.SparseData {
 		if padding {
-			data[i*recordValueBytes+paddingBytes] = byte(0x00)
+			data[i*recordValueBytes] = byte(0)
+			data[i*recordValueBytes+1] = register.Rho
+			data[i*recordValueBytes+2] = byte(register.Index >> 8)
+			data[i*recordValueBytes+3] = byte(register.Index & 0xff)
+		} else {
+			data[i*recordValueBytes] = byte(register.Index & 0xff)
+			data[i*recordValueBytes+1] = byte(register.Index >> 8)
+			data[i*recordValueBytes+2] = register.Rho
 		}
-		data[i*(recordValueBytes+paddingBytes)+paddingBytes] = byte(register.Index & 0xff)
-		data[i*(recordValueBytes+paddingBytes)+paddingBytes+1] = byte(register.Index >> 8)
-		data[i*(recordValueBytes+paddingBytes)+paddingBytes+2] = register.Rho
 	}
 	return data
 }
