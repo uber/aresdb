@@ -210,6 +210,19 @@ var _ = ginkgo.Describe("hll", func() {
 		Ω(h2).Should(Equal(h1))
 	})
 
+	ginkgo.It("encodebinary should work", func() {
+		h1 := HLL{
+			SparseData: []HLLRegister{
+				{
+					Index: 100,
+					Rho:   1,
+				},
+			},
+			NonZeroRegisters: 1,
+		}
+		Ω(h1.EncodeBinary()).Should(Equal([]byte{0, 100, 0, 1}))
+	})
+
 	ginkgo.It("stores data in sparse or dense format", func() {
 		var h HLL
 		h.Set(100, 1)

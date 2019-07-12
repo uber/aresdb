@@ -688,11 +688,35 @@ func (hll *HLL) Encode() []byte {
 	if len(hll.DenseData) != 0 {
 		return hll.DenseData
 	}
-	data := make([]byte, 3*len(hll.SparseData))
+	return hll.encodeSparse(false)
+}
+
+// EncodeBinary converts HLL to binary format
+// aligns to 4 bytes for sparse hll
+// used to build response for application/hll queries from HLL struct
+func (hll *HLL) EncodeBinary() []byte {
+	if len(hll.DenseData) != 0 {
+		return hll.DenseData
+	}
+	return hll.encodeSparse(true)
+}
+
+func (hll *HLL) encodeSparse(padding bool) []byte {
+	var (
+		recordValueBytes = 3
+		paddingBytes     = 0
+	)
+	if padding {
+		paddingBytes = 1
+	}
+	data := make([]byte, (recordValueBytes+paddingBytes)*len(hll.SparseData))
 	for i, register := range hll.SparseData {
-		data[i*3] = byte(register.Index & 0xff)
-		data[i*3+1] = byte(register.Index >> 8)
-		data[i*3+2] = register.Rho
+		if padding {
+			data[i*recordValueBytes+paddingBytes] = byte(0x00)
+		}
+		data[i*(recordValueBytes+paddingBytes)+paddingBytes] = byte(register.Index & 0xff)
+		data[i*(recordValueBytes+paddingBytes)+paddingBytes+1] = byte(register.Index >> 8)
+		data[i*(recordValueBytes+paddingBytes)+paddingBytes+2] = register.Rho
 	}
 	return data
 }
