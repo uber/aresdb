@@ -186,7 +186,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		redoLogTableSchema := &memCom.TableSchema{
 			Schema: *redoLogTable,
 		}
-		redoManagerFactory, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, mockDiskStore, mockMetaStore)
+		redoManagerFactory, _ := redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, mockDiskStore, mockMetaStore)
 
 		options := memstore.NewOptions(new(memComMocks.BootStrapToken), redoManagerFactory)
 		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID, options)

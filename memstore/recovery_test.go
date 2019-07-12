@@ -194,8 +194,8 @@ var _ = ginkgo.Describe("recovery", func() {
 		writer.WriteUint32(uint32(len(buffer)))
 		writer.Write(buffer)
 
+		namespace := "ns1"
 		c := &common.RedoLogConfig{
-			Namespace: "ns1",
 			DiskConfig: common.DiskRedoLogConfig{
 				Disabled: false,
 			},
@@ -221,7 +221,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		m.options.redoLogMaster.Stop()
 		//reassign
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
-		m.options.redoLogMaster, _ = redolog.NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
+		m.options.redoLogMaster, _ = redolog.NewKafkaRedoLogManagerMaster(namespace, c, diskStore, metaStore, consumer)
 		schema, _ := m.GetSchema(tableName)
 		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, m.options)
 

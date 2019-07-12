@@ -44,7 +44,7 @@ import (
 var _ = ginkgo.Describe("table shard bootstrap", func() {
 	diskStore := &diskMocks.DiskStore{}
 	metaStore := &metaMocks.MetaStore{}
-	redoLogManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+	redoLogManagerMaster, _ := redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, diskStore, metaStore)
 	bootstrapToken := new(memComMocks.BootStrapToken)
 	bootstrapToken.On("AcquireToken",  mock.Anything, mock.Anything).Return(true)
 	bootstrapToken.On("ReleaseToken",  mock.Anything, mock.Anything).Return()

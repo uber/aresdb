@@ -156,7 +156,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	bootstrapToken := bootstrap.NewPeerDataNodeServer(metaStore, diskStore).(memCom.BootStrapToken)
 
-	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(&cfg.RedoLogConfig, diskStore, metaStore)
+	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(cfg.Cluster.Namespace, &cfg.RedoLogConfig, diskStore, metaStore)
 	if err != nil {
 		utils.GetLogger().Fatal(err)
 	}

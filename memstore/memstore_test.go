@@ -61,7 +61,7 @@ func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType
 		schema.SetDefaultValue(i)
 	}
 
-	redoManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+	redoManagerMaster, _ := redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, diskStore, metaStore)
 	bootstrapToken := new(memComMocks.BootStrapToken)
 	bootstrapToken.On("AcquireToken", mock.Anything, mock.Anything).Return(true)
 	bootstrapToken.On("ReleaseToken", mock.Anything, mock.Anything).Return()

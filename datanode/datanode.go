@@ -119,7 +119,7 @@ func NewDataNode(
 	bootstrapToken := bootstrapServer.(memCom.BootStrapToken)
 
 	redologCfg := opts.ServerConfig().RedoLogConfig
-	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(&redologCfg, diskStore, metaStore)
+	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(opts.ServerConfig().Cluster.Namespace, &redologCfg, diskStore, metaStore)
 	if err != nil {
 		return nil, utils.StackError(err, "failed to initialize redolog manager master")
 	}

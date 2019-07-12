@@ -105,8 +105,6 @@ type KafkaRedoLogConfig struct {
 
 // Configs related to data import and redolog option
 type RedoLogConfig struct {
-	// namespace or cluster named for this db
-	Namespace string `yaml:"namespace"`
 	// Disk redolog config
 	DiskConfig DiskRedoLogConfig `yaml:"disk"`
 	// Kafka redolog config

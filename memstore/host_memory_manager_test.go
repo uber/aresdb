@@ -53,6 +53,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	var testMemStore *memStoreImpl
 	var testHostMemoryManager *hostMemoryManager
 	var options Options
+	namespace := ""
 
 	ginkgo.BeforeEach(func() {
 		utils.SetClockImplementation(func() time.Time {
@@ -72,7 +73,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 
 		testDiskStore = CreateMockDiskStore()
 		testMetaStore = CreateMockMetaStore()
-		redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, testDiskStore, testMetaStore)
+		redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(namespace, &common.RedoLogConfig{}, testDiskStore, testMetaStore)
 		bootstrapToken := new(memComMocks.BootStrapToken)
 		options = NewOptions(bootstrapToken, redologManagerMaster)
 		testMemStore = NewMemStore(testMetaStore, testDiskStore, options).(*memStoreImpl)

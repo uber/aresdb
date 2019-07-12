@@ -111,7 +111,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		diskStore.(*diskMocks.DiskStore).On(
 			"OpenVectorPartyFileForRead", table, mock.Anything, shardID, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
-		redologManagerMaster, _ = redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+		redologManagerMaster, _ = redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, diskStore, metaStore)
 		bootstrapToken := new(memComMocks.BootStrapToken)
 		options = memstore.NewOptions(bootstrapToken, redologManagerMaster)
 		shard = memstore.NewTableShard(&memCom.TableSchema{

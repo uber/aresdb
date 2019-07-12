@@ -144,7 +144,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 
 	mockMetastore := &mocks.MetaStore{}
 	mockDiskstore := CreateMockDiskStore()
-	redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, mockDiskstore, mockMetastore)
+	redologManagerMaster, _ := redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, mockDiskstore, mockMetastore)
 	options := NewOptions(new(memComMocks.BootStrapToken), redologManagerMaster)
 
 	var testHostMemoryManager *hostMemoryManager

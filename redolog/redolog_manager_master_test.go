@@ -35,16 +35,17 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 	}
 	metaStore := &metaMocks.MetaStore{}
 	diskStore := &diskMocks.DiskStore{}
+	namespace := ""
 
 	ginkgo.It("NewRedoLogManagerMaster", func() {
 		// nil config should work as before
-		f, err := NewRedoLogManagerMaster(nil, diskStore, metaStore)
+		f, err := NewRedoLogManagerMaster(namespace, nil, diskStore, metaStore)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
 
 		// empty config should work too
 		c := &common.RedoLogConfig{}
-		f, err = NewRedoLogManagerMaster(c, diskStore, metaStore)
+		f, err = NewRedoLogManagerMaster(namespace, c, diskStore, metaStore)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
 		m, err := f.NewRedologManager(table, shard, tableConfig)
@@ -59,7 +60,7 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 				Brokers: []string{},
 			},
 		}
-		f, err = NewRedoLogManagerMaster(c, diskStore, metaStore)
+		f, err = NewRedoLogManagerMaster(namespace, c, diskStore, metaStore)
 		Ω(err).Should(BeNil())
 		m, err = f.NewRedologManager(table, shard, tableConfig)
 		Ω(m.(*FileRedoLogManager)).ShouldNot(BeNil())
@@ -73,12 +74,12 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 				Brokers: []string{},
 			},
 		}
-		f, err = NewRedoLogManagerMaster(c, diskStore, metaStore)
+		f, err = NewRedoLogManagerMaster(namespace, c, diskStore, metaStore)
 		Ω(err).ShouldNot(BeNil())
 		Ω(err.Error()).Should(ContainSubstring("No kafka broker"))
 
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
-		f, err = NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
+		f, err = NewKafkaRedoLogManagerMaster(namespace, c, diskStore, metaStore, consumer)
 		Ω(err).Should(BeNil())
 
 		c = &common.RedoLogConfig{
@@ -94,11 +95,11 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 			},
 		}
 		// real kafka consumer creation will fail
-		f, err = NewRedoLogManagerMaster(c, diskStore, metaStore)
+		f, err = NewRedoLogManagerMaster(namespace, c, diskStore, metaStore)
 		Ω(err).ShouldNot(BeNil())
 
 		// mock kafka consumer will success
-		f, err = NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
+		f, err = NewKafkaRedoLogManagerMaster(namespace, c, diskStore, metaStore, consumer)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
 		Ω(f.consumer).ShouldNot(BeNil())
@@ -117,7 +118,7 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 				},
 			},
 		}
-		f, err = NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, consumer)
+		f, err = NewKafkaRedoLogManagerMaster(namespace, c, diskStore, metaStore, consumer)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
 		Ω(f.consumer).ShouldNot(BeNil())
@@ -127,7 +128,7 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 
 	ginkgo.It("NewRedologManager and close", func() {
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
-		f, _ := NewKafkaRedoLogManagerMaster(nil, diskStore, metaStore, consumer)
+		f, _ := NewKafkaRedoLogManagerMaster(namespace, nil, diskStore, metaStore, consumer)
 		_, err := f.NewRedologManager("table1", 0, &metaCom.TableConfig{})
 		Ω(err).Should(BeNil())
 		f.NewRedologManager("table1", 1, &metaCom.TableConfig{})
