@@ -16,13 +16,16 @@ package datanode
 
 import (
 	"fmt"
-	"github.com/m3db/m3/src/x/instrument"
-	controllerCli "github.com/uber/aresdb/controller/client"
 	"net/http"
 	"net/http/pprof"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/m3db/m3/src/x/instrument"
+	controllerCli "github.com/uber/aresdb/controller/client"
+
+	"strings"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -46,7 +49,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"strings"
 )
 
 // dataNode includes metastore, memstore and diskstore
@@ -117,7 +119,7 @@ func NewDataNode(
 	bootstrapToken := bootstrapServer.(memCom.BootStrapToken)
 
 	redologCfg := opts.ServerConfig().RedoLogConfig
-	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(&redologCfg, diskStore, metaStore)
+	redoLogManagerMaster, err := redolog.NewRedoLogManagerMaster(opts.ServerConfig().Cluster.Namespace, &redologCfg, diskStore, metaStore)
 	if err != nil {
 		return nil, utils.StackError(err, "failed to initialize redolog manager master")
 	}
@@ -144,7 +146,7 @@ func NewDataNode(
 	}
 	d.handlers = d.newHandlers()
 	d.bootstrapManager = NewBootstrapManager(d.hostID, memStore, opts, topo)
-	clusterClient, err := d.opts.ServerConfig().InstanceConfig.Etcd.NewClient(instrument.NewOptions())
+	clusterClient, err := d.opts.ServerConfig().Cluster.Etcd.NewClient(instrument.NewOptions())
 	if err != nil {
 		return nil, utils.StackError(err, "failed to create etcd client")
 	}
@@ -212,19 +214,19 @@ func (d *dataNode) Open() error {
 func (d *dataNode) startSchemaWatch() {
 	if d.opts.ServerConfig().Cluster.Enable {
 		// TODO better to reuse the code directly in controller to talk to etcd
-		if d.opts.ServerConfig().Cluster.ClusterName == "" {
+		if d.opts.ServerConfig().Cluster.Namespace == "" {
 			d.logger.Fatal("Missing cluster name")
 		}
-		controllerClientCfg := d.opts.ServerConfig().Gateway.Controller
+		controllerClientCfg := d.opts.ServerConfig().Cluster.Controller
 		if controllerClientCfg == nil {
 			d.logger.Fatal("Missing controller client config")
 		}
-		if d.opts.ServerConfig().Cluster.InstanceName != "" {
-			controllerClientCfg.Headers.Add(controllerCli.InstanceNameHeaderKey, d.opts.ServerConfig().Cluster.InstanceName)
+		if d.opts.ServerConfig().Cluster.InstanceID != "" {
+			controllerClientCfg.Headers.Add(controllerCli.InstanceNameHeaderKey, d.opts.ServerConfig().Cluster.InstanceID)
 		}
 
 		controllerClient := controllerCli.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
-		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, d.metaStore, metastore.NewTableSchameValidator(), controllerClient, d.opts.ServerConfig().Cluster.ClusterName, "")
+		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, d.metaStore, metastore.NewTableSchameValidator(), controllerClient, d.opts.ServerConfig().Cluster.Namespace, "")
 		// immediate initial fetch
 		schemaFetchJob.FetchSchema()
 		go schemaFetchJob.Run()
@@ -438,13 +440,13 @@ func (d *dataNode) Serve() {
 
 func (d *dataNode) advertise() {
 	serviceID := services.NewServiceID().
-		SetEnvironment(d.opts.ServerConfig().InstanceConfig.Etcd.Env).
-		SetZone(d.opts.ServerConfig().InstanceConfig.Etcd.Zone).
-		SetName(utils.DataNodeServiceName(d.opts.ServerConfig().InstanceConfig.Namespace))
+		SetEnvironment(d.opts.ServerConfig().Cluster.Etcd.Env).
+		SetZone(d.opts.ServerConfig().Cluster.Etcd.Zone).
+		SetName(utils.DataNodeServiceName(d.opts.ServerConfig().Cluster.Namespace))
 
 	err := d.clusterServices.SetMetadata(serviceID, services.NewMetadata().
-		SetHeartbeatInterval(time.Duration(d.opts.ServerConfig().InstanceConfig.HeartbeatConfig.Interval)*time.Second).
-		SetLivenessInterval(time.Duration(d.opts.ServerConfig().InstanceConfig.HeartbeatConfig.Timeout)*time.Second))
+		SetHeartbeatInterval(time.Duration(d.opts.ServerConfig().Cluster.HeartbeatConfig.Interval)*time.Second).
+		SetLivenessInterval(time.Duration(d.opts.ServerConfig().Cluster.HeartbeatConfig.Timeout)*time.Second))
 	if err != nil {
 		d.logger.With("error", err.Error()).Fatalf("failed to set heart beat metadata")
 	}

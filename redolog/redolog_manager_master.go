@@ -27,6 +27,8 @@ import (
 // Master class to create shard level redolog manager
 type RedoLogManagerMaster struct {
 	sync.Mutex
+	// namespace of the datanode
+	Namespace string
 	// redolog config
 	RedoLogConfig *common.RedoLogConfig
 	// kafka consuer if kafka consumer is configured
@@ -40,12 +42,12 @@ type RedoLogManagerMaster struct {
 }
 
 // NewRedoLogManagerMaster create RedoLogManagerMaster instance
-func NewRedoLogManagerMaster(c *common.RedoLogConfig, diskStore diskstore.DiskStore, metaStore metaCom.MetaStore) (*RedoLogManagerMaster, error) {
-	return NewKafkaRedoLogManagerMaster(c, diskStore, metaStore, nil)
+func NewRedoLogManagerMaster(namespace string, c *common.RedoLogConfig, diskStore diskstore.DiskStore, metaStore metaCom.MetaStore) (*RedoLogManagerMaster, error) {
+	return NewKafkaRedoLogManagerMaster(namespace, c, diskStore, metaStore, nil)
 }
 
 // NewKafkaRedoLogManagerMaster convenient function if the kafka consumer can be passed in from outside
-func NewKafkaRedoLogManagerMaster(cfg *common.RedoLogConfig, diskStore diskstore.DiskStore, metaStore metaCom.MetaStore, consumer sarama.Consumer) (*RedoLogManagerMaster, error) {
+func NewKafkaRedoLogManagerMaster(namespace string, cfg *common.RedoLogConfig, diskStore diskstore.DiskStore, metaStore metaCom.MetaStore, consumer sarama.Consumer) (*RedoLogManagerMaster, error) {
 
 	if cfg == nil {
 		cfg = &common.RedoLogConfig{}
@@ -65,6 +67,7 @@ func NewKafkaRedoLogManagerMaster(cfg *common.RedoLogConfig, diskStore diskstore
 	}
 
 	return &RedoLogManagerMaster{
+		Namespace: namespace,
 		RedoLogConfig: cfg,
 		diskStore:     diskStore,
 		managers:      make(map[string]map[int]RedologManager),
@@ -98,9 +101,9 @@ func (m *RedoLogManagerMaster) NewRedologManager(table string, shard int, tableC
 		getCheckpointOffsetFunc := m.metaStore.GetRedoLogCheckpointOffset
 
 		if m.RedoLogConfig.DiskConfig.Disabled {
-			manager = newKafkaRedoLogManager(m.RedoLogConfig.Namespace, table, m.RedoLogConfig.KafkaConfig.TopicSuffix, shard, m.consumer, true, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
+			manager = newKafkaRedoLogManager(m.Namespace, table, m.RedoLogConfig.KafkaConfig.TopicSuffix, shard, m.consumer, true, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
 		} else {
-			manager = newCompositeRedoLogManager(m.RedoLogConfig.Namespace, table, m.RedoLogConfig.KafkaConfig.TopicSuffix, shard, tableConfig, m.consumer, m.diskStore, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
+			manager = newCompositeRedoLogManager(m.Namespace, table, m.RedoLogConfig.KafkaConfig.TopicSuffix, shard, tableConfig, m.consumer, m.diskStore, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
 		}
 	} else {
 		manager = newFileRedoLogManager(int64(tableConfig.RedoLogRotationInterval), int64(tableConfig.MaxRedoLogFileSize), m.diskStore, table, shard)

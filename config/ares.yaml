@@ -19,12 +19,29 @@ http:
   read_time_out_in_seconds: 20
   write_time_out_in_seconds: 300 # 5 minutes to write the result
 
-gateways:
+cluster:
+  enable: false
+  distributed: false
+  namespace: ""
+  instance_id: ""
   # example controller client configs
   controller:
     address: localhost:6708
+  heartbeat:
+    timeout: 10
+    interval: 1
+  etcd:
+    zone: local 
+    env: dev
+    service: ares-datanode
+    etcdClusters:
+      - zone: local
+        endpoints:
+          - 127.0.0.1:2379
 
-cluster:
-  enable: false
-  cluster_name: ""
+redolog:
+  disk:
+    disabled: false
+  kafka:
+    enabled: false
 

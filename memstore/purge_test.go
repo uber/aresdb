@@ -64,7 +64,7 @@ var _ = ginkgo.Describe("Purge", func() {
 
 		diskStore = &diskStoreMocks.DiskStore{}
 		metaStore = &metaStoreMocks.MetaStore{}
-		redologManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+		redologManagerMaster, _ := redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, diskStore, metaStore)
 
 		options := NewOptions(bootstrapToken, redologManagerMaster)
 

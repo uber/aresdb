@@ -52,7 +52,7 @@ type TestFactoryT struct {
 func (t TestFactoryT) NewMockMemStore() *memStoreImpl {
 	metaStore := new(metaMocks.MetaStore)
 	diskStore := new(diskMocks.DiskStore)
-	redoLogManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, diskStore, metaStore)
+	redoLogManagerMaster, _ := redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, diskStore, metaStore)
 	bootstrapToken := new(memComMocks.BootStrapToken)
 	bootstrapToken.On("AcquireToken", mock.Anything, mock.Anything).Return(true)
 	bootstrapToken.On("ReleaseToken", mock.Anything, mock.Anything).Return()

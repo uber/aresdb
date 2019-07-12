@@ -120,7 +120,7 @@ var _ = ginkgo.Describe("archiving", func() {
 			HostMemoryManager: hostMemoryManager,
 		}
 
-		redoLogManagerMaster, _ := redolog.NewRedoLogManagerMaster(&common.RedoLogConfig{}, m.diskStore, m.metaStore)
+		redoLogManagerMaster, _ := redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, m.diskStore, m.metaStore)
 
 		shardMap[shardID].diskStore = m.diskStore
 		shardMap[shardID].metaStore = m.metaStore

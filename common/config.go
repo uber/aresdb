@@ -54,11 +54,6 @@ type ControllerConfig struct {
 	TimeoutSec int         `yaml:"timeout"`
 }
 
-// GatewayConfig is the config for all gateway
-type GatewayConfig struct {
-	Controller *ControllerConfig `yaml:"controller,omitempty"`
-}
-
 // HeartbeatConfig is the config for timeout and check interval with etcd
 type HeartbeatConfig struct {
 	// heartbeat timeout value
@@ -67,27 +62,29 @@ type HeartbeatConfig struct {
 	Interval int `yaml:"interval"`
 }
 
-// InstanceConfig defines the config related to this instance in distributed cluster
-type InstanceConfig struct {
-	// ID represents the instance id of this datanode
-	ID string `yaml:"id"`
-	// namespace is the namespace this instance belongs to
-	Namespace string `yaml:"namespace"`
-	// etcd client required config
-	Etcd etcd.Configuration `yaml:"etcd"`
-	// etcd heartbeat config
-	HeartbeatConfig HeartbeatConfig `yaml:"heartbeat"`
-}
-
 // ClusterConfig is the config for starting current instance with cluster mode
 type ClusterConfig struct {
 	// Enable controls whether to start in cluster mode
 	Enable bool `yaml:"enable"`
-	// ClusterName is the cluster to join
-	ClusterName string `yaml:"cluster_name"`
-	// InstanceName is the cluster wide unique name to identify current instance
+
+	// Enable distributed mode
+	Distributed bool `yaml:"distributed"`
+
+	// Namespace is the cluster namespace to join
+	Namespace string `yaml:"namespace"`
+
+	// InstanceID is the cluster wide unique name to identify current instance
 	// it can be static configured in yaml, or dynamically set on start up
-	InstanceName string `yaml:"instance_name"`
+	InstanceID string `yaml:"instance_id"`
+
+	// controller config
+	Controller *ControllerConfig `yaml:"controller,omitempty"`
+
+	// etcd client required config
+	Etcd etcd.Configuration `yaml:"etcd"`
+
+	// heartbeat config
+	HeartbeatConfig HeartbeatConfig `yaml:"heartbeat"`
 }
 
 // local redolog config
@@ -108,8 +105,6 @@ type KafkaRedoLogConfig struct {
 
 // Configs related to data import and redolog option
 type RedoLogConfig struct {
-	// namespace or cluster named for this db
-	Namespace string `yaml:"namespace"`
 	// Disk redolog config
 	DiskConfig DiskRedoLogConfig `yaml:"disk"`
 	// Kafka redolog config
@@ -139,16 +134,11 @@ type AresServerConfig struct {
 	// environment
 	Env string `yaml:"env"`
 
-	Distributed bool `yaml:"distributed"`
-
 	Query     QueryConfig     `yaml:"query"`
 	DiskStore DiskStoreConfig `yaml:"disk_store"`
 	HTTP      HTTPConfig      `yaml:"http"`
-	Cluster   ClusterConfig   `yaml:"cluster"`
-	Gateway   GatewayConfig   `yaml:"gateway"`
-
 	RedoLogConfig RedoLogConfig `yaml:"redolog"`
 
-	// InstanceConfig defines instance config within distributed cluster
-	InstanceConfig InstanceConfig `yaml:"instance"`
+	// Cluster determines the cluster mode configuration of aresdb
+	Cluster   ClusterConfig   `yaml:"cluster"`
 }

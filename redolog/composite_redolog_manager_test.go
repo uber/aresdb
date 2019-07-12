@@ -53,7 +53,6 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 		MaxRedoLogFileSize:      10000000,
 	}
 	redoLogConfig := &common.RedoLogConfig{
-		Namespace: namespace,
 		DiskConfig: common.DiskRedoLogConfig{
 			Disabled: false,
 		},
@@ -71,7 +70,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 
 		mockMetaStore := createMockMetaStore()
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
-		f, err := NewKafkaRedoLogManagerMaster(redoLogConfig, &diskMocks.DiskStore{}, mockMetaStore, consumer)
+		f, err := NewKafkaRedoLogManagerMaster(namespace, redoLogConfig, &diskMocks.DiskStore{}, mockMetaStore, consumer)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
 		m, err := f.NewRedologManager(table, shard, tableConfig)
@@ -154,7 +153,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 
 		redoLogConfig.DiskConfig.Disabled = false
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
-		f, err := NewKafkaRedoLogManagerMaster(redoLogConfig, diskStore, mockMetaStore, consumer)
+		f, err := NewKafkaRedoLogManagerMaster(namespace, redoLogConfig, diskStore, mockMetaStore, consumer)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
 		m, err := f.NewRedologManager(table, shard, tableConfig)
