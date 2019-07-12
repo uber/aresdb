@@ -96,7 +96,7 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 		logger.Fatal("Missing controller client config", err)
 	}
 
-	clusterName := cfg.Cluster.ClusterName
+	clusterName := cfg.Cluster.Namespace
 	controllerClient := client.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
 	schemaMutator := broker.NewBrokerSchemaMutator()
 	schemaFetchJob := metastore.NewSchemaFetchJob(10, schemaMutator, metastore.NewTableSchameValidator(), controllerClient, clusterName, "")

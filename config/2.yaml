@@ -1,7 +1,7 @@
-port: 9374
-debug_port: 43202
-root_path: ares-root
-total_memory_size: 161061273600 # 150gb
+port: 9376 
+debug_port: 43204
+root_path: /tmp/gforcedb2
+total_memory_size: 10737418240 # 150gb
 query:
   device_memory_utilization: 0.95
   device_choosing_timeout: 10
@@ -19,13 +19,25 @@ http:
   read_time_out_in_seconds: 20
   write_time_out_in_seconds: 300 # 5 minutes to write the result
 
-cluster:
-  enable: false
-  distributed: false
-  namespace: ""
+gateway:
   # example controller client configs
   controller:
     address: localhost:6708
+    headers:
+      RPC-Caller:
+        - aresdb-distributed-staging
+      RPC-Service:
+        - ares-controller-distributed-staging
+
+cluster:
+  enable: true
+  cluster_name: "dist"
+
+distributed: true
+
+instance:
+  id: 2 # will be replaced by env TODO
+  namespace: dist
   heartbeat:
     timeout: 10
     interval: 1
@@ -39,9 +51,10 @@ cluster:
           - 127.0.0.1:2379
 
 redolog:
-  namespace: ""
+  namespace: dist
   disk:
     disabled: false
   kafka:
     enabled: false
-
+    surfix: staging
+    uns: udg://kloak-lossless

@@ -114,7 +114,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	scope.Counter("restart").Inc(1)
 
-	if cfg.Distributed {
+	if cfg.Cluster.Distributed {
 		startDataNode(cfg, logger, scope, httpWrappers...)
 		return
 	}
@@ -135,19 +135,19 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	// fetch schema from controller and start periodical job
 	if cfg.Cluster.Enable {
-		if cfg.Cluster.ClusterName == "" {
+		if cfg.Cluster.Namespace == "" {
 			logger.Fatal("Missing cluster name")
 		}
-		controllerClientCfg := cfg.Gateway.Controller
+		controllerClientCfg := cfg.Cluster.Controller
 		if controllerClientCfg == nil {
 			logger.Fatal("Missing controller client config", err)
 		}
-		if cfg.Cluster.InstanceName != "" {
-			controllerClientCfg.Headers.Add(controllerCli.InstanceNameHeaderKey, cfg.Cluster.InstanceName)
+		if cfg.Cluster.InstanceID != "" {
+			controllerClientCfg.Headers.Add(controllerCli.InstanceNameHeaderKey, cfg.Cluster.InstanceID)
 		}
 
 		controllerClient := controllerCli.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
-		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.ClusterName, "")
+		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.Namespace, "")
 		// immediate initial fetch
 		schemaFetchJob.FetchSchema()
 		go schemaFetchJob.Run()
@@ -257,8 +257,8 @@ func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tall
 	opts := datanode.NewOptions().SetServerConfig(cfg).SetInstrumentOptions(utils.NewOptions()).SetBootstrapOptions(bootstrap.NewOptions()).SetHTTPWrappers(httpWrappers)
 
 	var topo topology.Topology
-	etcdCfg := cfg.InstanceConfig.Etcd
-	etcdCfg.Service = utils.DataNodeServiceName(cfg.InstanceConfig.Namespace)
+	etcdCfg := cfg.Cluster.Etcd
+	etcdCfg.Service = utils.DataNodeServiceName(cfg.Cluster.Namespace)
 	configServiceCli, err := etcdCfg.NewClient(instrument.NewOptions())
 	if err != nil {
 		logger.Fatal("Failed to create etcd client,", err)
@@ -276,7 +276,7 @@ func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tall
 		logger.Fatal("Failed to initialize dynamic topology,", err)
 	}
 
-	dataNode, err := datanode.NewDataNode(cfg.InstanceConfig.ID, topo, opts)
+	dataNode, err := datanode.NewDataNode(cfg.Cluster.InstanceID, topo, opts)
 	if err != nil {
 		logger.Fatal("Failed to create datanode,", err)
 	}
