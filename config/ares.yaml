@@ -23,6 +23,7 @@ cluster:
   enable: false
   distributed: false
   namespace: ""
+  instance_id: ""
   # example controller client configs
   controller:
     address: localhost:6708
