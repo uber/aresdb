@@ -40,7 +40,6 @@ cluster:
           - 127.0.0.1:2379
 
 redolog:
-  namespace: ""
   disk:
     disabled: false
   kafka:
