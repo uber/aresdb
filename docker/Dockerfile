@@ -3,7 +3,7 @@ FROM nvidia/cuda:9.1-devel-ubuntu16.04
 ENV GOPATH=/root/go
 ENV UBER_GITHUB_DIR=$GOPATH/src/github.com/uber
 ENV ARESDB_PATH=$UBER_GITHUB_DIR/aresdb
-ENV PATH=${GOPATH}/bin:/usr/lib/go-1.9/bin:/usr/local/cmake/bin:${PATH}
+ENV PATH=${GOPATH}/bin:/usr/lib/go-1.11/bin:/usr/local/cmake/bin:${PATH}
 ENV LD_LIBRARY_PATH=:${LD_LIBRARY_PATH}:/usr/local/cuda/lib64:${ARESDB_PATH}/lib
 
 # install add-apt-repository
