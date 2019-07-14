@@ -5,7 +5,7 @@ ENV UBER_GITHUB_DIR=$GOPATH/src/github.com/uber
 ENV ARESDB_PATH=$UBER_GITHUB_DIR/aresdb
 ENV PATH=${GOPATH}/bin:/usr/lib/go-1.11/bin:/usr/local/cmake/bin:${PATH}
 ENV LD_LIBRARY_PATH=:${LD_LIBRARY_PATH}:/usr/local/cuda/lib64:${ARESDB_PATH}/lib
-
+ENV GO111MODULE=on
 # install add-apt-repository
 RUN apt-get update --fix-missing
 RUN apt-get install -y --reinstall software-properties-common
