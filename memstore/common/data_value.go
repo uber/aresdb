@@ -133,8 +133,6 @@ type DataValue struct {
 	GoVal    GoDataValue
 	OtherVal unsafe.Pointer
 	DataType DataType
-	// only used for Array DataType, it is the data type of items inside array, the ItemType can not be Array and GeoShape for now
-	ItemType DataType
 	CmpFunc  CompareFunc
 	Valid    bool
 
@@ -481,24 +479,6 @@ func (gs *GeoShapeGo) Write(dataWriter *utils.StreamDataWriter) error {
 	return dataWriter.WritePadding(int(dataWriter.GetBytesWritten()), 4)
 }
 
-// GetSerBytes return the bytes will be used in upsertbatch serialized format
-func (av *ArrayValue) GetSerBytes() int {
-	// there is a item number at beginning when serialize to upsert batch
-	return (4*8 + (DataTypeBits(av.DataType)*av.GetLength()+7)/8*8 + (av.GetLength()+7)/8*8 + 63) / 64 * 8
-}
-
-// CalculateListElementBytes returns the total size in bytes needs to be allocated for a list type column for a single
-// row along with the validity vector start.
-func CalculateListElementBytes(dataType DataType, length int) int {
-	// DataTypeBits(dataType)+1 => element bits
-	// (element_bits*length + 63) / 64 => round by 64 bit
-	return ((DataTypeBits(dataType)*length+7)/8*8 + (length+7)/8*8 + 63) / 64 * 8
-}
-
-func CalculateListNilOffset(dataType DataType, length int) int {
-	return (DataTypeBits(dataType)*length + 7) / 8
-}
-
 // GetLength return item numbers for the array value
 func (av *ArrayValue) GetLength() int {
 	return len(av.Items)
@@ -507,6 +487,16 @@ func (av *ArrayValue) GetLength() int {
 // AddItem add new item into array
 func (av *ArrayValue) AddItem(item interface{}) {
 	av.Items = append(av.Items, item)
+}
+
+// GetSerBytes return the bytes will be used in upsertbatch serialized format
+func (av *ArrayValue) GetSerBytes() int {
+	// there is a item number at beginning when serialize to upsert batch
+	// element_number_bits => 8 * 4 (4 bytes)
+	// DataTypeBits(dataType) * length => element_bits, round to byte
+	// 1 * length => null bits, round to byte
+	// (element_number_bits + element_bits + null_bits + 63) / 64 => round by 64 bits (8 bytes)
+	return (4*8 + (DataTypeBits(av.DataType)*av.GetLength()+7)/8*8 + (av.GetLength()+7)/8*8 + 63) / 64 * 8
 }
 
 // NewArrayValue create a new ArrayValue instance
@@ -686,4 +676,17 @@ func (reader *ArrayValueReader) IsValid(index int) bool {
 	nilOffset := CalculateListNilOffset(reader.itemType, int(reader.length))
 	nilByte := *(*byte)(unsafe.Pointer(uintptr(reader.value) + uintptr(nilOffset) + uintptr(index/8)))
 	return nilByte&(0x1<<uint8(index%8)) == 0x0
+}
+
+// CalculateListElementBytes returns the total size in bytes needs to be allocated for a list type column for a single
+// row along with the validity vector start.
+func CalculateListElementBytes(dataType DataType, length int) int {
+	// DataTypeBits(dataType) * length => element_bits, round to byte
+	// 1 * length => null bits, round to byte
+	// (element_bits + null_bits + 63) / 64 => round by 64 bits (8 bytes)
+	return ((DataTypeBits(dataType)*length+7)/8*8 + (length+7)/8*8 + 63) / 64 * 8
+}
+
+func CalculateListNilOffset(dataType DataType, length int) int {
+	return (DataTypeBits(dataType)*length + 7) / 8
 }

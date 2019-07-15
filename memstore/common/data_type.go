@@ -575,6 +575,13 @@ func ArrayValueFromArray(value []interface{}, dataType DataType) (interface{}, e
 }
 
 // ArrayValueFromString convert string to array of sepecified item data type
+// we can support json formatted string like:
+// string array: "[\"11\",\"12\",\"13\"]"
+// integer array: "[11,12,13]"
+// string array of uuid: "[\"1e88a975-3d26-4277-ace9-bea91b072977\",\"1e88a975-3d26-4277-ace9-bea91b072978\",\"1e88a975-3d26-4277-ace9-bea91b072979\"]"
+// string array of geo-point: "[\"Point(180.0, 90.0)\",\"Point(179.0, 89.0)\",\"Point(178.0, 88.0)\"]"
+// we can also support comma delimited string value as long as the item not contain comma
+// "11,12,13"
 func ArrayValueFromString(value string, dataType DataType) (interface{}, error) {
 	value = strings.TrimSpace(value)
 	var arrVal []interface{}
