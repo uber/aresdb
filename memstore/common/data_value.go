@@ -16,12 +16,12 @@ package common
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/uber/aresdb/utils"
 	"strconv"
 	"strings"
 	"unsafe"
-	"encoding/json"
 )
 
 // NullDataValue is a global data value that stands a null value where the newly added
@@ -484,7 +484,7 @@ func (gs *GeoShapeGo) Write(dataWriter *utils.StreamDataWriter) error {
 // GetSerBytes return the bytes will be used in upsertbatch serialized format
 func (av *ArrayValue) GetSerBytes() int {
 	// there is a item number at beginning when serialize to upsert batch
-	return (4 * 8 + (DataTypeBits(av.DataType)*av.GetLength() + 7) / 8 * 8 + (av.GetLength() + 7) / 8 * 8 + 63) / 64 * 8
+	return (4*8 + (DataTypeBits(av.DataType)*av.GetLength()+7)/8*8 + (av.GetLength()+7)/8*8 + 63) / 64 * 8
 }
 
 // CalculateListElementBytes returns the total size in bytes needs to be allocated for a list type column for a single
@@ -492,7 +492,7 @@ func (av *ArrayValue) GetSerBytes() int {
 func CalculateListElementBytes(dataType DataType, length int) int {
 	// DataTypeBits(dataType)+1 => element bits
 	// (element_bits*length + 63) / 64 => round by 64 bit
-	return ((DataTypeBits(dataType)*length + 7) / 8 * 8 + (length + 7) / 8 * 8 + 63) / 64 * 8
+	return ((DataTypeBits(dataType)*length+7)/8*8 + (length+7)/8*8 + 63) / 64 * 8
 }
 
 func CalculateListNilOffset(dataType DataType, length int) int {
@@ -511,9 +511,9 @@ func (av *ArrayValue) AddItem(item interface{}) {
 
 // NewArrayValue create a new ArrayValue instance
 func NewArrayValue(dataType DataType) *ArrayValue {
-	return &ArrayValue {
+	return &ArrayValue{
 		DataType: dataType,
-		Items: make([]interface{}, 0),
+		Items:    make([]interface{}, 0),
 	}
 }
 
@@ -636,26 +636,26 @@ func (av *ArrayValue) Write(writer *utils.BufferWriter) error {
 // ArrayValueReader is an aux class to reader item data from bytes buffer
 type ArrayValueReader struct {
 	itemType DataType
-	value unsafe.Pointer
-	length int
+	value    unsafe.Pointer
+	length   int
 }
 
 // NewArrayValueReader is to create ArrayValueReader to read from upsertbatch, which includes the item number
 func NewArrayValueReader(dataType DataType, value unsafe.Pointer) *ArrayValueReader {
 	length := *((*uint32)(value))
-	return &ArrayValueReader {
+	return &ArrayValueReader{
 		itemType: GetItemDataType(dataType),
-		value: unsafe.Pointer(uintptr(value) + 4),
-		length: int(length),
+		value:    unsafe.Pointer(uintptr(value) + 4),
+		length:   int(length),
 	}
 }
 
 // NewArrayValueReader is to create ArrayValueReader to read from VP, which has item number passed from other place
 func NewArrayValueReaderWithLength(dataType DataType, value unsafe.Pointer, length int) *ArrayValueReader {
-	return &ArrayValueReader {
+	return &ArrayValueReader{
 		itemType: GetItemDataType(dataType),
-		value: value,
-		length: length,
+		value:    value,
+		length:   length,
 	}
 }
 
@@ -684,6 +684,6 @@ func (reader *ArrayValueReader) Get(index int) unsafe.Pointer {
 // IsValid check if the item in index-th place is valid or not
 func (reader *ArrayValueReader) IsValid(index int) bool {
 	nilOffset := CalculateListNilOffset(reader.itemType, int(reader.length))
-	nilByte :=  *(*byte)(unsafe.Pointer(uintptr(reader.value) + uintptr(nilOffset) + uintptr(index / 8)))
+	nilByte := *(*byte)(unsafe.Pointer(uintptr(reader.value) + uintptr(nilOffset) + uintptr(index/8)))
 	return nilByte&(0x1<<uint8(index%8)) == 0x0
 }

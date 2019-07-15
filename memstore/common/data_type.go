@@ -16,6 +16,7 @@ package common
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gofrs/uuid"
@@ -25,9 +26,8 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
-	"encoding/json"
 
-metaCom "github.com/uber/aresdb/metastore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -592,4 +592,3 @@ func ArrayValueFromString(value string, dataType DataType) (interface{}, error) 
 	}
 	return ConvertToArrayValue(dataType, arrVal)
 }
-
