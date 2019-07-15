@@ -35,4 +35,19 @@ const (
 	GeoPoint  = "GeoPoint"
 	GeoShape  = "GeoShape"
 	Int64     = "Int64"
+
+	// array types
+	ArrayBool      = "ArrayBool"
+	ArrayInt8      = "ArrayInt8"
+	ArrayUint8     = "ArrayUint8"
+	ArrayInt16     = "ArrayInt16"
+	ArrayUint16    = "ArrayUint16"
+	ArrayInt32     = "ArrayInt32"
+	ArrayUint32    = "ArrayUint32"
+	ArrayFloat32   = "ArrayFloat32"
+	ArraySmallEnum = "ArraySmallEnum"
+	ArrayBigEnum   = "ArrayBigEnum"
+	ArrayUUID      = "ArrayUUID"
+	ArrayGeoPoint  = "ArrayGeoPoint"
+	ArrayInt64     = "ArrayInt64"
 )

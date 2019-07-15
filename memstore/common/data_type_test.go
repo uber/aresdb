@@ -45,7 +45,22 @@ var _ = ginkgo.Describe("data_type", func() {
 		Ω(DataTypeBits(Float32)).Should(Equal(32))
 		Ω(DataTypeBits(SmallEnum)).Should(Equal(8))
 		Ω(DataTypeBits(BigEnum)).Should(Equal(16))
+		Ω(DataTypeBits(GeoPoint)).Should(Equal(64))
 		Ω(DataTypeBits(UUID)).Should(Equal(128))
+
+		Ω(DataTypeBits(ArrayBool)).Should(Equal(1))
+		Ω(DataTypeBits(ArrayInt8)).Should(Equal(8))
+		Ω(DataTypeBits(ArrayUint8)).Should(Equal(8))
+		Ω(DataTypeBits(ArrayInt16)).Should(Equal(16))
+		Ω(DataTypeBits(ArrayUint16)).Should(Equal(16))
+		Ω(DataTypeBits(ArrayInt32)).Should(Equal(32))
+		Ω(DataTypeBits(ArrayUint32)).Should(Equal(32))
+		Ω(DataTypeBits(ArrayInt64)).Should(Equal(64))
+		Ω(DataTypeBits(ArrayFloat32)).Should(Equal(32))
+		Ω(DataTypeBits(ArraySmallEnum)).Should(Equal(8))
+		Ω(DataTypeBits(ArrayBigEnum)).Should(Equal(16))
+		Ω(DataTypeBits(ArrayGeoPoint)).Should(Equal(64))
+		Ω(DataTypeBits(ArrayUUID)).Should(Equal(128))
 	})
 
 	ginkgo.It("maps data type name", func() {
@@ -60,8 +75,23 @@ var _ = ginkgo.Describe("data_type", func() {
 		Ω(DataTypeName[Float32]).Should(Equal("Float32"))
 		Ω(DataTypeName[SmallEnum]).Should(Equal("SmallEnum"))
 		Ω(DataTypeName[BigEnum]).Should(Equal("BigEnum"))
+		Ω(DataTypeName[GeoPoint]).Should(Equal("GeoPoint"))
 		Ω(DataTypeName[UUID]).Should(Equal("UUID"))
 		Ω(DataTypeName[Unknown]).Should(Equal("Unknown"))
+
+		Ω(DataTypeName[ArrayBool]).Should(Equal("ArrayBool"))
+		Ω(DataTypeName[ArrayInt8]).Should(Equal("ArrayInt8"))
+		Ω(DataTypeName[ArrayUint8]).Should(Equal("ArrayUint8"))
+		Ω(DataTypeName[ArrayInt16]).Should(Equal("ArrayInt16"))
+		Ω(DataTypeName[ArrayUint16]).Should(Equal("ArrayUint16"))
+		Ω(DataTypeName[ArrayInt32]).Should(Equal("ArrayInt32"))
+		Ω(DataTypeName[ArrayUint32]).Should(Equal("ArrayUint32"))
+		Ω(DataTypeName[ArrayInt64]).Should(Equal("ArrayInt64"))
+		Ω(DataTypeName[ArrayFloat32]).Should(Equal("ArrayFloat32"))
+		Ω(DataTypeName[ArraySmallEnum]).Should(Equal("ArraySmallEnum"))
+		Ω(DataTypeName[ArrayBigEnum]).Should(Equal("ArrayBigEnum"))
+		Ω(DataTypeName[ArrayUUID]).Should(Equal("ArrayUUID"))
+		Ω(DataTypeName[ArrayGeoPoint]).Should(Equal("ArrayGeoPoint"))
 	})
 
 	ginkgo.It("creates new data type", func() {
@@ -321,6 +351,11 @@ var _ = ginkgo.Describe("data_type", func() {
 
 		_, ok = ConvertToUUID("unknown")
 		Ω(ok).Should(BeFalse())
+
+		v, ok = ConvertToUUID("1e88a975-3d26-4277-ace9-bea91b072977")
+		Ω(ok).Should(BeTrue())
+		Ω(v).Should(Equal([2]uint64{8593473084385232926, 8586401979951933868}))
+
 	})
 
 	ginkgo.It("ConvertToGeoPoint", func() {
@@ -413,5 +448,144 @@ var _ = ginkgo.Describe("data_type", func() {
 		shape, ok = ConvertToGeoShape(buffer.Bytes())
 		Ω(ok).Should(BeTrue())
 		Ω(shape).Should(Equal(expectedShape))
+	})
+
+	ginkgo.It("ConvertToArray", func() {
+		//int8
+		v, err := ConvertToArrayValue(ArrayInt8, "[\"11\",\"12\",\"13\"]")
+		Ω(err).Should(BeNil())
+		res := v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Int8))
+		Ω(res.Items[0].(int8)).Should(Equal(int8(11)))
+		Ω(res.Items[2].(int8)).Should(Equal(int8(13)))
+
+		v, err = ConvertToArrayValue(ArrayInt8, "[11,12,13]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Int8))
+		Ω(res.Items[0].(int8)).Should(Equal(int8(11)))
+		Ω(res.Items[2].(int8)).Should(Equal(int8(13)))
+
+		v, err = ConvertToArrayValue(ArrayInt8, "11,12,13")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Int8))
+		Ω(res.Items[0].(int8)).Should(Equal(int8(11)))
+		Ω(res.Items[2].(int8)).Should(Equal(int8(13)))
+
+		v, err = ConvertToArrayValue(ArrayInt8, "")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(1))
+		Ω(res.Items[0]).Should(BeNil())
+
+		// uint8
+		v, err = ConvertToArrayValue(ArrayUint8, "[11,12,13]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Uint8))
+		Ω(res.Items[0].(uint8)).Should(Equal(uint8(11)))
+		Ω(res.Items[2].(uint8)).Should(Equal(uint8(13)))
+
+		// int16
+		v, err = ConvertToArrayValue(ArrayInt16, "[11,12,13]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Int16))
+		Ω(res.Items[0].(int16)).Should(Equal(int16(11)))
+		Ω(res.Items[2].(int16)).Should(Equal(int16(13)))
+
+		v, err = ConvertToArrayValue(ArrayUint16, "[11,12,13]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Uint16))
+		Ω(res.Items[0].(uint16)).Should(Equal(uint16(11)))
+		Ω(res.Items[2].(uint16)).Should(Equal(uint16(13)))
+
+		// int32
+		v, err = ConvertToArrayValue(ArrayInt32, "[11,12,13]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Int32))
+		Ω(res.Items[0].(int32)).Should(Equal(int32(11)))
+		Ω(res.Items[2].(int32)).Should(Equal(int32(13)))
+
+		// uint32
+		v, err = ConvertToArrayValue(ArrayUint32, "[11,12,13]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Uint32))
+		Ω(res.Items[0].(uint32)).Should(Equal(uint32(11)))
+		Ω(res.Items[2].(uint32)).Should(Equal(uint32(13)))
+
+		// float32
+		v, err = ConvertToArrayValue(ArrayFloat32, "[11.1,12.2,13.3]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Float32))
+		Ω(res.Items[0].(float32)).Should(Equal(float32(11.1)))
+		Ω(res.Items[2].(float32)).Should(Equal(float32(13.3)))
+
+		//smallenum
+		v, err = ConvertToArrayValue(ArraySmallEnum, "[11,12,13]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(SmallEnum))
+		Ω(res.Items[0].(uint8)).Should(Equal(uint8(11)))
+		Ω(res.Items[2].(uint8)).Should(Equal(uint8(13)))
+
+		// bigenum
+		v, err = ConvertToArrayValue(ArrayBigEnum, "[11,12,13]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(BigEnum))
+		Ω(res.Items[0].(uint16)).Should(Equal(uint16(11)))
+		Ω(res.Items[2].(uint16)).Should(Equal(uint16(13)))
+
+		// int64
+		v, err = ConvertToArrayValue(ArrayInt64, "[11,12,13]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(Int64))
+		Ω(res.Items[0].(int64)).Should(Equal(int64(11)))
+		Ω(res.Items[2].(int64)).Should(Equal(int64(13)))
+
+		//uuid
+		v, err = ConvertToArrayValue(ArrayUUID, "1e88a975-3d26-4277-ace9-bea91b072977,1e88a975-3d26-4277-ace9-bea91b072978,1e88a975-3d26-4277-ace9-bea91b072979")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(UUID))
+		Ω(res.Items[0].([2]uint64)).Should(Equal([2]uint64{8593473084385232926, 8586401979951933868}))
+		Ω(res.Items[2].([2]uint64)).Should(Equal([2]uint64{8593473084385232926, 8730517168027789740}))
+
+		v, err = ConvertToArrayValue(ArrayUUID, "[\"1e88a975-3d26-4277-ace9-bea91b072977\",\"1e88a975-3d26-4277-ace9-bea91b072978\",\"1e88a975-3d26-4277-ace9-bea91b072979\"]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(UUID))
+		Ω(res.Items[0].([2]uint64)).Should(Equal([2]uint64{8593473084385232926, 8586401979951933868}))
+		Ω(res.Items[2].([2]uint64)).Should(Equal([2]uint64{8593473084385232926, 8730517168027789740}))
+
+		// geopoint
+		v, err = ConvertToArrayValue(ArrayGeoPoint, "[\"Point(180.0, 90.0)\",\"Point(179.0, 89.0)\",\"Point(178.0, 88.0)\"]")
+		Ω(err).Should(BeNil())
+		res = v.(*ArrayValue)
+		Ω(res.GetLength()).Should(Equal(3))
+		Ω(res.DataType).Should(Equal(GeoPoint))
+		Ω(res.Items[0].([2]float32)).Should(Equal([2]float32{90.0, 180.0}))
+		Ω(res.Items[2].([2]float32)).Should(Equal([2]float32{88.0, 178.0}))
 	})
 })

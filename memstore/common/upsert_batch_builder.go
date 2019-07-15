@@ -100,6 +100,7 @@ func (c *columnBuilder) ResetRows() {
 // Calculated BufferSize returns the size of the column data in serialized format.
 func (c *columnBuilder) CalculateBufferSize(offset *int) {
 	isGoType := IsGoType(c.dataType)
+	isArrayType := IsArrayType(c.dataType)
 
 	switch c.GetMode() {
 	case AllValuesDefault:
@@ -109,8 +110,8 @@ func (c *columnBuilder) CalculateBufferSize(offset *int) {
 		}
 		fallthrough
 	case AllValuesPresent:
-		// if golang memory, align to 4 bytes for offset vector
-		if isGoType {
+		// if golang memory or array type, align to 4 bytes for offset vector
+		if isGoType || isArrayType {
 			*offset = utils.AlignOffset(*offset, 4)
 			// 1. uint32 for each offset value, and length = numRows + 1
 			// 2. last offset value is the end offset of the offset buffer
@@ -119,8 +120,13 @@ func (c *columnBuilder) CalculateBufferSize(offset *int) {
 			*offset = utils.AlignOffset(*offset, 8)
 			for _, v := range c.values {
 				if v != nil {
-					goVal := v.(GoDataValue)
-					*offset += goVal.GetSerBytes()
+					if isGoType {
+						goVal := v.(GoDataValue)
+						*offset += goVal.GetSerBytes()
+					} else {
+						arrVal := v.(*ArrayValue)
+						*offset += arrVal.GetSerBytes()
+					}
 				}
 			}
 		} else {
@@ -135,14 +141,14 @@ func (c *columnBuilder) CalculateBufferSize(offset *int) {
 // AppendToBuffer writes the column data to buffer and advances offset.
 func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 	writer.AlignBytes(1)
-	isGoType := IsGoType(c.dataType)
+	isVariableLength := IsGoType(c.dataType) || IsArrayType(c.dataType)
 
 	switch c.GetMode() {
 	case AllValuesDefault:
 		return nil
 	case HasNullVector:
 		// only non goType needs to write null vector
-		if !isGoType {
+		if !IsGoType(c.dataType) {
 			for row := 0; row < len(c.values); row++ {
 				value := c.values[row]
 				if err := writer.AppendBool(value != nil); err != nil {
@@ -154,7 +160,7 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 	case AllValuesPresent:
 		var offsetWriter, valueWriter *utils.BufferWriter
 		// only goType needs to write offsetVector
-		if isGoType {
+		if isVariableLength {
 			// Padding to 4 byte alignment for offset vector
 			writer.AlignBytes(4)
 			writerForked := *writer
@@ -258,6 +264,17 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 				}
 				// advance current offset
 				currentValueOffset += uint32(goVal.GetSerBytes())
+			default:
+				if IsArrayType(c.dataType) {
+					arrayValue := value.(*ArrayValue)
+					bytes := arrayValue.GetSerBytes()
+					err := arrayValue.Write(valueWriter)
+					if err != nil {
+						return utils.StackError(err, "Failed to write array value at row %d", row)
+					}
+					// advance current offset
+					currentValueOffset += uint32(bytes)
+				}
 			}
 		}
 

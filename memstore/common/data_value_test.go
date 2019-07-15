@@ -326,4 +326,115 @@ var _ = ginkgo.Describe("data value", func() {
 		dv = DataValue{Valid: true, GoVal: &shapeV}
 		Ω(dv.ConvertToHumanReadable(GeoShape)).Should(Equal("Polygon((180.0000+90.0000),(180.0000+90.0000,180.0000+90.0000))"))
 	})
+
+	ginkgo.It("ArrayValue ConvertToHumanReadable should work", func() {
+		// uint8
+		arrayValue := NewArrayValue(Uint8)
+		arrayValue.AddItem(uint8(11))
+		arrayValue.AddItem(uint8(12))
+		arrayValue.AddItem(uint8(13))
+		size := arrayValue.GetSerBytes()
+		buffer := make([]byte, size)
+		writer := utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv := DataValue{DataType: ArrayUint8, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayUint8)).Should(Equal("[11,12,13]"))
+
+		// int8
+		arrayValue = NewArrayValue(Int8)
+		arrayValue.AddItem(int8(11))
+		arrayValue.AddItem(int8(12))
+		arrayValue.AddItem(int8(13))
+		size = arrayValue.GetSerBytes()
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayInt8, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayInt8)).Should(Equal("[11,12,13]"))
+
+		// int16
+		arrayValue = NewArrayValue(Int16)
+		arrayValue.AddItem(int16(11))
+		arrayValue.AddItem(int16(12))
+		arrayValue.AddItem(int16(13))
+		size = arrayValue.GetSerBytes()
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayInt16, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayInt16)).Should(Equal("[11,12,13]"))
+
+		// uint16
+		arrayValue = NewArrayValue(Uint16)
+		arrayValue.AddItem(uint16(11))
+		arrayValue.AddItem(uint16(12))
+		arrayValue.AddItem(uint16(13))
+		size = arrayValue.GetSerBytes()
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayUint16, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayUint16)).Should(Equal("[11,12,13]"))
+
+		// int32
+		arrayValue = NewArrayValue(Int32)
+		arrayValue.AddItem(int32(11))
+		arrayValue.AddItem(int32(12))
+		arrayValue.AddItem(int32(13))
+		size = arrayValue.GetSerBytes()
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayInt32, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayInt32)).Should(Equal("[11,12,13]"))
+
+		// int64
+		arrayValue = NewArrayValue(Int64)
+		arrayValue.AddItem(int64(11))
+		arrayValue.AddItem(int64(12))
+		arrayValue.AddItem(int64(13))
+		size = arrayValue.GetSerBytes()
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayInt64, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayInt64)).Should(Equal("[11,12,13]"))
+
+		// float32
+		arrayValue = NewArrayValue(Float32)
+		arrayValue.AddItem(float32(11.1))
+		arrayValue.AddItem(float32(12.2))
+		arrayValue.AddItem(float32(13.3))
+		size = arrayValue.GetSerBytes()
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayFloat32, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayFloat32)).Should(Equal("[11.1,12.2,13.3]"))
+
+		// UUID
+		arrayValue = NewArrayValue(UUID)
+		arrayValue.AddItem([2]uint64{8593473084385232926, 8586401979951933868})
+		arrayValue.AddItem(nil)
+		arrayValue.AddItem([2]uint64{8593473084385232926, 8730517168027789740})
+		size = arrayValue.GetSerBytes()
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayUUID, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayUUID)).Should(Equal("[\"1e88a975-3d26-4277-ace9-bea91b072977\",null,\"1e88a975-3d26-4277-ace9-bea91b072979\"]"))
+
+		// GeoPoint
+		arrayValue = NewArrayValue(GeoPoint)
+		arrayValue.AddItem([2]float32{90.0, 180.0})
+		arrayValue.AddItem(nil)
+		arrayValue.AddItem([2]float32{88.0, 178.0})
+		size = arrayValue.GetSerBytes()
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayGeoPoint, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayGeoPoint)).Should(Equal("[\"Point(180.0000,90.0000)\",null,\"Point(178.0000,88.0000)\"]"))
+
+	})
 })

@@ -22,6 +22,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/utils"
 	"time"
+	"fmt"
+	"unsafe"
 )
 
 var _ = ginkgo.Describe("upsert batch", func() {
@@ -607,5 +609,96 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(err).Should(BeNil())
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeFalse())
+	})
+
+	ginkgo.It("works for array types", func() {
+		builder := NewUpsertBatchBuilder()
+
+		// All null bools.
+		err := builder.AddColumn(1, Uint16)
+		Ω(err).Should(BeNil())
+		err = builder.AddColumn(2, ArrayInt32)
+		Ω(err).Should(BeNil())
+		err = builder.AddColumn(3, Int32)
+		Ω(err).Should(BeNil())
+
+		builder.AddRow()
+		err = builder.SetValue(0, 0, 1)
+		Ω(err).Should(BeNil())
+		err = builder.SetValue(0, 1, "[\"11\",\"\",\"13\"]")
+		Ω(err).Should(BeNil())
+		err = builder.SetValue(0, 2, "101")
+		Ω(err).Should(BeNil())
+
+		builder.AddRow()
+		err = builder.SetValue(1, 0, 2)
+		Ω(err).Should(BeNil())
+		err = builder.SetValue(1, 1, "[21,22,null]")
+		Ω(err).Should(BeNil())
+		err = builder.SetValue(1, 2, "102")
+		Ω(err).Should(BeNil())
+
+		upsertBatchBytes, err := builder.ToByteArray()
+		Ω(err).Should(BeNil())
+
+		upsertBatch, _ := NewUpsertBatch(upsertBatchBytes)
+
+		// first row should have value
+		value, err := upsertBatch.GetDataValue(0, 0)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(1)))
+
+		value, err = upsertBatch.GetDataValue(0, 2)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*int32)(value.OtherVal)).Should(Equal(int32(101)))
+
+		value, err = upsertBatch.GetDataValue(0, 1)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		reader := NewArrayValueReader(value.DataType, value.OtherVal)
+		data := make([]byte, 24)
+		for i := 0; i < 24; i++ {
+			data[i] = *(*byte)(unsafe.Pointer(uintptr(reader.value) + uintptr(i)))
+		}
+		fmt.Printf("data: %+v\n", data)
+		Ω(reader.GetLength()).Should(Equal(3))
+		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsValid(1)).Should(BeFalse())
+		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(*(*int32)(reader.Get(0))).Should(Equal(int32(11)))
+		Ω(*(*int32)(reader.Get(1))).Should(Equal(int32(0)))
+		Ω(*(*int32)(reader.Get(2))).Should(Equal(int32(13)))
+
+		// second row
+		value, err = upsertBatch.GetDataValue(1, 0)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(2)))
+
+		value, err = upsertBatch.GetDataValue(1, 2)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+		Ω(*(*int32)(value.OtherVal)).Should(Equal(int32(102)))
+
+		value, err = upsertBatch.GetDataValue(1, 1)
+		Ω(err).Should(BeNil())
+		Ω(value).ShouldNot(BeNil())
+		Ω(value.Valid).Should(BeTrue())
+
+		reader = NewArrayValueReader(value.DataType, value.OtherVal)
+		Ω(reader.GetLength()).Should(Equal(3))
+		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(reader.IsValid(2)).Should(BeFalse())
+		Ω(*(*int32)(reader.Get(0))).Should(Equal(int32(21)))
+		Ω(*(*int32)(reader.Get(1))).Should(Equal(int32(22)))
+		Ω(*(*int32)(reader.Get(2))).Should(Equal(int32(0)))
 	})
 })
