@@ -327,90 +327,128 @@ var _ = ginkgo.Describe("data value", func() {
 		Ω(dv.ConvertToHumanReadable(GeoShape)).Should(Equal("Polygon((180.0000+90.0000),(180.0000+90.0000,180.0000+90.0000))"))
 	})
 
+	ginkgo.It("CalculateListElementBytes should work", func() {
+		s := CalculateListElementBytes(Bool, 10)
+		Ω(s).Should(Equal(8))
+
+		s = CalculateListElementBytes(Uint8, 10)
+		Ω(s).Should(Equal(16))
+
+		s = CalculateListElementBytes(Int16, 10)
+		Ω(s).Should(Equal(24))
+
+		s = CalculateListElementBytes(Int32, 10)
+		Ω(s).Should(Equal(48))
+
+		s = CalculateListElementBytes(Int64, 10)
+		Ω(s).Should(Equal(88))
+
+		s = CalculateListElementBytes(Int64, 10)
+		Ω(s).Should(Equal(88))
+
+		s = CalculateListElementBytes(UUID, 10)
+		Ω(s).Should(Equal(168))
+
+		s = CalculateListElementBytes(GeoPoint, 10)
+		Ω(s).Should(Equal(88))
+	})
+
 	ginkgo.It("ArrayValue ConvertToHumanReadable should work", func() {
-		// uint8
-		arrayValue := NewArrayValue(Uint8)
-		arrayValue.AddItem(uint8(11))
-		arrayValue.AddItem(uint8(12))
-		arrayValue.AddItem(uint8(13))
+		// bool
+		arrayValue := NewArrayValue(Bool)
+		arrayValue.AddItem(true)
+		arrayValue.AddItem(false)
+		arrayValue.AddItem(true)
 		size := arrayValue.GetSerBytes()
 		buffer := make([]byte, size)
 		writer := utils.NewBufferWriter(buffer)
 		arrayValue.Write(&writer)
-		dv := DataValue{DataType: ArrayUint8, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
-		Ω(dv.ConvertToHumanReadable(ArrayUint8)).Should(Equal("[11,12,13]"))
+		dv := DataValue{DataType: ArrayBool, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayBool)).Should(Equal("[true,false,true]"))
+
+		// uint8
+		arrayValue = NewArrayValue(Uint8)
+		arrayValue.AddItem(uint8(11))
+		arrayValue.AddItem(nil)
+		arrayValue.AddItem(uint8(13))
+		size = arrayValue.GetSerBytes()
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayUint8, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayUint8)).Should(Equal("[11,null,13]"))
 
 		// int8
 		arrayValue = NewArrayValue(Int8)
 		arrayValue.AddItem(int8(11))
-		arrayValue.AddItem(int8(12))
+		arrayValue.AddItem(nil)
 		arrayValue.AddItem(int8(13))
 		size = arrayValue.GetSerBytes()
 		buffer = make([]byte, size)
 		writer = utils.NewBufferWriter(buffer)
 		arrayValue.Write(&writer)
 		dv = DataValue{DataType: ArrayInt8, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
-		Ω(dv.ConvertToHumanReadable(ArrayInt8)).Should(Equal("[11,12,13]"))
+		Ω(dv.ConvertToHumanReadable(ArrayInt8)).Should(Equal("[11,null,13]"))
 
 		// int16
 		arrayValue = NewArrayValue(Int16)
 		arrayValue.AddItem(int16(11))
-		arrayValue.AddItem(int16(12))
+		arrayValue.AddItem(nil)
 		arrayValue.AddItem(int16(13))
 		size = arrayValue.GetSerBytes()
 		buffer = make([]byte, size)
 		writer = utils.NewBufferWriter(buffer)
 		arrayValue.Write(&writer)
 		dv = DataValue{DataType: ArrayInt16, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
-		Ω(dv.ConvertToHumanReadable(ArrayInt16)).Should(Equal("[11,12,13]"))
+		Ω(dv.ConvertToHumanReadable(ArrayInt16)).Should(Equal("[11,null,13]"))
 
 		// uint16
 		arrayValue = NewArrayValue(Uint16)
 		arrayValue.AddItem(uint16(11))
-		arrayValue.AddItem(uint16(12))
+		arrayValue.AddItem(nil)
 		arrayValue.AddItem(uint16(13))
 		size = arrayValue.GetSerBytes()
 		buffer = make([]byte, size)
 		writer = utils.NewBufferWriter(buffer)
 		arrayValue.Write(&writer)
 		dv = DataValue{DataType: ArrayUint16, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
-		Ω(dv.ConvertToHumanReadable(ArrayUint16)).Should(Equal("[11,12,13]"))
+		Ω(dv.ConvertToHumanReadable(ArrayUint16)).Should(Equal("[11,null,13]"))
 
 		// int32
 		arrayValue = NewArrayValue(Int32)
 		arrayValue.AddItem(int32(11))
-		arrayValue.AddItem(int32(12))
+		arrayValue.AddItem(nil)
 		arrayValue.AddItem(int32(13))
 		size = arrayValue.GetSerBytes()
 		buffer = make([]byte, size)
 		writer = utils.NewBufferWriter(buffer)
 		arrayValue.Write(&writer)
 		dv = DataValue{DataType: ArrayInt32, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
-		Ω(dv.ConvertToHumanReadable(ArrayInt32)).Should(Equal("[11,12,13]"))
+		Ω(dv.ConvertToHumanReadable(ArrayInt32)).Should(Equal("[11,null,13]"))
 
 		// int64
 		arrayValue = NewArrayValue(Int64)
 		arrayValue.AddItem(int64(11))
-		arrayValue.AddItem(int64(12))
+		arrayValue.AddItem(nil)
 		arrayValue.AddItem(int64(13))
 		size = arrayValue.GetSerBytes()
 		buffer = make([]byte, size)
 		writer = utils.NewBufferWriter(buffer)
 		arrayValue.Write(&writer)
 		dv = DataValue{DataType: ArrayInt64, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
-		Ω(dv.ConvertToHumanReadable(ArrayInt64)).Should(Equal("[11,12,13]"))
+		Ω(dv.ConvertToHumanReadable(ArrayInt64)).Should(Equal("[11,null,13]"))
 
 		// float32
 		arrayValue = NewArrayValue(Float32)
 		arrayValue.AddItem(float32(11.1))
-		arrayValue.AddItem(float32(12.2))
+		arrayValue.AddItem(nil)
 		arrayValue.AddItem(float32(13.3))
 		size = arrayValue.GetSerBytes()
 		buffer = make([]byte, size)
 		writer = utils.NewBufferWriter(buffer)
 		arrayValue.Write(&writer)
 		dv = DataValue{DataType: ArrayFloat32, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
-		Ω(dv.ConvertToHumanReadable(ArrayFloat32)).Should(Equal("[11.1,12.2,13.3]"))
+		Ω(dv.ConvertToHumanReadable(ArrayFloat32)).Should(Equal("[11.1,null,13.3]"))
 
 		// UUID
 		arrayValue = NewArrayValue(UUID)
