@@ -512,7 +512,7 @@ func NewArrayValue(dataType DataType) *ArrayValue {
 // number of items: 4 bytes
 // per item bytes * number of items
 // null bit * number of items
-// align to
+// align to 8 bytes
 func (av *ArrayValue) Write(writer *utils.BufferWriter) error {
 	num := av.GetLength()
 	err := writer.AppendUint32(uint32(num))
