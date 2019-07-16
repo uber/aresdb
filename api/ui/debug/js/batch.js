@@ -24,10 +24,8 @@ if (!String.prototype.format) {
 const maxRowsPerPage = 100;
 const pagesToShow = 10;
 const maxValueLength = 100;
-var currentTableName = "";
 var isFactTable = true;
 var ownedShards = [];
-var currentShardID = 0;
 var currentBatchID = 0;
 
 function Iterator(column, numRows) {
@@ -72,7 +70,7 @@ function renderTables(tables) {
     });
 
     tableSelect.change(function () {
-        currentTableName = $(this).find(":selected").text();
+        var currentTableName = $(this).find(":selected").text();
         getTableSchema(currentTableName);
     });
 }
@@ -82,9 +80,6 @@ function renderShards(shards) {
     shardSelect.empty();
     shards.forEach(function (shard, id) {
         shardSelect.append('<option value' + '=' + id + '>' + shard + '</option>');
-    });
-    shardSelect.change(function() {
-        currentShardID = $(this).find(":selected").text();
     });
 }
 
@@ -97,6 +92,7 @@ function getBatchSize(shard, id) {
 }
 
 function renderShard(shard) {
+    console.log(shard);
     var batchTableBody = $('#batch-table-body');
     batchTableBody.empty();
     Object.keys(shard.liveStore.batches).forEach(function (id) {
@@ -130,6 +126,8 @@ function renderShard(shard) {
     pkLookupInput.keyup(function (e) {
         if (e.keyCode === 13) {
             var uuid = $('#primary-key-lookup-input').val();
+            var currentTableName = $('#table-select').find(":selected").text();
+            var currentShardID = $('#shard-select').find(":selected").text();
             $.ajax({
                 url: '/dbg/{0}/{1}/primary-keys?key={2}'.format(currentTableName, currentShardID, uuid),
                 dataType: 'json',
@@ -296,6 +294,8 @@ function renderColumns(columns) {
 }
 
 function loadBatch(startRow, numRows, highlightRowNumber) {
+    var currentTableName = $('#table-select').find(":selected").text();
+    var currentShardID = $('#shard-select').find(":selected").text();
     $.getJSON(
         '/dbg/{0}/{1}/batches/{2}?startRow={3}&numRows={4}'.format(currentTableName, currentShardID, currentBatchID, startRow, numRows),
         {},
@@ -304,6 +304,8 @@ function loadBatch(startRow, numRows, highlightRowNumber) {
 }
 
 function listBatches() {
+    var currentTableName = $('#table-select').find(":selected").text();
+    var currentShardID = $('#shard-select').find(":selected").text();
     $.getJSON(
         '/dbg/{0}/{1}'.format(currentTableName, currentShardID),
         {},
@@ -347,6 +349,8 @@ function getTableSchema(table) {
 }
 
 function loadVectorParty(batchID, columnName) {
+    var currentTableName = $('#table-select').find(":selected").text();
+    var currentShardID = $('#shard-select').find(":selected").text();
     $.ajax({
         url: '/dbg/{0}/{1}/batches/{2}/vector-parties/{3}'.format(currentTableName, currentShardID, batchID, columnName)
     }).done(listBatches);
