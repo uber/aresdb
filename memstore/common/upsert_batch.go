@@ -67,6 +67,21 @@ func (c *columnReader) ReadValue(row int) (unsafe.Pointer, bool) {
 	return unsafe.Pointer(&c.valueVector[row*DataTypeBits(c.dataType)/8]), true
 }
 
+// ReadArrayValue returns the ArrayValue from upsert batch at given row
+func (c *columnReader) ReadArrayValue(row int) (unsafe.Pointer, bool) {
+	validity := c.readValidity(row)
+	if !validity {
+		return nil, false
+	}
+
+	offset := c.readOffset(row)
+	nextOffset := c.readOffset(row + 1)
+	if offset == nextOffset {
+		return nil, false
+	}
+	return unsafe.Pointer(&c.valueVector[offset]), true
+}
+
 // ReadValue returns the row data (boolean type) for a column, and its validity.
 func (c *columnReader) ReadBool(row int) (bool, bool) {
 	validity := c.readValidity(row)
@@ -267,6 +282,11 @@ func (u *UpsertBatch) GetDataValue(row, col int) (DataValue, error) {
 	if IsGoType(dataType) {
 		val.GoVal = u.columns[col].ReadGoValue(row)
 		val.Valid = val.GoVal != nil
+		return val, nil
+	}
+
+	if IsArrayType(dataType) {
+		val.OtherVal, val.Valid = u.columns[col].ReadArrayValue(row)
 		return val, nil
 	}
 
@@ -511,6 +531,7 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 		}
 
 		isGoType := IsGoType(columnType)
+		isArrayType := IsArrayType(columnType)
 
 		currentOffset := columnStartOffset
 		switch columnMode {
@@ -524,7 +545,7 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 			}
 			fallthrough
 		case AllValuesPresent:
-			if isGoType {
+			if isGoType || isArrayType {
 				currentOffset = utils.AlignOffset(currentOffset, 4)
 				offsetVectorLength := (batch.NumRows + 1) * 4
 				columns[i].offsetVector = buffer[currentOffset : currentOffset+offsetVectorLength]

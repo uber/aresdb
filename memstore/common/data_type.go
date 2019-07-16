@@ -16,6 +16,8 @@ package common
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gofrs/uuid"
 	"math"
@@ -29,13 +31,14 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-// DataType is the type of value supported in gforcedb.
+// DataType is the type of value supported in AresDB.
 type DataType uint32
 
 // The list of supported DataTypes.
-// DataType & 0x0000FFFF: The width of the data type in bits.
-// DataType & 0x00FF0000 >> 16: The base type of the enum.
-// DataType & 0xFF000000 >> 24: Reserved for supporting variable length values (array).
+// DataType & 0x0000FFFF: The width of the data type in bits, or width of the item data type for array.
+// DataType & 0x00FF0000 >> 16: The base type of the data or array.
+// DataType & 0x01000000 >> 24: Indicatation of arrary type, and item type is on DataType & 0x00FF0000 >> 16.
+// DataType & 0xFE000000 >> 24: Reserved
 // See https://github.com/uber/aresdb/wiki/redologs for more details.
 const (
 	Unknown   DataType = 0x00000000
@@ -53,6 +56,21 @@ const (
 	GeoPoint  DataType = 0x000b0040
 	GeoShape  DataType = 0x000c0000
 	Int64     DataType = 0x000d0040
+
+	// array types
+	ArrayBool      DataType = 0x01000001
+	ArrayInt8      DataType = 0x01010008
+	ArrayUint8     DataType = 0x01020008
+	ArrayInt16     DataType = 0x01030010
+	ArrayUint16    DataType = 0x01040010
+	ArrayInt32     DataType = 0x01050020
+	ArrayUint32    DataType = 0x01060020
+	ArrayFloat32   DataType = 0x01070020
+	ArraySmallEnum DataType = 0x01080008
+	ArrayBigEnum   DataType = 0x01090010
+	ArrayUUID      DataType = 0x010a0080
+	ArrayGeoPoint  DataType = 0x010b0040
+	ArrayInt64     DataType = 0x010d0040
 )
 
 // DataTypeName returns the literal name of the data type.
@@ -72,6 +90,21 @@ var DataTypeName = map[DataType]string{
 	GeoPoint:  metaCom.GeoPoint,
 	GeoShape:  metaCom.GeoShape,
 	Int64:     metaCom.Int64,
+
+	// array types
+	ArrayBool:      metaCom.ArrayBool,
+	ArrayInt8:      metaCom.ArrayInt8,
+	ArrayUint8:     metaCom.ArrayUint8,
+	ArrayInt16:     metaCom.ArrayInt16,
+	ArrayUint16:    metaCom.ArrayUint16,
+	ArrayInt32:     metaCom.ArrayInt32,
+	ArrayUint32:    metaCom.ArrayUint32,
+	ArrayFloat32:   metaCom.ArrayFloat32,
+	ArraySmallEnum: metaCom.ArraySmallEnum,
+	ArrayBigEnum:   metaCom.ArrayBigEnum,
+	ArrayUUID:      metaCom.ArrayUUID,
+	ArrayGeoPoint:  metaCom.ArrayGeoPoint,
+	ArrayInt64:     metaCom.ArrayInt64,
 }
 
 // StringToDataType maps string representation to DataType
@@ -90,6 +123,21 @@ var StringToDataType = map[string]DataType{
 	metaCom.GeoPoint:  GeoPoint,
 	metaCom.GeoShape:  GeoShape,
 	metaCom.Int64:     Int64,
+
+	// array types
+	metaCom.ArrayBool:      ArrayBool,
+	metaCom.ArrayInt8:      ArrayInt8,
+	metaCom.ArrayUint8:     ArrayUint8,
+	metaCom.ArrayInt16:     ArrayInt16,
+	metaCom.ArrayUint16:    ArrayUint16,
+	metaCom.ArrayInt32:     ArrayInt32,
+	metaCom.ArrayUint32:    ArrayUint32,
+	metaCom.ArrayFloat32:   ArrayFloat32,
+	metaCom.ArraySmallEnum: ArraySmallEnum,
+	metaCom.ArrayBigEnum:   ArrayBigEnum,
+	metaCom.ArrayUUID:      ArrayUUID,
+	metaCom.ArrayGeoPoint:  ArrayGeoPoint,
+	metaCom.ArrayInt64:     ArrayInt64,
 }
 
 // NewDataType converts an uint32 value into a DataType. It returns error if the the data type is
@@ -111,6 +159,19 @@ func NewDataType(value uint32) (DataType, error) {
 	case UUID:
 	case GeoPoint:
 	case GeoShape:
+	case ArrayBool:
+	case ArrayInt8:
+	case ArrayUint8:
+	case ArrayInt16:
+	case ArrayUint16:
+	case ArrayInt32:
+	case ArrayUint32:
+	case ArrayInt64:
+	case ArrayFloat32:
+	case ArraySmallEnum:
+	case ArrayBigEnum:
+	case ArrayUUID:
+	case ArrayGeoPoint:
 	default:
 		return Unknown, utils.StackError(nil, "Invalid data type value %#x", value)
 	}
@@ -120,6 +181,16 @@ func NewDataType(value uint32) (DataType, error) {
 // IsNumeric determines whether a data type is numeric
 func IsNumeric(dataType DataType) bool {
 	return (dataType >= Int8 && dataType <= Float32) || dataType == Int64
+}
+
+// IsArrayType determins where a data type is Array
+func IsArrayType(dataType DataType) bool {
+	return (dataType & 0x01000000) > 0
+}
+
+// GetItemDataType retrieve item data type for Array DataType
+func GetItemDataType(dataType DataType) DataType {
+	return dataType & 0x00FFFFFF
 }
 
 // DataTypeBits returns the number of bits of a data type.
@@ -182,6 +253,10 @@ func ConvertValueForType(dataType DataType, value interface{}) (interface{}, err
 		out, ok = ConvertToGeoPoint(value)
 	case GeoShape:
 		out, ok = ConvertToGeoShape(value)
+	default:
+		if IsArrayType(dataType) {
+			return ConvertToArrayValue(dataType, value)
+		}
 	}
 	if !ok {
 		return nil, utils.StackError(nil, "Invalid data value %v for data type %s", value, DataTypeName[dataType])
@@ -356,7 +431,7 @@ func ConvertToUUID(value interface{}) ([2]uint64, bool) {
 
 // GeoPointFromString convert string to geopoint
 // we support wkt format, eg. Point(lng,lat)
-// Inside gforcedb system we store lat,lng format
+// Inside AresDB system we store lat,lng format
 func GeoPointFromString(str string) (point [2]float32, err error) {
 	lngLatStrs := strings.Fields(strings.NewReplacer("p", "", "o", "", "i", "", "n", "", "t", "", "(", "", ")", "", ",", " ").Replace(strings.ToLower(str)))
 	if len(lngLatStrs) != 2 {
@@ -467,10 +542,60 @@ func GetGoDataValue(dataType DataType) GoDataValue {
 	return nil
 }
 
-// CalculateListElementBytes returns the total size in bytes needs to be allocated for a list type column for a single
-// row along with the validity vector start.
-func CalculateListElementBytes(dataType DataType, length int) int {
-	// DataTypeBits(dataType)+1 => element bits
-	// (element_bits*length + 63) / 64 => round by 64 bit
-	return ((DataTypeBits(dataType)+1)*length + 63) / 64 * 8
+// ConvertToArrayValue convert input to ArrayValue at best effort
+func ConvertToArrayValue(dataType DataType, value interface{}) (interface{}, error) {
+	switch v := value.(type) {
+	case []interface{}:
+		return ArrayValueFromArray(v, GetItemDataType(dataType))
+	case string:
+		return ArrayValueFromString(v, GetItemDataType(dataType))
+	}
+	return nil, errors.New(fmt.Sprintf("unknown data type %T", value))
+}
+
+// ArrayValueFromArray convert any array to array of sepecified item data type
+func ArrayValueFromArray(value []interface{}, dataType DataType) (interface{}, error) {
+	arrValue := NewArrayValue(dataType)
+	for _, item := range value {
+		if item == nil {
+			arrValue.AddItem(nil)
+		} else {
+			if s, ok := item.(string); ok && len(s) == 0 {
+				arrValue.AddItem(nil)
+				continue
+			}
+			val, err := ConvertValueForType(dataType, item)
+			if err != nil {
+				return nil, err
+			}
+			arrValue.AddItem(val)
+		}
+	}
+	return arrValue, nil
+}
+
+// ArrayValueFromString convert string to array of sepecified item data type
+// we can support json formatted string like:
+// string array: "[\"11\",\"12\",\"13\"]"
+// integer array: "[11,12,13]"
+// string array of uuid: "[\"1e88a975-3d26-4277-ace9-bea91b072977\",\"1e88a975-3d26-4277-ace9-bea91b072978\",\"1e88a975-3d26-4277-ace9-bea91b072979\"]"
+// string array of geo-point: "[\"Point(180.0, 90.0)\",\"Point(179.0, 89.0)\",\"Point(178.0, 88.0)\"]"
+// we can also support comma delimited string value as long as the item not contain comma
+// "11,12,13"
+func ArrayValueFromString(value string, dataType DataType) (interface{}, error) {
+	value = strings.TrimSpace(value)
+	var arrVal []interface{}
+	if strings.HasPrefix(value, "[") {
+		arrVal = make([]interface{}, 0)
+		if err := json.Unmarshal([]byte(value), &arrVal); err != nil {
+			return nil, err
+		}
+	} else {
+		val := strings.Split(value, ",")
+		arrVal = make([]interface{}, len(val))
+		for i, item := range val {
+			arrVal[i] = item
+		}
+	}
+	return ConvertToArrayValue(dataType, arrVal)
 }
