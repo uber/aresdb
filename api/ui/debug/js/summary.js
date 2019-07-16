@@ -26,6 +26,27 @@ function resetToggleButton() {
     });
 }
 
+function getSchema(table, callback) {
+    $.ajax({
+        url: '/schema/tables/{0}'.format(table),
+        success: callback,
+        err: function (xhr) {
+            alert(xhr.responseText);
+        }
+    });
+}
+
+function renderShardSelection(shards) {
+    $('#shard-selector').empty();
+    $('#shard-selector').select2({
+        data: shards,
+        width: 'resolve'
+    }).on('change', function (e) {
+        refreshShardViewer();
+    });
+    refreshShardViewer();
+}
+
 function initSummaryViewer() {
     resetToggleButton();
     $('#health-toggle').change(function () {
@@ -60,35 +81,34 @@ function initSummaryViewer() {
         },
         width: 'resolve'
     }).on('change', function () {
-        refreshShardViewer();
+        var table = $("#table-selector").select2('data')[0].text;
+        getSchema(table, function (schema) {
+            refreshShardSelection(schema.isFactTable);
+        });
     });
+}
 
-    // Init shard selector.
-    $('#shard-selector').select2({
-        ajax: {
+function refreshShardSelection(isFactTable) {
+    if (isFactTable) {
+        $.ajax({
             url: "/dbg/shards",
-            dataType: 'json',
-            quietMillis: 50,
-            processResults: function (data) {
-                return {
-                    results: $.map(data, function (item, idx) {
-                        return {
-                            text: item,
-                            id: idx + 1,
-                        };
-                    })
-                };
-            }
-        },
-        width: 'resolve'
-    }).on('change', function (e) {
-        refreshShardViewer();
-    });
+            success: function (body) {
+                renderShardSelection(body);
+            },
+            error: function (xhr) {
+                alert(xhr.responseText);
+            },
+            async: true
+        })
+    } else {
+        renderShardSelection([0]);
+    }
 }
 
 function refreshShardViewer() {
     var table = $("#table-selector").select2('data')[0].text;
     var shard = $("#shard-selector").select2('data')[0].text;
+    console.log(table + " , " + shard);
 
     // Get shard info.
     $.ajax({
