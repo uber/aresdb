@@ -18,7 +18,6 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"fmt"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/utils"
@@ -665,7 +664,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		for i := 0; i < 24; i++ {
 			data[i] = *(*byte)(unsafe.Pointer(uintptr(reader.value) + uintptr(i)))
 		}
-		fmt.Printf("data: %+v\n", data)
+
 		Ω(reader.GetLength()).Should(Equal(3))
 		Ω(reader.IsValid(0)).Should(BeTrue())
 		Ω(reader.IsValid(1)).Should(BeFalse())

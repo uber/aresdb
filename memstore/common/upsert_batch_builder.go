@@ -141,6 +141,7 @@ func (c *columnBuilder) CalculateBufferSize(offset *int) {
 // AppendToBuffer writes the column data to buffer and advances offset.
 func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 	writer.AlignBytes(1)
+	// both gotype and array type is variable length
 	isVariableLength := IsGoType(c.dataType) || IsArrayType(c.dataType)
 
 	switch c.GetMode() {
@@ -159,7 +160,7 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 		fallthrough
 	case AllValuesPresent:
 		var offsetWriter, valueWriter *utils.BufferWriter
-		// only goType needs to write offsetVector
+		// variable length data type needs to write offsetVector
 		if isVariableLength {
 			// Padding to 4 byte alignment for offset vector
 			writer.AlignBytes(4)
