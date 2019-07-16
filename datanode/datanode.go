@@ -77,8 +77,7 @@ type dataNode struct {
 	mapWatch topology.MapWatch
 	close    chan struct{}
 
-	readyToServe bool
-	serveCond    *sync.Cond
+	readyCh  chan struct{}
 }
 
 type datanodeHandlers struct {
@@ -145,11 +144,11 @@ func NewDataNode(
 		redoLogManagerMaster: redoLogManagerMaster,
 		shardSet:             shard.NewShardSet(nil),
 		close:                make(chan struct{}),
+		readyCh:              make(chan struct{}),
 	}
 	d.handlers = d.newHandlers()
 	d.bootstrapManager = NewBootstrapManager(d.hostID, memStore, opts, topo)
 	clusterClient, err := d.opts.ServerConfig().Cluster.Etcd.NewClient(instrument.NewOptions())
-	d.serveCond = sync.NewCond(&d.RWMutex)
 	if err != nil {
 		return nil, utils.StackError(err, "failed to create etcd client")
 	}
@@ -210,6 +209,8 @@ func (d *dataNode) Open() error {
 	go d.startActiveTopologyWatch()
 	// 8. start analyzing shard availability
 	go d.startAnalyzingShardAvailability()
+	// 9. start analyzing server readiness
+	go d.startAnalyzingServerReadiness()
 
 	return nil
 }
@@ -334,8 +335,57 @@ func (d *dataNode) checkShardReadiness(tables []string, shards []uint32) (numRea
 	return
 }
 
-func (d *dataNode) startAnalyzingShardAvailability() {
+func (d *dataNode) startAnalyzingServerReadiness() {
 	ticker := time.NewTicker(10 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+		case <-d.close:
+			return
+		}
+
+		factTables := make([]string, 0)
+		dimTables := make([]string, 0)
+		nonInitializing := make([]uint32, 0)
+
+		hostShardSet, ok := d.mapWatch.Get().LookupHostShardSet(d.hostID)
+		if !ok {
+			// no shards owned by server
+			close(d.readyCh)
+			return
+		}
+
+		for _, s := range hostShardSet.ShardSet().All() {
+			if s.State() != m3Shard.Initializing {
+				nonInitializing = append(nonInitializing, s.ID())
+			}
+		}
+
+		d.memStore.RLock()
+		for table, schema := range d.memStore.GetSchemas() {
+			if !schema.Schema.IsFactTable {
+				dimTables = append(dimTables, table)
+			} else {
+				factTables = append(factTables, table)
+			}
+		}
+		d.memStore.RUnlock()
+
+		// condition for serving readiness
+		// 1. all shards are initializing, we start to serve immediately
+		if len(nonInitializing) == 0 ||
+		// 2. all fact table shards are ready for nonInitializing shards
+		// and all dimension table shards are ready (only one shard for dim table)
+			(d.checkShardReadiness(factTables, nonInitializing) == len(nonInitializing) &&
+				d.checkShardReadiness(dimTables, []uint32{0}) == 1) {
+			close(d.readyCh)
+			return
+		}
+	}
+}
+
+func (d *dataNode) startAnalyzingShardAvailability() {
+	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -353,17 +403,13 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 		// we always bootstrap nonInitializing shards first
 		// and wait for nonInitializing shards's readiness before serving traffic
 		initializing := make([]uint32, 0)
-		nonInitializing := make([]uint32, 0)
 
-		// snapshot fact tables and dimension tables
+		// snapshot fact tables
 		factTables := make([]string, 0)
-		dimTables := make([]string, 0)
 		d.memStore.RLock()
 		for table, schema := range d.memStore.GetSchemas() {
 			if schema.Schema.IsFactTable {
 				factTables = append(factTables, table)
-			} else {
-				dimTables = append(dimTables, table)
 			}
 		}
 		d.memStore.RUnlock()
@@ -371,23 +417,6 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 		for _, s := range hostShardSet.ShardSet().All() {
 			if s.State() == m3Shard.Initializing {
 				initializing = append(initializing, s.ID())
-			} else {
-				nonInitializing = append(nonInitializing, s.ID())
-			}
-		}
-
-		if !d.readyToServe {
-			// condition for serving readiness
-			// 1. all shards are initializing, we start to serve immediately
-			if len(nonInitializing) == 0 ||
-				// 2. all fact table shards are ready for nonInitializing shards
-				// and all dimension table shards are ready (only one shard for dim table)
-				(d.checkShardReadiness(factTables, nonInitializing) == len(nonInitializing) &&
-					d.checkShardReadiness(dimTables, []uint32{0}) == 1) {
-				d.Lock()
-				d.readyToServe = true
-				d.serveCond.Broadcast()
-				d.Unlock()
 			}
 		}
 
@@ -408,7 +437,6 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 			}
 		}
 	}
-
 }
 
 // Options returns the database options.
@@ -426,12 +454,8 @@ func (d *dataNode) ID() string {
 }
 
 func (d *dataNode) Serve() {
-	// wait for serve condition to meet
-	d.Lock()
-	for !d.readyToServe {
-		d.serveCond.Wait()
-	}
-	d.Unlock()
+	// wait for server is ready to serve
+	<-d.readyCh
 
 	// start advertising to the cluster
 	d.advertise()
