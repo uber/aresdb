@@ -610,9 +610,9 @@ func (av *ArrayValue) Write(writer *utils.BufferWriter) error {
 	// add nil bit for each item
 	for _, val := range av.Items {
 		if val == nil {
-			err = writer.AppendBool(true)
-		} else {
 			err = writer.AppendBool(false)
+		} else {
+			err = writer.AppendBool(true)
 		}
 		if err != nil {
 			return err
@@ -675,7 +675,7 @@ func (reader *ArrayValueReader) Get(index int) unsafe.Pointer {
 func (reader *ArrayValueReader) IsValid(index int) bool {
 	nilOffset := CalculateListNilOffset(reader.itemType, int(reader.length))
 	nilByte := *(*byte)(unsafe.Pointer(uintptr(reader.value) + uintptr(nilOffset) + uintptr(index/8)))
-	return nilByte&(0x1<<uint8(index%8)) == 0x0
+	return nilByte&(0x1<<uint8(index%8)) != 0x0
 }
 
 // CalculateListElementBytes returns the total size in bytes needs to be allocated for a list type column for a single

@@ -31,7 +31,7 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
-// DataType is the type of value supported in gforcedb.
+// DataType is the type of value supported in AresDB.
 type DataType uint32
 
 // The list of supported DataTypes.
@@ -431,7 +431,7 @@ func ConvertToUUID(value interface{}) ([2]uint64, bool) {
 
 // GeoPointFromString convert string to geopoint
 // we support wkt format, eg. Point(lng,lat)
-// Inside gforcedb system we store lat,lng format
+// Inside AresDB system we store lat,lng format
 func GeoPointFromString(str string) (point [2]float32, err error) {
 	lngLatStrs := strings.Fields(strings.NewReplacer("p", "", "o", "", "i", "", "n", "", "t", "", "(", "", ")", "", ",", " ").Replace(strings.ToLower(str)))
 	if len(lngLatStrs) != 2 {

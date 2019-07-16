@@ -340,8 +340,8 @@ var _ = ginkgo.Describe("data value", func() {
 		s = CalculateListElementBytes(Int32, 10)
 		Ω(s).Should(Equal(48))
 
-		s = CalculateListElementBytes(Int64, 10)
-		Ω(s).Should(Equal(88))
+		s = CalculateListElementBytes(Float32, 10)
+		Ω(s).Should(Equal(48))
 
 		s = CalculateListElementBytes(Int64, 10)
 		Ω(s).Should(Equal(88))
