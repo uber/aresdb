@@ -252,8 +252,6 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 // start datanode in distributed mode
 func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tally.Scope, httpWrappers ...utils.HTTPHandlerWrapper) {
-	serverRestartTimer := scope.Timer("restart").Start()
-
 	opts := datanode.NewOptions().SetServerConfig(cfg).SetInstrumentOptions(utils.NewOptions()).SetBootstrapOptions(bootstrap.NewOptions()).SetHTTPWrappers(httpWrappers)
 
 	var topo topology.Topology
@@ -287,14 +285,6 @@ func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tall
 	if err != nil {
 		logger.Fatal("Failed to open datanode,", err)
 	}
-	// bootstrap and recovery
-	err = dataNode.Bootstrap()
-	if err != nil {
-		logger.Fatal("Failed to bootstrap datanode,", err)
-	}
-
-	serverRestartTimer.Stop()
-
 	// start serving traffic
 	dataNode.Serve()
 }
