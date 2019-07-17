@@ -77,7 +77,7 @@ type dataNode struct {
 	mapWatch topology.MapWatch
 	close    chan struct{}
 
-	readyCh  chan struct{}
+	readyCh chan struct{}
 }
 
 type datanodeHandlers struct {
@@ -344,13 +344,12 @@ func (d *dataNode) startAnalyzingServerReadiness() {
 			return
 		}
 
-		factTables := make([]string, 0)
-		dimTables := make([]string, 0)
 		nonInitializing := make([]uint32, 0)
 
+		// condition for serving readiness
+		// 1. no shards owned by server
 		hostShardSet, ok := d.mapWatch.Get().LookupHostShardSet(d.hostID)
 		if !ok {
-			// no shards owned by server
 			close(d.readyCh)
 			return
 		}
@@ -361,6 +360,14 @@ func (d *dataNode) startAnalyzingServerReadiness() {
 			}
 		}
 
+		// 2. no nonInitializing (available/leaving) shards waiting for bootstrap
+		if len(nonInitializing) == 0 {
+			close(d.readyCh)
+			return
+		}
+
+		factTables := make([]string, 0)
+		dimTables := make([]string, 0)
 		d.memStore.RLock()
 		for table, schema := range d.memStore.GetSchemas() {
 			if !schema.Schema.IsFactTable {
@@ -371,13 +378,10 @@ func (d *dataNode) startAnalyzingServerReadiness() {
 		}
 		d.memStore.RUnlock()
 
-		// condition for serving readiness
-		// 1. all shards are initializing, we start to serve immediately
-		if len(nonInitializing) == 0 ||
-		// 2. all fact table shards are ready for nonInitializing shards
-		// and all dimension table shards are ready (only one shard for dim table)
-			(d.checkShardReadiness(factTables, nonInitializing) == len(nonInitializing) &&
-				d.checkShardReadiness(dimTables, []uint32{0}) == 1) {
+		// 3. all nonInitializing (available/leaving) shards are bootstrapped
+		// and all dimension table shards are bootstrapped (only one shard for dim table)
+		if d.checkShardReadiness(factTables, nonInitializing) == len(nonInitializing) &&
+			d.checkShardReadiness(dimTables, []uint32{0}) == 1 {
 			close(d.readyCh)
 			return
 		}
@@ -403,17 +407,6 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 		// we always bootstrap nonInitializing shards first
 		// and wait for nonInitializing shards's readiness before serving traffic
 		initializing := make([]uint32, 0)
-
-		// snapshot fact tables
-		factTables := make([]string, 0)
-		d.memStore.RLock()
-		for table, schema := range d.memStore.GetSchemas() {
-			if schema.Schema.IsFactTable {
-				factTables = append(factTables, table)
-			}
-		}
-		d.memStore.RUnlock()
-
 		for _, s := range hostShardSet.ShardSet().All() {
 			if s.State() == m3Shard.Initializing {
 				initializing = append(initializing, s.ID())
@@ -421,6 +414,16 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 		}
 
 		if len(initializing) > 0 {
+			// snapshot fact tables
+			factTables := make([]string, 0)
+			d.memStore.RLock()
+			for table, schema := range d.memStore.GetSchemas() {
+				if schema.Schema.IsFactTable {
+					factTables = append(factTables, table)
+				}
+			}
+			d.memStore.RUnlock()
+
 			dynamicTopo, ok := d.topo.(topology.DynamicTopology)
 			if !ok {
 				d.logger.Error("cannot mark shard available, topology is not dynamic")
