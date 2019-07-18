@@ -15,7 +15,10 @@
 package metastore
 
 import (
+	"fmt"
 	controllerCli "github.com/uber/aresdb/controller/client"
+	controllerMutatorCom "github.com/uber/aresdb/controller/mutators/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"reflect"
@@ -28,21 +31,25 @@ type SchemaFetchJob struct {
 	hash              string
 	intervalInSeconds int
 	schemaMutator     common.TableSchemaMutator
+	enumUpdater       memCom.EnumUpdater
 	schemaValidator   TableSchemaValidator
 	controllerClient  controllerCli.ControllerClient
+	enumMutator       controllerMutatorCom.EnumMutator
 	stopChan          chan struct{}
 }
 
 // NewSchemaFetchJob creates a new SchemaFetchJob
-func NewSchemaFetchJob(intervalInSeconds int, schemaMutator common.TableSchemaMutator, schemaValidator TableSchemaValidator, controllerClient controllerCli.ControllerClient, clusterName, initialHash string) *SchemaFetchJob {
+func NewSchemaFetchJob(intervalInSeconds int, schemaMutator common.TableSchemaMutator, enumUpdater memCom.EnumUpdater, schemaValidator TableSchemaValidator, controllerClient controllerCli.ControllerClient, enumMutator controllerMutatorCom.EnumMutator, clusterName, initialHash string) *SchemaFetchJob {
 	return &SchemaFetchJob{
 		clusterName:       clusterName,
 		hash:              initialHash,
 		intervalInSeconds: intervalInSeconds,
 		schemaMutator:     schemaMutator,
+		enumUpdater:       enumUpdater,
 		schemaValidator:   schemaValidator,
 		stopChan:          make(chan struct{}),
 		controllerClient:  controllerClient,
+		enumMutator:       enumMutator,
 	}
 }
 
@@ -54,6 +61,9 @@ func (j *SchemaFetchJob) Run() {
 		select {
 		case <-tickChan:
 			j.FetchSchema()
+			if j.enumUpdater != nil {
+				j.FetchEnum()
+			}
 		case <-j.stopChan:
 			return
 		}
@@ -68,13 +78,13 @@ func (j *SchemaFetchJob) Stop() {
 func (j *SchemaFetchJob) FetchSchema() {
 	newHash, err := j.controllerClient.GetSchemaHash(j.clusterName)
 	if err != nil {
-		reportError(err, "hash")
+		reportError(err, true, "hash")
 		return
 	}
 	if newHash != j.hash {
 		newSchemas, err := j.controllerClient.GetAllSchema(j.clusterName)
 		if err != nil {
-			reportError(err, "allSchema")
+			reportError(err, true, "allSchema")
 			return
 		}
 		err = j.applySchemaChange(newSchemas)
@@ -84,7 +94,7 @@ func (j *SchemaFetchJob) FetchSchema() {
 		}
 		j.hash = newHash
 	}
-	utils.GetLogger().Info("Succeeded to run schema fetch job")
+	utils.GetLogger().Debug("Succeeded to run schema fetch job")
 	utils.GetRootReporter().GetCounter(utils.SchemaFetchSuccess).Inc(1)
 }
 
@@ -104,7 +114,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 			// found new table
 			err = j.schemaMutator.CreateTable(&table)
 			if err != nil {
-				reportError(err, table.Name)
+				reportError(err, true, table.Name)
 				continue
 			}
 			utils.GetRootReporter().GetCounter(utils.SchemaCreationCount).Inc(1)
@@ -114,7 +124,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 			var oldTable *common.Table
 			oldTable, err = j.schemaMutator.GetTable(table.Name)
 			if err != nil {
-				reportError(err, table.Name)
+				reportError(err, true, table.Name)
 				continue
 			}
 			if oldTable.Incarnation < table.Incarnation {
@@ -122,14 +132,14 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 				// then create new table
 				err := j.schemaMutator.DeleteTable(table.Name)
 				if err != nil {
-					reportError(err, table.Name)
+					reportError(err, true, table.Name)
 					continue
 				}
 				utils.GetRootReporter().GetCounter(utils.SchemaDeletionCount).Inc(1)
 				utils.GetLogger().With("table", table.Name).Debug("deleted table")
 				err = j.schemaMutator.CreateTable(&table)
 				if err != nil {
-					reportError(err, table.Name)
+					reportError(err, true, table.Name)
 					continue
 				}
 				utils.GetRootReporter().GetCounter(utils.SchemaCreationCount).Inc(1)
@@ -141,12 +151,12 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 				j.schemaValidator.SetOldTable(*oldTable)
 				err = j.schemaValidator.Validate()
 				if err != nil {
-					reportError(err, table.Name)
+					reportError(err, true, table.Name)
 					continue
 				}
 				err = j.schemaMutator.UpdateTable(table)
 				if err != nil {
-					reportError(err, table.Name)
+					reportError(err, true, table.Name)
 					continue
 				}
 				utils.GetRootReporter().GetCounter(utils.SchemaUpdateCount).Inc(1)
@@ -160,7 +170,7 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 			// found table deletion
 			err = j.schemaMutator.DeleteTable(oldTableName)
 			if err != nil {
-				reportError(err, oldTableName)
+				reportError(err, true, oldTableName)
 				continue
 			}
 			utils.GetRootReporter().GetCounter(utils.SchemaDeletionCount).Inc(1)
@@ -170,7 +180,50 @@ func (j *SchemaFetchJob) applySchemaChange(tables []common.Table) (err error) {
 	return
 }
 
-func reportError(err error, extraInfo string) {
-	utils.GetRootReporter().GetCounter(utils.SchemaFetchFailure).Inc(1)
+// FetchEnum updates all enums
+func (j *SchemaFetchJob) FetchEnum() {
+	var (
+		tableNames []string
+		table      *common.Table
+		enumCases  []string
+		err        error
+	)
+	tableNames, err = j.schemaMutator.ListTables()
+	if err != nil {
+		reportError(err, false, "failed to get tables when fetching enums")
+		return
+	}
+
+	for _, tableName := range tableNames {
+		table, err = j.schemaMutator.GetTable(tableName)
+		if err != nil {
+			reportError(err, false, fmt.Sprintf("failed to get table %s when fetching enums", tableName))
+			continue
+		}
+		for _, column := range table.Columns {
+			if !column.IsEnumColumn() {
+				continue
+			}
+			enumCases, err = j.enumMutator.GetEnumCases(j.clusterName, tableName, column.Name)
+			if err != nil {
+				reportError(err, false, fmt.Sprintf("failed to get enums, table %s column %s", tableName, column.Name))
+				continue
+			}
+			err = j.enumUpdater.UpdateEnum(tableName, column.Name, enumCases)
+			if err != nil {
+				reportError(err, false, fmt.Sprintf("failed to update enums, table %s column %s", tableName, column.Name))
+				continue
+			}
+			utils.GetLogger().Debugf("Succeeded to fetch enums. table %s, column %s", tableName, column.Name)
+		}
+	}
+}
+
+func reportError(err error, isSchemaError bool, extraInfo string) {
+	if isSchemaError {
+		utils.GetRootReporter().GetCounter(utils.SchemaFetchFailure).Inc(1)
+	} else {
+		utils.GetRootReporter().GetCounter(utils.SchemaFetchFailureEnum).Inc(1)
+	}
 	utils.GetLogger().With("extraInfo", extraInfo).Error(utils.StackError(err, "err running schema fetch job"))
 }

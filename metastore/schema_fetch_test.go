@@ -4,7 +4,9 @@ import (
 	"errors"
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/mock"
-	controllerMocks "github.com/uber/aresdb/controller/client/mocks"
+	cCliMocks "github.com/uber/aresdb/controller/client/mocks"
+	cMuMocks "github.com/uber/aresdb/controller/mutators/common/mocks"
+	memMocks "github.com/uber/aresdb/memstore/common/mocks"
 	"github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 )
@@ -13,7 +15,7 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 	var job *SchemaFetchJob
 	var mockSchemaMutator metaMocks.TableSchemaMutator
 	var mockSchemaValidator metaMocks.TableSchemaValidator
-	var mockControllerCli controllerMocks.ControllerClient
+	var mockControllerCli cCliMocks.ControllerClient
 
 	testTable1 := common.Table{
 		Name: "testTable1",
@@ -59,12 +61,29 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 		Version: 2,
 	}
 
+	testTable4 := common.Table{
+		Name: "testTable4",
+		Columns: []common.Column{
+			{
+				Name: "col1",
+				Type: "SmallEnum",
+			},
+			{
+				Name: "col2",
+				Type: "BigEnum",
+			},
+		},
+		Version: 2,
+	}
+
+	someError := errors.New("some error")
+
 	ginkgo.BeforeEach(func() {
 		mockSchemaMutator = metaMocks.TableSchemaMutator{}
 		mockSchemaValidator = metaMocks.TableSchemaValidator{}
-		mockControllerCli = controllerMocks.ControllerClient{}
+		mockControllerCli = cCliMocks.ControllerClient{}
 
-		job = NewSchemaFetchJob(1, &mockSchemaMutator, &mockSchemaValidator, &mockControllerCli, "cluster1", "123")
+		job = NewSchemaFetchJob(1, &mockSchemaMutator, nil, &mockSchemaValidator, &mockControllerCli, nil, "cluster1", "123")
 	})
 
 	ginkgo.It("should work with no schema changes", func() {
@@ -96,7 +115,6 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 	})
 
 	ginkgo.It("should report errors", func() {
-		someError := errors.New("some error")
 
 		// error getting schema hash
 		mockSchemaValidator.On("SetNewTable", mock.Anything).Return(nil)
@@ -129,5 +147,51 @@ var _ = ginkgo.Describe("schema fetch job", func() {
 		mockSchemaMutator.On("GetTable", "testTable3").Return(nil, someError).Once()
 		mockSchemaMutator.On("DeleteTable", "testTable4").Return(someError).Once()
 		job.FetchSchema()
+	})
+
+	ginkgo.It("fetch enum should work", func() {
+		mockSchemaMutator.On("ListTables").Return([]string{"testTable4"}, nil).Once()
+		mockSchemaMutator.On("GetTable", "testTable4").Return(&testTable4, nil).Once()
+
+		mockEnumMutator := cMuMocks.EnumMutator{}
+		mockEnumUpdator := memMocks.EnumUpdater{}
+
+		enumsCases := []string{"foo", "bar"}
+		mockEnumMutator.On("GetEnumCases", job.clusterName, "testTable4", "col1").Return(enumsCases, nil)
+		mockEnumMutator.On("GetEnumCases", job.clusterName, "testTable4", "col2").Return(enumsCases, nil)
+		mockEnumUpdator.On("UpdateEnum", "testTable4", "col1", enumsCases).Return(nil)
+		mockEnumUpdator.On("UpdateEnum", "testTable4", "col2", enumsCases).Return(nil)
+
+		job.enumMutator = &mockEnumMutator
+		job.enumUpdater = &mockEnumUpdator
+
+		job.FetchEnum()
+	})
+
+	ginkgo.It("fetch enum report errors", func() {
+		enumsCases := []string{"foo", "bar"}
+
+		mockSchemaMutator.On("ListTables").Return(nil, someError).Once()
+
+		mockEnumMutator := cMuMocks.EnumMutator{}
+		mockEnumUpdator := memMocks.EnumUpdater{}
+
+		job.enumMutator = &mockEnumMutator
+		job.enumUpdater = &mockEnumUpdator
+
+		// error ListTables
+		job.FetchEnum()
+
+		mockSchemaMutator.On("ListTables").Return([]string{"testTableNonExist", "testTable4"}, nil).Once()
+		// error get table
+		mockSchemaMutator.On("GetTable", "testTableNonExist").Return(nil, someError).Once()
+		mockSchemaMutator.On("GetTable", "testTable4").Return(&testTable4, nil).Once()
+		// error GetEnumCases
+		mockEnumMutator.On("GetEnumCases", job.clusterName, "testTable4", "col1").Return(nil, someError)
+		mockEnumMutator.On("GetEnumCases", job.clusterName, "testTable4", "col2").Return(enumsCases, nil)
+		// error UpdateEnum
+		mockEnumUpdator.On("UpdateEnum", "testTable4", "col2", enumsCases).Return(someError)
+
+		job.FetchEnum()
 	})
 })
