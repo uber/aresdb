@@ -123,7 +123,7 @@ var _ = ginkgo.Describe("hll", func() {
 				},
 			}}
 
-		res, err := NewTimeSeriesHLLResult(data, HLLDataHeader)
+		res, err := NewTimeSeriesHLLResult(data, HLLDataHeader, false)
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(expected))
 	})
@@ -131,7 +131,7 @@ var _ = ginkgo.Describe("hll", func() {
 	ginkgo.It("ParseHLLQueryResults should work", func() {
 		data, err := ioutil.ReadFile("../../testing/data/query/hll_query_results")
 		Ω(err).Should(BeNil())
-		results, errs, err := ParseHLLQueryResults(data)
+		results, errs, err := ParseHLLQueryResults(data, false)
 		Ω(errs).Should(HaveLen(2))
 		Ω(results).Should(HaveLen(2))
 		Ω(errs[1].Error()).Should(Equal("test"))
@@ -172,7 +172,7 @@ var _ = ginkgo.Describe("hll", func() {
 	ginkgo.It("Parse empty hll result", func() {
 		data, err := ioutil.ReadFile("../../testing/data/query/hll_empty_results")
 		Ω(err).Should(BeNil())
-		results, errs, err := ParseHLLQueryResults(data)
+		results, errs, err := ParseHLLQueryResults(data, false)
 		fmt.Println(errs, err)
 		Ω(results).Should(Equal([]AQLQueryResult{{}}))
 		Ω(errs).Should(Equal([]error{nil}))
@@ -220,7 +220,12 @@ var _ = ginkgo.Describe("hll", func() {
 			},
 			NonZeroRegisters: 1,
 		}
-		Ω(h1.EncodeBinary()).Should(Equal([]byte{0, 1, 0, 100}))
+		bs := h1.EncodeBinary()
+		Ω(bs).Should(Equal([]byte{100, 0, 1, 0}))
+		var offset int64 = 0
+		hllBack := readHLL(unsafe.Pointer(&bs[0]), 1, &offset)
+		Ω(hllBack).Should(Equal(h1))
+
 	})
 
 	ginkgo.It("stores data in sparse or dense format", func() {
@@ -247,5 +252,52 @@ var _ = ginkgo.Describe("hll", func() {
 		Ω(h.DenseData[4299]).Should(Equal(byte(3)))
 		Ω(h.DenseData[4300]).Should(Equal(byte(0)))
 		Ω(h.NonZeroRegisters).Should(Equal(uint16(4101)))
+	})
+
+	ginkgo.It("BuildVectorsFromHLLResult should work", func() {
+		var err error
+		hllResult := AQLQueryResult{
+			"NULL": map[string]interface{}{
+				"NULL": map[string]interface{}{
+					"NULL": HLL{NonZeroRegisters: 3,
+						SparseData: []HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+				}},
+			"1": map[string]interface{}{
+				"c": map[string]interface{}{
+					"2": HLL{NonZeroRegisters: 2, DenseData: hllData[12 : 12+DenseDataLength]},
+				},
+			},
+			"4294967295": map[string]interface{}{
+				"d": map[string]interface{}{
+					"514": HLL{NonZeroRegisters: 4, SparseData: []HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
+				},
+			}}
+		var (
+			hllvector   []byte
+			dimvector   []byte
+			countvector []byte
+		)
+		enumDicts := map[int]map[string]int{
+			1: {
+				"c": 0,
+				"d": 1,
+			},
+		}
+		hllvector, dimvector, countvector, err = BuildVectorsFromHLLResult(hllResult, []memCom.DataType{memCom.Uint32, memCom.Uint8, memCom.Int16}, enumDicts, []int{0, 2, 1})
+		Ω(err).Should(BeNil())
+		Ω(hllvector).Should(Equal([]byte{
+			1, 0, 255, 255, 2, 0, 254, 255, 3, 0, 253, 255, 0, 0, 1, 0, 1, 0, 1, 0, 255, 0, 1, 0, 254, 0, 2, 0, 253, 0, 3, 0, 252, 0, 4, 0,
+		}))
+		Ω(dimvector).Should(Equal([]byte{
+			0, 0, 0, 0, 1, 0, 0, 0, 255, 255, 255, 255, // dim 0
+			0, 0, 2, 0, 2, 2, // dim 2
+			0, 0, 1, // dim 1 (encoded enum)
+			0, 1, 1, // validity dim 0
+			0, 1, 1, // validity dim2
+			0, 1, 1, // validity dim1
+		}))
+		Ω(countvector).Should(Equal([]byte{3, 0, 2, 0, 4, 0}))
+
 	})
 })
