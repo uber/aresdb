@@ -35,14 +35,10 @@ type DataNode interface {
 	// Open data node
 	Open() error
 
-	// Bootstrap starts data node bootstap
-	Bootstrap() error
-
 	// Close data node
 	Close()
 
-	// Serve will start serving read and write requests
-	// should always call Bootstrap() during server start before Serve()
+	// serve will start serving read and write requests
 	Serve()
 }
 

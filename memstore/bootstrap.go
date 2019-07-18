@@ -65,6 +65,17 @@ func (m *memStoreImpl) Bootstrap(
 	}
 	m.RUnlock()
 
+	// partition table shards based on whether it needs to copy data from peer
+	// so that we can start process those doesn't first
+	nonInitializingEnd := 0
+	for i := 0; i < len(tableShards); i++ {
+		// if doesn't need peer copy, swap into the first half
+		if atomic.LoadUint32(&tableShards[i].needPeerCopy) == 0 {
+			tableShards[i], tableShards[nonInitializingEnd] = tableShards[nonInitializingEnd], tableShards[i]
+			nonInitializingEnd++
+		}
+	}
+
 	workers := xsync.NewWorkerPool(options.MaxConcurrentTableShards())
 	workers.Init()
 	var (
@@ -483,10 +494,10 @@ func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.P
 	done := make(chan struct{})
 	ttl := int64(options.BootstrapSessionTTL())
 	startSessionRequest := &rpc.StartSessionRequest{
-		Table: shard.Schema.Schema.Name,
-		Shard: uint32(shard.ShardID),
+		Table:  shard.Schema.Schema.Name,
+		Shard:  uint32(shard.ShardID),
 		NodeID: origin,
-		Ttl:   ttl,
+		Ttl:    ttl,
 	}
 
 	session, err := client.StartSession(context.Background(), startSessionRequest)
