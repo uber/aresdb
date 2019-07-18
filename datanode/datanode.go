@@ -306,8 +306,14 @@ func (d *dataNode) startActiveTopologyWatch() {
 	}
 }
 
+// checkShardReadiness check which of the shards are ready (meaning all tables within the shard are bootstrapped)
+// this function will partition the input shards into two parts with all ready shards in the first part
+// and return the number of ready shards
+// eg. given input shards [0, 1, 2, 3, 4, 5, 6, 7], if all tables in shard 2, 6 are bootstrapped
+// when the algorithm is finished,
+// the input shards slice will become [2, 6, 0, 1, 3, 4, 5, 7],
+// and numReadyShards returned is 2
 func (d *dataNode) checkShardReadiness(tables []string, shards []uint32) (numReadyShards int) {
-	// check all whether all tables within initialing shards are bootstrapped
 	for i := 0; i < len(shards); i++ {
 		shardID := shards[i]
 		numTablesBootstrapped := 0
