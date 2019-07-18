@@ -103,6 +103,7 @@ const (
 	SchemaCreationCount
 	SchemaDeletionCount
 	SchemaFetchFailure
+	SchemaFetchFailureEnum
 	SchemaFetchSuccess
 	SchemaUpdateCount
 	SizeOfRedologs
@@ -238,6 +239,7 @@ const (
 	scopeNameBatchSizeReportTime             = "batch_size_report_time"
 	scopeNameSchemaFetchSuccess              = "schema_fetch_success"
 	scopeNameSchemaFetchFailure              = "schema_fetch_failure"
+	scopeNameSchemaFetchFailureEnum          = "schema_fetch_failure_enum"
 	scopeNameSchemaUpdateCount               = "schema_updates"
 	scopeNameSchemaDeletionCount             = "schema_deletions"
 	scopeNameSchemaCreationCount             = "schema_creations"
@@ -936,6 +938,13 @@ var metricDefs = map[MetricName]metricDefinition{
 	},
 	SchemaFetchFailure: {
 		name:       scopeNameSchemaFetchFailure,
+		metricType: Counter,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentMetaStore,
+		},
+	},
+	SchemaFetchFailureEnum: {
+		name:       scopeNameSchemaFetchFailureEnum,
 		metricType: Counter,
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentMetaStore,

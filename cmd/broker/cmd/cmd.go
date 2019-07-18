@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3/src/x/instrument"
 	"github.com/mitchellh/mapstructure"
@@ -30,6 +31,7 @@ import (
 	"github.com/uber/aresdb/cmd/aresd/cmd"
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/controller/client"
+	controllerEtcd "github.com/uber/aresdb/controller/mutators/etcd"
 	dataNodeCli "github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
@@ -96,16 +98,12 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 		logger.Fatal("Missing controller client config", err)
 	}
 
-	clusterName := cfg.Cluster.Namespace
-	controllerClient := client.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
-	schemaMutator := broker.NewBrokerSchemaMutator()
-	schemaFetchJob := metastore.NewSchemaFetchJob(10, schemaMutator, metastore.NewTableSchameValidator(), controllerClient, clusterName, "")
-	schemaFetchJob.FetchSchema()
-	go schemaFetchJob.Run()
-
-	var topo topology.Topology
-
-	serviceName := utils.BrokerServiceName(clusterName)
+	var (
+		topo        topology.Topology
+		clusterName = cfg.Cluster.Namespace
+		serviceName = utils.BrokerServiceName(clusterName)
+		store       kv.TxnStore
+	)
 
 	cfg.Etcd.Service = serviceName
 	configServiceCli, err := cfg.Etcd.NewClient(
@@ -113,6 +111,38 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	if err != nil {
 		logger.Fatal("Failed to create config service client,", err)
 	}
+
+	controllerClient := client.NewControllerHTTPClient(
+		controllerClientCfg.Address,
+		time.Duration(controllerClientCfg.TimeoutSec)*time.Second,
+		controllerClientCfg.Headers,
+	)
+	brokerSchemaMutator := broker.NewBrokerSchemaMutator()
+
+	store, err = configServiceCli.Txn()
+	if err != nil {
+		logger.Fatal("Failed to get kv store")
+	}
+
+	schemaFetchJob := metastore.NewSchemaFetchJob(
+		10,
+		brokerSchemaMutator,
+		brokerSchemaMutator,
+		metastore.NewTableSchameValidator(),
+		controllerClient,
+		controllerEtcd.NewEnumMutator(
+			store, controllerEtcd.NewTableSchemaMutator(
+				store,
+				zap.NewExample().Sugar(),
+			),
+		),
+		clusterName,
+		"",
+	)
+	schemaFetchJob.FetchSchema()
+	schemaFetchJob.FetchEnum()
+	go schemaFetchJob.Run()
+
 	dynamicOptions := topology.NewDynamicOptions().SetConfigServiceClient(configServiceCli).SetServiceID(services.NewServiceID().SetZone(cfg.Etcd.Zone).SetName(serviceName).SetEnvironment(cfg.Etcd.Env))
 	topo, err = topology.NewDynamicInitializer(dynamicOptions).Init()
 	if err != nil {
@@ -120,7 +150,7 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	}
 
 	// executor
-	exec := broker.NewQueryExecutor(schemaMutator, topo, dataNodeCli.NewDataNodeQueryClient())
+	exec := broker.NewQueryExecutor(brokerSchemaMutator, topo, dataNodeCli.NewDataNodeQueryClient())
 
 	// init handlers
 	queryHandler := broker.NewQueryHandler(exec)

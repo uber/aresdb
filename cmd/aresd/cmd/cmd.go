@@ -147,7 +147,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 		}
 
 		controllerClient := controllerCli.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
-		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, metaStore, metastore.NewTableSchameValidator(), controllerClient, cfg.Cluster.Namespace, "")
+		schemaFetchJob := metastore.NewSchemaFetchJob(30, metaStore, nil, metastore.NewTableSchameValidator(), controllerClient, nil, cfg.Cluster.Namespace, "")
 		// immediate initial fetch
 		schemaFetchJob.FetchSchema()
 		go schemaFetchJob.Run()
