@@ -20,10 +20,12 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/metastore/common"
+	"github.com/uber/aresdb/utils"
 	"sync"
 )
 
 // BrokerSchemaMutator implements metastore.TableSchemaMutator
+// and memstore.TableSchemaReader, and memstore.EnumUpdater
 type BrokerSchemaMutator struct {
 	sync.RWMutex
 
@@ -117,3 +119,41 @@ func (b *BrokerSchemaMutator) DeleteColumn(table string, column string) (err err
 	b.tables[table] = memCom.NewTableSchema(&oldSchema)
 	return
 }
+
+// ====  memstore/common.TableSchemaReader ====
+func (b *BrokerSchemaMutator) GetSchema(table string) (*memCom.TableSchema, error) {
+	if t, exists := b.tables[table]; exists {
+		return t, nil
+	}
+	return nil, utils.StackError(nil, "Failed to get table schema for table %s", table)
+}
+
+func (b *BrokerSchemaMutator) GetSchemas() map[string]*memCom.TableSchema {
+	return b.tables
+}
+
+func (b *BrokerSchemaMutator) UpdateEnum(table, column string, enumList []string) error {
+	var (
+		exists   bool
+		t        *memCom.TableSchema
+		columnID int
+	)
+	t, exists = b.tables[table]
+	if !exists {
+		return utils.StackError(nil, "Failed to find table %s", table)
+	}
+	columnID, exists = t.ColumnIDs[column]
+	if !exists {
+		return utils.StackError(nil, "Failed to find column %s from table %s", column, table)
+	}
+
+	col := t.Schema.Columns[columnID]
+	if !col.IsEnumColumn() {
+		return utils.StackError(nil, "Column is not enum column, table %s column %s", table, column)
+	}
+
+	t.CreateEnumDict(column, enumList)
+	return nil
+}
+
+// === controller/common.TableSchameReader =====

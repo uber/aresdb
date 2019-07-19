@@ -17,6 +17,7 @@ package broker
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	common2 "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore/common"
 )
 
@@ -55,6 +56,28 @@ var _ = ginkgo.Describe("broker schema mutator", func() {
 		t, err = mutator.GetTable("t1")
 		Ω(err).Should(BeNil())
 		Ω(*t).Should(Equal(testTableOneMoreCol))
+
+		var ts *common2.TableSchema
+		ts, err = mutator.GetSchema("t1")
+		Ω(err).Should(BeNil())
+		tsExpected := common2.NewTableSchema(&testTableOneMoreCol)
+		Ω(ts).Should(Equal(tsExpected))
+
+		mutator.UpdateEnum("t1", "c2", []string{"foo", "bar"})
+
+		ts, err = mutator.GetSchema("t1")
+		Ω(err).Should(BeNil())
+		tsExpected.EnumDicts = map[string]common2.EnumDict{
+			"c2": {
+				Capacity: 256,
+				Dict: map[string]int{
+					"bar": 1,
+					"foo": 0,
+				},
+				ReverseDict: []string{"foo", "bar"},
+			},
+		}
+		Ω(ts).Should(Equal(tsExpected))
 
 		err = mutator.DeleteColumn("t1", "bla")
 		Ω(err.Error()).Should(ContainSubstring("not found"))
