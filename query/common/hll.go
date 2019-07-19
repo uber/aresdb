@@ -710,6 +710,10 @@ func (hll *HLL) EncodeBinary() []byte {
 	return hll.encodeSparse(true)
 }
 
+// encode sparse HLL value in 2 modes
+// 1. padding (1 byte) | rho (1 byte) | index (2 byte)  endianness based on the machine itself
+// 2. rho (1 byte) | index (2 byte)  small endian
+// based on `padding` parameter
 func (hll *HLL) encodeSparse(padding bool) []byte {
 	recordValueBytes := 3
 	if padding {
