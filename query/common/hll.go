@@ -1031,7 +1031,19 @@ func traverseRecursive(dimIdx int, curr interface{}, dimDataTypes []memCom.DataT
 	case map[string]interface{}:
 		dimDataType := dimDataTypes[dimIdx]
 		dimValueBytes := memCom.DataTypeBytes(dimDataType)
-		for k, v := range curr.(map[string]interface{}) {
+
+		// iterate map in order
+		m := curr.(map[string]interface{})
+		keys := make([]string, len(m))
+		kidx := 0
+		for k, _ := range m {
+			keys[kidx] = k
+			kidx++
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			v := m[k]
 			// visit child first
 			var childSize int
 			childSize, err = traverseRecursive(dimIdx+1, v, dimDataTypes, enumDicts, hllVector, countVector, dimVectors, validityVectors)

@@ -292,17 +292,17 @@ var _ = ginkgo.Describe("hll", func() {
 		hllvector, dimvector, countvector, err = BuildVectorsFromHLLResult(hllResult, []memCom.DataType{memCom.Uint32, memCom.Uint8, memCom.Int16}, enumDicts, []int{0, 2, 1})
 		Ω(err).Should(BeNil())
 		Ω(hllvector).Should(Equal([]byte{
-			1, 0, 255, 255, 2, 0, 254, 255, 3, 0, 253, 255, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 255, 0, 1, 0, 254, 0, 2, 0, 253, 0, 3, 0, 252, 0, 4, 0, 0, 0, 1, 0, 1, 0, 1, 0,
+			0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 255, 0, 1, 0, 254, 0, 2, 0, 253, 0, 3, 0, 252, 0, 4, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 255, 255, 2, 0, 254, 255, 3, 0, 253, 255,
 		}))
 		Ω(dimvector).Should(Equal([]byte{
-			0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, // dim 0
-			0, 0, 2, 0, 3, 0, 2, 2, 4, 0, // dim 2
-			0, 0, 0, 1, 2, // dim 1 (encoded enum)
-			0, 1, 1, 1, 1, // validity dim 0
-			0, 1, 1, 1, 1, // validity dim2
-			0, 1, 1, 1, 1, // validity dim1
+			1, 0, 0, 0, 1, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, // dim 0
+			2, 0, 3, 0, 2, 2, 4, 0, 0, 0, // dim 2
+			0, 0, 1, 2, 0, // dim 1 (encoded enum)
+			1, 1, 1, 1, 0, // validity dim 0
+			1, 1, 1, 1, 0, // validity dim2
+			1, 1, 1, 1, 0, // validity dim1
 		}))
-		Ω(countvector).Should(Equal([]byte{3, 0, 2, 0, 2, 0, 4, 0, 2, 0}))
+		Ω(countvector).Should(Equal([]byte{2, 0, 2, 0, 4, 0, 2, 0, 3, 0}))
 
 	})
 })
