@@ -38,7 +38,6 @@ const (
 	DenseDataLength = 1 << 14 // 16kb
 	// DenseThreshold is the thresold to convert sparse value to dense value.
 	DenseThreshold = DenseDataLength / 4
-	NullString     = "NULL"
 )
 
 // HLLData stores fields for serialize and deserialize an hyperloglog query result when client sets Content-Accept
@@ -1055,7 +1054,7 @@ func traverseRecursive(dimIdx int, curr interface{}, dimDataTypes []memCom.DataT
 				dataVal memCom.DataValue
 				isValid uint8 = 1
 			)
-			if NullString == k {
+			if NULLString == k {
 				isValid = 0
 			} else {
 				if enumDict, ok := enumDicts[dimIdx]; ok {
