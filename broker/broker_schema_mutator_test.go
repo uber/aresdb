@@ -63,7 +63,8 @@ var _ = ginkgo.Describe("broker schema mutator", func() {
 		tsExpected := common2.NewTableSchema(&testTableOneMoreCol)
 		Ω(ts).Should(Equal(tsExpected))
 
-		mutator.UpdateEnum("t1", "c2", []string{"foo", "bar"})
+		err = mutator.UpdateEnum("t1", "c2", []string{"foo", "bar"})
+		Ω(err).Should(BeNil())
 
 		ts, err = mutator.GetSchema("t1")
 		Ω(err).Should(BeNil())

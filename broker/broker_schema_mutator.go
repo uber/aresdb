@@ -142,6 +142,8 @@ func (b *BrokerSchemaMutator) UpdateEnum(table, column string, enumList []string
 	if !exists {
 		return utils.StackError(nil, "Failed to find table %s", table)
 	}
+	t.Lock()
+	defer t.Unlock()
 	columnID, exists = t.ColumnIDs[column]
 	if !exists {
 		return utils.StackError(nil, "Failed to find column %s from table %s", column, table)
