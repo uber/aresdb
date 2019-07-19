@@ -1007,7 +1007,7 @@ func BuildVectorsFromHLLResult(result AQLQueryResult, dimDataTypes []memCom.Data
 	dimVectors := make([][]byte, len(dimDataTypes))
 	validityVectors := make([][]byte, len(dimDataTypes))
 
-	err = traverseRecursive(0, map[string]interface{}(result), dimDataTypes, enumDicts, &hllVector, &countVector, dimVectors, validityVectors)
+	_, err = traverseRecursive(0, map[string]interface{}(result), dimDataTypes, enumDicts, &hllVector, &countVector, dimVectors, validityVectors)
 	if err != nil {
 		return
 	}
@@ -1024,13 +1024,20 @@ func BuildVectorsFromHLLResult(result AQLQueryResult, dimDataTypes []memCom.Data
 	return
 }
 
-// helper function that traverses HLL query result
-func traverseRecursive(level int, curr interface{}, dimDataTypes []memCom.DataType, enumDicts map[int]map[string]int, hllVector, countVector *[]byte, dimVectors, validityVectors [][]byte) (err error) {
+// helper function that traverses HLL query result in post order
+// returns: size is the total num dim rows of the subtree rooted by current node
+func traverseRecursive(dimIdx int, curr interface{}, dimDataTypes []memCom.DataType, enumDicts map[int]map[string]int, hllVector, countVector *[]byte, dimVectors, validityVectors [][]byte) (size int, err error) {
 	switch curr.(type) {
 	case map[string]interface{}:
-		dimDataType := dimDataTypes[level]
+		dimDataType := dimDataTypes[dimIdx]
 		dimValueBytes := memCom.DataTypeBytes(dimDataType)
 		for k, v := range curr.(map[string]interface{}) {
+			// visit child first
+			var childSize int
+			childSize, err = traverseRecursive(dimIdx+1, v, dimDataTypes, enumDicts, hllVector, countVector, dimVectors, validityVectors)
+			if err != nil {
+				return
+			}
 			// convert dimension
 			var (
 				dataVal memCom.DataValue
@@ -1039,7 +1046,7 @@ func traverseRecursive(level int, curr interface{}, dimDataTypes []memCom.DataTy
 			if NullString == k {
 				isValid = 0
 			} else {
-				if enumDict, ok := enumDicts[level]; ok {
+				if enumDict, ok := enumDicts[dimIdx]; ok {
 					enumVal := enumDict[k]
 					if dimValueBytes == 1 {
 						ui8 := uint8(enumVal)
@@ -1064,28 +1071,27 @@ func traverseRecursive(level int, curr interface{}, dimDataTypes []memCom.DataTy
 				}
 			}
 
+			var bs []byte
 			if dataVal.Valid {
 				byteVal := dataVal.OtherVal
 				switch dimValueBytes {
 				case 8:
-					dimVectors[level] = append(dimVectors[level], (*[8]byte)(byteVal)[:]...)
+					bs = (*[8]byte)(byteVal)[:]
 				case 4:
-					dimVectors[level] = append(dimVectors[level], (*[4]byte)(byteVal)[:]...)
+					bs = (*[4]byte)(byteVal)[:]
 				case 2:
-					dimVectors[level] = append(dimVectors[level], (*[2]byte)(byteVal)[:]...)
+					bs = (*[2]byte)(byteVal)[:]
 				case 1:
-					dimVectors[level] = append(dimVectors[level], *(*byte)(byteVal))
+					bs = (*[1]byte)(byteVal)[:]
 				}
 			} else {
-				dimVectors[level] = append(dimVectors[level], make([]byte, dimValueBytes)...)
+				bs = make([]byte, dimValueBytes)
 			}
-			validityVectors[level] = append(validityVectors[level], byte(isValid))
-
-			// keep traversing
-			err = traverseRecursive(level+1, v, dimDataTypes, enumDicts, hllVector, countVector, dimVectors, validityVectors)
-			if err != nil {
-				return
+			for i := 0; i < childSize; i++ {
+				dimVectors[dimIdx] = append(dimVectors[dimIdx], bs...)
+				validityVectors[dimIdx] = append(validityVectors[dimIdx], byte(isValid))
 			}
+			size += childSize
 		}
 	case HLL:
 		hLL := curr.(HLL)
@@ -1103,6 +1109,7 @@ func traverseRecursive(level int, curr interface{}, dimDataTypes []memCom.DataTy
 		bs := hLL.EncodeBinary()
 		*hllVector = append(*hllVector, bs...)
 		*countVector = append(*countVector, (*((*[2]byte)(unsafe.Pointer(&count))))[:]...)
+		size = 1
 	default:
 		err = utils.StackError(nil, "unknown type %+v", curr)
 	}

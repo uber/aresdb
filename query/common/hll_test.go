@@ -266,11 +266,15 @@ var _ = ginkgo.Describe("hll", func() {
 			"1": map[string]interface{}{
 				"c": map[string]interface{}{
 					"2": HLL{NonZeroRegisters: 2, DenseData: hllData[12 : 12+DenseDataLength]},
+					"3": HLL{NonZeroRegisters: 2, DenseData: hllData[12 : 12+DenseDataLength]},
 				},
 			},
 			"4294967295": map[string]interface{}{
 				"d": map[string]interface{}{
 					"514": HLL{NonZeroRegisters: 4, SparseData: []HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
+				},
+				"e": map[string]interface{}{
+					"4": HLL{NonZeroRegisters: 2, DenseData: hllData[12 : 12+DenseDataLength]},
 				},
 			}}
 		var (
@@ -282,22 +286,23 @@ var _ = ginkgo.Describe("hll", func() {
 			1: {
 				"c": 0,
 				"d": 1,
+				"e": 2,
 			},
 		}
 		hllvector, dimvector, countvector, err = BuildVectorsFromHLLResult(hllResult, []memCom.DataType{memCom.Uint32, memCom.Uint8, memCom.Int16}, enumDicts, []int{0, 2, 1})
 		Ω(err).Should(BeNil())
 		Ω(hllvector).Should(Equal([]byte{
-			1, 0, 255, 255, 2, 0, 254, 255, 3, 0, 253, 255, 0, 0, 1, 0, 1, 0, 1, 0, 255, 0, 1, 0, 254, 0, 2, 0, 253, 0, 3, 0, 252, 0, 4, 0,
+			1, 0, 255, 255, 2, 0, 254, 255, 3, 0, 253, 255, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 255, 0, 1, 0, 254, 0, 2, 0, 253, 0, 3, 0, 252, 0, 4, 0, 0, 0, 1, 0, 1, 0, 1, 0,
 		}))
 		Ω(dimvector).Should(Equal([]byte{
-			0, 0, 0, 0, 1, 0, 0, 0, 255, 255, 255, 255, // dim 0
-			0, 0, 2, 0, 2, 2, // dim 2
-			0, 0, 1, // dim 1 (encoded enum)
-			0, 1, 1, // validity dim 0
-			0, 1, 1, // validity dim2
-			0, 1, 1, // validity dim1
+			0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, // dim 0
+			0, 0, 2, 0, 3, 0, 2, 2, 4, 0, // dim 2
+			0, 0, 0, 1, 2, // dim 1 (encoded enum)
+			0, 1, 1, 1, 1, // validity dim 0
+			0, 1, 1, 1, 1, // validity dim2
+			0, 1, 1, 1, 1, // validity dim1
 		}))
-		Ω(countvector).Should(Equal([]byte{3, 0, 2, 0, 4, 0}))
+		Ω(countvector).Should(Equal([]byte{3, 0, 2, 0, 2, 0, 4, 0, 2, 0}))
 
 	})
 })
