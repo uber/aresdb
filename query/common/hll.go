@@ -1073,16 +1073,7 @@ func traverseRecursive(level int, curr interface{}, dimDataTypes []memCom.DataTy
 					dimVectors[level] = append(dimVectors[level], (*[1]byte)(byteVal)[:]...)
 				}
 			} else {
-				switch dimValueBytes {
-				case 8:
-					dimVectors[level] = append(dimVectors[level], make([]byte, 8)...)
-				case 4:
-					dimVectors[level] = append(dimVectors[level], make([]byte, 4)...)
-				case 2:
-					dimVectors[level] = append(dimVectors[level], make([]byte, 2)...)
-				case 1:
-					dimVectors[level] = append(dimVectors[level], byte(0))
-				}
+				dimVectors[level] = append(dimVectors[level], make([]byte, dimValueBytes)...)
 			}
 			validityVectors[level] = append(validityVectors[level], byte(isValid))
 
