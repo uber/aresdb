@@ -157,5 +157,3 @@ func (b *BrokerSchemaMutator) UpdateEnum(table, column string, enumList []string
 	t.CreateEnumDict(column, enumList)
 	return nil
 }
-
-// === controller/common.TableSchameReader =====
