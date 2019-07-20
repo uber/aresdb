@@ -101,6 +101,9 @@ function renderTableShardTable(tableShardSummaries) {
         return '<div class="progress"> <div class="progress-bar {0} progress-bar-striped active" role="progressbar" aria-valuenow="{1}" aria-valuemin="0" aria-valuemax="100" style="width:{2}%"> {3} / {4} Batches Copied </div> </div>'.format(getStyleClass(percentFinished), percentFinished, percentFinished, numFinishedBatches, numPendingBatches);
     }
 
+    //TODO(@jshencode)
+    //  1. column level tracking
+    //  2. source + started time of each stage
     var tableShardsTable = $('#table-shards-table').DataTable({
         paging: false,
         autoWidth: false,
@@ -113,16 +116,6 @@ function renderTableShardTable(tableShardSummaries) {
         ],
         aaData: tableShardSummaries
     });
-
-    // var tableColumnsTable = $('#table-columns-table').DataTable({
-    //     paging: false,
-    //     autoWidth: false,
-    //     aoColumns: [
-    //         {title: "Column", data: "column"},
-    //         {title: "Status", data: "preloadMemory", type: "data-size", render: renderMem},
-    //     ],
-    //     aaData: []
-    // });
 
     $('#table-columns-close').click(function(event){
         $('#table-columns').addClass("collapse");
