@@ -49,4 +49,13 @@ function reloadCurrentTab() {
     $("#tabs").tabs('load', current_index);
 }
 
+function promiseFromAjax(opts, callback) {
+    if (callback) {
+        return new Promise((resolve, reject) =>
+            $.ajax(opts).done(x => resolve(callback(x))).fail((x, y, err) => reject(err)));
+    }
+    return new Promise((resolve, reject) =>
+        $.ajax(opts).done(x => resolve(x)).fail((x, y, err) => reject(err)));
+}
+
 

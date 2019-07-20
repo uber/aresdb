@@ -6,28 +6,22 @@
     <link rel="stylesheet" href="../node_modules/datatables.net-dt/css/jquery.dataTables.css" type="text/css"/>
     <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" type="text/css" href="../node_modules/jquery-ui-dist/jquery-ui.min.css">
-    <link rel="stylesheet" type="text/css"
-          href="../node_modules/jquery-datetimepicker/build/jquery.datetimepicker.min.css">
-
     <script src="../node_modules/jquery/dist/jquery.min.js"></script>
     <script src="../node_modules/datatables.net/js/jquery.dataTables.min.js"
             type="text/javascript"></script>
     <script src="../node_modules/jquery-ui-dist/jquery-ui.min.js"></script>
-    <script src="../node_modules/jquery-datetimepicker/build/jquery.datetimepicker.full.js"></script>
     <script src="../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script src="../node_modules/chart.js/dist/Chart.js"></script>
-    <script src="../node_modules/google-palette/palette.js"></script>
     <script src="js/utils.js"></script>
-    <script src="js/memory.js"></script>
+    <script src="js/bootstrap.js"></script>
     <script type='text/javascript'>
         $(document).ready(function () {
-            initHostMemoryExplorer();
+            initBootstrapViewer();
         });
     </script>
 </head>
 <body>
 
-<h2>Host Memory Viewer</h2>
+<h2>Bootstrap Viewer</h2>
 <div class="row">
     <div class="col-md-12" id="table-shards">
         <table id="table-shards-table" class="hover stripe order-column"></table>
@@ -36,10 +30,6 @@
         <button id="table-columns-close" class="btn btn-danger"><b>X</b></button>
         <table id="table-columns-table" class="hover stripe order-column"></table>
     </div>
-</div>
-</div>
-<div class="chart-container" style="position: relative; height:50vh; width:50vw">
-    <canvas id="chart"></canvas>
 </div>
 </body>
 </html>
