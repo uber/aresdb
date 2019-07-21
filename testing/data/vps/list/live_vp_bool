@@ -1,4 +1,4 @@
-data_type: Bool
+data_type: Bool[]
 length: 4
 values:
   - true

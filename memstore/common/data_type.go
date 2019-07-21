@@ -594,7 +594,11 @@ func ArrayValueFromString(value string, dataType DataType) (interface{}, error) 
 		val := strings.Split(value, ",")
 		arrVal = make([]interface{}, len(val))
 		for i, item := range val {
-			arrVal[i] = item
+			if len(item) == 0 || item == "null" {
+				arrVal[i] = nil
+			} else {
+				arrVal[i] = item
+			}
 		}
 	}
 	return ConvertToArrayValue(dataType, arrVal)

@@ -54,31 +54,38 @@ var _ = ginkgo.Describe("test factory", func() {
 		listVP := vp.AsList()
 		// compare row 0.
 		// 1
-		Ω(listVP.GetElementLength(0)).Should(Equal(1))
+		val, valid := listVP.GetListValue(0)
+		Ω(valid).Should(BeTrue())
+		reader := common.NewArrayValueReader(common.Uint32, val)
+		Ω(reader.GetLength()).Should(Equal(1))
 		cmpFunc := common.GetCompareFunc(common.Uint32)
 		var expectedVal uint32 = 1
-		Ω(cmpFunc(listVP.ReadElementValue(0, 0), unsafe.Pointer(&expectedVal))).Should(BeZero())
-		Ω(listVP.ReadElementValidity(0, 0)).Should(BeTrue())
+		Ω(cmpFunc(reader.Get(0), unsafe.Pointer(&expectedVal))).Should(BeZero())
+		Ω(reader.IsValid(0)).Should(BeTrue())
 
 		// row 1
 		// 1 null 3
-		Ω(listVP.GetElementLength(1)).Should(Equal(3))
+		val, valid = listVP.GetListValue(1)
+		Ω(valid).Should(BeTrue())
+		reader = common.NewArrayValueReader(common.Uint32, val)
+		Ω(reader.GetLength()).Should(Equal(3))
 		expectedVal = 1
-		Ω(cmpFunc(listVP.ReadElementValue(1, 0), unsafe.Pointer(&expectedVal))).Should(BeZero())
-		Ω(listVP.ReadElementValidity(1, 0)).Should(BeTrue())
+		Ω(cmpFunc(reader.Get(0), unsafe.Pointer(&expectedVal))).Should(BeZero())
+		Ω(reader.IsValid(0)).Should(BeTrue())
 
-		Ω(listVP.ReadElementValidity(1, 1)).Should(BeFalse())
+		Ω(reader.IsValid(1)).Should(BeFalse())
 
 		expectedVal = 3
-		Ω(cmpFunc(listVP.ReadElementValue(1, 2), unsafe.Pointer(&expectedVal))).Should(BeZero())
-		Ω(listVP.ReadElementValidity(1, 2)).Should(BeTrue())
+		Ω(cmpFunc(reader.Get(2), unsafe.Pointer(&expectedVal))).Should(BeZero())
+		Ω(reader.IsValid(2)).Should(BeTrue())
 
 		// row 2
-		Ω(listVP.GetElementLength(2)).Should(Equal(0))
+		val, valid = listVP.GetListValue(2)
+		Ω(valid).Should(BeFalse())
 
 		// row 3
 		// null
-		Ω(listVP.GetElementLength(3)).Should(Equal(1))
-		Ω(listVP.ReadElementValidity(3, 0)).Should(BeFalse())
+		val, valid = listVP.GetListValue(3)
+		Ω(valid).Should(BeFalse())
 	})
 })
