@@ -45,11 +45,6 @@ type ArchiveVectorParty struct {
 	// Used in archive batches to allow requesters to wait until the vector party
 	// is fully loaded from disk.
 	Loader sync.WaitGroup
-	// For archive store only. Number of users currently using this vector party.
-	// This field is protected by the batch lock.
-	pins int
-	// For archive store only. The condition for pins to drop down to 0.
-	allUsersDone *sync.Cond
 }
 
 // NewArchiveVectorParty returns a new ArchiveVectorParty.
@@ -148,11 +143,7 @@ func (vp *ArchiveVectorParty) setValue(row int, val unsafe.Pointer, valid bool) 
 	vp.offsets.SetValue(2*row+1, unsafe.Pointer(&newLen))
 
 	baseAddr := uintptr(vp.values.Buffer()) + uintptr(vp.bytesWritten)
-	to := cgoutils.MakeSliceFromCPtr(baseAddr, newBytes)
-	from := cgoutils.MakeSliceFromCPtr(uintptr(val), newBytes)
-	for i := 0; i < newBytes; i++ {
-		to[i] = from[i]
-	}
+	utils.MemCopy(unsafe.Pointer(baseAddr), val, newBytes)
 
 	vp.bytesWritten += int64(newBytes)
 }
@@ -312,6 +303,9 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	}
 
 	if s != nil {
+		// memory usage:
+		// 1. offset vector party: (4 bytes offset + 4 bytes length) * length
+		// 2. value vector is totalValueBytes of uint8
 		s.ReportVectorPartyMemoryUsage(int64(vp.length*4*2) + vp.totalValueBytes)
 	}
 	return nil

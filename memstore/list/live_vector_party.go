@@ -288,12 +288,7 @@ func (vp *LiveVectorParty) SetValue(row int, val unsafe.Pointer, valid bool) {
 
 	if valid {
 		baseAddr := vp.memoryPool.Interpret(buf[0])
-
-		to := cgoutils.MakeSliceFromCPtr(baseAddr, newBytes)
-		from := cgoutils.MakeSliceFromCPtr(uintptr(val), newBytes)
-		for i := 0; i < newBytes; i++ {
-			to[i] = from[i]
-		}
+		utils.MemCopy(unsafe.Pointer(baseAddr), val, newBytes)
 	}
 }
 
