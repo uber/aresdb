@@ -1026,23 +1026,22 @@ func BuildVectorsFromHLLResult(result AQLQueryResult, dimDataTypes []memCom.Data
 // helper function that traverses HLL query result in post order
 // returns: size is the total num dim rows of the subtree rooted by current node
 func traverseRecursive(dimIdx int, curr interface{}, dimDataTypes []memCom.DataType, enumDicts map[int]map[string]int, hllVector, countVector *[]byte, dimVectors, validityVectors [][]byte) (size int, err error) {
-	switch curr.(type) {
+	switch v := curr.(type) {
 	case map[string]interface{}:
 		dimDataType := dimDataTypes[dimIdx]
 		dimValueBytes := memCom.DataTypeBytes(dimDataType)
 
 		// iterate map in order
-		m := curr.(map[string]interface{})
-		keys := make([]string, len(m))
+		keys := make([]string, len(v))
 		kidx := 0
-		for k, _ := range m {
+		for k, _ := range v {
 			keys[kidx] = k
 			kidx++
 		}
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			v := m[k]
+			v := v[k]
 			// visit child first
 			var childSize int
 			childSize, err = traverseRecursive(dimIdx+1, v, dimDataTypes, enumDicts, hllVector, countVector, dimVectors, validityVectors)
@@ -1105,19 +1104,18 @@ func traverseRecursive(dimIdx int, curr interface{}, dimDataTypes []memCom.DataT
 			size += childSize
 		}
 	case HLL:
-		hLL := curr.(HLL)
-		count := hLL.NonZeroRegisters
+		count := v.NonZeroRegisters
 
 		if count < DenseThreshold {
-			if !hLL.ConvertToSparse() {
-				err = utils.StackError(nil, "Failed to convert HLL to sparse %+v", hLL)
+			if !v.ConvertToSparse() {
+				err = utils.StackError(nil, "Failed to convert HLL to sparse %+v", v)
 				return
 			}
 		} else {
-			hLL.ConvertToDense()
+			v.ConvertToDense()
 		}
 
-		bs := hLL.EncodeBinary()
+		bs := v.EncodeBinary()
 		*hllVector = append(*hllVector, bs...)
 		*countVector = append(*countVector, (*((*[2]byte)(unsafe.Pointer(&count))))[:]...)
 		size = 1
