@@ -127,12 +127,10 @@ func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 		valueBytes += common.CalculateListElementBytes(vp.dataType, int(length))
 	}
 	// to compatible with archive vp, align to 64 bytes alignment
-	if vp.offsets.Bytes > 8*vp.length {
-		dataWriter.SkipBytes(vp.offsets.Bytes - 8*vp.length)
-	}
+	dataWriter.WritePadding(8*vp.length, 64)
 
 	// value bytes, to compatible with archive vp, align to 64 bytes alignment
-	totalValueBytes := (valueBytes*8 + 511) / 512 * 64
+	totalValueBytes := utils.AlignOffset(valueBytes, 64)
 	if err := dataWriter.WriteUint64(uint64(totalValueBytes)); err != nil {
 		return err
 	}
@@ -149,7 +147,7 @@ func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 			}
 		}
 	}
-	dataWriter.SkipBytes(totalValueBytes - valueBytes)
+	dataWriter.WritePadding(valueBytes, 64)
 	return
 }
 
