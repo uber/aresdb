@@ -22,9 +22,9 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	"github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/common"
-	memCom"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/diskstore/mocks"
+	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/testing"
 	"github.com/uber/aresdb/utils"
@@ -175,7 +175,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		Ω(batchInfo.Batch).ShouldNot(BeNil())
 		Ω(batchInfo.RedoLogFile).Should(Equal(int64(1)))
 
-		batchInfo  = nextUpsertBatch()
+		batchInfo = nextUpsertBatch()
 		Ω(batchInfo.Batch).ShouldNot(BeNil())
 		Ω(batchInfo.RedoLogFile).Should(Equal(int64(1)))
 

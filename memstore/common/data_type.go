@@ -583,6 +583,9 @@ func ArrayValueFromArray(value []interface{}, dataType DataType) (interface{}, e
 // we can also support comma delimited string value as long as the item not contain comma
 // "11,12,13"
 func ArrayValueFromString(value string, dataType DataType) (interface{}, error) {
+	if len(value) == 0 || value == "null" {
+		return nil, nil
+	}
 	value = strings.TrimSpace(value)
 	var arrVal []interface{}
 	if strings.HasPrefix(value, "[") {

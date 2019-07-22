@@ -15,19 +15,20 @@
 package list
 
 import (
-	"github.com/uber/aresdb/memstore"
+	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/diskstore"
+	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"sync"
 	"unsafe"
-	"github.com/uber/aresdb/cgoutils"
 )
 
 const (
 	ListVectorPartyHeader uint32 = 0xFADEFACF
 )
+
 // ArchiveVectorParty is the representation of list data type vector party in archive store.
 // It does not support random access update. Instead updates to archiveListVectorParty can only be done
 // via appending to the tail during archiving and backfill.
@@ -69,7 +70,6 @@ func NewArchiveVectorParty(length int, dataType common.DataType,
 		totalValueBytes: totalValueBytes,
 	}
 }
-
 
 // Allocate allocate underlying storage for vector party. Note allocation for
 // archive vp does not report host memory change. Memory reporting is done
@@ -216,6 +216,7 @@ func (vp *ArchiveVectorParty) Write(writer io.Writer) error {
 	if err := dataWriter.WriteUint64(uint64(vp.values.Bytes)); err != nil {
 		return err
 	}
+
 	// Write value vector.
 	if err := dataWriter.Write(
 		cgoutils.MakeSliceFromCPtr(uintptr(vp.values.Buffer()), vp.values.Bytes),
@@ -293,7 +294,7 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	vp.dataType = dataType
 
 	vp.offsets = memstore.NewVector(common.Uint32, vp.length*2)
-	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.offsets.Buffer()), vp.offsets.Bytes), ); err != nil {
+	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.offsets.Buffer()), vp.offsets.Bytes)); err != nil {
 		return err
 	}
 
@@ -306,12 +307,13 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	// Read value vector.
 	vp.values = memstore.NewVector(common.Uint8, int(vp.totalValueBytes))
 	// Here we directly read from reader into the c allocated bytes.
-	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.values.Buffer()), vp.values.Bytes), ); err != nil {
+	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.values.Buffer()), vp.values.Bytes)); err != nil {
 		return err
 	}
 
-	s.ReportVectorPartyMemoryUsage(int64(vp.length*4*2) + vp.totalValueBytes)
-
+	if s != nil {
+		s.ReportVectorPartyMemoryUsage(int64(vp.length*4*2) + vp.totalValueBytes)
+	}
 	return nil
 }
 
@@ -363,5 +365,3 @@ func (vp *ArchiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorPar
 	utils.GetLogger().Panic("CopyOnWrite is not supported by list vector party")
 	return nil
 }
-
-

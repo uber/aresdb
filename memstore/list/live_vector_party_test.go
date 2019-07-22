@@ -15,6 +15,7 @@
 package list
 
 import (
+	"bytes"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
@@ -38,6 +39,54 @@ func getCompactedTotalBytes(vp common.LiveVectorParty) int64 {
 		}
 	}
 	return totalBytes
+}
+
+func createArrayUpsertBatch() (*common.UpsertBatch, error) {
+	// initiate value into UpsertBatch
+	builder := common.NewUpsertBatchBuilder()
+	err := builder.AddColumn(1, common.Uint16)
+	Ω(err).Should(BeNil())
+	err = builder.AddColumn(2, common.ArrayInt32)
+	Ω(err).Should(BeNil())
+	err = builder.AddColumn(3, common.Int32)
+	Ω(err).Should(BeNil())
+
+	builder.AddRow()
+	err = builder.SetValue(0, 0, 1)
+	Ω(err).Should(BeNil())
+	err = builder.SetValue(0, 1, "[\"11\",\"\",\"13\"]")
+	Ω(err).Should(BeNil())
+	err = builder.SetValue(0, 2, "101")
+	Ω(err).Should(BeNil())
+
+	builder.AddRow()
+	err = builder.SetValue(1, 0, 2)
+	Ω(err).Should(BeNil())
+	err = builder.SetValue(1, 1, "[21,22,null]")
+	Ω(err).Should(BeNil())
+	err = builder.SetValue(1, 2, "102")
+	Ω(err).Should(BeNil())
+
+	builder.AddRow()
+	err = builder.SetValue(2, 0, 3)
+	Ω(err).Should(BeNil())
+	err = builder.SetValue(2, 1, "null")
+	Ω(err).Should(BeNil())
+	err = builder.SetValue(2, 2, "103")
+	Ω(err).Should(BeNil())
+
+	builder.AddRow()
+	err = builder.SetValue(3, 0, 4)
+	Ω(err).Should(BeNil())
+	err = builder.SetValue(3, 1, "41,42,43")
+	Ω(err).Should(BeNil())
+	err = builder.SetValue(3, 2, "104")
+	Ω(err).Should(BeNil())
+
+	upsertBatchBytes, err := builder.ToByteArray()
+	Ω(err).Should(BeNil())
+
+	return common.NewUpsertBatch(upsertBatchBytes)
 }
 
 var _ = ginkgo.Describe("list vector party tests", func() {
@@ -119,5 +168,67 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		// Test Destroy.
 		listVP.SafeDestruct()
 		Ω(listVP.GetBytes()).Should(BeZero())
+	})
+
+	ginkgo.It("live list vectorparty read write should work", func() {
+		upsertBatch, err := createArrayUpsertBatch()
+		Ω(err).Should(BeNil())
+
+		// store into vp
+		vp := NewLiveVectorParty(10, common.ArrayUint32, nil)
+		vp.Allocate(false)
+		for i := 0; i < upsertBatch.NumRows; i++ {
+			val, valid, err := upsertBatch.GetValue(i, 1)
+			Ω(err).Should(BeNil())
+			vp.SetValue(i, val, valid)
+		}
+
+		//check data in vp is correct
+		// row 0
+		val, valid := vp.GetValue(0)
+		Ω(valid).Should(BeTrue())
+		reader := common.NewArrayValueReader(common.Uint32, val)
+		Ω(reader.GetLength()).Should(Equal(3))
+		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(11)))
+		Ω(reader.IsValid(1)).Should(BeFalse())
+		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(13)))
+
+		// row 1
+		val, valid = vp.GetValue(1)
+		Ω(valid).Should(BeTrue())
+		reader = common.NewArrayValueReader(common.Uint32, val)
+		Ω(reader.GetLength()).Should(Equal(3))
+		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(21)))
+		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(22)))
+		Ω(reader.IsValid(2)).Should(BeFalse())
+
+		// row 2
+		val, valid = vp.GetValue(2)
+		Ω(valid).Should(BeFalse())
+
+		// row 3
+		val, valid = vp.GetValue(3)
+		Ω(valid).Should(BeTrue())
+		reader = common.NewArrayValueReader(common.Uint32, val)
+		Ω(reader.GetLength()).Should(Equal(3))
+		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(41)))
+		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(42)))
+		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(43)))
+
+		buf := &bytes.Buffer{}
+		err = vp.Write(buf)
+		Ω(err).Should(BeNil())
+
+		newVP := NewLiveVectorParty(10, common.ArrayUint32, nil)
+		err = newVP.Read(buf, nil)
+		Ω(err).Should(BeNil())
+		Ω(newVP.Equals(vp)).Should(BeTrue())
 	})
 })

@@ -15,13 +15,13 @@
 package list
 
 import (
+	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"io"
-	"unsafe"
-	"github.com/uber/aresdb/cgoutils"
 	"sync"
+	"unsafe"
 )
 
 // LiveVectorParty is the representation of list data type vector party in live store.
@@ -77,7 +77,6 @@ func (vp *LiveVectorParty) SafeDestruct() {
 	}
 }
 
-
 // Write serialize vector party.
 func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 	vp.RLock()
@@ -115,35 +114,42 @@ func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 	}
 
 	// write offsets
-	var valueOffset uint32
-	for i := 0; i< vp.length; i++ {
+	var valueBytes int
+	for i := 0; i < vp.length; i++ {
 		_, length := vp.GetOffsetLength(i)
-		if err = dataWriter.WriteUint32(valueOffset); err != nil {
-			return
+		if length == 0 {
+			dataWriter.WriteUint32(uint32(0))
+		} else {
+			dataWriter.WriteUint32(uint32(valueBytes))
 		}
-		if err = dataWriter.WriteUint32(length); err != nil {
-			return
-		}
-		valueOffset += uint32(common.CalculateListElementBytes(vp.dataType, int(length)))
+		dataWriter.WriteUint32(length)
+
+		valueBytes += common.CalculateListElementBytes(vp.dataType, int(length))
+	}
+	// to compatible with archive vp, align to 64 bytes alignment
+	if vp.offsets.Bytes > 8*vp.length {
+		dataWriter.SkipBytes(vp.offsets.Bytes - 8*vp.length)
 	}
 
-	// value bytes
-	if err := dataWriter.WriteUint64(uint64(valueOffset)); err != nil {
+	// value bytes, to compatible with archive vp, align to 64 bytes alignment
+	totalValueBytes := (valueBytes*8 + 511) / 512 * 64
+	if err := dataWriter.WriteUint64(uint64(totalValueBytes)); err != nil {
 		return err
 	}
 
 	// write values
 	baseAddr := vp.memoryPool.GetNativeMemoryAllocator().GetBaseAddr()
-	for i := 0; i< vp.length; i++ {
+	for i := 0; i < vp.length; i++ {
 		offset, length := vp.GetOffsetLength(i)
 		bytes := common.CalculateListElementBytes(vp.dataType, int(length))
 
 		if bytes > 0 {
-			if err = dataWriter.Write(cgoutils.MakeSliceFromCPtr(baseAddr + uintptr(offset), bytes)); err != nil {
+			if err = dataWriter.Write(cgoutils.MakeSliceFromCPtr(baseAddr+uintptr(offset), bytes)); err != nil {
 				return
 			}
 		}
 	}
+	dataWriter.SkipBytes(totalValueBytes - valueBytes)
 	return
 }
 
@@ -211,7 +217,7 @@ func (vp *LiveVectorParty) Read(reader io.Reader, serializer common.VectorPartyS
 	vp.dataType = dataType
 
 	vp.Allocate(false)
-	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.offsets.Buffer()), vp.offsets.Bytes), ); err != nil {
+	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.offsets.Buffer()), vp.offsets.Bytes)); err != nil {
 		return
 	}
 
@@ -222,17 +228,17 @@ func (vp *LiveVectorParty) Read(reader io.Reader, serializer common.VectorPartyS
 	}
 
 	var zero uint32 = 0
-	for i := 0; i< vp.length; i++ {
-		itemLen := *(*uint32)(vp.offsets.GetValue(2*i+1))
+	for i := 0; i < vp.length; i++ {
+		itemLen := *(*uint32)(vp.offsets.GetValue(2*i + 1))
 		itemBytes := common.CalculateListElementBytes(vp.dataType, int(itemLen))
-        if itemBytes > 0 {
+		if itemBytes > 0 {
 			buf := vp.memoryPool.Allocate(itemBytes)
 			// update offset.
 			vp.offsets.SetValue(2*i, unsafe.Pointer(&buf[0]))
 			// Set footer offset.
 			vp.caps.SetValue(i, unsafe.Pointer(&buf[1]))
-			baseAddr := vp.memoryPool.Interpret(buf[0])
-			if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(baseAddr+buf[0], itemBytes)); err != nil {
+			addr := vp.memoryPool.Interpret(buf[0])
+			if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(addr, itemBytes)); err != nil {
 				return
 			}
 		} else {
@@ -267,7 +273,7 @@ func (vp *LiveVectorParty) SetValue(row int, val unsafe.Pointer, valid bool) {
 	}
 
 	oldOffset, oldLen := vp.GetOffsetLength(row)
-	oldCap :=  *(*uint32)(vp.caps.GetValue(row))
+	oldCap := *(*uint32)(vp.caps.GetValue(row))
 	oldBytes := common.CalculateListElementBytes(vp.dataType, int(oldLen))
 	newBytes := common.CalculateListElementBytes(vp.dataType, int(newLen))
 

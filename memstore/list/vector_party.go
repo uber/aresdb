@@ -34,7 +34,7 @@ type baseVectorParty struct {
 	// get data type from values vector. Also we store it on disk anyway.
 	dataType common.DataType
 
-	reporter      HostMemoryChangeReporter
+	reporter HostMemoryChangeReporter
 }
 
 // GetOffsetLength returns the <offset, length> pair at ith row.
@@ -112,6 +112,7 @@ func (vp *baseVectorParty) equals(other common.VectorParty, leftVP common.ListVe
 func arrayValueCompare(dataType common.DataType, left, right unsafe.Pointer) bool {
 	lReader := common.NewArrayValueReader(dataType, left)
 	rReader := common.NewArrayValueReader(dataType, right)
+
 	if lReader.GetLength() != rReader.GetLength() {
 		return false
 	}

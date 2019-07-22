@@ -120,7 +120,6 @@ func CompareGeoPoint(a, b unsafe.Pointer) int {
 	return -1
 }
 
-
 // GetCompareFunc get the compare function for specific data type
 func GetCompareFunc(dataType DataType) CompareFunc {
 	switch dataType {

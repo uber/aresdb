@@ -15,6 +15,7 @@
 package list
 
 import (
+	"bytes"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore"
@@ -115,5 +116,98 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		// Test Destroy.
 		listVP.SafeDestruct()
 		Ω(listVP.GetBytes()).Should(BeZero())
+	})
+
+	ginkgo.It("archive list vectorparty read write should work", func() {
+		upsertBatch, err := createArrayUpsertBatch()
+		Ω(err).Should(BeNil())
+
+		// store into vp
+		vp := NewArchiveVectorParty(4, common.ArrayUint32, 64, &sync.RWMutex{})
+		vp.Allocate(false)
+		for i := 0; i < upsertBatch.NumRows; i++ {
+			val, valid, err := upsertBatch.GetValue(i, 1)
+			Ω(err).Should(BeNil())
+			vp.SetDataValue(i, common.DataValue{
+				Valid:    valid,
+				OtherVal: val,
+				DataType: common.Uint32,
+			}, memstore.IgnoreCount)
+		}
+
+		//check data in vp is correct
+		// row 0
+		val := vp.GetDataValue(0)
+		Ω(val.Valid).Should(BeTrue())
+		reader := common.NewArrayValueReader(common.Uint32, val.OtherVal)
+		Ω(reader.GetLength()).Should(Equal(3))
+		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(11)))
+		Ω(reader.IsValid(1)).Should(BeFalse())
+		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(13)))
+
+		// row 1
+		val = vp.GetDataValue(1)
+		Ω(val.Valid).Should(BeTrue())
+		reader = common.NewArrayValueReader(common.Uint32, val.OtherVal)
+		Ω(reader.GetLength()).Should(Equal(3))
+		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(21)))
+		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(22)))
+		Ω(reader.IsValid(2)).Should(BeFalse())
+
+		// row 2
+		val = vp.GetDataValue(2)
+		Ω(val.Valid).Should(BeFalse())
+
+		// row 3
+		val = vp.GetDataValue(3)
+		Ω(val.Valid).Should(BeTrue())
+		reader = common.NewArrayValueReader(common.Uint32, val.OtherVal)
+		Ω(reader.GetLength()).Should(Equal(3))
+		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(41)))
+		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(42)))
+		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(43)))
+
+		// save to buffer
+		buf := &bytes.Buffer{}
+		err = vp.Write(buf)
+		Ω(err).Should(BeNil())
+
+		// read from buffer
+		newVP := NewArchiveVectorParty(4, common.ArrayUint32, 0, &sync.RWMutex{})
+		err = newVP.Read(buf, nil)
+		Ω(err).Should(BeNil())
+		Ω(newVP.Equals(vp)).Should(BeTrue())
+	})
+
+	ginkgo.It("mix list archive/live vp read/write should work", func() {
+		upsertBatch, err := createArrayUpsertBatch()
+		Ω(err).Should(BeNil())
+
+		// store into vp
+		vp := NewLiveVectorParty(10, common.ArrayUint32, nil)
+		vp.Allocate(false)
+		for i := 0; i < upsertBatch.NumRows; i++ {
+			val, valid, err := upsertBatch.GetValue(i, 1)
+			Ω(err).Should(BeNil())
+			vp.SetValue(i, val, valid)
+		}
+
+		// save to buffer
+		buf := &bytes.Buffer{}
+		err = vp.Write(buf)
+		Ω(err).Should(BeNil())
+
+		// read from buffer
+		newVP := NewArchiveVectorParty(4, common.ArrayUint32, 0, &sync.RWMutex{})
+		err = newVP.Read(buf, nil)
+		Ω(err).Should(BeNil())
+		Ω(newVP.Equals(vp)).Should(BeTrue())
 	})
 })

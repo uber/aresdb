@@ -204,7 +204,7 @@ var _ = ginkgo.Describe("recovery", func() {
 					"host1",
 					"host2",
 				},
-				Enabled: true,
+				Enabled:     true,
 				TopicSuffix: "staging",
 			},
 		}

@@ -67,7 +67,7 @@ func NewKafkaRedoLogManagerMaster(namespace string, cfg *common.RedoLogConfig, d
 	}
 
 	return &RedoLogManagerMaster{
-		Namespace: namespace,
+		Namespace:     namespace,
 		RedoLogConfig: cfg,
 		diskStore:     diskStore,
 		managers:      make(map[string]map[int]RedologManager),

@@ -82,7 +82,7 @@ type DiskStore interface {
 	// Archived vector party files.
 
 	// Get all vector party files for a specific batch version/seq
-	ListArchiveBatchVectorPartyFiles(table string, shard, batchID int, batchVersion uint32, seqNum uint32)([]int, error)
+	ListArchiveBatchVectorPartyFiles(table string, shard, batchID int, batchVersion uint32, seqNum uint32) ([]int, error)
 	// Opens the vector party file at the specified batchVersion for read.
 	OpenVectorPartyFileForRead(table string, column, shard, batchID int, batchVersion uint32,
 		seqNum uint32) (io.ReadCloser, error)

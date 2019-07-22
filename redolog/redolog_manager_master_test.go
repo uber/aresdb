@@ -18,13 +18,11 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/common"
-	"github.com/uber/aresdb/testing"
+	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
-	diskMocks "github.com/uber/aresdb/diskstore/mocks"
-
+	"github.com/uber/aresdb/testing"
 )
-
 
 var _ = ginkgo.Describe("redolog manager master tests", func() {
 	table := "table1"
@@ -141,7 +139,7 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 		Ω(len(f.managers)).Should(Equal(2))
 		Ω(len(f.managers["table1"])).Should(Equal(2))
 		Ω(len(f.managers["table2"])).Should(Equal(2))
-		f.Close("table1" ,0)
+		f.Close("table1", 0)
 		f.Close("table1", 1)
 		Ω(len(f.managers)).Should(Equal(1))
 		Ω(len(f.managers["table2"])).Should(Equal(2))

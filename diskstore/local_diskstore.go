@@ -170,7 +170,7 @@ func (l LocalDiskStore) ListSnapshotVectorPartyFiles(table string, shard int,
 	return l.readVectoryPartyFiles(snapshotBatchDir)
 }
 
-func (l LocalDiskStore) readVectoryPartyFiles(dir string) (columnIDs[]int, err error) {
+func (l LocalDiskStore) readVectoryPartyFiles(dir string) (columnIDs []int, err error) {
 	vpFiles, err := ioutil.ReadDir(dir)
 
 	if os.IsNotExist(err) {
@@ -292,7 +292,7 @@ func (l LocalDiskStore) DeleteSnapshot(table string, shard int, latestRedoLogFil
 
 // ListArchiveBatchVectorPartyFiles return all vp for one batch version/seq
 func (l LocalDiskStore) ListArchiveBatchVectorPartyFiles(table string, shard, batchID int,
-	batchVersion uint32, seqNum uint32)([]int, error) {
+	batchVersion uint32, seqNum uint32) ([]int, error) {
 	batchIDTimeStr := daysSinceEpochToTimeStr(batchID)
 	tableArchiveBatchDir := GetPathForTableArchiveBatchDir(l.rootPath, table, shard, batchIDTimeStr, batchVersion, seqNum)
 	return l.readVectoryPartyFiles(tableArchiveBatchDir)

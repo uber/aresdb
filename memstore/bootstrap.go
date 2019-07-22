@@ -483,10 +483,10 @@ func (shard *TableShard) startStreamSession(peerHost topology.Host, client rpc.P
 	done := make(chan struct{})
 	ttl := int64(options.BootstrapSessionTTL())
 	startSessionRequest := &rpc.StartSessionRequest{
-		Table: shard.Schema.Schema.Name,
-		Shard: uint32(shard.ShardID),
+		Table:  shard.Schema.Schema.Name,
+		Shard:  uint32(shard.ShardID),
 		NodeID: origin,
-		Ttl:   ttl,
+		Ttl:    ttl,
 	}
 
 	session, err := client.StartSession(context.Background(), startSessionRequest)

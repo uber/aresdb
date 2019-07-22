@@ -16,10 +16,10 @@ package testing
 
 import (
 	"bytes"
-	"github.com/onsi/ginkgo"
+	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
-	"fmt"
+	"github.com/onsi/ginkgo"
 )
 
 // TestReadWriteCloser implements a in-memory io.ReadWriteCloser and utils.ReaderSeekerCloser for testing files.
