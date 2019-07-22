@@ -56,7 +56,7 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host
 	if hll {
 		var results []queryCom.AQLQueryResult
 		var errs []error
-		results, errs, err = queryCom.ParseHLLQueryResults(bs)
+		results, errs, err = queryCom.ParseHLLQueryResults(bs, true)
 		if err != nil {
 			utils.GetLogger().With("host", host, "query", query, "error", err, "errors", errs, "hll", hll).Error("datanode query client Query failed")
 			return

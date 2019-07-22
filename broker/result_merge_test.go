@@ -448,8 +448,8 @@ var _ = ginkgo.Describe("resultMerge", func() {
 	ginkgo.It("hll should work same shape", func() {
 		data, err := ioutil.ReadFile("../testing/data/query/hll_query_results")
 		Ω(err).Should(BeNil())
-		lhs, _, _ := queryCom.ParseHLLQueryResults(data)
-		rhs, _, _ := queryCom.ParseHLLQueryResults(data)
+		lhs, _, _ := queryCom.ParseHLLQueryResults(data, true)
+		rhs, _, _ := queryCom.ParseHLLQueryResults(data, true)
 		ctx := newResultMergeContext(common.Hll)
 		result := ctx.run(lhs[0], rhs[0])
 		Ω(ctx.err).Should(BeNil())

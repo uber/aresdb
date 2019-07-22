@@ -54,7 +54,7 @@ const (
 //	 [uint32] data_type_0...[uint32] data_type_n [padding for 8 bytes]
 //
 //	 <enum cases 0>
-//	 [uint32_t] number of bytes of enum cases [uint16] column_index [2 bytes: padding]
+//	 [uint32_t] number of bytes of enum cases [uint16] dim_index [2 bytes: padding]
 //	 <enum values 0> delimited by "\u0000\n" [padding for 8 bytes]
 //	 <end of header>
 //	 <raw dim values vector>
@@ -74,7 +74,7 @@ type HLLData struct {
 
 	DimIndexes []int
 	DataTypes  []memCom.DataType
-	// map from column id => enum cases. It will
+	// map from dimension index => enum cases. It will
 	// only include columns used in dimensions.
 	EnumDicts map[int][]string
 }
@@ -98,7 +98,7 @@ func (data *HLLData) CalculateSizes() (uint32, int64) {
 
 	// Enum cases.
 	for _, enumCases := range data.EnumDicts {
-		// number of bytes of enum cases + column index + padding = 8 bytes.
+		// number of bytes of enum cases + dim index + padding = 8 bytes.
 		headerSize += int(8 + CalculateEnumCasesBytes(enumCases))
 	}
 
@@ -214,7 +214,7 @@ func (hll *HLL) Set(index uint16, rho byte) {
 	}
 }
 
-func parseOldTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
+func parseOldTimeseriesHLLResult(buffer []byte, ignoreEnum bool) (AQLQueryResult, error) {
 	// empty result buffer
 	if len(buffer) == 0 {
 		return AQLQueryResult{}, nil
@@ -301,7 +301,7 @@ func parseOldTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
 			return nil, err
 		}
 
-		columnID, err := reader.ReadUint16()
+		dimIdx, err := reader.ReadUint16()
 		if err != nil {
 			return nil, err
 		}
@@ -315,7 +315,7 @@ func parseOldTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
 
 		// remove last empty element.
 		enumCases = enumCases[:len(enumCases)-1]
-		enumDicts[int(columnID)] = enumCases
+		enumDicts[int(dimIdx)] = enumCases
 	}
 
 	headerSize := reader.GetBytesRead()
@@ -346,7 +346,11 @@ func parseOldTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
 			offsets := dimOffsets[dimIndex]
 			valueOffset, nullOffset := offsets[0], offsets[1]
 			valuePtr, nullPtr := memAccess(dimValuesVector, valueOffset), memAccess(dimValuesVector, nullOffset)
-			dimValues[dimIndex] = ReadDimension(valuePtr, nullPtr, i, dataTypes[dimIndex], enumDicts[dimIndex], nil, nil)
+			enumDict := []string{}
+			if !ignoreEnum {
+				enumDict = enumDicts[dimIndex]
+			}
+			dimValues[dimIndex] = ReadDimension(valuePtr, nullPtr, i, dataTypes[dimIndex], enumDict, nil, nil)
 		}
 
 		count := *(*uint16)(memAccess(countVector, int(2*i)))
@@ -357,7 +361,7 @@ func parseOldTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
 	return result, nil
 }
 
-func parseTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
+func parseTimeseriesHLLResult(buffer []byte, ignoreEnum bool) (AQLQueryResult, error) {
 	// empty result buffer
 	if len(buffer) == 0 {
 		return AQLQueryResult{}, nil
@@ -435,7 +439,7 @@ func parseTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
 			return nil, err
 		}
 
-		columnID, err := reader.ReadUint16()
+		dimIdx, err := reader.ReadUint16()
 		if err != nil {
 			return nil, err
 		}
@@ -449,7 +453,7 @@ func parseTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
 
 		// remove last empty element.
 		enumCases = enumCases[:len(enumCases)-1]
-		enumDicts[int(columnID)] = enumCases
+		enumDicts[int(dimIdx)] = enumCases
 	}
 
 	headerSize := reader.GetBytesRead()
@@ -480,7 +484,11 @@ func parseTimeseriesHLLResult(buffer []byte) (AQLQueryResult, error) {
 			offsets := dimOffsets[dimIndex]
 			valueOffset, nullOffset := offsets[0], offsets[1]
 			valuePtr, nullPtr := memAccess(dimValuesVector, valueOffset), memAccess(dimValuesVector, nullOffset)
-			dimValues[dimIndex] = ReadDimension(valuePtr, nullPtr, i, dataTypes[dimIndex], enumDicts[dimIndex], nil, nil)
+			enumDict := []string{}
+			if !ignoreEnum {
+				enumDict = enumDicts[dimIndex]
+			}
+			dimValues[dimIndex] = ReadDimension(valuePtr, nullPtr, i, dataTypes[dimIndex], enumDict, nil, nil)
 		}
 
 		count := *(*uint16)(memAccess(countVector, int(2*i)))
@@ -518,12 +526,12 @@ func computeHLLResultRecursive(result interface{}) interface{} {
 }
 
 // NewTimeSeriesHLLResult creates a new NewTimeSeriesHLLResult and deserialize the buffer into the result.
-func NewTimeSeriesHLLResult(buffer []byte, magicHeader uint32) (AQLQueryResult, error) {
+func NewTimeSeriesHLLResult(buffer []byte, magicHeader uint32, ignoreEnum bool) (AQLQueryResult, error) {
 	switch magicHeader {
 	case OldHLLDataHeader:
-		return parseOldTimeseriesHLLResult(buffer)
+		return parseOldTimeseriesHLLResult(buffer, ignoreEnum)
 	case HLLDataHeader:
-		return parseTimeseriesHLLResult(buffer)
+		return parseTimeseriesHLLResult(buffer, ignoreEnum)
 	default:
 		// should not happen
 		return nil, utils.StackError(nil, "magic header version unsupported: %d", magicHeader)
@@ -572,7 +580,7 @@ func readHLL(hllVector unsafe.Pointer, count uint16, currentOffset *int64) HLL {
 }
 
 // ParseHLLQueryResults will parse the response body into a slice of query results and a slice of errors.
-func ParseHLLQueryResults(data []byte) (queryResults []AQLQueryResult, queryErrors []error, err error) {
+func ParseHLLQueryResults(data []byte, ignoreEnum bool) (queryResults []AQLQueryResult, queryErrors []error, err error) {
 	reader := utils.NewStreamDataReader(bytes.NewBuffer(data))
 
 	var magicHeader uint32
@@ -610,7 +618,7 @@ func ParseHLLQueryResults(data []byte) (queryResults []AQLQueryResult, queryErro
 			queryResults = append(queryResults, nil)
 		} else {
 			var res AQLQueryResult
-			if res, err = NewTimeSeriesHLLResult(bs, magicHeader); err != nil {
+			if res, err = NewTimeSeriesHLLResult(bs, magicHeader, ignoreEnum); err != nil {
 				return
 			}
 			queryResults = append(queryResults, res)
@@ -688,11 +696,37 @@ func (hll *HLL) Encode() []byte {
 	if len(hll.DenseData) != 0 {
 		return hll.DenseData
 	}
-	data := make([]byte, 3*len(hll.SparseData))
+	return hll.encodeSparse(false)
+}
+
+// EncodeBinary converts HLL to binary format
+// aligns to 4 bytes for sparse hll
+// used to build response for application/hll queries from HLL struct
+func (hll *HLL) EncodeBinary() []byte {
+	if len(hll.DenseData) != 0 {
+		return hll.DenseData
+	}
+	return hll.encodeSparse(true)
+}
+
+// encode sparse HLL value in 2 modes
+// 1. padding (1 byte) | rho (1 byte) | index (2 byte)  endianness based on the machine itself
+// 2. rho (1 byte) | index (2 byte)  small endian
+// based on `padding` parameter
+func (hll *HLL) encodeSparse(padding bool) []byte {
+	recordValueBytes := 3
+	if padding {
+		recordValueBytes = 4
+	}
+	data := make([]byte, (recordValueBytes)*len(hll.SparseData))
 	for i, register := range hll.SparseData {
-		data[i*3] = byte(register.Index & 0xff)
-		data[i*3+1] = byte(register.Index >> 8)
-		data[i*3+2] = register.Rho
+		if padding {
+			*(*uint32)(unsafe.Pointer(&data[i*recordValueBytes])) = (uint32(int8(register.Rho)))<<16 | uint32(register.Index)
+		} else {
+			data[i*recordValueBytes] = byte(register.Index & 0xff)
+			data[i*recordValueBytes+1] = byte(register.Index >> 8)
+			data[i*recordValueBytes+2] = register.Rho
+		}
 	}
 	return data
 }
@@ -814,3 +848,279 @@ var hllBiases = []float64{
 	-32.3715999999986, -22.3907999999938, -43.6720000000059, -35.9038, -39.7492000000057,
 	-54.1641999999993, -45.2749999999942, -42.2989999999991, -44.1089999999967, -64.3564000000042,
 	-49.9551999999967, -42.6116000000038}
+
+// HLLDataWriter is the struct to serialize HLL Data struct.
+type HLLDataWriter struct {
+	HLLData
+	Buffer []byte
+}
+
+// SerializeHeader serialize HLL header
+//	-----------query result 0-------------------
+//	 <header>
+//	 [uint8] num_enum_columns [uint8] bytes per dim ... [padding for 8 bytes]
+//	 [uint32] result_size [uint32] raw_dim_values_vector_length
+//	 [uint8] dim_index_0... [uint8] dim_index_n [padding for 8 bytes]
+//	 [uint32] data_type_0...[uint32] data_type_n [padding for 8 bytes]
+//
+//	 <enum cases 0>
+//	 [uint32_t] number of bytes of enum cases [uint16] column_index [2 bytes: padding]
+//	 <enum values 0> delimited by "\u0000\n" [padding for 8 bytes]
+//
+// 	 <end of header>
+func (builder *HLLDataWriter) SerializeHeader() error {
+	writer := utils.NewBufferWriter(builder.Buffer)
+
+	// num_enum_columns
+	if err := writer.AppendUint8(uint8(len(builder.EnumDicts))); err != nil {
+		return err
+	}
+
+	// bytes per dim
+	if err := writer.Append([]byte(builder.NumDimsPerDimWidth[:])); err != nil {
+		return err
+	}
+	writer.AlignBytes(8)
+
+	// result_size
+	if err := writer.AppendUint32(builder.ResultSize); err != nil {
+		return err
+	}
+
+	// raw_dim_values_vector_length
+	if err := writer.AppendUint32(builder.PaddedRawDimValuesVectorLength); err != nil {
+		return err
+	}
+
+	// dim_indexes
+	for _, dimIndex := range builder.DimIndexes {
+		if err := writer.AppendUint8(uint8(dimIndex)); err != nil {
+			return err
+		}
+	}
+	writer.AlignBytes(8)
+
+	// data_types
+	for _, dataType := range builder.DataTypes {
+		if err := writer.AppendUint32(uint32(dataType)); err != nil {
+			return err
+		}
+	}
+	writer.AlignBytes(8)
+
+	// Write enum cases.
+	for dimIdx, enumCases := range builder.EnumDicts {
+		enumCasesBytes := CalculateEnumCasesBytes(enumCases)
+		if err := writer.AppendUint32(enumCasesBytes); err != nil {
+			return err
+		}
+
+		if err := writer.AppendUint16(uint16(dimIdx)); err != nil {
+			return err
+		}
+
+		// padding
+		writer.SkipBytes(2)
+
+		var enumCaseBytesWritten uint32
+		for _, enumCase := range enumCases {
+			if err := writer.Append([]byte(enumCase)); err != nil {
+				return err
+			}
+
+			if err := writer.Append([]byte(EnumDelimiter)); err != nil {
+				return err
+			}
+
+			enumCaseBytesWritten += uint32(len(enumCase)) + 2
+		}
+
+		writer.SkipBytes(int(enumCasesBytes - enumCaseBytesWritten))
+	}
+	return nil
+}
+
+// HLLQueryResults holds the buffer to store multiple hll query results or errors.
+type HLLQueryResults struct {
+	buffer bytes.Buffer
+}
+
+// NewHLLQueryResults returns a new NewHLLQueryResults and writes the magical header and
+// padding to underlying buffer.
+func NewHLLQueryResults() *HLLQueryResults {
+	r := &HLLQueryResults{}
+	header := HLLDataHeader
+	r.buffer.Write((*(*[4]byte)(unsafe.Pointer(&header)))[:])
+	// Padding.
+	var bs [4]byte
+	r.buffer.Write(bs[:])
+	return r
+}
+
+// WriteResult write result to the buffer.
+func (r *HLLQueryResults) WriteResult(result []byte) {
+	totalSize := uint32(len(result))
+	// Write total size.
+	r.buffer.Write((*(*[4]byte)(unsafe.Pointer(&totalSize)))[:])
+	// 0 stands for result.
+	r.buffer.WriteByte(byte(0))
+	// Padding.
+	var bs [3]byte
+	r.buffer.Write(bs[:])
+	r.buffer.Write(result)
+}
+
+// WriteError write error to the buffer.
+func (r *HLLQueryResults) WriteError(err error) {
+	totalSize := len(err.Error())
+	// Write total size.
+	r.buffer.Write((*(*[4]byte)(unsafe.Pointer(&totalSize)))[:])
+	// 1 stands for error.
+	r.buffer.WriteByte(byte(1))
+	// Padding.
+	var bs [3]byte
+	r.buffer.Write(bs[:])
+	strErr := err.Error()
+	padding := (8 - (len(strErr) & 7)) & 8
+	r.buffer.Write([]byte(strErr))
+	if padding > 0 {
+		paddingBytes := make([]byte, padding)
+		r.buffer.Write(paddingBytes)
+	}
+}
+
+// GetBytes returns the underlying bytes.
+func (r *HLLQueryResults) GetBytes() []byte {
+	return r.buffer.Bytes()
+}
+
+// BuildVectorsFromHLLResult traverses input HLL query result and builds byte slices
+// result must have HLL in the leave nodes
+// this function is useful when converting HLL query result to it's binary format
+// dimDataTypes stores types of each dimension, in the the same order as in query
+// dimensionVectorIndex stores re-ordered dimension index, sorted by dim datatype width
+func BuildVectorsFromHLLResult(result AQLQueryResult, dimDataTypes []memCom.DataType, enumDicts map[int]map[string]int, dimensionVectorIndex []int) (hllVector, dimVector, countVector []byte, err error) {
+	hllVector = []byte{}
+	countVector = []byte{}
+
+	dimVectors := make([][]byte, len(dimDataTypes))
+	validityVectors := make([][]byte, len(dimDataTypes))
+
+	_, err = traverseRecursive(0, map[string]interface{}(result), dimDataTypes, enumDicts, &hllVector, &countVector, dimVectors, validityVectors)
+	if err != nil {
+		return
+	}
+
+	dimVector = []byte{}
+	// append in descending order of width
+	for _, idx := range dimensionVectorIndex {
+		dimVector = append(dimVector, dimVectors[idx]...)
+	}
+	for _, idx := range dimensionVectorIndex {
+		dimVector = append(dimVector, validityVectors[idx]...)
+	}
+
+	return
+}
+
+// helper function that traverses HLL query result in post order
+// returns: size is the total num dim rows of the subtree rooted by current node
+func traverseRecursive(dimIdx int, curr interface{}, dimDataTypes []memCom.DataType, enumDicts map[int]map[string]int, hllVector, countVector *[]byte, dimVectors, validityVectors [][]byte) (size int, err error) {
+	switch v := curr.(type) {
+	case map[string]interface{}:
+		dimDataType := dimDataTypes[dimIdx]
+		dimValueBytes := memCom.DataTypeBytes(dimDataType)
+
+		// iterate map in order
+		keys := make([]string, len(v))
+		kidx := 0
+		for k, _ := range v {
+			keys[kidx] = k
+			kidx++
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			v := v[k]
+			// visit child first
+			var childSize int
+			childSize, err = traverseRecursive(dimIdx+1, v, dimDataTypes, enumDicts, hllVector, countVector, dimVectors, validityVectors)
+			if err != nil {
+				return
+			}
+			// convert dimension
+			var (
+				dataVal memCom.DataValue
+				isValid uint8 = 1
+			)
+			if NULLString == k {
+				isValid = 0
+			} else {
+				if enumDict, ok := enumDicts[dimIdx]; ok {
+					enumVal := enumDict[k]
+					if dimValueBytes == 1 {
+						ui8 := uint8(enumVal)
+						dataVal = memCom.DataValue{
+							Valid:    true,
+							OtherVal: unsafe.Pointer(&ui8),
+						}
+					} else if dimValueBytes == 2 {
+						ui16 := uint16(enumVal)
+						dataVal = memCom.DataValue{
+							Valid:    true,
+							OtherVal: unsafe.Pointer(&ui16),
+						}
+					} else {
+						err = utils.StackError(nil, "data width %d doesn't match any enum", dimValueBytes)
+					}
+				} else {
+					dataVal, err = memCom.ValueFromString(k, dimDataType)
+					if err != nil {
+						return
+					}
+				}
+			}
+
+			var bs []byte
+			if dataVal.Valid {
+				byteVal := dataVal.OtherVal
+				switch dimValueBytes {
+				case 8:
+					bs = (*[8]byte)(byteVal)[:]
+				case 4:
+					bs = (*[4]byte)(byteVal)[:]
+				case 2:
+					bs = (*[2]byte)(byteVal)[:]
+				case 1:
+					bs = (*[1]byte)(byteVal)[:]
+				}
+			} else {
+				bs = make([]byte, dimValueBytes)
+			}
+			for i := 0; i < childSize; i++ {
+				dimVectors[dimIdx] = append(dimVectors[dimIdx], bs...)
+				validityVectors[dimIdx] = append(validityVectors[dimIdx], byte(isValid))
+			}
+			size += childSize
+		}
+	case HLL:
+		count := v.NonZeroRegisters
+
+		if count < DenseThreshold {
+			if !v.ConvertToSparse() {
+				err = utils.StackError(nil, "Failed to convert HLL to sparse %+v", v)
+				return
+			}
+		} else {
+			v.ConvertToDense()
+		}
+
+		bs := v.EncodeBinary()
+		*hllVector = append(*hllVector, bs...)
+		*countVector = append(*countVector, (*((*[2]byte)(unsafe.Pointer(&count))))[:]...)
+		size = 1
+	default:
+		err = utils.StackError(nil, "unknown type %+v", curr)
+	}
+	return
+}

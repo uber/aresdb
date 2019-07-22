@@ -35,7 +35,7 @@ var bytesComma = []byte(",")
 func (qc *AQLQueryContext) Postprocess() {
 	oopkContext := qc.OOPK
 	if oopkContext.IsHLL() {
-		result, err := queryCom.NewTimeSeriesHLLResult(qc.HLLQueryResult, queryCom.HLLDataHeader)
+		result, err := queryCom.NewTimeSeriesHLLResult(qc.HLLQueryResult, queryCom.HLLDataHeader, qc.DataOnly)
 		if err != nil {
 			// should never be here except bug
 			qc.Error = utils.StackError(err, "failed to read hll result")

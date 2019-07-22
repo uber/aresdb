@@ -22,6 +22,11 @@ import (
 	"unsafe"
 )
 
+const (
+	// string representing null dimension values
+	NULLString = "NULL"
+)
+
 // DimCountsPerDimWidth defines dimension counts per dimension width
 // 16-byte 8-byte 4-byte 2-byte 1-byte
 type DimCountsPerDimWidth [5]uint8

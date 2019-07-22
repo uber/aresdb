@@ -43,7 +43,7 @@ type AQLQueryResult map[string]interface{}
 
 // Set measure value for dimensions
 func (r AQLQueryResult) Set(dimValues []*string, measureValue *float64) {
-	null := "NULL"
+	null := NULLString
 	var current map[string]interface{} = r
 	for i, dimValue := range dimValues {
 		if dimValue == nil {
@@ -69,7 +69,7 @@ func (r AQLQueryResult) Set(dimValues []*string, measureValue *float64) {
 
 // SetHLL sets hll struct to be the leaves of the nested map.
 func (r AQLQueryResult) SetHLL(dimValues []*string, hll HLL) {
-	null := "NULL"
+	null := NULLString
 	var current map[string]interface{} = r
 	for i, dimValue := range dimValues {
 		if dimValue == nil {
@@ -106,7 +106,7 @@ func (r AQLQueryResult) Append(dimValues []*string) {
 	values := make([]interface{}, len(dimValues))
 	for index, v := range dimValues {
 		if v == nil {
-			values[index] = "NULL"
+			values[index] = NULLString
 		} else {
 			values[index] = *v
 		}
