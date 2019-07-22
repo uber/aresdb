@@ -220,6 +220,7 @@ func (v1 DataValue) ConvertToHumanReadable(dataType DataType) interface{} {
 				pointsStrs := make([]string, len(points))
 				for j, point := range points {
 					// in string format, lng goes first and lat second
+					// https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
 					pointsStrs[j] = fmt.Sprintf("%.4f+%.4f", point[1], point[0])
 				}
 				polygons[i] = fmt.Sprintf("(%s)", strings.Join(pointsStrs, ","))

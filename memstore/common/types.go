@@ -14,6 +14,11 @@ type TableSchemaReader interface {
 	utils.RWLocker
 }
 
+type EnumUpdater interface {
+	// UpdateEnum can update enum for one column
+	UpdateEnum(table, column string, enumList []string) error
+}
+
 // BootStrapToken used to Acqure/Release token during data purge operations
 type BootStrapToken interface {
 	// Call AcquireToken to reserve usage token before any data purge operation

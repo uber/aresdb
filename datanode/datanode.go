@@ -230,7 +230,7 @@ func (d *dataNode) startSchemaWatch() {
 		}
 
 		controllerClient := controllerCli.NewControllerHTTPClient(controllerClientCfg.Address, time.Duration(controllerClientCfg.TimeoutSec)*time.Second, controllerClientCfg.Headers)
-		schemaFetchJob := metastore.NewSchemaFetchJob(5*60, d.metaStore, metastore.NewTableSchameValidator(), controllerClient, d.opts.ServerConfig().Cluster.Namespace, "")
+		schemaFetchJob := metastore.NewSchemaFetchJob(30, d.metaStore, nil, metastore.NewTableSchameValidator(), controllerClient, nil, d.opts.ServerConfig().Cluster.Namespace, "")
 		// immediate initial fetch
 		schemaFetchJob.FetchSchema()
 		go schemaFetchJob.Run()
