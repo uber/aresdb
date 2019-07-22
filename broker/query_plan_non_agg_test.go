@@ -80,7 +80,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 
 		// test negative limit (no limit)
 		w := httptest.NewRecorder()
-		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
+		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
 		Ω(err).Should(BeNil())
 
 		Ω(plan.nodes).Should(HaveLen(len(mockHosts)))
@@ -92,7 +92,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		Ω(plan.nodes[0].query.Shards).Should(HaveLen(2))
 		Ω(plan.nodes[1].query.Shards).Should(HaveLen(2))
 
-		err = plan.Execute(context.TODO())
+		err = plan.Execute(context.TODO(), w)
 		Ω(err).Should(BeNil())
 
 		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"],["bar","2"],["foo","1"],["bar","2"]]}`))
@@ -100,10 +100,10 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		// test limit
 		qc.AQLQuery.Limit = 3
 		w = httptest.NewRecorder()
-		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
+		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
 		Ω(err).Should(BeNil())
 		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
-		err = plan.Execute(context.TODO())
+		err = plan.Execute(context.TODO(), w)
 		Ω(err).Should(BeNil())
 		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))
 

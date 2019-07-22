@@ -62,13 +62,12 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 	return
 }
 
-func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient, w http.ResponseWriter) (plan NonAggQueryPlan, err error) {
+func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan NonAggQueryPlan, err error) {
 	headers := make([]string, len(qc.AQLQuery.Dimensions))
 	for i, dim := range qc.AQLQuery.Dimensions {
 		headers[i] = dim.Expr
 	}
 	plan.headers = headers
-	plan.w = w
 	plan.resultChan = make(chan streamingScanNoderesult)
 	plan.limit = qc.AQLQuery.Limit
 
@@ -104,7 +103,6 @@ type streamingScanNoderesult struct {
 
 // NonAggQueryPlan implements QueryPlan
 type NonAggQueryPlan struct {
-	w          http.ResponseWriter
 	resultChan chan streamingScanNoderesult
 	headers    []string
 	nodes      []*StreamingScanNode
@@ -114,21 +112,21 @@ type NonAggQueryPlan struct {
 	flushed int
 }
 
-func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
+func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) (err error) {
 	var headersBytes []byte
 	headersBytes, err = json.Marshal(nqp.headers)
 	if err != nil {
 		return
 	}
-	_, err = nqp.w.Write([]byte(`{"headers":`))
+	_, err = w.Write([]byte(`{"headers":`))
 	if err != nil {
 		return
 	}
-	_, err = nqp.w.Write(headersBytes)
+	_, err = w.Write(headersBytes)
 	if err != nil {
 		return
 	}
-	_, err = nqp.w.Write([]byte(`,"matrixData":[`))
+	_, err = w.Write([]byte(`,"matrixData":[`))
 	if err != nil {
 		return
 	}
@@ -166,7 +164,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 		// write rows
 		if nqp.limit < 0 {
 			// when no limit, flush data directly
-			nqp.w.Write(res.data)
+			w.Write(res.data)
 		} else {
 			// with limit, we have to deserialize
 			serDeStart := utils.Now()
@@ -181,7 +179,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 			}
 
 			if len(resultData) <= nqp.getRowsWanted() {
-				nqp.w.Write(res.data[1 : len(res.data)-1])
+				w.Write(res.data[1 : len(res.data)-1])
 				nqp.flushed += len(resultData)
 				utils.GetLogger().With("nrows", len(resultData)).Debug("flushed batch")
 			} else {
@@ -192,18 +190,18 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 				if err != nil {
 					return
 				}
-				nqp.w.Write(bs[1 : len(bs)-1])
+				w.Write(bs[1 : len(bs)-1])
 				nqp.flushed += rowsToFlush
 				utils.GetLogger().With("nrows", rowsToFlush).Debug("flushed rows")
 			}
 			utils.GetRootReporter().GetTimer(utils.TimeSerDeDataNodeResponse).Record(utils.Now().Sub(serDeStart))
 		}
 		if !(nqp.getRowsWanted() == 0) && i != len(nqp.nodes)-1 {
-			nqp.w.Write([]byte(`,`))
+			w.Write([]byte(`,`))
 		}
 	}
 
-	_, err = nqp.w.Write([]byte(`]}`))
+	_, err = w.Write([]byte(`]}`))
 	return
 }
 

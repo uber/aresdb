@@ -399,8 +399,8 @@ func (bc *oopkBatchContext) makeWriteToDimensionVectorAction(valueOffset, nullOf
 			return
 		}
 
-		dataType := getDimensionDataType(exp)
-		dataBytes := getDimensionDataBytes(exp)
+		dataType := common.GetDimensionDataType(exp)
+		dataBytes := common.GetDimensionDataBytes(exp)
 		outputVector := makeDimensionVectorOutput(
 			bc.dimensionVectorD[0].getPointer(),
 			// move dimensionVectorD to the start position of current batch

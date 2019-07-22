@@ -19,27 +19,44 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	common2 "github.com/uber/aresdb/metastore/common"
-	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	memCom "github.com/uber/aresdb/memstore/common"
+	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"net/http/httptest"
 )
 
 var _ = ginkgo.Describe("query compiler", func() {
+	table1 := &metaCom.Table{
+		Name: "table1",
+		Columns: []metaCom.Column{
+			{Name: "field1", Type: "Uint32"},
+			{Name: "field2", Type: "Uint16"},
+		},
+	}
+	tableSchema1 := memCom.NewTableSchema(table1)
+
+	table2 := &metaCom.Table{
+		Name: "table2",
+		Columns: []metaCom.Column{
+			{Name: "field2"},
+		},
+	}
+	tableSchema2 := memCom.NewTableSchema(table2)
+
 	ginkgo.It("should work happy path", func() {
-		mockMutator := metaMocks.TableSchemaReader{}
-		mockMutator.On("GetTable", "table1").Return(&common2.Table{
-			Name: "table1",
-			Columns: []common2.Column{
-				{Name: "field1"},
-				{Name: "field2"},
-			},
-		}, nil)
+		mockTableSchemaReader := memComMocks.TableSchemaReader{}
+		mockTableSchemaReader.On("RLock").Return(nil)
+		mockTableSchemaReader.On("RUnlock").Return(nil)
+		mockTableSchemaReader.On("GetSchema", "table1").Return(tableSchema1, nil)
+		mockTableSchemaReader.On("GetSchema", "table2").Return(tableSchema2, nil)
 
 		qc := NewQueryContext(&common.AQLQuery{
 			Table: "table1",
-			Joins: nil,
+			Joins: []common.Join{
+				{Table: "table2", Conditions: []string{"table1.field2 = table2.field2"}},
+			},
 			Dimensions: []common.Dimension{
 				{
 					Expr: "field1",
@@ -50,26 +67,33 @@ var _ = ginkgo.Describe("query compiler", func() {
 					Expr: "count(*)",
 				},
 			},
-			SQLQuery: "SELECT count(*) FROM table1 GROUP BY field1",
-		}, httptest.NewRecorder())
-		qc.Compile(&mockMutator)
+			SQLQuery: "SELECT count(*) FROM table1 JOIN table2 ON table1.field2 = table2.field2 GROUP BY field1",
+		}, false, httptest.NewRecorder())
+		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.AQLQuery).Should(Equal(&common.AQLQuery{
 			Table: "table1",
-			Joins: nil,
+			Joins: []common.Join{
+				{Table: "table2", Conditions: []string{"table1.field2 = table2.field2"}},
+			},
 			Dimensions: []common.Dimension{
 				{
-					Expr: "field1",
+					Expr:       "field1",
+					ExprParsed: &expr.VarRef{Val: "field1", ExprType: 2, TableID: 0, ColumnID: 0, DataType: memCom.Uint32},
 				},
 			},
 			Measures: []common.Measure{
 				{
 					Expr:       "count(*)",
-					ExprParsed: &expr.Call{Name: "count", Args: []expr.Expr{&expr.Wildcard{}}, ExprType: 0},
+					ExprParsed: &expr.Call{Name: "count", Args: []expr.Expr{&expr.Wildcard{}}, ExprType: 2},
 				},
 			},
-			SQLQuery: "SELECT count(*) FROM table1 GROUP BY field1",
+			SQLQuery: "SELECT count(*) FROM table1 JOIN table2 ON table1.field2 = table2.field2 GROUP BY field1",
 		}))
+
+		Ω(qc.NumDimsPerDimWidth).Should(Equal(common.DimCountsPerDimWidth{0, 0, 1, 0, 0}))
+		Ω(qc.DimensionVectorIndex).Should(Equal([]int{0}))
+		Ω(qc.DimRowBytes).Should(Equal(5))
 
 		qc = NewQueryContext(&common.AQLQuery{
 			Table: "table1",
@@ -87,15 +111,15 @@ var _ = ginkgo.Describe("query compiler", func() {
 			},
 			Limit:    nonAggregationQueryLimit,
 			SQLQuery: "SELECT * FROM table1",
-		}, httptest.NewRecorder())
-		qc.Compile(&mockMutator)
+		}, false, httptest.NewRecorder())
+		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.AQLQuery).Should(Equal(&common.AQLQuery{
 			Table: "table1",
 			Joins: nil,
 			Dimensions: []common.Dimension{
-				{Expr: "field1"},
-				{Expr: "field2"},
+				{Expr: "field1", ExprParsed: &expr.VarRef{Val: "field1", ExprType: 2, DataType: memCom.Uint32}},
+				{Expr: "field2", ExprParsed: &expr.VarRef{Val: "field2", ColumnID: 1, ExprType: 2, DataType: memCom.Uint16}},
 			},
 			Measures: []common.Measure{
 				{
@@ -109,8 +133,10 @@ var _ = ginkgo.Describe("query compiler", func() {
 	})
 
 	ginkgo.It("should fail invalid table names", func() {
-		mockMutator := metaMocks.TableSchemaReader{}
-		mockMutator.On("GetTable", "tableNonExist").Return(nil, errors.New("not found"))
+		mockTableSchemaReader := memComMocks.TableSchemaReader{}
+		mockTableSchemaReader.On("RLock").Return(nil)
+		mockTableSchemaReader.On("RUnlock").Return(nil)
+		mockTableSchemaReader.On("GetSchema", "tableNonExist").Return(nil, errors.New("not found"))
 
 		qc := NewQueryContext(&common.AQLQuery{
 			Table: "tableNonExist",
@@ -128,12 +154,12 @@ var _ = ginkgo.Describe("query compiler", func() {
 			},
 			Limit:    nonAggregationQueryLimit,
 			SQLQuery: "SELECT * FROM tableNonExist",
-		}, httptest.NewRecorder())
-		qc.Compile(&mockMutator)
+		}, false, httptest.NewRecorder())
+		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).ShouldNot(BeNil())
 
-		mockMutator.On("GetTable", "table1").Return(nil, nil)
-		mockMutator.On("GetTable", "foreignTableNonExsit").Return(nil, errors.New("no found"))
+		mockTableSchemaReader.On("GetSchema", "table1").Return(tableSchema1, nil)
+		mockTableSchemaReader.On("GetSchema", "foreignTableNonExsit").Return(nil, errors.New("no found"))
 		qc = NewQueryContext(&common.AQLQuery{
 			Table: "table1",
 			Joins: []common.Join{
@@ -151,14 +177,16 @@ var _ = ginkgo.Describe("query compiler", func() {
 				},
 			},
 			Limit: nonAggregationQueryLimit,
-		}, httptest.NewRecorder())
-		qc.Compile(&mockMutator)
+		}, false, httptest.NewRecorder())
+		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("should fail more than 1 measure", func() {
-		mockMutator := metaMocks.TableSchemaReader{}
-		mockMutator.On("GetTable", mock.Anything).Return(nil, nil)
+		mockTableSchemaReader := memComMocks.TableSchemaReader{}
+		mockTableSchemaReader.On("RLock").Return(nil)
+		mockTableSchemaReader.On("RUnlock").Return(nil)
+		mockTableSchemaReader.On("GetSchema", mock.Anything).Return(tableSchema1, nil)
 
 		qc := NewQueryContext(&common.AQLQuery{
 			Table: "table1",
@@ -177,8 +205,8 @@ var _ = ginkgo.Describe("query compiler", func() {
 				},
 			},
 			Limit: nonAggregationQueryLimit,
-		}, httptest.NewRecorder())
-		qc.Compile(&mockMutator)
+		}, false, httptest.NewRecorder())
+		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).ShouldNot(BeNil())
 	})
 })

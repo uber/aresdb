@@ -15,7 +15,6 @@
 package query
 
 import (
-	"bytes"
 	"github.com/uber/aresdb/cgoutils"
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
@@ -25,65 +24,11 @@ import (
 	"unsafe"
 )
 
-// HLLQueryResults holds the buffer to store multiple hll query results or errors.
-type HLLQueryResults struct {
-	buffer bytes.Buffer
-}
-
-// NewHLLQueryResults returns a new NewHLLQueryResults and writes the magical header and
-// padding to underlying buffer.
-func NewHLLQueryResults() *HLLQueryResults {
-	r := &HLLQueryResults{}
-	header := queryCom.HLLDataHeader
-	r.buffer.Write((*(*[4]byte)(unsafe.Pointer(&header)))[:])
-	// Padding.
-	var bs [4]byte
-	r.buffer.Write(bs[:])
-	return r
-}
-
-// WriteResult write result to the buffer.
-func (r *HLLQueryResults) WriteResult(result []byte) {
-	totalSize := uint32(len(result))
-	// Write total size.
-	r.buffer.Write((*(*[4]byte)(unsafe.Pointer(&totalSize)))[:])
-	// 0 stands for result.
-	r.buffer.WriteByte(byte(0))
-	// Padding.
-	var bs [3]byte
-	r.buffer.Write(bs[:])
-	r.buffer.Write(result)
-}
-
-// WriteError write error to the buffer.
-func (r *HLLQueryResults) WriteError(err error) {
-	totalSize := len(err.Error())
-	// Write total size.
-	r.buffer.Write((*(*[4]byte)(unsafe.Pointer(&totalSize)))[:])
-	// 1 stands for error.
-	r.buffer.WriteByte(byte(1))
-	// Padding.
-	var bs [3]byte
-	r.buffer.Write(bs[:])
-	strErr := err.Error()
-	padding := (8 - (len(strErr) & 7)) & 8
-	r.buffer.Write([]byte(strErr))
-	if padding > 0 {
-		paddingBytes := make([]byte, padding)
-		r.buffer.Write(paddingBytes)
-	}
-}
-
-// GetBytes returns the underlying bytes.
-func (r *HLLQueryResults) GetBytes() []byte {
-	return r.buffer.Bytes()
-}
-
 // SerializeHLL allocates buffer based on the metadata and then serializes hll data into the buffer.
 func (qc *AQLQueryContext) SerializeHLL(dataTypes []memCom.DataType,
 	enumDicts map[int][]string, timeDimensions []int) ([]byte, error) {
 	oopkContext := qc.OOPK
-	paddedRawDimValuesVectorLength := (uint32(dimValResVectorSize(oopkContext.ResultSize, oopkContext.NumDimsPerDimWidth)) + 7) / 8 * 8
+	paddedRawDimValuesVectorLength := (uint32(queryCom.DimValResVectorSize(oopkContext.ResultSize, oopkContext.NumDimsPerDimWidth)) + 7) / 8 * 8
 	paddedCountLength := uint32(2*oopkContext.ResultSize+7) / 8 * 8
 	paddedHLLVectorLength := (qc.OOPK.hllVectorSize + 7) / 8 * 8
 	builder := queryCom.HLLDataWriter{

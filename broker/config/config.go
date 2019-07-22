@@ -15,7 +15,6 @@
 package config
 
 import (
-	"github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/uber/aresdb/common"
 )
 
@@ -23,8 +22,6 @@ type BrokerConfig struct {
 	// HTTP port for serving.
 	Port int `yaml:"port"`
 
-	ControllerConfig *common.ControllerConfig `yaml:"controller,omitempty"`
-	HTTP             common.HTTPConfig        `yaml:"http"`
-	Etcd             etcd.Configuration       `yaml:"etcd"`
-	Cluster          common.ClusterConfig     `yaml:"cluster"`
+	HTTP    common.HTTPConfig    `yaml:"http"`
+	Cluster common.ClusterConfig `yaml:"cluster"`
 }

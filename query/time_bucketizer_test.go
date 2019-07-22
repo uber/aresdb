@@ -112,8 +112,8 @@ var _ = ginkgo.Describe("Time Bucketizer", func() {
 
 		qc.timezoneTable.tableColumn = ""
 		qc.fixedTimezone = time.FixedZone("Foo", 2018)
-		qc.fromTime = &alignedTime{Time: utils.Now().In(qc.fixedTimezone)}
-		qc.toTime = &alignedTime{Time: utils.Now().In(qc.fixedTimezone)}
+		qc.fromTime = &queryCom.AlignedTime{Time: utils.Now().In(qc.fixedTimezone)}
+		qc.toTime = &queryCom.AlignedTime{Time: utils.Now().In(qc.fixedTimezone)}
 		exp, err = qc.buildTimeDimensionExpr("week", timeColumn)
 		Ω(exp).ShouldNot(BeNil())
 		Ω(exp.String()).Should(Equal("GET_WEEK_START(request_at CONVERT_TZ 2018)"))
