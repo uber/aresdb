@@ -126,6 +126,7 @@ const (
 	QuerySucceededBroker
 	QueryLatencyBroker
 	SQLParsingLatencyBroker
+	QueryPlanExecuteFailures
 	DataNodeQueryFailures
 	TimeWaitedForDataNode
 	TimeSerDeDataNodeResponse
@@ -252,6 +253,7 @@ const (
 	scopeNameQuerySucceededBroker      = "query_succeeded_broker"
 	scopeNameQueryLatencyBroker        = "query_latency_broker"
 	scopeNameSQLParsingLatencyBroker   = "sql_parsing_latency_broker"
+	scopeNameQueryPlanExecuteFailures  = "query_plan_execute_failures"
 	scopeNameDataNodeQueryFailures     = "datanode_query_failures"
 	scopeNameTimeWaitedForDataNode     = "time_waited_for_datanodes"
 	scopeNameTimeSerDeDataNodeResponse = "time_serde_response"
@@ -1022,6 +1024,13 @@ var metricDefs = map[MetricName]metricDefinition{
 	SQLParsingLatencyBroker: {
 		name:       scopeNameSQLParsingLatencyBroker,
 		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	QueryPlanExecuteFailures: {
+		name:       scopeNameQueryPlanExecuteFailures,
+		metricType: Counter,
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentQuery,
 		},
