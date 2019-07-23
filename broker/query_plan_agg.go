@@ -182,7 +182,7 @@ type AggQueryPlan struct {
 }
 
 // NewAggQueryPlan creates a new agg query plan
-func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan AggQueryPlan, err error) {
+func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan *AggQueryPlan, err error) {
 	var root common.MergeNode
 
 	var assignments map[topology.Host][]uint32
@@ -206,7 +206,7 @@ func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.Da
 		root = buildSubPlan(agg, qc.AQLQuery, assignments, topo, client)
 	}
 
-	plan = AggQueryPlan{
+	plan = &AggQueryPlan{
 		aggType: agg,
 		qc:      qc,
 		root:    root,

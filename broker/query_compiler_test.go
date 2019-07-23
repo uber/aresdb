@@ -75,19 +75,19 @@ var _ = ginkgo.Describe("query compiler", func() {
 			Table: "table1",
 			Joins: []common.Join{
 				{
-					Table: "table2",
+					Table:      "table2",
 					Conditions: []string{"table1.field2 = table2.field2"},
 					ConditionsParsed: []expr.Expr{
 						&expr.BinaryExpr{
 							Op: expr.EQ,
 							LHS: &expr.VarRef{
-								Val: "table1.field2",
+								Val:      "table1.field2",
 								ExprType: 2,
 								ColumnID: 1,
 								DataType: memCom.Uint16,
 							},
 							RHS: &expr.VarRef{
-								Val: "table2.field2",
+								Val:     "table2.field2",
 								TableID: 1,
 							},
 							ExprType: 1,
@@ -103,12 +103,13 @@ var _ = ginkgo.Describe("query compiler", func() {
 			},
 			Measures: []common.Measure{
 				{
-					Expr:       "count(*)",
-					ExprParsed: &expr.Call{Name: "count", Args: []expr.Expr{&expr.Wildcard{}}, ExprType: 2},
+					Expr:          "count(*)",
+					ExprParsed:    &expr.Call{Name: "count", Args: []expr.Expr{&expr.Wildcard{}}, ExprType: 2},
+					FiltersParsed: []expr.Expr{},
 				},
 			},
 			FiltersParsed: []expr.Expr{},
-			SQLQuery: "SELECT count(*) FROM table1 JOIN table2 ON table1.field2 = table2.field2 GROUP BY field1",
+			SQLQuery:      "SELECT count(*) FROM table1 JOIN table2 ON table1.field2 = table2.field2 GROUP BY field1",
 		}))
 
 		Ω(qc.NumDimsPerDimWidth).Should(Equal(common.DimCountsPerDimWidth{0, 0, 1, 0, 0}))
@@ -143,13 +144,14 @@ var _ = ginkgo.Describe("query compiler", func() {
 			},
 			Measures: []common.Measure{
 				{
-					Expr:       "1",
-					ExprParsed: &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: 2},
+					Expr:          "1",
+					ExprParsed:    &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: 2},
+					FiltersParsed: []expr.Expr{},
 				},
 			},
 			FiltersParsed: []expr.Expr{},
-			Limit:    nonAggregationQueryLimit,
-			SQLQuery: "SELECT * FROM table1",
+			Limit:         nonAggregationQueryLimit,
+			SQLQuery:      "SELECT * FROM table1",
 		}))
 	})
 
@@ -236,6 +238,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 		// invalid measure to parse
 		qc := QueryContext{
 			AQLQuery: &common.AQLQuery{
+				Table: "tableNonExistent",
 				Measures: []common.Measure{
 					{Expr: "foo("},
 				},
@@ -247,15 +250,21 @@ var _ = ginkgo.Describe("query compiler", func() {
 
 		// invalid measure expr type
 		qc.Error = nil
-		qc.AQLQuery.Measures[0].Expr = "foo"
+		qc.AQLQuery.Measures[0].Expr = "1 = 2"
 		qc.processMeasures()
 		Ω(qc.Error.Error()).Should(ContainSubstring("expect aggregate function"))
+
+		// invalid table
+		qc.Error = nil
+		qc.AQLQuery.Measures[0].Expr = "foo"
+		qc.processMeasures()
+		Ω(qc.Error.Error()).Should(ContainSubstring("unknown table"))
 
 		// invalid number of args
 		qc.Error = nil
 		qc.AQLQuery.Measures[0].Expr = "sum(f1, f2)"
 		qc.processMeasures()
-		Ω(qc.Error.Error()).Should(ContainSubstring("expect one parameter"))
+		Ω(qc.Error.Error()).Should(ContainSubstring("expect 1 argument"))
 
 		// invalid callname for hll query
 		qc.Error = nil

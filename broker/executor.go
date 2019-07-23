@@ -52,27 +52,15 @@ func (qe *queryExecutorImpl) Execute(ctx context.Context, aql *queryCom.AQLQuery
 	}
 
 	// execute
+	var queryPlan common.QueryPlan
 	if qc.IsNonAggregationQuery {
-		return qe.executeNonAggQuery(ctx, qc, w)
+		queryPlan, err = NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
+	} else {
+		queryPlan, err = NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
 	}
-	return qe.executeAggQuery(ctx, qc, w)
-}
-
-// TODO: unify to QueryPlan interface
-func (qe *queryExecutorImpl) executeNonAggQuery(ctx context.Context, qc *QueryContext, w http.ResponseWriter) (err error) {
-	var plan NonAggQueryPlan
-	plan, err = NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
 	if err != nil {
 		return
 	}
-	return plan.Execute(ctx, w)
-}
 
-func (qe *queryExecutorImpl) executeAggQuery(ctx context.Context, qc *QueryContext, w http.ResponseWriter) (err error) {
-	var plan AggQueryPlan
-	plan, err = NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
-	if err != nil {
-		return
-	}
-	return plan.Execute(ctx, w)
+	return queryPlan.Execute(ctx, w)
 }

@@ -33,9 +33,8 @@ type StreamingScanNode struct {
 }
 
 func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error) {
-	trial := 0
-	for trial < rpcRetries {
-		trial++
+
+	for trial := 1; trial <= rpcRetries; trial++ {
 
 		var fetchErr error
 
@@ -62,14 +61,17 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 	return
 }
 
-func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan NonAggQueryPlan, err error) {
+func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan *NonAggQueryPlan, err error) {
 	headers := make([]string, len(qc.AQLQuery.Dimensions))
 	for i, dim := range qc.AQLQuery.Dimensions {
 		headers[i] = dim.Expr
 	}
-	plan.headers = headers
-	plan.resultChan = make(chan streamingScanNoderesult)
-	plan.limit = qc.AQLQuery.Limit
+
+	plan = &NonAggQueryPlan{
+		headers:    headers,
+		resultChan: make(chan streamingScanNoderesult),
+		limit:      qc.AQLQuery.Limit,
+	}
 
 	var assignment map[topology.Host][]uint32
 	assignment, err = util.CalculateShardAssignment(topo)
@@ -152,7 +154,9 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 		}
 		res := <-nqp.resultChan
 
+		isFirstResult := false
 		if i == 0 {
+			isFirstResult = true
 			// only log time waited for the fastest datanode for now
 			utils.GetRootReporter().GetTimer(utils.TimeWaitedForDataNode).Record(utils.Now().Sub(dataNodeWaitStart))
 		}
@@ -161,9 +165,17 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 			err = res.err
 			return
 		}
+
+		if len(res.data) == 0 {
+			continue
+		}
+
 		// write rows
 		if nqp.limit < 0 {
 			// when no limit, flush data directly
+			if !isFirstResult {
+				w.Write([]byte(`,`))
+			}
 			w.Write(res.data)
 		} else {
 			// with limit, we have to deserialize
@@ -179,6 +191,9 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 			}
 
 			if len(resultData) <= nqp.getRowsWanted() {
+				if !isFirstResult {
+					w.Write([]byte(`,`))
+				}
 				w.Write(res.data[1 : len(res.data)-1])
 				nqp.flushed += len(resultData)
 				utils.GetLogger().With("nrows", len(resultData)).Debug("flushed batch")
@@ -190,14 +205,15 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 				if err != nil {
 					return
 				}
+				if !isFirstResult {
+					w.Write([]byte(`,`))
+				}
+				// strip brackets
 				w.Write(bs[1 : len(bs)-1])
 				nqp.flushed += rowsToFlush
 				utils.GetLogger().With("nrows", rowsToFlush).Debug("flushed rows")
 			}
 			utils.GetRootReporter().GetTimer(utils.TimeSerDeDataNodeResponse).Record(utils.Now().Sub(serDeStart))
-		}
-		if !(nqp.getRowsWanted() == 0) && i != len(nqp.nodes)-1 {
-			w.Write([]byte(`,`))
 		}
 	}
 

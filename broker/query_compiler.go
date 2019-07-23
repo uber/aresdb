@@ -294,6 +294,10 @@ func (qc *QueryContext) processDimensions() {
 			qc.AQLQuery.Dimensions = append(qc.AQLQuery.Dimensions, dim)
 		}
 	}
+
+	for _, dim := range qc.AQLQuery.Dimensions {
+		dim.ExprParsed = expr.Rewrite(qc, dim.ExprParsed)
+	}
 }
 
 func (qc *QueryContext) sortDimensionColumns() {
