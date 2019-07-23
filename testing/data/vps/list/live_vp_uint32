@@ -1,4 +1,4 @@
-data_type: Uint32
+data_type: Uint32[]
 length: 4
 values:
   - 1

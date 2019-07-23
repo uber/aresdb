@@ -93,6 +93,33 @@ func CompareFloat32(a, b unsafe.Pointer) int {
 	}
 }
 
+// CompareUUID compare UUID values
+func CompareUUID(a, b unsafe.Pointer) int {
+	uuid1 := *(*[2]uint64)(a)
+	uuid2 := *(*[2]uint64)(b)
+	var res int
+	if res = int(uuid1[0] - uuid2[0]); res == 0 {
+		res = int(uuid1[1] - uuid2[1])
+	}
+	return res
+}
+
+// CompareGeoPoint compare GeoPoint Values
+func CompareGeoPoint(a, b unsafe.Pointer) int {
+	point1 := *(*[2]float32)(a)
+	point2 := *(*[2]float32)(b)
+	var val float32
+	if val = point1[0] - point2[0]; val == 0 {
+		val = point1[1] - point2[1]
+	}
+	if val == 0 {
+		return 0
+	} else if val > 0 {
+		return 1
+	}
+	return -1
+}
+
 // GetCompareFunc get the compare function for specific data type
 func GetCompareFunc(dataType DataType) CompareFunc {
 	switch dataType {
@@ -112,6 +139,10 @@ func GetCompareFunc(dataType DataType) CompareFunc {
 		return CompareInt64
 	case Float32:
 		return CompareFloat32
+	case UUID:
+		return CompareUUID
+	case GeoPoint:
+		return CompareGeoPoint
 	}
 	return nil
 }
@@ -392,6 +423,27 @@ func ValueFromString(str string, dataType DataType) (val DataValue, err error) {
 		val.OtherVal = unsafe.Pointer(&point[0])
 		return
 	default:
+		if IsArrayType(dataType) {
+			var value interface{}
+			value, err = ArrayValueFromString(str, GetItemDataType(dataType))
+			if err != nil {
+				err = utils.StackError(err, "Failed to read array string: %s", str)
+				return
+			}
+			arrayValue := value.(*ArrayValue)
+			bytes := arrayValue.GetSerBytes()
+			buffer := make([]byte, bytes)
+			valueWriter := utils.NewBufferWriter(buffer)
+			err = arrayValue.Write(&valueWriter)
+			if err != nil {
+				err = utils.StackError(err, "Unable to write array value to buffer: %s", str)
+				return
+			}
+
+			val.Valid = true
+			val.OtherVal = unsafe.Pointer(&buffer[0])
+			return
+		}
 		err = utils.StackError(nil, "Unsupported data type value %#x", dataType)
 		return
 	}
@@ -492,12 +544,7 @@ func (av *ArrayValue) AddItem(item interface{}) {
 
 // GetSerBytes return the bytes will be used in upsertbatch serialized format
 func (av *ArrayValue) GetSerBytes() int {
-	// there is a item number at beginning when serialize to upsert batch
-	// element_number_bits => 8 * 4 (4 bytes)
-	// DataTypeBits(dataType) * length => element_bits, round to byte
-	// 1 * length => null bits, round to byte
-	// (element_number_bits + element_bits + null_bits + 63) / 64 => round by 64 bits (8 bytes)
-	return (4*8 + (DataTypeBits(av.DataType)*av.GetLength()+7)/8*8 + (av.GetLength()+7)/8*8 + 63) / 64 * 8
+	return CalculateListElementBytes(av.DataType, av.GetLength())
 }
 
 // NewArrayValue create a new ArrayValue instance
@@ -641,15 +688,6 @@ func NewArrayValueReader(dataType DataType, value unsafe.Pointer) *ArrayValueRea
 	}
 }
 
-// NewArrayValueReader is to create ArrayValueReader to read from VP, which has item number passed from other place
-func NewArrayValueReaderWithLength(dataType DataType, value unsafe.Pointer, length int) *ArrayValueReader {
-	return &ArrayValueReader{
-		itemType: GetItemDataType(dataType),
-		value:    value,
-		length:   length,
-	}
-}
-
 // GetLength return item numbers inside the array
 func (reader *ArrayValueReader) GetLength() int {
 	return reader.length
@@ -682,10 +720,15 @@ func (reader *ArrayValueReader) IsValid(index int) bool {
 // CalculateListElementBytes returns the total size in bytes needs to be allocated for a list type column for a single
 // row along with the validity vector start.
 func CalculateListElementBytes(dataType DataType, length int) int {
+	if length == 0 {
+		return 0
+	}
+	// there is a item number at beginning
+	// element_number_bits => 8 * 4 (4 bytes)
 	// DataTypeBits(dataType) * length => element_bits, round to byte
 	// 1 * length => null bits, round to byte
-	// (element_bits + null_bits + 63) / 64 => round by 64 bits (8 bytes)
-	return ((DataTypeBits(dataType)*length+7)/8*8 + (length+7)/8*8 + 63) / 64 * 8
+	// (element_number_bits + element_bits + null_bits + 63) / 64 => round by 64 bits (8 bytes)
+	return (4*8 + (DataTypeBits(dataType)*length+7)/8*8 + (length+7)/8*8 + 63) / 64 * 8
 }
 
 func CalculateListNilOffset(dataType DataType, length int) int {

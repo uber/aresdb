@@ -201,17 +201,8 @@ type ArchiveVectorParty interface {
 	SliceIndex(lowerBoundRow, upperBoundRow int) (startIndex, endIndex int)
 }
 
-// ListDataValueReader defines how to read ith element in jth row from a data source.
-// Out of boundary access will panic.
-type ListDataValueReader interface {
-	ReadElementValue(row int, i int) unsafe.Pointer
-	ReadElementBool(row int, i int) bool
-	ReadElementValidity(row int, i int) bool
-	GetElementLength(row int) int
-}
-
 // ListVectorParty is the interface for list vector party to read and write list value.
 type ListVectorParty interface {
-	ListDataValueReader
-	SetListValue(row int, reader ListDataValueReader)
+	GetListValue(row int) (unsafe.Pointer, bool)
+	SetListValue(row int, val unsafe.Pointer, valid bool)
 }

@@ -91,12 +91,12 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 
 		nextUpsertBatch, err := cm.Iterator()
 		for i := 1; i <= 2*maxBatchesPerFile; i++ {
-			 batchInfo := nextUpsertBatch()
-			 if i < 6000 {
-			 	m.UpdateMaxEventTime(uint32(1), batchInfo.RedoLogFile)
-			 } else {
-				 m.UpdateMaxEventTime(uint32(utils.Now().Unix()), batchInfo.RedoLogFile)
-			 }
+			batchInfo := nextUpsertBatch()
+			if i < 6000 {
+				m.UpdateMaxEventTime(uint32(1), batchInfo.RedoLogFile)
+			} else {
+				m.UpdateMaxEventTime(uint32(utils.Now().Unix()), batchInfo.RedoLogFile)
+			}
 		}
 
 		// should not block

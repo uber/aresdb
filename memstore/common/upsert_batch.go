@@ -64,16 +64,14 @@ func (c *columnReader) ReadValue(row int) (unsafe.Pointer, bool) {
 	if !validity {
 		return nil, false
 	}
+	if IsArrayType(c.dataType) {
+		return c.readArrayValue(row)
+	}
 	return unsafe.Pointer(&c.valueVector[row*DataTypeBits(c.dataType)/8]), true
 }
 
 // ReadArrayValue returns the ArrayValue from upsert batch at given row
-func (c *columnReader) ReadArrayValue(row int) (unsafe.Pointer, bool) {
-	validity := c.readValidity(row)
-	if !validity {
-		return nil, false
-	}
-
+func (c *columnReader) readArrayValue(row int) (unsafe.Pointer, bool) {
 	offset := c.readOffset(row)
 	nextOffset := c.readOffset(row + 1)
 	if offset == nextOffset {
@@ -282,11 +280,6 @@ func (u *UpsertBatch) GetDataValue(row, col int) (DataValue, error) {
 	if IsGoType(dataType) {
 		val.GoVal = u.columns[col].ReadGoValue(row)
 		val.Valid = val.GoVal != nil
-		return val, nil
-	}
-
-	if IsArrayType(dataType) {
-		val.OtherVal, val.Valid = u.columns[col].ReadArrayValue(row)
 		return val, nil
 	}
 

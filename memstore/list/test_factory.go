@@ -22,7 +22,6 @@ import (
 	"github.com/uber/aresdb/utils"
 	"gopkg.in/yaml.v2"
 	"path/filepath"
-	"strings"
 	"unsafe"
 )
 
@@ -118,33 +117,17 @@ func (rvp *rawListVectorParty) toVectorParty() (memCom.VectorParty, error) {
 		)
 	}
 
-	vp := NewLiveVectorParty(rvp.Length, dataType, nil)
+	vp := NewLiveVectorParty(rvp.Length, memCom.GetItemDataType(dataType), nil)
 	vp.Allocate(false)
-	listVP := vp.AsList()
 
-	nrow := rvp.Length
-	values := make([][]memCom.DataValue, nrow)
-
-	listReader := testListDataValueReader{
-		length: nrow,
-		values: values,
-	}
 	for i, row := range rvp.Values {
-		rawValues := strings.FieldsFunc(row, vpValueSplitFunc)
-		ncol := len(rawValues)
-		rowValues := make([]memCom.DataValue, ncol)
-		for j, rawValue := range rawValues {
-			val, err := memCom.ValueFromString(rawValue, dataType)
-			if err != nil {
-				return nil, utils.StackError(err,
-					"Unable to parse value from string %s for data type %d",
-					rawValue, dataType)
-			}
-			rowValues[j] = val
+		val, err := memCom.ValueFromString(row, dataType)
+		if err != nil {
+			return nil, utils.StackError(err,
+				"Unable to parse value from string %s for data type %d", row, dataType)
 		}
 
-		values[i] = rowValues
-		listVP.SetListValue(i, listReader)
+		vp.SetDataValue(i, val, memstore.IgnoreCount)
 	}
 
 	return vp, nil

@@ -508,9 +508,7 @@ var _ = ginkgo.Describe("data_type", func() {
 
 		v, err = ConvertToArrayValue(ArrayInt8, "")
 		Ω(err).Should(BeNil())
-		res = v.(*ArrayValue)
-		Ω(res.GetLength()).Should(Equal(1))
-		Ω(res.Items[0]).Should(BeNil())
+		Ω(v).Should(BeNil())
 
 		// uint8
 		v, err = ConvertToArrayValue(ArrayUint8, "[11,12,13]")

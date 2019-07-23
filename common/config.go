@@ -134,11 +134,11 @@ type AresServerConfig struct {
 	// environment
 	Env string `yaml:"env"`
 
-	Query     QueryConfig     `yaml:"query"`
-	DiskStore DiskStoreConfig `yaml:"disk_store"`
-	HTTP      HTTPConfig      `yaml:"http"`
-	RedoLogConfig RedoLogConfig `yaml:"redolog"`
+	Query         QueryConfig     `yaml:"query"`
+	DiskStore     DiskStoreConfig `yaml:"disk_store"`
+	HTTP          HTTPConfig      `yaml:"http"`
+	RedoLogConfig RedoLogConfig   `yaml:"redolog"`
 
 	// Cluster determines the cluster mode configuration of aresdb
-	Cluster   ClusterConfig   `yaml:"cluster"`
+	Cluster ClusterConfig `yaml:"cluster"`
 }
