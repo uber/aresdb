@@ -88,6 +88,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 					ExprParsed: &expr.Call{Name: "count", Args: []expr.Expr{&expr.Wildcard{}}, ExprType: 2},
 				},
 			},
+			FiltersParsed: []expr.Expr{},
 			SQLQuery: "SELECT count(*) FROM table1 JOIN table2 ON table1.field2 = table2.field2 GROUP BY field1",
 		}))
 
@@ -127,6 +128,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 					ExprParsed: &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: 2},
 				},
 			},
+			FiltersParsed: []expr.Expr{},
 			Limit:    nonAggregationQueryLimit,
 			SQLQuery: "SELECT * FROM table1",
 		}))
