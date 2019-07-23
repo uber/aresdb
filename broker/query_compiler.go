@@ -66,6 +66,11 @@ func (qc *QueryContext) Compile(tableSchemaReader memCom.TableSchemaReader) {
 		return
 	}
 
+	qc.processJoins()
+	if qc.Error != nil {
+		return
+	}
+
 	qc.processMeasures()
 	if qc.Error != nil {
 		return
@@ -76,11 +81,6 @@ func (qc *QueryContext) Compile(tableSchemaReader memCom.TableSchemaReader) {
 	}
 
 	qc.processFilters()
-	if qc.Error != nil {
-		return
-	}
-
-	qc.resolveTypes()
 	if qc.Error != nil {
 		return
 	}
@@ -171,6 +171,25 @@ func (qc *QueryContext) resolveColumn(identifier string) (int, int, error) {
 	return tableID, columnID, nil
 }
 
+func (qc *QueryContext) processJoins() {
+	var err error
+	for i, join := range qc.AQLQuery.Joins {
+		join.ConditionsParsed = make([]expr.Expr, len(join.Conditions))
+		for j, cond := range join.Conditions {
+			join.ConditionsParsed[j], err = expr.ParseExpr(cond)
+			if err != nil {
+				qc.Error = utils.StackError(err, "Failed to parse join condition: %s", cond)
+				return
+			}
+			join.ConditionsParsed[j] = expr.Rewrite(qc, join.ConditionsParsed[j])
+			if qc.Error != nil {
+				return
+			}
+		}
+		qc.AQLQuery.Joins[i] = join
+	}
+}
+
 func (qc *QueryContext) processFilters() {
 	var err error
 
@@ -199,6 +218,24 @@ func (qc *QueryContext) processMeasures() {
 			qc.Error = utils.StackError(err, "Failed to parse measure: %s", measure.Expr)
 			return
 		}
+		measure.ExprParsed = expr.Rewrite(qc, measure.ExprParsed)
+		if qc.Error != nil {
+			return
+		}
+
+		measure.FiltersParsed = make([]expr.Expr, len(measure.Filters))
+		for j, filter := range measure.Filters {
+			measure.FiltersParsed[j], err = expr.ParseExpr(filter)
+			if err != nil {
+				qc.Error = utils.StackError(err, "Failed to parse measure filter %s", filter)
+				return
+			}
+			measure.FiltersParsed[j] = expr.Rewrite(qc, measure.FiltersParsed[j])
+			if qc.Error != nil {
+				return
+			}
+		}
+		measure.FiltersParsed = normalizeAndFilters(measure.FiltersParsed)
 		qc.AQLQuery.Measures[i] = measure
 	}
 
@@ -238,53 +275,6 @@ func (qc *QueryContext) processMeasures() {
 			qc.AQLQuery.Measures[0].Expr)
 		return
 	}
-}
-
-func (qc *QueryContext) resolveTypes() {
-	// Join conditions.
-	for i, join := range qc.AQLQuery.Joins {
-		for j, cond := range join.ConditionsParsed {
-			join.ConditionsParsed[j] = expr.Rewrite(qc, cond)
-			if qc.Error != nil {
-				return
-			}
-		}
-		qc.AQLQuery.Joins[i] = join
-	}
-
-	// Dimensions.
-	for i, dim := range qc.AQLQuery.Dimensions {
-		dim.ExprParsed = expr.Rewrite(qc, dim.ExprParsed)
-		if qc.Error != nil {
-			return
-		}
-		qc.AQLQuery.Dimensions[i] = dim
-	}
-
-	// Measures.
-	for i, measure := range qc.AQLQuery.Measures {
-		measure.ExprParsed = expr.Rewrite(qc, measure.ExprParsed)
-		if qc.Error != nil {
-			return
-		}
-		for j, filter := range measure.FiltersParsed {
-			measure.FiltersParsed[j] = expr.Rewrite(qc, filter)
-			if qc.Error != nil {
-				return
-			}
-		}
-		measure.FiltersParsed = normalizeAndFilters(measure.FiltersParsed)
-		qc.AQLQuery.Measures[i] = measure
-	}
-
-	// Filters.
-	for i, filter := range qc.AQLQuery.FiltersParsed {
-		qc.AQLQuery.FiltersParsed[i] = expr.Rewrite(qc, filter)
-		if qc.Error != nil {
-			return
-		}
-	}
-	qc.AQLQuery.FiltersParsed = normalizeAndFilters(qc.AQLQuery.FiltersParsed)
 }
 
 func (qc *QueryContext) processDimensions() {

@@ -74,7 +74,26 @@ var _ = ginkgo.Describe("query compiler", func() {
 		Ω(qc.AQLQuery).Should(Equal(&common.AQLQuery{
 			Table: "table1",
 			Joins: []common.Join{
-				{Table: "table2", Conditions: []string{"table1.field2 = table2.field2"}},
+				{
+					Table: "table2",
+					Conditions: []string{"table1.field2 = table2.field2"},
+					ConditionsParsed: []expr.Expr{
+						&expr.BinaryExpr{
+							Op: expr.EQ,
+							LHS: &expr.VarRef{
+								Val: "table1.field2",
+								ExprType: 2,
+								ColumnID: 1,
+								DataType: memCom.Uint16,
+							},
+							RHS: &expr.VarRef{
+								Val: "table2.field2",
+								TableID: 1,
+							},
+							ExprType: 1,
+						},
+					},
+				},
 			},
 			Dimensions: []common.Dimension{
 				{
@@ -110,7 +129,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 					ExprParsed: &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: 2},
 				},
 			},
-			Limit:    nonAggregationQueryLimit,
+			Limit:    0,
 			SQLQuery: "SELECT * FROM table1",
 		}, false, httptest.NewRecorder())
 		qc.Compile(&mockTableSchemaReader)
@@ -210,6 +229,40 @@ var _ = ginkgo.Describe("query compiler", func() {
 		}, false, httptest.NewRecorder())
 		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("processMeasures should return error", func() {
+
+		// invalid measure to parse
+		qc := QueryContext{
+			AQLQuery: &common.AQLQuery{
+				Measures: []common.Measure{
+					{Expr: "foo("},
+				},
+			},
+		}
+
+		qc.processMeasures()
+		Ω(qc.Error.Error()).Should(ContainSubstring("Failed to parse measure"))
+
+		// invalid measure expr type
+		qc.Error = nil
+		qc.AQLQuery.Measures[0].Expr = "foo"
+		qc.processMeasures()
+		Ω(qc.Error.Error()).Should(ContainSubstring("expect aggregate function"))
+
+		// invalid number of args
+		qc.Error = nil
+		qc.AQLQuery.Measures[0].Expr = "sum(f1, f2)"
+		qc.processMeasures()
+		Ω(qc.Error.Error()).Should(ContainSubstring("expect one parameter"))
+
+		// invalid callname for hll query
+		qc.Error = nil
+		qc.ReturnHLLBinary = true
+		qc.AQLQuery.Measures[0].Expr = "count(*)"
+		qc.processMeasures()
+		Ω(qc.Error.Error()).Should(ContainSubstring("expect hll aggregate function"))
 	})
 
 	ginkgo.It("expandINOp should work", func() {
