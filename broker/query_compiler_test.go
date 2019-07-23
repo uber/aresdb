@@ -343,4 +343,96 @@ var _ = ginkgo.Describe("query compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.AQLQuery.FiltersParsed[0].String()).Should(Equal("NOT(id = 1 OR id = 2 OR id = 3)"))
 	})
+
+	ginkgo.It("rewrite should work", func() {
+		qc := QueryContext{}
+
+		// paren
+		Ω(qc.Rewrite(&expr.ParenExpr{Expr: &expr.StringLiteral{Val: "foo"}})).Should(Equal(&expr.StringLiteral{Val: "foo"}))
+
+		// unary
+		Ω(qc.Rewrite(&expr.UnaryExpr{
+			Op:   expr.NOT,
+			Expr: &expr.VarRef{ExprType: expr.Signed}},
+		)).Should(Equal(&expr.UnaryExpr{
+			Op:       expr.NOT,
+			ExprType: expr.Boolean,
+			Expr:     &expr.VarRef{ExprType: expr.Signed},
+		}))
+		Ω(qc.Rewrite(&expr.UnaryExpr{
+			Op:       expr.UNARY_MINUS,
+			ExprType: expr.Boolean,
+			Expr:     &expr.VarRef{ExprType: expr.Signed},
+		})).Should(Equal(&expr.UnaryExpr{
+			Op:       expr.UNARY_MINUS,
+			ExprType: expr.Signed,
+			Expr:     &expr.VarRef{ExprType: expr.Signed},
+		}))
+		Ω(qc.Rewrite(&expr.UnaryExpr{
+			Op:       expr.IS_NULL,
+			ExprType: expr.Signed,
+			Expr:     &expr.VarRef{ExprType: expr.Signed},
+		})).Should(Equal(&expr.UnaryExpr{
+			Op:       expr.IS_NULL,
+			ExprType: expr.Boolean,
+			Expr:     &expr.VarRef{ExprType: expr.Signed},
+		}))
+		Ω(qc.Rewrite(&expr.UnaryExpr{
+			Op:       expr.IS_TRUE,
+			ExprType: expr.Boolean,
+			Expr:     &expr.VarRef{ExprType: expr.Boolean},
+		})).Should(Equal(&expr.VarRef{ExprType: expr.Boolean}))
+	})
+
+	ginkgo.It("rewrite should fail", func() {
+		qc := QueryContext{
+			TableIDByAlias: map[string]int{"t": 0},
+			Tables: []*memCom.TableSchema{
+				{
+					Schema: metaCom.Table{
+						Name: "t",
+						Columns: []metaCom.Column{
+							{Deleted: true},
+						},
+					},
+					ColumnIDs: map[string]int{"f": 0},
+				},
+			},
+			AQLQuery: &common.AQLQuery{
+				Table: "t",
+			},
+		}
+
+		// deleted column
+		qc.Rewrite(&expr.VarRef{Val: "f"})
+		Ω(qc.Error.Error()).Should(ContainSubstring("has been deleted"))
+
+		// unary
+		qc.Error = nil
+		qc.Rewrite(&expr.UnaryExpr{Op: expr.NOT, Expr: &expr.VarRef{DataType: memCom.UUID}})
+		Ω(qc.Error.Error()).Should(ContainSubstring("uuid column type only supports"))
+		qc.Error = nil
+		qc.Rewrite(&expr.UnaryExpr{Op: expr.UNARY_MINUS, Expr: &expr.VarRef{DataType: memCom.GeoPoint}})
+		Ω(qc.Error.Error()).Should(ContainSubstring("numeric operations not supported for column over 4 bytes length"))
+
+		// binary
+		qc.Error = nil
+		qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.SUB,
+			ExprType: expr.Boolean,
+			LHS:      &expr.VarRef{ExprType: expr.GeoPoint, DataType: memCom.GeoPoint},
+			RHS:      &expr.VarRef{ExprType: expr.GeoPoint, DataType: memCom.GeoPoint},
+		})
+		Ω(qc.Error.Error()).Should(ContainSubstring("numeric operations not supported for column over 4 bytes length"))
+
+		qc.Error = nil
+		qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.SUB,
+			ExprType: expr.Boolean,
+			LHS:      &expr.StringLiteral{Val: "foo"},
+			RHS:      &expr.StringLiteral{Val: "foo"},
+		})
+		Ω(qc.Error.Error()).Should(ContainSubstring("string type only support EQ and NEQ operators"))
+
+	})
 })
