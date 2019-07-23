@@ -1,8 +1,8 @@
 package common
 
 import (
-	"github.com/uber/aresdb/query/expr"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/query/expr"
 )
 
 // DataTypeToExprType maps data type from the column schema format to

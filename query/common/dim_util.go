@@ -1,8 +1,8 @@
 package common
 
 import (
-	"github.com/uber/aresdb/query/expr"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/query/expr"
 )
 
 // GetDimensionDataType gets DataType for given expr

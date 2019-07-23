@@ -572,7 +572,6 @@ func (qc *AQLQueryContext) resolveColumn(identifier string) (int, int, error) {
 	return tableID, columnID, nil
 }
 
-
 func blockNumericOpsForColumnOverFourBytes(token expr.Token, expressions ...expr.Expr) error {
 	if token == expr.UNARY_MINUS || token == expr.BITWISE_NOT ||
 		(token >= expr.ADD && token <= expr.BITWISE_LEFT_SHIFT) {

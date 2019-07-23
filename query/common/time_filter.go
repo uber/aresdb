@@ -362,7 +362,7 @@ func ParseTimeFilter(filter TimeFilter, loc *time.Location, now time.Time) (from
 		}
 	} else if from != nil {
 		// Populate to with now if from is present.
-		to = &AlignedTime{now, "s"}
+		to = &AlignedTime{Time: now, Unit: "s"}
 	}
 	return
 }

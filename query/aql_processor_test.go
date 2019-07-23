@@ -1556,8 +1556,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					dimIndex:      -1,
 				},
 			},
-			fromTime: &queryCom.AlignedTime{time.Unix(0, 0), "s"},
-			toTime:   &queryCom.AlignedTime{time.Unix(86400, 0), "s"},
+			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
+			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
 		}
 
 		qc.ProcessQuery(mockMemStore)
@@ -1830,8 +1830,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					inOrOut:       true,
 				},
 			},
-			fromTime: &queryCom.AlignedTime{time.Unix(0, 0), "s"},
-			toTime:   &queryCom.AlignedTime{time.Unix(86400, 0), "s"},
+			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
+			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
 		}
 
 		qc.ProcessQuery(mockMemStore)
@@ -2083,8 +2083,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					ExprType: expr.Unsigned,
 				},
 			},
-			fromTime: &queryCom.AlignedTime{time.Unix(0, 0), "s"},
-			toTime:   &queryCom.AlignedTime{time.Unix(86400, 0), "s"},
+			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
+			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
 		}
 
 		qc.ProcessQuery(mockMemStore)

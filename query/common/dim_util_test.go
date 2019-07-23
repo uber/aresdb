@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = ginkgo.Describe("dim utils", func(){
+var _ = ginkgo.Describe("dim utils", func() {
 	ginkgo.It("DimValResVectorSize should work", func() {
 		Ω(DimValResVectorSize(3, DimCountsPerDimWidth{0, 0, 1, 1, 1})).Should(Equal(30))
 		Ω(DimValResVectorSize(3, DimCountsPerDimWidth{0, 0, 2, 1, 1})).Should(Equal(45))

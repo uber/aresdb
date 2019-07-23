@@ -380,7 +380,7 @@ type AQLQueryContext struct {
 	resultFlushContext resultFlushContext
 
 	// whether it's a DataOnly request from broker
-	DataOnly           bool `json:"DataOnly"`
+	DataOnly bool `json:"DataOnly"`
 	// whether to serialize the query result as HLLData. If ReturnHLLData is true, we will not release dimension
 	// vector and measure vector until serialization is done.
 	ReturnHLLData  bool   `json:"ReturnHLLData"`
