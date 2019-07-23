@@ -105,12 +105,12 @@ var _ = Describe("dynamic", func() {
 	It("GetUniqueShardsAndReplicas", func() {
 		goodInstances := goodInstances()
 
-		shards, err := validateInstances(goodInstances, 2, 3)
+		shards, err := validateInstances(goodInstances, true, 2, 3)
 		Ω(err).Should(BeNil())
 		Ω(len(shards)).Should(Equal(3))
 
 		goodInstances[0].SetShards(nil)
-		_, err = validateInstances(goodInstances, 2, 3)
+		_, err = validateInstances(goodInstances, true, 2, 3)
 		Ω(err).Should(Equal(errInstanceHasNoShardsAssignment))
 
 		goodInstances[0].SetShards(shard.NewShards(
@@ -119,7 +119,7 @@ var _ = Describe("dynamic", func() {
 				shard.NewShard(1),
 				shard.NewShard(3),
 			}))
-		_, err = validateInstances(goodInstances, 2, 3)
+		_, err = validateInstances(goodInstances, true, 2, 3)
 		Ω(err).Should(Equal(errUnexpectedShard))
 
 		// got h1: 1, h2: 1, 2, h3 0,2, missing a replica for 1
@@ -127,7 +127,7 @@ var _ = Describe("dynamic", func() {
 			[]shard.Shard{
 				shard.NewShard(1),
 			}))
-		_, err = validateInstances(goodInstances, 2, 3)
+		_, err = validateInstances(goodInstances, true, 2, 3)
 		Ω(err).Should(Equal(errNotEnoughReplicasForShard))
 
 		goodInstances[0].SetShards(shard.NewShards(
@@ -138,7 +138,7 @@ var _ = Describe("dynamic", func() {
 			[]shard.Shard{
 				shard.NewShard(2),
 			}))
-		_, err = validateInstances(goodInstances, 2, 3)
+		_, err = validateInstances(goodInstances, true, 2, 3)
 		// got h1:0, h2: 2, h3 0,2, missing 1
 		Ω(err).Should(Equal(errMissingShard))
 	})

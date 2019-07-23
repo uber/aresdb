@@ -100,7 +100,7 @@ func newDynamicTopology(opts DynamicOptions) (DynamicTopology, error) {
 	<-watch.C()
 	logger.Info("initial topology / placement value received")
 
-	m, err := getMapFromUpdate(watch.Get())
+	m, err := getMapFromUpdate(watch.Get(), opts.QueryOptions().IncludeUnhealthy())
 	if err != nil {
 		logger.With("err", err).Error("dynamic topology received invalid initial value")
 		return nil, err
@@ -134,7 +134,7 @@ func (t *dynamicTopology) run() {
 			break
 		}
 
-		m, err := getMapFromUpdate(t.watch.Get())
+		m, err := getMapFromUpdate(t.watch.Get(), t.opts.QueryOptions().IncludeUnhealthy())
 		if err != nil {
 			t.logger.With("err", err).Warn("dynamic topology received invalid update")
 			continue
@@ -182,8 +182,8 @@ func (t *dynamicTopology) MarkShardsAvailable(
 	return err
 }
 
-func getMapFromUpdate(service services.Service) (Map, error) {
-	to, err := getStaticOptions(service)
+func getMapFromUpdate(service services.Service, unhealthyIncluded bool) (Map, error) {
+	to, err := getStaticOptions(service, unhealthyIncluded)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func getMapFromUpdate(service services.Service) (Map, error) {
 	return NewStaticMap(to), nil
 }
 
-func getStaticOptions(service services.Service) (StaticOptions, error) {
+func getStaticOptions(service services.Service, unhealthyIncluded bool) (StaticOptions, error) {
 	if service == nil || service.Replication() == nil || service.Sharding() == nil || service.Instances() == nil {
 		return nil, errInvalidService
 	}
@@ -199,7 +199,7 @@ func getStaticOptions(service services.Service) (StaticOptions, error) {
 	instances := service.Instances()
 	numShards := service.Sharding().NumShards()
 
-	allShardIDs, err := validateInstances(instances, replicas, numShards)
+	allShardIDs, err := validateInstances(instances, unhealthyIncluded, replicas, numShards)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func getStaticOptions(service services.Service) (StaticOptions, error) {
 		SetHostShardSets(hostShardSets), nil
 }
 
-func validateInstances(instances []services.ServiceInstance, replicas, numShards int) ([]uint32, error) {
+func validateInstances(instances []services.ServiceInstance, unhealthyIncluded bool, replicas, numShards int) ([]uint32, error) {
 	m := make(map[uint32]int)
 	for _, i := range instances {
 		if i.Shards() == nil {
@@ -243,7 +243,7 @@ func validateInstances(instances []services.ServiceInstance, replicas, numShards
 		if !exist {
 			return nil, errMissingShard
 		}
-		if count < replicas {
+		if unhealthyIncluded && count < replicas {
 			return nil, errNotEnoughReplicasForShard
 		}
 		delete(m, expectShard)
