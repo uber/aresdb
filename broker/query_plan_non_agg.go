@@ -147,6 +147,8 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 
 	dataNodeWaitStart := utils.Now()
 
+	// the first result
+	processedFirtBatch := false
 	for i := 0; i < len(nqp.nodes); i++ {
 		if nqp.getRowsWanted() == 0 {
 			utils.GetLogger().Debug("got enough rows, exiting")
@@ -154,9 +156,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 		}
 		res := <-nqp.resultChan
 
-		isFirstResult := false
 		if i == 0 {
-			isFirstResult = true
 			// only log time waited for the fastest datanode for now
 			utils.GetRootReporter().GetTimer(utils.TimeWaitedForDataNode).Record(utils.Now().Sub(dataNodeWaitStart))
 		}
@@ -173,7 +173,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 		// write rows
 		if nqp.limit < 0 {
 			// when no limit, flush data directly
-			if !isFirstResult {
+			if processedFirtBatch {
 				w.Write([]byte(`,`))
 			}
 			w.Write(res.data)
@@ -191,7 +191,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 			}
 
 			if len(resultData) <= nqp.getRowsWanted() {
-				if !isFirstResult {
+				if processedFirtBatch {
 					w.Write([]byte(`,`))
 				}
 				w.Write(res.data[1 : len(res.data)-1])
@@ -205,7 +205,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 				if err != nil {
 					return
 				}
-				if !isFirstResult {
+				if processedFirtBatch {
 					w.Write([]byte(`,`))
 				}
 				// strip brackets
@@ -215,6 +215,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 			}
 			utils.GetRootReporter().GetTimer(utils.TimeSerDeDataNodeResponse).Record(utils.Now().Sub(serDeStart))
 		}
+		processedFirtBatch = true
 	}
 
 	_, err = w.Write([]byte(`]}`))
