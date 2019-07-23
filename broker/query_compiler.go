@@ -75,6 +75,11 @@ func (qc *QueryContext) Compile(tableSchemaReader memCom.TableSchemaReader) {
 		return
 	}
 
+	qc.processFilters()
+	if qc.Error != nil {
+		return
+	}
+
 	qc.resolveTypes()
 	if qc.Error != nil {
 		return
@@ -166,10 +171,28 @@ func (qc *QueryContext) resolveColumn(identifier string) (int, int, error) {
 	return tableID, columnID, nil
 }
 
+func (qc *QueryContext) processFilters() {
+	var err error
+
+	qc.AQLQuery.FiltersParsed = make([]expr.Expr, len(qc.AQLQuery.Filters))
+	for i, filter := range qc.AQLQuery.Filters {
+		qc.AQLQuery.FiltersParsed[i], err = expr.ParseExpr(filter)
+		if err != nil {
+			qc.Error = utils.StackError(err, "Failed to parse filter %s", filter)
+			return
+		}
+		qc.AQLQuery.FiltersParsed[i] = expr.Rewrite(qc, qc.AQLQuery.FiltersParsed[i])
+		if qc.Error != nil {
+			return
+		}
+	}
+
+	qc.AQLQuery.FiltersParsed = normalizeAndFilters(qc.AQLQuery.FiltersParsed)
+}
+
 func (qc *QueryContext) processMeasures() {
 	var err error
 
-	// Measures.
 	for i, measure := range qc.AQLQuery.Measures {
 		measure.ExprParsed, err = expr.ParseExpr(measure.Expr)
 		if err != nil {

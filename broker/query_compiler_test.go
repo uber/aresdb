@@ -209,4 +209,74 @@ var _ = ginkgo.Describe("query compiler", func() {
 		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).ShouldNot(BeNil())
 	})
+
+	ginkgo.It("expandINOp should work", func() {
+		query := &common.AQLQuery{
+			Table:   "table1",
+			Filters: []string{"id in (1, 2)"},
+		}
+		tableSchema := &memCom.TableSchema{
+			ColumnIDs: map[string]int{
+				"time_col": 0,
+				"id":       1,
+			},
+			Schema: metaCom.Table{
+				Name:        "table1",
+				IsFactTable: true,
+				Columns: []metaCom.Column{
+					{Name: "time_col", Type: metaCom.Uint32},
+					{Name: "id", Type: metaCom.Uint16},
+				},
+			},
+			ValueTypeByColumn: []memCom.DataType{
+				memCom.Uint32,
+				memCom.Uint16,
+			},
+		}
+		qc := QueryContext{
+			AQLQuery: query,
+			TableSchemaByName: map[string]*memCom.TableSchema{
+				"table1": tableSchema,
+			},
+			TableIDByAlias: map[string]int{
+				"table1": 0,
+			},
+			Tables: []*memCom.TableSchema{
+				tableSchema,
+			},
+		}
+
+		qc.processFilters()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.AQLQuery.FiltersParsed).Should(HaveLen(1))
+		Ω(qc.AQLQuery.FiltersParsed[0].String()).Should(Equal("id = 1 OR id = 2"))
+
+		qc.AQLQuery.Filters[0] = "id in ()"
+		qc.processFilters()
+		Ω(qc.Error).ShouldNot(BeNil())
+
+		qc.Error = nil
+		qc.AQLQuery.Filters[0] = "id in (1)"
+		qc.processFilters()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.AQLQuery.FiltersParsed[0].String()).Should(Equal("id = 1"))
+
+		qc.Error = nil
+		qc.AQLQuery.Filters[0] = "id in ('1')"
+		qc.processFilters()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.AQLQuery.FiltersParsed[0].String()).Should(Equal("id = '1'"))
+
+		qc.Error = nil
+		qc.AQLQuery.Filters[0] = "id in (1,2,3)"
+		qc.processFilters()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.AQLQuery.FiltersParsed[0].String()).Should(Equal("id = 1 OR id = 2 OR id = 3"))
+
+		qc.Error = nil
+		qc.AQLQuery.Filters[0] = "id not in (1,2,3)"
+		qc.processFilters()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.AQLQuery.FiltersParsed[0].String()).Should(Equal("NOT(id = 1 OR id = 2 OR id = 3)"))
+	})
 })
