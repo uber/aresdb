@@ -513,11 +513,12 @@ func (qc *QueryContext) Rewrite(expression expr.Expr) expr.Expr {
 					value = -1
 				}
 				e.RHS = &expr.NumberLiteral{Int: value, ExprType: expr.Unsigned}
-			} else {
-				// Cast to highestType.
-				e.LHS = expr.Cast(e.LHS, highestType)
-				e.RHS = expr.Cast(e.RHS, highestType)
+				break
 			}
+
+			// Cast to highestType.
+			e.LHS = expr.Cast(e.LHS, highestType)
+			e.RHS = expr.Cast(e.RHS, highestType)
 
 			if rhs != nil && lhs.DataType == memCom.GeoPoint {
 				if val, err := memCom.GeoPointFromString(rhs.Val); err != nil {

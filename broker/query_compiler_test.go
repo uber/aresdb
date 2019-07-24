@@ -382,6 +382,157 @@ var _ = ginkgo.Describe("query compiler", func() {
 			ExprType: expr.Boolean,
 			Expr:     &expr.VarRef{ExprType: expr.Boolean},
 		})).Should(Equal(&expr.VarRef{ExprType: expr.Boolean}))
+
+		// binary
+
+		// cast to highest type for add
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.ADD,
+			ExprType: expr.Signed,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Float},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		})).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.ADD,
+			ExprType: expr.Float,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Float},
+			RHS: &expr.ParenExpr{
+				Expr:     &expr.VarRef{Val: "f", ExprType: expr.Signed},
+				ExprType: expr.Float,
+			},
+		}))
+
+		// cast to signed for sub
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.SUB,
+			ExprType: expr.Unsigned,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+		})).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.SUB,
+			ExprType: expr.Signed,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+		}))
+
+		// cast to highest type for mul
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.MUL,
+			ExprType: expr.Unsigned,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		})).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.MUL,
+			ExprType: expr.Signed,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		}))
+
+		// cast to float type for div
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.DIV,
+			ExprType: expr.Unsigned,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+		})).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.DIV,
+			ExprType: expr.Float,
+			LHS: &expr.ParenExpr{
+				Expr:     &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+				ExprType: expr.Float,
+			},
+			RHS: &expr.ParenExpr{
+				Expr:     &expr.VarRef{Val: "f", ExprType: expr.Unsigned},
+				ExprType: expr.Float,
+			},
+		}))
+
+		// cast to unsigned for bitwise
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.BITWISE_AND,
+			ExprType: expr.Signed,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		})).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.BITWISE_AND,
+			ExprType: expr.Unsigned,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		}))
+
+		// cast to boolean for and and or
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.AND,
+			ExprType: expr.Signed,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		})).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.AND,
+			ExprType: expr.Boolean,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		}))
+
+		// cast to boolean for comparison
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.LT,
+			ExprType: expr.Signed,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		})).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.LT,
+			ExprType: expr.Boolean,
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		}))
+
+		// EQ NEQ
+		// rhs bool
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.EQ,
+			ExprType: expr.Signed,
+			LHS:      &expr.BooleanLiteral{Val: true},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		})).Should(Equal(&expr.UnaryExpr{
+			Expr:     &expr.VarRef{Val: "f", ExprType: expr.Signed},
+			Op:       expr.IS_TRUE,
+			ExprType: expr.Boolean,
+		}))
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.EQ,
+			ExprType: expr.Signed,
+			LHS:      &expr.BooleanLiteral{Val: false},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Signed},
+		})).Should(Equal(&expr.UnaryExpr{
+			Expr:     &expr.VarRef{Val: "f", ExprType: expr.Signed},
+			Op:       expr.NOT,
+			ExprType: expr.Boolean,
+		}))
+		// rhs enum
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.EQ,
+			ExprType: expr.Signed,
+			LHS:      &expr.StringLiteral{Val: "foo"},
+			RHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned, EnumDict: map[string]int{"foo": 1}},
+		})).Should(Equal(&expr.BinaryExpr{
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.Unsigned, EnumDict: map[string]int{"foo": 1}},
+			RHS:      &expr.NumberLiteral{Int: 1, ExprType: expr.Unsigned},
+			Op:       expr.EQ,
+			ExprType: expr.Boolean,
+		}))
+		// rhs geopoint
+		pointStr := "POINT (30 10)"
+		val, _ := memCom.GeoPointFromString(pointStr)
+		Ω(qc.Rewrite(&expr.BinaryExpr{
+			Op:       expr.EQ,
+			ExprType: expr.Signed,
+			LHS:      &expr.VarRef{Val: "f", DataType: memCom.GeoPoint},
+			RHS:      &expr.StringLiteral{Val: "POINT (30 10)"},
+		})).Should(Equal(&expr.BinaryExpr{
+			LHS:      &expr.VarRef{Val: "f", DataType: memCom.GeoPoint},
+			RHS:      &expr.GeopointLiteral{Val: val},
+			Op:       expr.EQ,
+			ExprType: expr.Boolean,
+		}))
 	})
 
 	ginkgo.It("rewrite should fail", func() {
@@ -434,5 +585,62 @@ var _ = ginkgo.Describe("query compiler", func() {
 		})
 		Ω(qc.Error.Error()).Should(ContainSubstring("string type only support EQ and NEQ operators"))
 
+		// call
+		qc.Error = nil
+		qc.Rewrite(&expr.Call{
+			Name: "someRandomCallName",
+		})
+		Ω(qc.Error.Error()).Should(ContainSubstring("unknown function"))
+	})
+
+	ginkgo.It("convert_tz should work", func() {
+		query := &common.AQLQuery{
+			Table: "table1",
+			Filters: []string{
+				"convert_tz(table1.time_col, 'GMT', 'America/Phoenix') = 2",
+				"convert_tz(from_unixtime(table1.time_col / 1000), 'GMT', 'America/Phoenix') = 2",
+			},
+		}
+		tableSchema := &memCom.TableSchema{
+			ColumnIDs: map[string]int{
+				"time_col": 0,
+				"id":       1,
+			},
+			Schema: metaCom.Table{
+				Name:        "table1",
+				IsFactTable: true,
+				Columns: []metaCom.Column{
+					{Name: "time_col", Type: metaCom.Uint32},
+					{Name: "id", Type: metaCom.Uint16},
+				},
+			},
+			ValueTypeByColumn: []memCom.DataType{
+				memCom.Uint32,
+				memCom.Uint16,
+			},
+		}
+		qc := QueryContext{
+			AQLQuery: query,
+			TableSchemaByName: map[string]*memCom.TableSchema{
+				"table1": tableSchema,
+			},
+			TableIDByAlias: map[string]int{
+				"table1": 0,
+			},
+			Tables: []*memCom.TableSchema{
+				tableSchema,
+			},
+		}
+
+		qc.processFilters()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.AQLQuery.FiltersParsed).Should(HaveLen(2))
+		Ω(qc.AQLQuery.FiltersParsed[0].String()).Should(Equal("table1.time_col + -25200 = 2"))
+		Ω(qc.AQLQuery.FiltersParsed[1].String()).Should(Equal("table1.time_col + -25200 = 2"))
+
+		qc.AQLQuery.Filters = []string{"convert_tz(from_unixtime(table1.time_col), 'GMT', 'America/Phoenix') = 2"}
+		qc.processFilters()
+		Ω(qc.Error).ShouldNot(BeNil())
+		Ω(qc.Error.Error()).Should(ContainSubstring("from_unixtime must be time column / 1000"))
 	})
 })
