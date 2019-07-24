@@ -34,6 +34,7 @@ type QueryContext struct {
 	Writer                http.ResponseWriter
 	Error                 error
 	MainTable             *metaCom.Table
+	RequestID             string
 }
 
 // NewQueryContext creates new query context

@@ -87,10 +87,10 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		Ω(plan.headers).Should(Equal([]string{"field1", "field2"}))
 
 		bs := []byte(`["foo","1"],["bar","2"]`)
-		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
 
-		Ω(plan.nodes[0].query.Shards).Should(HaveLen(2))
-		Ω(plan.nodes[1].query.Shards).Should(HaveLen(2))
+		Ω(plan.nodes[0].qc.AQLQuery.Shards).Should(HaveLen(2))
+		Ω(plan.nodes[1].qc.AQLQuery.Shards).Should(HaveLen(2))
 
 		err = plan.Execute(context.TODO())
 		Ω(err).Should(BeNil())
@@ -102,7 +102,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		w = httptest.NewRecorder()
 		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
 		Ω(err).Should(BeNil())
-		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
 		err = plan.Execute(context.TODO())
 		Ω(err).Should(BeNil())
 		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))

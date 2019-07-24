@@ -20,14 +20,13 @@ import (
 	"github.com/uber/aresdb/broker/util"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
-	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
 
 // StreamingScanNode implements StreamingPlanNode
 type StreamingScanNode struct {
-	query          queryCom.AQLQuery
+	qc             QueryContext
 	host           topology.Host
 	dataNodeClient dataCli.DataNodeQueryClient
 }
@@ -39,14 +38,15 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 
 		var fetchErr error
 
-		utils.GetLogger().With("host", ssn.host, "query", ssn.query).Debug("sending query to datanode")
-		bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.host, ssn.query)
+		utils.GetLogger().With("host", ssn.host, "query", ssn.qc.AQLQuery).Debug("sending query to datanode")
+		bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.qc.RequestID, ssn.host, *ssn.qc.AQLQuery)
 		if fetchErr != nil {
 			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(
 				"error", fetchErr,
 				"host", ssn.host,
-				"query", ssn.query,
+				"query", ssn.qc.AQLQuery,
+				"requestID", ssn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
 			err = utils.StackError(fetchErr, "fetch from datanode failed")
 			continue
@@ -82,12 +82,14 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli
 	i := 0
 	for host, shards := range assignment {
 		// make deep copy
-		q := *qc.AQLQuery
+		currQ := *qc.AQLQuery
 		for _, shard := range shards {
-			q.Shards = append(q.Shards, int(shard))
+			currQ.Shards = append(currQ.Shards, int(shard))
 		}
+		currQc := *qc
+		currQc.AQLQuery = &currQ
 		plan.nodes[i] = &StreamingScanNode{
-			query:          q,
+			qc:             currQc,
 			host:           host,
 			dataNodeClient: client,
 		}
