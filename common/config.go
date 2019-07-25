@@ -109,6 +109,8 @@ type RedoLogConfig struct {
 	DiskConfig DiskRedoLogConfig `yaml:"disk"`
 	// Kafka redolog config
 	KafkaConfig KafkaRedoLogConfig `yaml:"kafka"`
+	// Disk only redolog for unsharded tables
+	DiskOnlyForUnsharded bool `yaml:"diskOnlyForUnsharded"`
 }
 
 // AresServerConfig is config specific for ares server.
