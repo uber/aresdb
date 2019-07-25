@@ -36,25 +36,28 @@ var _ = ginkgo.Describe("agg query plan", func() {
 			},
 		}
 
-		q1, q2 := splitAvgQuery(q)
-		Ω(q1).Should(Equal(common2.AQLQuery{
+		qc := QueryContext{AQLQuery: &q}
+		q1, q2 := splitAvgQuery(qc)
+		Ω(q1).Should(Equal(QueryContext{AQLQuery: &common2.AQLQuery{
 			Table: "foo",
 			Measures: []common2.Measure{
 				{Expr: "sum(fare)", ExprParsed: &expr.Call{Name: "sum", Args: []expr.Expr{&expr.VarRef{Val: "fare"}}}},
 			},
-		}))
-		Ω(q2).Should(Equal(common2.AQLQuery{
+		}}))
+		Ω(q2).Should(Equal(QueryContext{AQLQuery: &common2.AQLQuery{
 			Table: "foo",
 			Measures: []common2.Measure{
 				{Expr: "count(*)", ExprParsed: &expr.Call{Name: "count", Args: []expr.Expr{&expr.Wildcard{}}}},
 			},
-		}))
-		Ω(q).Should(Equal(common2.AQLQuery{
+		}}))
+
+		// original qc should not be changed
+		Ω(qc).Should(Equal(QueryContext{AQLQuery: &common2.AQLQuery{
 			Table: "foo",
 			Measures: []common2.Measure{
 				{Expr: "avg(fare)"},
 			},
-		}))
+		}}))
 	})
 
 	ginkgo.It("MergeNode should work", func() {
@@ -163,10 +166,10 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		Ω(mn.children).Should(HaveLen(len(mockHosts)))
 		sn1, ok := mn.children[0].(*BlockingScanNode)
 		Ω(ok).Should(BeTrue())
-		Ω(sn1.query.Shards).Should(HaveLen(2))
+		Ω(sn1.qc.AQLQuery.Shards).Should(HaveLen(2))
 		sn2, ok := mn.children[1].(*BlockingScanNode)
 		Ω(ok).Should(BeTrue())
-		Ω(sn2.query.Shards).Should(HaveLen(2))
+		Ω(sn2.qc.AQLQuery.Shards).Should(HaveLen(2))
 	})
 
 	ginkgo.It("NewAggQueryPlan should work for avg query", func() {
@@ -238,10 +241,10 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
 		myResult := common2.AQLQueryResult{"foo": 1}
-		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
 
 		sn := BlockingScanNode{
-			query:          q,
+			qc:             QueryContext{AQLQuery: &q},
 			dataNodeClient: &mockDatanodeCli,
 		}
 
@@ -265,10 +268,10 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
 		myResult := common2.AQLQueryResult{"foo": 1}
-		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, true).Return(myResult, nil)
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, true).Return(myResult, nil)
 
 		sn := BlockingScanNode{
-			query:          q,
+			qc:             QueryContext{AQLQuery: &q},
 			dataNodeClient: &mockDatanodeCli,
 		}
 
@@ -291,10 +294,10 @@ var _ = ginkgo.Describe("agg query plan", func() {
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Times(rpcRetries)
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Times(rpcRetries)
 
 		sn := BlockingScanNode{
-			query:          q,
+			qc:             QueryContext{AQLQuery: &q},
 			dataNodeClient: &mockDatanodeCli,
 		}
 
@@ -316,12 +319,12 @@ var _ = ginkgo.Describe("agg query plan", func() {
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Once()
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("rpc error")).Once()
 		myResult := common2.AQLQueryResult{"foo": 1}
-		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil).Once()
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil).Once()
 
 		sn := BlockingScanNode{
-			query:          q,
+			qc:             QueryContext{AQLQuery: &q},
 			dataNodeClient: &mockDatanodeCli,
 		}
 

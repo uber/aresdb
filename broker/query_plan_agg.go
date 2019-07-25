@@ -138,27 +138,28 @@ func (mn *mergeNodeImpl) Execute(ctx context.Context) (result queryCom.AQLQueryR
 type BlockingScanNode struct {
 	blockingPlanNodeImpl
 
-	query          queryCom.AQLQuery
+	qc             QueryContext
 	host           topology.Host
 	dataNodeClient dataCli.DataNodeQueryClient
 }
 
 func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
-	isHll := common.CallNameToAggType[sn.query.Measures[0].ExprParsed.(*expr.Call).Name] == common.Hll
+	isHll := common.CallNameToAggType[sn.qc.AQLQuery.Measures[0].ExprParsed.(*expr.Call).Name] == common.Hll
 
 	trial := 0
 	for trial < rpcRetries {
 		trial++
 
 		var fetchErr error
-		utils.GetLogger().With("host", sn.host, "query", sn.query).Debug("sending query to datanode")
-		result, fetchErr = sn.dataNodeClient.Query(ctx, sn.host, sn.query, isHll)
+		utils.GetLogger().With("host", sn.host, "query", sn.qc.AQLQuery).Debug("sending query to datanode")
+		result, fetchErr = sn.dataNodeClient.Query(ctx, sn.qc.RequestID, sn.host, *sn.qc.AQLQuery, isHll)
 		if fetchErr != nil {
 			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(
 				"error", fetchErr,
 				"host", sn.host,
-				"query", sn.query,
+				"query", sn.qc.AQLQuery,
+				"requestID", sn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
 			err = utils.StackError(fetchErr, "fetch from datanode failed")
 			continue
@@ -198,12 +199,12 @@ func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.Da
 	switch agg {
 	case common.Avg:
 		root = NewMergeNode(common.Avg)
-		sumQuery, countQuery := splitAvgQuery(*qc.AQLQuery)
+		sumQuery, countQuery := splitAvgQuery(*qc)
 		root.Add(
-			buildSubPlan(common.Sum, &sumQuery, assignments, topo, client),
-			buildSubPlan(common.Count, &countQuery, assignments, topo, client))
+			buildSubPlan(common.Sum, sumQuery, assignments, topo, client),
+			buildSubPlan(common.Count, countQuery, assignments, topo, client))
 	default:
-		root = buildSubPlan(agg, qc.AQLQuery, assignments, topo, client)
+		root = buildSubPlan(agg, *qc, assignments, topo, client)
 	}
 
 	plan = &AggQueryPlan{
@@ -327,10 +328,11 @@ func (ap *AggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) (err
 }
 
 // splitAvgQuery to sum and count queries
-func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom.AQLQuery) {
+func splitAvgQuery(qc QueryContext) (sumqc QueryContext, countqc QueryContext) {
+	q := qc.AQLQuery
 	measure := q.Measures[0]
 
-	sumq = q
+	sumq := *q
 	sumq.Measures = []queryCom.Measure{
 		{
 			Alias:   measure.Alias,
@@ -341,7 +343,7 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 	sumq.Measures[0].Expr = strings.Replace(strings.ToLower(sumq.Measures[0].Expr), "avg", "sum", 1)
 	sumq.Measures[0].ExprParsed, _ = expr.ParseExpr(sumq.Measures[0].Expr)
 
-	countq = q
+	countq := *q
 	countq.Measures = []queryCom.Measure{
 		{
 			Alias:   measure.Alias,
@@ -351,19 +353,26 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 	}
 	countq.Measures[0].Expr = "count(*)"
 	countq.Measures[0].ExprParsed, _ = expr.ParseExpr(countq.Measures[0].Expr)
+
+	sumqc = qc
+	sumqc.AQLQuery = &sumq
+	countqc = qc
+	countqc.AQLQuery = &countq
 	return
 }
 
-func buildSubPlan(agg common.AggType, q *queryCom.AQLQuery, assignments map[topology.Host][]uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
+func buildSubPlan(agg common.AggType, qc QueryContext, assignments map[topology.Host][]uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
 	for host, shardIDs := range assignments {
 		// make deep copy
-		newQ := *q
+		currQ := *qc.AQLQuery
 		for _, shard := range shardIDs {
-			newQ.Shards = append(newQ.Shards, int(shard))
+			currQ.Shards = append(currQ.Shards, int(shard))
 		}
+		currQc := qc
+		currQc.AQLQuery = &currQ
 		root.Add(&BlockingScanNode{
-			query:          newQ,
+			qc:             currQc,
 			host:           host,
 			dataNodeClient: client,
 		})

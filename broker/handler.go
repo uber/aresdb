@@ -16,6 +16,7 @@ package broker
 
 import (
 	"context"
+	"fmt"
 	"github.com/gorilla/mux"
 	apiCom "github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/broker/common"
@@ -23,15 +24,19 @@ import (
 	"github.com/uber/aresdb/query/sql"
 	"github.com/uber/aresdb/utils"
 	"net/http"
+	"sync/atomic"
 )
 
 type QueryHandler struct {
-	exec common.QueryExecutor
+	exec          common.QueryExecutor
+	nextRequestID int64
+	instanceID    string
 }
 
-func NewQueryHandler(executor common.QueryExecutor) QueryHandler {
+func NewQueryHandler(executor common.QueryExecutor, instanceID string) QueryHandler {
 	return QueryHandler{
-		exec: executor,
+		exec:       executor,
+		instanceID: instanceID,
 	}
 }
 
@@ -75,7 +80,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.exec.Execute(context.TODO(), aql, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
+	err = handler.exec.Execute(context.TODO(), handler.getReqestID(), aql, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return
@@ -109,12 +114,17 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.exec.Execute(context.TODO(), &queryReqeust.Body.Query, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
+	err = handler.exec.Execute(context.TODO(), handler.getReqestID(), &queryReqeust.Body.Query, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return
 	}
 	return
+}
+
+func (handler *QueryHandler) getReqestID() string {
+	newID := atomic.AddInt64(&handler.nextRequestID, 1)
+	return fmt.Sprintf("%s_%d", handler.instanceID, newID)
 }
 
 // BrokerSQLRequest represents SQL query request. Debug mode will

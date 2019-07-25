@@ -45,6 +45,7 @@ type QueryContext struct {
 	// it down to datanodes
 	DimensionVectorIndex []int
 	DimRowBytes          int
+	RequestID            string
 }
 
 // NewQueryContext creates new query context

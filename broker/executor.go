@@ -40,7 +40,7 @@ type queryExecutorImpl struct {
 	dataNodeClient    dataCli.DataNodeQueryClient
 }
 
-func (qe *queryExecutorImpl) Execute(ctx context.Context, aql *queryCom.AQLQuery, returnHLLBinary bool, w http.ResponseWriter) (err error) {
+func (qe *queryExecutorImpl) Execute(ctx context.Context, requestID string, aql *queryCom.AQLQuery, returnHLLBinary bool, w http.ResponseWriter) (err error) {
 	// TODO: add timeout
 
 	// compile
