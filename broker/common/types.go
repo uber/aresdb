@@ -32,7 +32,7 @@ type SchemaManager interface {
 // QueryExecutor defines query executor
 type QueryExecutor interface {
 	// Execute executes query and flush result to connection
-	Execute(ctx context.Context, requestID string, aql *queryCom.AQLQuery, w http.ResponseWriter) (err error)
+	Execute(ctx context.Context, requestID string, aql *queryCom.AQLQuery, returnHLLBinary bool, w http.ResponseWriter) (err error)
 }
 
 type QueryPlan interface {
