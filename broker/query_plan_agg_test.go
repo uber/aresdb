@@ -15,9 +15,14 @@ import (
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
 	common3 "github.com/uber/aresdb/common"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
+	memCom "github.com/uber/aresdb/memstore/common"
+	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	common2 "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"io/ioutil"
+	"net/http/httptest"
 )
 
 var _ = ginkgo.Describe("agg query plan", func() {
@@ -326,5 +331,112 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		res, err := sn.Execute(context.TODO())
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(myResult))
+	})
+
+	ginkgo.It("post process hll should work", func() {
+		table1 := &metaCom.Table{
+			Name: "table1",
+			Columns: []metaCom.Column{
+				{Name: "field1", Type: "Uint32"},
+				{Name: "field2", Type: "SmallEnum"},
+				{Name: "field3", Type: "Uint16"},
+				{Name: "field4", Type: "Uint32"},
+			},
+		}
+		tableSchema1 := memCom.NewTableSchema(table1)
+		tableSchema1.CreateEnumDict("field2", []string{"c", "d"})
+
+		hllResult := common2.AQLQueryResult{
+			"NULL": map[string]interface{}{
+				"NULL": map[string]interface{}{
+					"NULL": common2.HLL{NonZeroRegisters: 3,
+						SparseData: []common2.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+				}},
+			"1": map[string]interface{}{
+				"c": map[string]interface{}{
+					"2": common2.HLL{NonZeroRegisters: 3,
+						SparseData: []common2.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+				},
+			},
+			"4294967295": map[string]interface{}{
+				"d": map[string]interface{}{
+					"514": common2.HLL{NonZeroRegisters: 4, SparseData: []common2.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
+				},
+			}}
+
+		mockTableSchemaReader := memComMocks.TableSchemaReader{}
+		mockTableSchemaReader.On("RLock").Return(nil)
+		mockTableSchemaReader.On("RUnlock").Return(nil)
+		mockTableSchemaReader.On("GetSchema", "table1").Return(tableSchema1, nil)
+
+		mockBlockingPlanNode := mocks.BlockingPlanNode{}
+		mockBlockingPlanNode.On("Execute", mock.Anything).Return(hllResult, nil)
+
+		q := common2.AQLQuery{
+			Table: "table1",
+			Dimensions: []common2.Dimension{
+				{Expr: "field1"},
+				{Expr: "field2"},
+				{Expr: "field3"},
+			},
+			Measures: []common2.Measure{
+				{Expr: "hll(field4)"},
+			},
+		}
+		w := httptest.NewRecorder()
+		qc := NewQueryContext(&q, true, w)
+		qc.Compile(&mockTableSchemaReader)
+		Ω(qc.Error).Should(BeNil())
+
+		plan := AggQueryPlan{
+			aggType: common.Hll,
+			qc:      qc,
+			root:    &mockBlockingPlanNode,
+		}
+
+		err := plan.Execute(context.TODO(), w)
+		Ω(err).Should(BeNil())
+		Ω(w.Header().Get(utils.HTTPContentTypeHeaderKey)).Should(Equal(utils.HTTPContentTypeHyperLogLog))
+		var bs []byte
+		bs, err = ioutil.ReadAll(w.Result().Body)
+		Ω(err).Should(BeNil())
+
+		var (
+			qResults []common2.AQLQueryResult
+			qErrors  []error
+		)
+		qResults, qErrors, err = common2.ParseHLLQueryResults(bs, false)
+		Ω(err).Should(BeNil())
+		Ω(qErrors).Should(HaveLen(1))
+		Ω(qErrors[0]).Should(BeNil())
+		Ω(qResults).Should(HaveLen(1))
+		Ω(qResults[0]).Should(Equal(hllResult))
+
+		qResults, qErrors, err = common2.ParseHLLQueryResults(bs, true)
+		Ω(err).Should(BeNil())
+		Ω(qErrors).Should(HaveLen(1))
+		Ω(qErrors[0]).Should(BeNil())
+		Ω(qResults).Should(HaveLen(1))
+		Ω(qResults[0]).Should(Equal(common2.AQLQueryResult{
+			"NULL": map[string]interface{}{
+				"NULL": map[string]interface{}{
+					"NULL": common2.HLL{NonZeroRegisters: 3,
+						SparseData: []common2.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+				}},
+			"1": map[string]interface{}{
+				"0": map[string]interface{}{
+					"2": common2.HLL{NonZeroRegisters: 3,
+						SparseData: []common2.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+				},
+			},
+			"4294967295": map[string]interface{}{
+				"1": map[string]interface{}{
+					"514": common2.HLL{NonZeroRegisters: 4, SparseData: []common2.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
+				},
+			}}))
 	})
 })

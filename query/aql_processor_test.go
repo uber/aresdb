@@ -1260,18 +1260,6 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		utils.ResetDefaults()
 	})
 
-	ginkgo.It("dimValResVectorSize should work", func() {
-		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 1})).Should(Equal(30))
-		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 2, 1, 1})).Should(Equal(45))
-		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 0})).Should(Equal(15))
-		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 0})).Should(Equal(24))
-		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 1})).Should(Equal(21))
-		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 0, 1, 1})).Should(Equal(15))
-		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 0, 1, 0})).Should(Equal(9))
-		Ω(dimValResVectorSize(3, queryCom.DimCountsPerDimWidth{0, 0, 0, 0, 1})).Should(Equal(6))
-		Ω(dimValResVectorSize(0, queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 1})).Should(Equal(0))
-	})
-
 	ginkgo.It("getGeoShapeLatLongSlice", func() {
 		var lats, longs []float32
 
@@ -1568,8 +1556,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					dimIndex:      -1,
 				},
 			},
-			fromTime: &alignedTime{time.Unix(0, 0), "s"},
-			toTime:   &alignedTime{time.Unix(86400, 0), "s"},
+			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
+			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
 		}
 
 		qc.ProcessQuery(mockMemStore)
@@ -1842,8 +1830,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					inOrOut:       true,
 				},
 			},
-			fromTime: &alignedTime{time.Unix(0, 0), "s"},
-			toTime:   &alignedTime{time.Unix(86400, 0), "s"},
+			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
+			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
 		}
 
 		qc.ProcessQuery(mockMemStore)
@@ -2095,8 +2083,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					ExprType: expr.Unsigned,
 				},
 			},
-			fromTime: &alignedTime{time.Unix(0, 0), "s"},
-			toTime:   &alignedTime{time.Unix(86400, 0), "s"},
+			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
+			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
 		}
 
 		qc.ProcessQuery(mockMemStore)

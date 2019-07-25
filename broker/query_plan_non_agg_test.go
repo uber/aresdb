@@ -80,7 +80,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 
 		// test negative limit (no limit)
 		w := httptest.NewRecorder()
-		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
+		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
 		Ω(err).Should(BeNil())
 
 		Ω(plan.nodes).Should(HaveLen(len(mockHosts)))
@@ -92,20 +92,47 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		Ω(plan.nodes[0].qc.AQLQuery.Shards).Should(HaveLen(2))
 		Ω(plan.nodes[1].qc.AQLQuery.Shards).Should(HaveLen(2))
 
-		err = plan.Execute(context.TODO())
+		err = plan.Execute(context.TODO(), w)
 		Ω(err).Should(BeNil())
 
 		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"],["bar","2"],["foo","1"],["bar","2"]]}`))
 
-		// test limit
+		// test limit no enough data
 		qc.AQLQuery.Limit = 3
 		w = httptest.NewRecorder()
-		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
+		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
 		Ω(err).Should(BeNil())
 		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
 		err = plan.Execute(context.TODO())
+
+		bsEmpty := []byte(``)
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Once()
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bsEmpty, nil).Times(len(mockHosts) - 1)
+		err = plan.Execute(context.TODO(), w)
+		Ω(err).Should(BeNil())
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"]]}`))
+
+		// test limit with enough data 1
+		qc.AQLQuery.Limit = 3
+		w = httptest.NewRecorder()
+		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
+
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bsEmpty, nil).Times(len(mockHosts) - 2)
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(2)
+		err = plan.Execute(context.TODO(), w)
 		Ω(err).Should(BeNil())
 		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))
 
+		// test limit with enough data 2
+		w = httptest.NewRecorder()
+		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
+
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(2)
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bsEmpty, nil).Times(len(mockHosts) - 2)
+		err = plan.Execute(context.TODO(), w)
+		Ω(err).Should(BeNil())
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))
 	})
 })

@@ -35,6 +35,7 @@ var bytesComma = []byte(",")
 func (qc *AQLQueryContext) Postprocess() {
 	oopkContext := qc.OOPK
 	if oopkContext.IsHLL() {
+		// skip translate enum for HLL if query is from broker
 		result, err := queryCom.NewTimeSeriesHLLResult(qc.HLLQueryResult, queryCom.HLLDataHeader, qc.DataOnly)
 		if err != nil {
 			// should never be here except bug
@@ -57,7 +58,7 @@ func (qc *AQLQueryContext) initResultFlushContext() {
 
 	oopkContext := qc.OOPK
 	for dimIndex, dimExpr := range oopkContext.Dimensions {
-		qc.resultFlushContext.dimensionDataTypes[dimIndex], qc.resultFlushContext.reverseDicts[dimIndex] = getDimensionDataType(dimExpr), qc.getEnumReverseDict(dimIndex, dimExpr)
+		qc.resultFlushContext.dimensionDataTypes[dimIndex], qc.resultFlushContext.reverseDicts[dimIndex] = queryCom.GetDimensionDataType(dimExpr), qc.getEnumReverseDict(dimIndex, dimExpr)
 	}
 }
 
@@ -112,8 +113,21 @@ func (qc *AQLQueryContext) flushResultBuffer() {
 				}
 			}
 
+			enumDict := dpc.reverseDicts[dimIndex]
+
+			// TODO: enable this logic when broker is ready to translate enums
+			// whether to translate enum:
+			// 1. for non agg query
+			//    1a. if local enum still exists, translate
+			//    1b. if no local enum, won't translate
+			// 2. agg query: skip translate if query is from broker (DataOnly == true)
+			//enumDict := []string{}
+			//if !qc.DataOnly || qc.IsNonAggregationQuery {
+			//	enumDict = dpc.reverseDicts[dimIndex]
+			//}
+
 			dimValues[dimIndex] = queryCom.ReadDimension(
-				valuePtr, nullPtr, i, dpc.dimensionDataTypes[dimIndex], dpc.reverseDicts[dimIndex],
+				valuePtr, nullPtr, i, dpc.dimensionDataTypes[dimIndex], enumDict,
 				timeDimensionMeta, dpc.dimensionValueCache[dimIndex])
 		}
 		utils.GetRootReporter().GetTimer(utils.QueryDimReadLatency).Record(utils.Now().Sub(dimReadingStart))
@@ -159,7 +173,7 @@ func (qc *AQLQueryContext) PostprocessAsHLLData() ([]byte, error) {
 
 	var timeDimensions []int
 	for dimIndex, ast := range oopkContext.Dimensions {
-		dataTypes[dimIndex], reverseDicts[dimIndex] = getDimensionDataType(ast), qc.getEnumReverseDict(dimIndex, ast)
+		dataTypes[dimIndex], reverseDicts[dimIndex] = queryCom.GetDimensionDataType(ast), qc.getEnumReverseDict(dimIndex, ast)
 		if qc.Query.Dimensions[dimIndex].IsTimeDimension() {
 			timeDimensions = append(timeDimensions, dimIndex)
 		}

@@ -35,6 +35,10 @@ type QueryExecutor interface {
 	Execute(ctx context.Context, requestID string, aql *queryCom.AQLQuery, w http.ResponseWriter) (err error)
 }
 
+type QueryPlan interface {
+	Execute(ctx context.Context, w http.ResponseWriter) (err error)
+}
+
 // BlockingPlanNode defines query plan nodes that waits for children to finish
 type BlockingPlanNode interface {
 	Execute(ctx context.Context) (queryCom.AQLQueryResult, error)

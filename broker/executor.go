@@ -16,17 +16,16 @@ package broker
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
-	metaCom "github.com/uber/aresdb/metastore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"net/http"
 )
 
 // NewQueryExecutor creates a new QueryExecutor
-func NewQueryExecutor(tsr metaCom.TableSchemaReader, topo topology.Topology, client dataCli.DataNodeQueryClient) common.QueryExecutor {
+func NewQueryExecutor(tsr memCom.TableSchemaReader, topo topology.Topology, client dataCli.DataNodeQueryClient) common.QueryExecutor {
 	return &queryExecutorImpl{
 		tableSchemaReader: tsr,
 		topo:              topo,
@@ -36,17 +35,16 @@ func NewQueryExecutor(tsr metaCom.TableSchemaReader, topo topology.Topology, cli
 
 // queryExecutorImpl will be reused across all queries
 type queryExecutorImpl struct {
-	tableSchemaReader metaCom.TableSchemaReader
+	tableSchemaReader memCom.TableSchemaReader
 	topo              topology.Topology
 	dataNodeClient    dataCli.DataNodeQueryClient
 }
 
-func (qe *queryExecutorImpl) Execute(ctx context.Context, requestID string, aql *queryCom.AQLQuery, w http.ResponseWriter) (err error) {
+func (qe *queryExecutorImpl) Execute(ctx context.Context, requestID string, aql *queryCom.AQLQuery, returnHLLBinary bool, w http.ResponseWriter) (err error) {
 	// TODO: add timeout
 
 	// compile
-	qc := NewQueryContext(aql, w)
-	qc.RequestID = requestID
+	qc := NewQueryContext(aql, returnHLLBinary, w)
 	qc.Compile(qe.tableSchemaReader)
 	if qc.Error != nil {
 		err = qc.Error
@@ -54,34 +52,15 @@ func (qe *queryExecutorImpl) Execute(ctx context.Context, requestID string, aql 
 	}
 
 	// execute
+	var queryPlan common.QueryPlan
 	if qc.IsNonAggregationQuery {
-		return qe.executeNonAggQuery(ctx, qc, w)
+		queryPlan, err = NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
+	} else {
+		queryPlan, err = NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
 	}
-	return qe.executeAggQuery(ctx, qc, w)
-}
+	if err != nil {
+		return
+	}
 
-func (qe *queryExecutorImpl) executeNonAggQuery(ctx context.Context, qc *QueryContext, w http.ResponseWriter) (err error) {
-	var plan NonAggQueryPlan
-	plan, err = NewNonAggQueryPlan(qc, qe.topo, qe.dataNodeClient, w)
-	if err != nil {
-		return
-	}
-	return plan.Execute(ctx)
-}
-
-func (qe *queryExecutorImpl) executeAggQuery(ctx context.Context, qc *QueryContext, w http.ResponseWriter) (err error) {
-	var plan AggQueryPlan
-	plan, err = NewAggQueryPlan(qc, qe.topo, qe.dataNodeClient)
-	if err != nil {
-		return
-	}
-	var result queryCom.AQLQueryResult
-	result, err = plan.Execute(ctx)
-	if err != nil {
-		return
-	}
-	var bs []byte
-	bs, err = json.Marshal(result)
-	w.Write([]byte(bs))
-	return
+	return queryPlan.Execute(ctx, w)
 }
