@@ -75,7 +75,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.exec.Execute(context.TODO(), aql, w)
+	err = handler.exec.Execute(context.TODO(), aql, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return
@@ -109,7 +109,7 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.exec.Execute(context.TODO(), &queryReqeust.Body.Query, w)
+	err = handler.exec.Execute(context.TODO(), &queryReqeust.Body.Query, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return

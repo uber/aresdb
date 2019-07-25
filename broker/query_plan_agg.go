@@ -16,14 +16,17 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/broker/util"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
+	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"net/http"
 	"strings"
 	"sync"
 )
@@ -173,11 +176,13 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 
 // AggQueryPlan is the plan for aggregate queries
 type AggQueryPlan struct {
-	root common.BlockingPlanNode
+	aggType common.AggType
+	qc      *QueryContext
+	root    common.BlockingPlanNode
 }
 
 // NewAggQueryPlan creates a new agg query plan
-func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan AggQueryPlan, err error) {
+func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan *AggQueryPlan, err error) {
 	var root common.MergeNode
 
 	var assignments map[topology.Host][]uint32
@@ -201,14 +206,124 @@ func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.Da
 		root = buildSubPlan(agg, qc.AQLQuery, assignments, topo, client)
 	}
 
-	plan = AggQueryPlan{
-		root: root,
+	plan = &AggQueryPlan{
+		aggType: agg,
+		qc:      qc,
+		root:    root,
 	}
 	return
 }
 
-func (ap *AggQueryPlan) Execute(ctx context.Context) (results queryCom.AQLQueryResult, err error) {
-	return ap.root.Execute(ctx)
+func (ap *AggQueryPlan) postProcess(results queryCom.AQLQueryResult, execErr error, w http.ResponseWriter) (err error) {
+	var data []byte
+	// for now post process for HLL binary only
+	// TODO: move post processing logic for non-agg and other agg queries here
+	if ap.qc.ReturnHLLBinary {
+		w.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
+		data, err = ap.postProcessHLLBinary(results, execErr)
+	} else {
+		data, err = json.Marshal(results)
+	}
+
+	if err != nil {
+		return
+	}
+
+	_, err = w.Write([]byte(data))
+	return
+}
+
+// convert HLL to binary format
+func (ap *AggQueryPlan) postProcessHLLBinary(res queryCom.AQLQueryResult, execErr error) (data []byte, err error) {
+	hllQueryResults := queryCom.NewHLLQueryResults()
+	if execErr != nil {
+		hllQueryResults.WriteError(execErr)
+		data = hllQueryResults.GetBytes()
+		return
+	}
+
+	var (
+		qc           = ap.qc
+		dimDataTypes = make([]memCom.DataType, len(qc.AQLQuery.Dimensions))
+		reverseDicts = make(map[int][]string)
+		enumDicts    = make(map[int]map[string]int)
+		resultSize   = len(res)
+		hllVector    []byte
+		dimVector    []byte
+		countVector  []byte
+	)
+
+	// build dataTypes and enumDicts
+	for dimIdx, dim := range qc.AQLQuery.Dimensions {
+		dimDataTypes[dimIdx] = queryCom.GetDimensionDataType(dim.ExprParsed)
+		if memCom.IsEnumType(dimDataTypes[dimIdx]) {
+			var (
+				tableID  int
+				columnID int
+			)
+			tableID, columnID, err = qc.resolveColumn(dim.Expr)
+			if err != nil {
+				return
+			}
+			table := qc.Tables[tableID]
+			reverseDicts[dimIdx] = table.EnumDicts[table.Schema.Columns[columnID].Name].ReverseDict
+			enumDicts[dimIdx] = table.EnumDicts[table.Schema.Columns[columnID].Name].Dict
+		}
+	}
+
+	// build HLL binary
+	hllVector, dimVector, countVector, err = queryCom.BuildVectorsFromHLLResult(res, dimDataTypes, enumDicts, qc.DimensionVectorIndex)
+	if err != nil {
+		return
+	}
+	paddedRawDimValuesVectorLength := (uint32(queryCom.DimValResVectorSize(resultSize, qc.NumDimsPerDimWidth)) + 7) / 8 * 8
+	paddedHLLVectorLength := (int64(len(hllVector)) + 7) / 8 * 8
+
+	builder := queryCom.HLLDataWriter{
+		HLLData: queryCom.HLLData{
+			ResultSize:                     uint32(resultSize),
+			NumDimsPerDimWidth:             qc.NumDimsPerDimWidth,
+			DimIndexes:                     qc.DimensionVectorIndex,
+			DataTypes:                      dimDataTypes,
+			EnumDicts:                      reverseDicts,
+			PaddedRawDimValuesVectorLength: paddedRawDimValuesVectorLength,
+			PaddedHLLVectorLength:          paddedHLLVectorLength,
+		},
+	}
+
+	headerSize, totalSize := builder.CalculateSizes()
+	builder.Buffer = make([]byte, totalSize)
+	err = builder.SerializeHeader()
+	if err != nil {
+		return
+	}
+
+	writer := utils.NewBufferWriter(builder.Buffer)
+	writer.SkipBytes(int(headerSize))
+	_, err = writer.Write(dimVector)
+	if err != nil {
+		return
+	}
+	writer.AlignBytes(8)
+	_, err = writer.Write(countVector)
+	if err != nil {
+		return
+	}
+	writer.AlignBytes(8)
+	_, err = writer.Write(hllVector)
+	if err != nil {
+		return
+	}
+
+	// write hll binary to hll result, and return
+	hllQueryResults.WriteResult(builder.Buffer)
+	return hllQueryResults.GetBytes(), nil
+}
+
+func (ap *AggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) (err error) {
+	var results queryCom.AQLQueryResult
+	results, err = ap.root.Execute(ctx)
+	return ap.postProcess(results, err, w)
 }
 
 // splitAvgQuery to sum and count queries

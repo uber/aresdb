@@ -379,6 +379,8 @@ type AQLQueryContext struct {
 	Results            queryCom.AQLQueryResult `json:"-"`
 	resultFlushContext resultFlushContext
 
+	// whether it's a DataOnly request from broker
+	DataOnly bool `json:"DataOnly"`
 	// whether to serialize the query result as HLLData. If ReturnHLLData is true, we will not release dimension
 	// vector and measure vector until serialization is done.
 	ReturnHLLData  bool   `json:"ReturnHLLData"`
@@ -386,8 +388,8 @@ type AQLQueryContext struct {
 
 	// for time filter
 	fixedTimezone *time.Location
-	fromTime      *alignedTime
-	toTime        *alignedTime
+	fromTime      *queryCom.AlignedTime
+	toTime        *queryCom.AlignedTime
 	dstswitch     int64
 
 	// timezone column and time filter related
@@ -396,7 +398,6 @@ type AQLQueryContext struct {
 	// fields for non aggregate query
 	// Flag to indicate if this query is not aggregation query
 	IsNonAggregationQuery      bool
-	DataOnly                   bool
 	numberOfRowsWritten        int
 	maxBatchSizeAfterPrefilter int
 
