@@ -118,7 +118,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(listVP.GetBytes()).Should(BeZero())
 	})
 
-	ginkgo.It("archive list vectorparty read write should work", func() {
+	ginkgo.It("archive list vector party read write should work", func() {
 		upsertBatch, err := createArrayUpsertBatch()
 		Ω(err).Should(BeNil())
 
