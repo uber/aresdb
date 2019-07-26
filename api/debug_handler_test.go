@@ -597,6 +597,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
     "primaryKeyColumnTypes": []
   },
   "bootstrapDetails": {
+	"source": "",
+	"startedAt": 0,
     "stage": "waiting",
     "numColumns": 0,
     "batches": {}

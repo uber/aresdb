@@ -59,6 +59,7 @@ const (
 type BootstrapDetails interface {
 	json.Marshaler
 
+	SetSource(source string)
 	SetNumColumns(numColumns int)
 	SetBootstrapStage(stage BootstrapStage)
 	AddVPToCopy(batch int32, columnID uint32)

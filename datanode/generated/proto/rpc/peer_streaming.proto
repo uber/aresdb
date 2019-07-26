@@ -121,6 +121,19 @@ message BenchmarkRequest {
     int32 bufferSize = 3;
 }
 
+message HealthCheckRequest {
+    string service = 1;
+}
+
+message HealthCheckResponse {
+    enum ServingStatus {
+        UNKNOWN = 0;
+        SERVING = 1;
+        NOT_SERVING = 2;
+    }
+    ServingStatus status = 1;
+}
+
 // PeerDataNode service defines the service for data fetching from peer data node
 // A data fetching process will proceed with the following sequence:
 //  1. StartSession to start data fetching session. (as long as any ongoing session is alive, the peer data node will
@@ -132,6 +145,7 @@ message BenchmarkRequest {
 //     at the peer node
 //  4. FetchVectorPartyRawData to fetch vector party from peer data node
 service PeerDataNode {
+    rpc Health(HealthCheckRequest ) returns (HealthCheckResponse ) {}
     // StartSession starts a session for data streaming
     rpc StartSession(StartSessionRequest ) returns (Session ) {}
     // KeepAlive sends keep alive message to the peer data service to

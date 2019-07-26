@@ -18,10 +18,14 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
 	queryCom "github.com/uber/aresdb/query/common"
+	"google.golang.org/grpc"
 )
 
 // WithConnectionFn defines function with PeerDataNodeClient
-type WithConnectionFn func(rpc.PeerDataNodeClient)
+type WithConnectionFn func(peerID string, client rpc.PeerDataNodeClient)
+
+// PeerConnDialer defines the dial function for PeerDataDodeClient
+type PeerConnDialer func(target string, opts ...grpc.DialOption) (client rpc.PeerDataNodeClient, closeFn func() error, err error)
 
 type Peer interface {
 	BorrowConnection(fn WithConnectionFn) error
@@ -32,7 +36,7 @@ type Peer interface {
 // PeerSource represent a peer source which manages peer connections
 type PeerSource interface {
 	// BorrowConnection will borrow a connection and execute a user function.
-	BorrowConnection(hostID string, fn WithConnectionFn) error
+	BorrowConnection(hostIDs []string, fn WithConnectionFn) error
 	Close()
 }
 
