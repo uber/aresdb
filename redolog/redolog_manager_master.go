@@ -94,9 +94,9 @@ func (m *RedoLogManagerMaster) NewRedologManager(table string, shard int, unshar
 		return nil, fmt.Errorf("NewRedologManager for table: %s, shard: %d is already running", table, shard)
 	}
 
-	if unsharded && m.RedoLogConfig.DiskOnlyForUnsharded {
+	if unsharded && m.RedoLogConfig.DiskOnlyForUnsharded || !m.RedoLogConfig.KafkaConfig.Enabled {
 		manager = newFileRedoLogManager(int64(tableConfig.RedoLogRotationInterval), int64(tableConfig.MaxRedoLogFileSize), m.diskStore, table, shard)
-	} else if m.RedoLogConfig.KafkaConfig.Enabled {
+	} else {
 		commitFunc := m.metaStore.UpdateRedoLogCommitOffset
 		checkPointFunc := m.metaStore.UpdateRedoLogCheckpointOffset
 		getCommitOffsetFunc := m.metaStore.GetRedoLogCommitOffset
@@ -107,8 +107,6 @@ func (m *RedoLogManagerMaster) NewRedologManager(table string, shard int, unshar
 		} else {
 			manager = newCompositeRedoLogManager(m.Namespace, table, m.RedoLogConfig.KafkaConfig.TopicSuffix, shard, tableConfig, m.consumer, m.diskStore, commitFunc, checkPointFunc, getCommitOffsetFunc, getCheckpointOffsetFunc)
 		}
-	} else {
-		manager = newFileRedoLogManager(int64(tableConfig.RedoLogRotationInterval), int64(tableConfig.MaxRedoLogFileSize), m.diskStore, table, shard)
 	}
 
 	tableManager[shard] = manager
