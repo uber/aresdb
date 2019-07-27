@@ -122,6 +122,16 @@ type DynamicTopology interface {
 	MarkShardsAvailable(instanceID string, shardIDs ...uint32) error
 }
 
+// HealthTrackingDynamicTopoloy is a topology that can set topo
+type HealthTrackingDynamicTopoloy interface {
+	Topology
+
+	// MarkHostHealthy will keep the host in the view of Hosts
+	MarkHostHealthy(host Host) error
+	// MarkHostUnhealthy will remove the host from the view of Hosts
+	MarkHostUnhealthy(host Host) error
+}
+
 // StaticConfiguration is used for standing up M3DB with a static topology
 type StaticConfiguration struct {
 	Shards   int               `yaml:"shards"`
