@@ -15,7 +15,6 @@
 package list
 
 import (
-	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/memstore/common"
 	"unsafe"
 )
@@ -27,7 +26,7 @@ import (
 // 2. There is no default value concept for list at least for now, so we will not store default value.
 type baseVectorParty struct {
 	// offset is a pair of uint32 [offset, length]. therefore its length is 2 * length of vp.
-	offsets *memstore.Vector
+	offsets *common.Vector
 	// length of vp.
 	length int
 	// DataType of values. We need it since for mode 0 vector party, we cannot
@@ -45,6 +44,14 @@ func (vp *baseVectorParty) GetOffsetLength(row int) (offset uint32, length uint3
 	offset = *(*uint32)(vp.offsets.GetValue(2 * row))
 	length = *(*uint32)(vp.offsets.GetValue(2*row + 1))
 	return
+}
+
+// GetElemCount return the number of element for value in n-th row
+func (vp *baseVectorParty) GetElemCount(row int) uint32 {
+	if vp.offsets == nil || row < 0 || row >= vp.length {
+		return 0
+	}
+	return *(*uint32)(vp.offsets.GetValue(2*row + 1))
 }
 
 // GetValidity get validity of given offset.

@@ -63,6 +63,15 @@ type HostVectorPartySlice struct {
 // vector parties.
 type ValueCountsUpdateMode int
 
+const (
+	// IgnoreCount skip setting value counts.
+	IgnoreCount ValueCountsUpdateMode = iota
+	// IncrementCount only increment count.
+	IncrementCount
+	// CheckExistingCount also check existing count.
+	CheckExistingCount
+)
+
 // SlicedVector is vector party data represented into human-readable slice format
 // consists of a value slice and count slice,
 // count slice consists of accumulative counts.
@@ -203,6 +212,18 @@ type ArchiveVectorParty interface {
 
 // ListVectorParty is the interface for list vector party to read and write list value.
 type ListVectorParty interface {
+	// GetElemCount is to get count of elements of n-th element in the VP
+	GetElemCount(row int) uint32
+	// GetListValue is to get the raw value of n-th element in the VP
 	GetListValue(row int) (unsafe.Pointer, bool)
+	// SetListValue is to set value for n-th element in the VP
 	SetListValue(row int, val unsafe.Pointer, valid bool)
+}
+
+// VectorPartyEquals covers nil VectorParty compare
+func VectorPartyEquals(v1 VectorParty, v2 VectorParty) bool {
+	if v1 == nil || v2 == nil {
+		return v1 == nil && v2 == nil
+	}
+	return v1.Equals(v2)
 }

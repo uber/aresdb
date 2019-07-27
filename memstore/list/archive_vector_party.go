@@ -17,7 +17,6 @@ package list
 import (
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"io"
@@ -36,8 +35,8 @@ const (
 // in memory representation except archiving vp does not have cap vector.
 type ArchiveVectorParty struct {
 	baseVectorParty
-	memstore.Pinnable
-	values *memstore.Vector
+	common.Pinnable
+	values *common.Vector
 	// bytesWritten should only be used when archiving or backfilling. It's used to record the current position
 	// in values vector.
 	bytesWritten    int64
@@ -54,12 +53,17 @@ type ArchiveVectorParty struct {
 // store values and validities.
 func NewArchiveVectorParty(length int, dataType common.DataType,
 	totalValueBytes int64, locker sync.Locker) common.ArchiveVectorParty {
+		return newArchiveVectorParty(length, dataType, totalValueBytes, locker)
+}
+
+func newArchiveVectorParty(length int, dataType common.DataType,
+	totalValueBytes int64, locker sync.Locker) *ArchiveVectorParty {
 	return &ArchiveVectorParty{
 		baseVectorParty: baseVectorParty{
 			length:   length,
 			dataType: dataType,
 		},
-		Pinnable: memstore.Pinnable{
+		Pinnable: common.Pinnable{
 			AllUsersDone: sync.NewCond(locker),
 		},
 		totalValueBytes: totalValueBytes,
@@ -71,8 +75,8 @@ func NewArchiveVectorParty(length int, dataType common.DataType,
 // after switching to the new version of archive store. Before switching the memory
 // managed by this vp is counted as unmanaged memory.
 func (vp *ArchiveVectorParty) Allocate(hasCount bool) {
-	vp.offsets = memstore.NewVector(common.Uint32, vp.length*2)
-	vp.values = memstore.NewVector(common.Uint8, int(vp.totalValueBytes))
+	vp.offsets = common.NewVector(common.Uint32, vp.length*2)
+	vp.values = common.NewVector(common.Uint8, int(vp.totalValueBytes))
 }
 
 // GetBytes returns the bytes this vp occupies.
@@ -284,7 +288,7 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	vp.length = length
 	vp.dataType = dataType
 
-	vp.offsets = memstore.NewVector(common.Uint32, vp.length*2)
+	vp.offsets = common.NewVector(common.Uint32, vp.length*2)
 	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.offsets.Buffer()), vp.offsets.Bytes)); err != nil {
 		return err
 	}
@@ -296,7 +300,7 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	}
 	vp.totalValueBytes = int64(bytes)
 	// Read value vector.
-	vp.values = memstore.NewVector(common.Uint8, int(vp.totalValueBytes))
+	vp.values = common.NewVector(common.Uint8, int(vp.totalValueBytes))
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.values.Buffer()), vp.values.Bytes)); err != nil {
 		return err
@@ -327,7 +331,7 @@ func (vp *ArchiveVectorParty) LoadFromDisk(hostMemManager common.HostMemoryManag
 	table string, shardID int, columnID, batchID int, batchVersion uint32, seqNum uint32) {
 	vp.Loader.Add(1)
 	go func() {
-		serializer := memstore.NewVectorPartyArchiveSerializer(hostMemManager, diskStore, table, shardID, columnID, batchID, batchVersion, seqNum)
+		serializer := common.NewVectorPartyArchiveSerializer(hostMemManager, diskStore, table, shardID, columnID, batchID, batchVersion, seqNum)
 		err := serializer.ReadVectorParty(vp)
 		if err != nil {
 			utils.GetLogger().Panic(err)
@@ -354,8 +358,16 @@ func (vp *ArchiveVectorParty) SliceIndex(lowerBoundRow, upperBoundRow int) (
 	return lowerBoundRow, upperBoundRow
 }
 
-// CopyOnWrite is not supported by list vector party
+// CopyOnWrite clone vector party for updates, the update can only for in-place change with same length for update row
 func (vp *ArchiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorParty {
-	utils.GetLogger().Panic("CopyOnWrite is not supported by list vector party")
-	return nil
+	// archive vector party should always have allUsersDone initialized correctly with batch rwlock
+	newVP := newArchiveVectorParty(batchSize, vp.dataType, vp.totalValueBytes, vp.AllUsersDone.L)
+	newVP.Allocate(false)
+	if vp.values != nil {
+		utils.MemCopy(unsafe.Pointer(newVP.values.Buffer()), unsafe.Pointer(vp.values.Buffer()), vp.values.Bytes)
+	}
+	if vp.offsets != nil {
+		utils.MemCopy(unsafe.Pointer(newVP.offsets.Buffer()), unsafe.Pointer(vp.offsets.Buffer()), vp.offsets.Bytes)
+	}
+	return newVP
 }

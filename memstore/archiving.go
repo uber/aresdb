@@ -225,6 +225,25 @@ func (ap *archivingPatch) GetDataValueWithDefault(row, columnID int, defaultValu
 	return vp.GetDataValue(int(recordID.Index))
 }
 
+// GetCount get number of elements for values in the specified row/column, it is only valid for Array Value
+func (ap *archivingPatch) GetCount(row, columnID int) int {
+	recordID := ap.recordIDs[row]
+	batch := ap.data.batches[recordID.BatchID]
+
+	if columnID >= len(batch) {
+		return 0
+	}
+
+	vp := batch[columnID]
+	if vp == nil {
+		return 0
+	}
+	if vp.IsList() {
+		return int(vp.AsList().GetElemCount(row))
+	}
+	return 0
+}
+
 // Archive is the process of periodically moving stable records in fact tables from live batches to archive batches,
 // and converting them to a compressed format (run-length encoding). This is a blocking call so caller need to wait
 // for archiving process to finish.

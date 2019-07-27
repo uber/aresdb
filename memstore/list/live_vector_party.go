@@ -16,7 +16,6 @@ package list
 
 import (
 	"github.com/uber/aresdb/cgoutils"
-	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"io"
@@ -31,21 +30,17 @@ import (
 type LiveVectorParty struct {
 	baseVectorParty
 	// storing the offset to slab footer offset for each row.
-	caps       *memstore.Vector
+	caps       *common.Vector
 	memoryPool HighLevelMemoryPool
 	sync.RWMutex
 }
 
-// GetBytes returns the bytes this vp occupies.
+// GetBytes returns the bytes this vp occupies except memory pool
 func (vp *LiveVectorParty) GetBytes() int64 {
 	vp.RLock()
 	defer vp.RUnlock()
 
 	var bytes int64
-	if vp.memoryPool != nil {
-		bytes += vp.memoryPool.GetNativeMemoryAllocator().GetTotalBytes()
-	}
-
 	if vp.offsets != nil {
 		bytes += int64(vp.offsets.Bytes)
 	}
@@ -55,10 +50,22 @@ func (vp *LiveVectorParty) GetBytes() int64 {
 	return bytes
 }
 
+// GetTotalBytes return the bytes this vp occpuies including memory pool
+func (vp *LiveVectorParty) GetTotalBytes() int64 {
+	bytes := vp.GetBytes()
+
+	vp.RLock()
+	defer vp.RUnlock()
+
+	if vp.memoryPool != nil {
+		bytes += vp.memoryPool.GetNativeMemoryAllocator().GetTotalBytes()
+	}
+	return bytes
+}
+
 // SafeDestruct destructs vector party memory.
 func (vp *LiveVectorParty) SafeDestruct() {
 	if vp != nil {
-		totalBytes := vp.GetBytes()
 		if vp.offsets != nil {
 			vp.offsets.SafeDestruct()
 			vp.offsets = nil
@@ -70,9 +77,6 @@ func (vp *LiveVectorParty) SafeDestruct() {
 		if vp.memoryPool != nil {
 			vp.memoryPool.Destroy()
 			vp.memoryPool = nil
-		}
-		if totalBytes > 0 {
-			vp.reporter(-totalBytes)
 		}
 	}
 }
@@ -360,12 +364,9 @@ func (vp *LiveVectorParty) GetDataValueByRow(row int) common.DataValue {
 
 // Allocate allocate underlying storage for vector party
 func (vp *LiveVectorParty) Allocate(hasCount bool) {
-	// Report caps and offsets usage.
-	vp.reporter(int64(vp.length * 3 * common.DataTypeBytes(common.Uint32)))
-	vp.caps = memstore.NewVector(common.Uint32, vp.length)
-	vp.offsets = memstore.NewVector(common.Uint32, vp.length*2)
+	vp.caps = common.NewVector(common.Uint32, vp.length)
+	vp.offsets = common.NewVector(common.Uint32, vp.length*2)
 
-	// No need to report memory pool usage until allocation happens on memory pool.
 	vp.memoryPool = NewHighLevelMemoryPool(vp.reporter)
 }
 
@@ -376,7 +377,7 @@ func NewLiveVectorParty(length int, dataType common.DataType,
 	return &LiveVectorParty{
 		baseVectorParty: baseVectorParty{
 			length:   length,
-			dataType: dataType,
+			dataType: common.GetItemDataType(dataType),
 			reporter: func(bytes int64) {
 				if hmm != nil {
 					hmm.ReportUnmanagedSpaceUsageChange(bytes)

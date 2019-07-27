@@ -102,7 +102,8 @@ func (m *memStoreImpl) createSnapshot(shard *TableShard, redoFile int64, batchOf
 				"job", "snapshot",
 				"table", shard.Schema.Schema.Name).Infof("batch: %d, columeID: %d", batchID, colID)
 
-			serializer := NewVectorPartySnapshotSerializer(shard, colID, int(batchID), 0, 0, redoFile, batchOffset)
+			serializer := memCom.NewVectorPartySnapshotSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID,
+				colID, int(batchID), 0, 0, redoFile, batchOffset)
 			if err := serializer.WriteVectorParty(vp); err != nil {
 				batch.RUnlock()
 				return err

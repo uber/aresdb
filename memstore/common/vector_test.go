@@ -12,23 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package common
 
 import (
 	"unsafe"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/memstore/common"
 )
 
 var _ = ginkgo.Describe("vector", func() {
 	ginkgo.It("stores 9 bools", func() {
-		v := NewVector(common.Bool, 9)
+		v := NewVector(Bool, 9)
 		Ω(v.unitBits).Should(Equal(1))
 		Ω(v.Size).Should(Equal(9))
 		Ω(v.Bytes).Should(Equal(64))
-		Ω(v.DataType).Should(Equal(common.Bool))
+		Ω(v.DataType).Should(Equal(Bool))
 
 		Ω(v.GetBool(0)).Should(BeFalse())
 		Ω(v.GetBool(1)).Should(BeFalse())
@@ -64,11 +63,11 @@ var _ = ginkgo.Describe("vector", func() {
 	})
 
 	ginkgo.It("stores 3 uint8s", func() {
-		v := NewVector(common.Uint8, 3)
+		v := NewVector(Uint8, 3)
 		Ω(v.unitBits).Should(Equal(8))
 		Ω(v.Size).Should(Equal(3))
 		Ω(v.Bytes).Should(Equal(64))
-		Ω(v.DataType).Should(Equal(common.Uint8))
+		Ω(v.DataType).Should(Equal(Uint8))
 
 		data := *(*uint32)(v.GetValue(0))
 		Ω(data).Should(Equal(uint32(0x0)))
@@ -107,11 +106,11 @@ var _ = ginkgo.Describe("vector", func() {
 	})
 
 	ginkgo.It("stores 2 uint16s", func() {
-		v := NewVector(common.Uint16, 2)
+		v := NewVector(Uint16, 2)
 		Ω(v.unitBits).Should(Equal(16))
 		Ω(v.Size).Should(Equal(2))
 		Ω(v.Bytes).Should(Equal(64))
-		Ω(v.DataType).Should(Equal(common.Uint16))
+		Ω(v.DataType).Should(Equal(Uint16))
 
 		data := *(*uint32)(v.GetValue(0))
 		Ω(data).Should(Equal(uint32(0x0)))
@@ -146,11 +145,11 @@ var _ = ginkgo.Describe("vector", func() {
 	})
 
 	ginkgo.It("stores 2 uint32s", func() {
-		v := NewVector(common.Uint32, 2)
+		v := NewVector(Uint32, 2)
 		Ω(v.unitBits).Should(Equal(32))
 		Ω(v.Size).Should(Equal(2))
 		Ω(v.Bytes).Should(Equal(64))
-		Ω(v.DataType).Should(Equal(common.Uint32))
+		Ω(v.DataType).Should(Equal(Uint32))
 
 		value := *(*uint32)(v.GetValue(0))
 		Ω(value).Should(Equal(uint32(0x0)))
@@ -174,11 +173,11 @@ var _ = ginkgo.Describe("vector", func() {
 	})
 
 	ginkgo.It("stores 2 uuids", func() {
-		v := NewVector(common.UUID, 2)
+		v := NewVector(UUID, 2)
 		Ω(v.unitBits).Should(Equal(128))
 		Ω(v.Size).Should(Equal(2))
 		Ω(v.Bytes).Should(Equal(64))
-		Ω(v.DataType).Should(Equal(common.UUID))
+		Ω(v.DataType).Should(Equal(UUID))
 
 		ptr := uintptr(v.GetValue(0))
 		Ω(*(*uint64)(unsafe.Pointer(ptr))).Should(Equal(uint64(0x0)))
@@ -204,11 +203,11 @@ var _ = ginkgo.Describe("vector", func() {
 	})
 
 	ginkgo.It("stores 2 geopoints", func() {
-		v := NewVector(common.GeoPoint, 2)
+		v := NewVector(GeoPoint, 2)
 		Ω(v.unitBits).Should(Equal(64))
 		Ω(v.Size).Should(Equal(2))
 		Ω(v.Bytes).Should(Equal(64))
-		Ω(v.DataType).Should(Equal(common.GeoPoint))
+		Ω(v.DataType).Should(Equal(GeoPoint))
 
 		ptr := uintptr(v.GetValue(0))
 		Ω(*(*[2]float32)(unsafe.Pointer(ptr))).Should(Equal([2]float32{0.0, 0.0}))
@@ -229,7 +228,7 @@ var _ = ginkgo.Describe("vector", func() {
 	})
 
 	ginkgo.It("lower/upper bound", func() {
-		v := NewVector(common.Uint8, 5)
+		v := NewVector(Uint8, 5)
 		var value uint8
 		value = 0x12
 		v.SetValue(0, unsafe.Pointer(&value))
@@ -288,7 +287,7 @@ var _ = ginkgo.Describe("vector", func() {
 		v.SafeDestruct()
 
 		var boolVal bool = true
-		v2 := NewVector(common.Bool, 5)
+		v2 := NewVector(Bool, 5)
 		v2.SetBool(0, false)
 		v2.SetBool(1, false)
 		v2.SetBool(2, false)
@@ -311,7 +310,7 @@ var _ = ginkgo.Describe("vector", func() {
 	})
 
 	ginkgo.It("GetSliceBytesAligned", func() {
-		v := NewVector(common.Bool, 1024)
+		v := NewVector(Bool, 1024)
 		buffer, startIndex, bytes := v.GetSliceBytesAligned(1000, 1010)
 		Ω(buffer).ShouldNot(Equal(unsafe.Pointer(uintptr(0))))
 		Ω(startIndex).Should(Equal(488))
@@ -331,13 +330,13 @@ var _ = ginkgo.Describe("vector", func() {
 	})
 
 	ginkgo.It("CheckAllValid should work", func() {
-		vector := NewVector(common.Bool, 8) // 1 bytes
+		vector := NewVector(Bool, 8) // 1 bytes
 		vector.SetAllValid()
 		Ω(vector.CheckAllValid()).Should(BeTrue())
 		vector.SetBool(0, false)
 		Ω(vector.CheckAllValid()).ShouldNot(BeTrue())
 
-		vector = NewVector(common.Bool, 3) // 1 bytes
+		vector = NewVector(Bool, 3) // 1 bytes
 		vector.SetBool(0, true)
 		vector.SetBool(1, true)
 		vector.SetBool(2, true)
@@ -345,13 +344,13 @@ var _ = ginkgo.Describe("vector", func() {
 		vector.SetBool(0, false)
 		Ω(vector.CheckAllValid()).ShouldNot(BeTrue())
 
-		vector = NewVector(common.Bool, 2E7)
+		vector = NewVector(Bool, 2E7)
 		vector.SetAllValid()
 		Ω(vector.CheckAllValid()).Should(BeTrue())
 		vector.SetBool(1E7, false)
 		Ω(vector.CheckAllValid()).ShouldNot(BeTrue())
 
-		vector = NewVector(common.Bool, 2E7+1)
+		vector = NewVector(Bool, 2E7+1)
 		vector.SetAllValid()
 		Ω(vector.CheckAllValid()).Should(BeTrue())
 		vector.SetBool(2E7-1, false)
@@ -360,48 +359,48 @@ var _ = ginkgo.Describe("vector", func() {
 	})
 
 	ginkgo.It("data value comparison", func() {
-		v1, v2 := common.NullDataValue, common.NullDataValue
+		v1, v2 := NullDataValue, NullDataValue
 
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(0))
 
-		v1 = common.DataValue{
+		v1 = DataValue{
 			Valid: false,
 		}
-		v2 = common.DataValue{
+		v2 = DataValue{
 			Valid: true,
 		}
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(-1))
 
-		v1 = common.DataValue{
+		v1 = DataValue{
 			Valid: true,
 		}
-		v2 = common.DataValue{
+		v2 = DataValue{
 			Valid: false,
 		}
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(1))
 
-		vector1 := NewVector(common.Int32, 1)
+		vector1 := NewVector(Int32, 1)
 
-		v1 = common.DataValue{
+		v1 = DataValue{
 			Valid:   true,
 			BoolVal: false,
 			IsBool:  true,
 		}
 
-		v2 = common.DataValue{
+		v2 = DataValue{
 			Valid:   true,
 			BoolVal: true,
 			IsBool:  true,
 		}
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(-1))
 
-		v1 = common.DataValue{
+		v1 = DataValue{
 			Valid:   true,
 			BoolVal: true,
 			IsBool:  true,
 		}
 
-		v2 = common.DataValue{
+		v2 = DataValue{
 			Valid:   true,
 			BoolVal: true,
 			IsBool:  true,
@@ -409,13 +408,13 @@ var _ = ginkgo.Describe("vector", func() {
 
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(0))
 
-		v1 = common.DataValue{
+		v1 = DataValue{
 			Valid:   true,
 			BoolVal: false,
 			IsBool:  true,
 		}
 
-		v2 = common.DataValue{
+		v2 = DataValue{
 			Valid:   true,
 			BoolVal: false,
 			IsBool:  true,
@@ -423,13 +422,13 @@ var _ = ginkgo.Describe("vector", func() {
 
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(0))
 
-		v1 = common.DataValue{
+		v1 = DataValue{
 			Valid:   true,
 			BoolVal: true,
 			IsBool:  true,
 		}
 
-		v2 = common.DataValue{
+		v2 = DataValue{
 			Valid:   true,
 			BoolVal: false,
 			IsBool:  true,
@@ -437,53 +436,53 @@ var _ = ginkgo.Describe("vector", func() {
 
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(1))
 
-		vector2 := NewVector(common.Int32, 1)
+		vector2 := NewVector(Int32, 1)
 
 		t1, t2 := 0, 0
-		v1 = common.DataValue{
+		v1 = DataValue{
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t1),
 			DataType: vector1.DataType,
-			CmpFunc:  vector1.cmpFunc,
+			CmpFunc:  vector1.CmpFunc,
 		}
 
-		v2 = common.DataValue{
+		v2 = DataValue{
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t2),
 			DataType: vector2.DataType,
-			CmpFunc:  vector2.cmpFunc,
+			CmpFunc:  vector2.CmpFunc,
 		}
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(0))
 
 		t1, t2 = 0, 1
-		v1 = common.DataValue{
+		v1 = DataValue{
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t1),
 			DataType: vector1.DataType,
-			CmpFunc:  vector1.cmpFunc,
+			CmpFunc:  vector1.CmpFunc,
 		}
 
-		v2 = common.DataValue{
+		v2 = DataValue{
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t2),
 			DataType: vector2.DataType,
-			CmpFunc:  vector2.cmpFunc,
+			CmpFunc:  vector2.CmpFunc,
 		}
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(-1))
 
 		t1, t2 = 1, 0
-		v1 = common.DataValue{
+		v1 = DataValue{
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t1),
 			DataType: vector1.DataType,
-			CmpFunc:  vector1.cmpFunc,
+			CmpFunc:  vector1.CmpFunc,
 		}
 
-		v2 = common.DataValue{
+		v2 = DataValue{
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t2),
 			DataType: vector2.DataType,
-			CmpFunc:  vector2.cmpFunc,
+			CmpFunc:  vector2.CmpFunc,
 		}
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(1))
 	})

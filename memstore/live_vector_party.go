@@ -21,6 +21,7 @@ import (
 	"io"
 	"reflect"
 	"unsafe"
+	"github.com/uber/aresdb/memstore/list"
 )
 
 // cLiveVectorParty is the implementation of LiveVectorParty with c allocated memory
@@ -70,7 +71,7 @@ type goLiveVectorParty struct {
 
 // GetMinMaxValue implements GetMinMaxValue in LiveVectorParty interface
 func (vp *cLiveVectorParty) GetMinMaxValue() (min uint32, max uint32) {
-	return vp.values.minValue, vp.values.maxValue
+	return vp.values.GetMinValue(), vp.values.GetMaxValue()
 }
 
 // Allocate implements Allocate in VectorParty interface
@@ -323,6 +324,9 @@ func NewLiveVectorParty(length int, dataType common.DataType, defaultValue commo
 	isGoType := common.IsGoType(dataType)
 	if isGoType {
 		return newGoLiveVetorParty(length, dataType, hostMemoryManager)
+	}
+	if common.IsArrayType(dataType) {
+		return list.NewLiveVectorParty(length, dataType, hostMemoryManager)
 	}
 	return newCLiveVectorParty(length, dataType, defaultValue)
 }

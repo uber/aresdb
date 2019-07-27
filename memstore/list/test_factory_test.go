@@ -24,26 +24,26 @@ import (
 var _ = ginkgo.Describe("test factory", func() {
 	ginkgo.It("test read list vector party", func() {
 		// Path not exist should raise error.
-		vp, err := GetFactory().ReadListVectorParty("fancy_non_existent_name")
+		vp, err := GetFactory().ReadLiveVectorParty("list/fancy_non_existent_name")
 		Ω(err).ShouldNot(BeNil())
 		Ω(err.Error()).Should(HavePrefix("open ../../testing/data/vps/list/fancy_non_existent_name: " +
 			"no such file or directory"))
 		Ω(vp).Should(BeNil())
 
 		// Length not match
-		vp, err = GetFactory().ReadListVectorParty("length_not_match")
+		vp, err = GetFactory().ReadLiveVectorParty("list/length_not_match")
 		Ω(err).ShouldNot(BeNil())
 		Ω(err.Error()).Should(HavePrefix("List values length 4 is not as expected 5"))
 		Ω(vp).Should(BeNil())
 
 		// Unknown data type
-		vp, err = GetFactory().ReadListVectorParty("unknown_data_type")
+		vp, err = GetFactory().ReadLiveVectorParty("list/unknown_data_type")
 		Ω(err).ShouldNot(BeNil())
 		Ω(err.Error()).Should(HavePrefix("Unknown DataType when reading vector from file"))
 		Ω(vp).Should(BeNil())
 
 		// Successful read.
-		vp, err = GetFactory().ReadListVectorParty("live_vp_uint32")
+		vp, err = GetFactory().ReadLiveVectorParty("list/live_vp_uint32")
 		Ω(err).Should(BeNil())
 		Ω(vp).ShouldNot(BeNil())
 

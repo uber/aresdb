@@ -13,7 +13,6 @@
 // limitations under the License.
 
 package memstore
-
 import (
 	"io"
 
@@ -30,46 +29,35 @@ import (
 )
 
 var _ = ginkgo.Describe("vector party serializer", func() {
-	var serializer *vectorPartyArchiveSerializer
-	var snapshotSerializer *vectorPartySnapshotSerializer
+	var serializer common.VectorPartySerializer
+	var snapshotSerializer common.VectorPartySerializer
 
 	var writer io.WriteCloser
 	var reader io.ReadCloser
 	var buf *bytes.Buffer
 	m := GetFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
+	var diskStore *mocks.DiskStore
+	table := "test"
+	var shardID, columnID, batchID int
+	var batchVersion, seqNum, offset uint32
+	var redoLogFile int64
 
 	ginkgo.BeforeEach(func() {
-		serializer = &vectorPartyArchiveSerializer{
-			vectorPartyBaseSerializer{
-				table:             "test",
-				diskstore:         new(mocks.DiskStore),
-				hostMemoryManager: hostMemoryManager,
-			},
-		}
+		diskStore = new(mocks.DiskStore)
+		serializer = common.NewVectorPartyArchiveSerializer(hostMemoryManager, diskStore, "test", shardID, columnID, batchID, batchVersion, seqNum)
 
 		buf = &bytes.Buffer{}
 		writer = &utils.ClosableBuffer{
 			Buffer: buf,
 		}
 
-		serializer.diskstore.(*mocks.DiskStore).On("OpenVectorPartyFileForWrite",
-			serializer.table, serializer.columnID, serializer.shard,
-			serializer.batchID, serializer.batchVersion, serializer.seqNum).Return(writer, nil)
+		diskStore.On("OpenVectorPartyFileForWrite",
+			table, columnID, shardID, batchID, batchVersion, seqNum).Return(writer, nil)
 
-		snapshotSerializer = &vectorPartySnapshotSerializer{
-			vectorPartyBaseSerializer{
-				table:             "test",
-				diskstore:         new(mocks.DiskStore),
-				hostMemoryManager: hostMemoryManager,
-			},
-			0,
-			0,
-		}
+		snapshotSerializer = common.NewVectorPartySnapshotSerializer(hostMemoryManager, diskStore, table, shardID, columnID, batchID, batchVersion, seqNum, redoLogFile, offset)
 
-		snapshotSerializer.diskstore.(*mocks.DiskStore).On("OpenSnapshotVectorPartyFileForWrite",
-			snapshotSerializer.table, snapshotSerializer.shard, snapshotSerializer.redoLogFile, snapshotSerializer.offset,
-			snapshotSerializer.batchID, snapshotSerializer.columnID).Return(writer, nil)
+		diskStore.On("OpenSnapshotVectorPartyFileForWrite", table, shardID, redoLogFile, offset, batchID, columnID).Return(writer, nil)
 	})
 
 	ginkgo.It("mode 0 vector should work", func() {
@@ -81,9 +69,8 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		reader = &utils.ClosableReader{
 			Reader: bytes.NewReader(buf.Bytes()),
 		}
-		serializer.diskstore.(*mocks.DiskStore).On("OpenVectorPartyFileForRead",
-			serializer.table, serializer.columnID, serializer.shard,
-			serializer.batchID, serializer.batchVersion, serializer.seqNum).Return(reader, nil)
+		diskStore.On("OpenVectorPartyFileForRead", table, columnID, shardID, batchID, batchVersion, seqNum).Return(reader, nil)
+
 		newVP := &cVectorParty{}
 		err = serializer.ReadVectorParty(newVP)
 		Ω(err).Should(BeNil())
@@ -99,9 +86,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		reader = &utils.ClosableReader{
 			Reader: bytes.NewReader(buf.Bytes()),
 		}
-		serializer.diskstore.(*mocks.DiskStore).On("OpenVectorPartyFileForRead",
-			serializer.table, serializer.columnID, serializer.shard,
-			serializer.batchID, serializer.batchVersion, serializer.seqNum).Return(reader, nil)
+		diskStore.On("OpenVectorPartyFileForRead", table, columnID, shardID, batchID, batchVersion, seqNum).Return(reader, nil)
 		newVP := &cVectorParty{}
 		err = serializer.ReadVectorParty(newVP)
 		Ω(err).Should(BeNil())
@@ -117,9 +102,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		reader = &utils.ClosableReader{
 			Reader: bytes.NewReader(buf.Bytes()),
 		}
-		serializer.diskstore.(*mocks.DiskStore).On("OpenVectorPartyFileForRead",
-			serializer.table, serializer.columnID, serializer.shard,
-			serializer.batchID, serializer.batchVersion, serializer.seqNum).Return(reader, nil)
+		diskStore.On("OpenVectorPartyFileForRead", table, columnID, shardID, batchID, batchVersion, seqNum).Return(reader, nil)
 		newVP := &cVectorParty{}
 		err = serializer.ReadVectorParty(newVP)
 		Ω(err).Should(BeNil())
@@ -135,9 +118,8 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		reader = &utils.ClosableReader{
 			Reader: bytes.NewReader(buf.Bytes()),
 		}
-		serializer.diskstore.(*mocks.DiskStore).On("OpenVectorPartyFileForRead",
-			serializer.table, serializer.columnID, serializer.shard,
-			serializer.batchID, serializer.batchVersion, serializer.seqNum).Return(reader, nil)
+		diskStore.On("OpenVectorPartyFileForRead", table, columnID, shardID, batchID, batchVersion, seqNum).Return(reader, nil)
+
 		newVP := &cVectorParty{}
 		err = serializer.ReadVectorParty(newVP)
 		Ω(err).Should(BeNil())
@@ -156,9 +138,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		reader = &utils.ClosableReader{
 			Reader: bytes.NewReader(buf.Bytes()),
 		}
-		snapshotSerializer.diskstore.(*mocks.DiskStore).On("OpenSnapshotVectorPartyFileForRead",
-			snapshotSerializer.table, serializer.shard, snapshotSerializer.redoLogFile, snapshotSerializer.offset,
-			snapshotSerializer.batchID, snapshotSerializer.columnID).Return(reader, nil)
+		diskStore.On("OpenSnapshotVectorPartyFileForRead", table, shardID, redoLogFile, offset, batchID, columnID).Return(reader, nil)
 		newVP := &cVectorParty{}
 		err = snapshotSerializer.ReadVectorParty(newVP)
 		Ω(err).Should(BeNil())
@@ -174,9 +154,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		reader = &utils.ClosableReader{
 			Reader: bytes.NewReader(buf.Bytes()),
 		}
-		snapshotSerializer.diskstore.(*mocks.DiskStore).On("OpenSnapshotVectorPartyFileForRead",
-			snapshotSerializer.table, serializer.shard, snapshotSerializer.redoLogFile, snapshotSerializer.offset,
-			snapshotSerializer.batchID, snapshotSerializer.columnID).Return(reader, nil)
+		diskStore.On("OpenSnapshotVectorPartyFileForRead", table, shardID, redoLogFile, offset, batchID, columnID).Return(reader, nil)
 		newVP := &cVectorParty{}
 		err = snapshotSerializer.ReadVectorParty(newVP)
 		Ω(err).Should(BeNil())
@@ -192,9 +170,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		reader = &utils.ClosableReader{
 			Reader: bytes.NewReader(buf.Bytes()),
 		}
-		snapshotSerializer.diskstore.(*mocks.DiskStore).On("OpenSnapshotVectorPartyFileForRead",
-			snapshotSerializer.table, serializer.shard, snapshotSerializer.redoLogFile, snapshotSerializer.offset,
-			snapshotSerializer.batchID, snapshotSerializer.columnID).Return(reader, nil)
+		diskStore.On("OpenSnapshotVectorPartyFileForRead", table, shardID, redoLogFile, offset, batchID, columnID).Return(reader, nil)
 		newVP := &cVectorParty{}
 		err = snapshotSerializer.ReadVectorParty(newVP)
 		Ω(err).Should(BeNil())
@@ -210,9 +186,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		reader = &utils.ClosableReader{
 			Reader: bytes.NewReader(buf.Bytes()),
 		}
-		snapshotSerializer.diskstore.(*mocks.DiskStore).On("OpenSnapshotVectorPartyFileForRead",
-			snapshotSerializer.table, serializer.shard, snapshotSerializer.redoLogFile, snapshotSerializer.offset,
-			snapshotSerializer.batchID, snapshotSerializer.columnID).Return(reader, nil)
+		diskStore.On("OpenSnapshotVectorPartyFileForRead", table, shardID, redoLogFile, offset, batchID, columnID).Return(reader, nil)
 		newVP := &cVectorParty{}
 		err = snapshotSerializer.ReadVectorParty(newVP)
 		Ω(err).Should(BeNil())
@@ -240,8 +214,8 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 
 		shard := NewTableShard(schema, nil, diskStore,
 			NewHostMemoryManager(GetFactory().NewMockMemStore(), 1<<32), 0, m.options)
-		archiveSerializer := NewVectorPartyArchiveSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID, 0, 0, 0, 0)
-		snapshotSerializer := NewVectorPartySnapshotSerializer(shard, 0, 0, 0, 0, 0, 0)
+		archiveSerializer := common.NewVectorPartyArchiveSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID, 0, 0, 0, 0)
+		snapshotSerializer := common.NewVectorPartySnapshotSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID,0, 0, 0, 0, 0, 0)
 
 		// snapshotSerializer should always has no error
 		// goLiveVectoryParty should always has no error
@@ -312,9 +286,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		reader = &utils.ClosableReader{
 			Reader: bytes.NewReader(buf.Bytes()),
 		}
-		snapshotSerializer.diskstore.(*mocks.DiskStore).On("OpenSnapshotVectorPartyFileForRead",
-			snapshotSerializer.table, serializer.shard, snapshotSerializer.redoLogFile, snapshotSerializer.offset,
-			snapshotSerializer.batchID, snapshotSerializer.columnID).Return(reader, nil)
+		diskStore.On("OpenSnapshotVectorPartyFileForRead", table, shardID, redoLogFile, offset, batchID, columnID).Return(reader, nil)
 
 		vp.On("Read", reader, snapshotSerializer).Return(nil)
 		err := snapshotSerializer.ReadVectorParty(vp)
@@ -325,3 +297,4 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		Ω(err).ShouldNot(BeNil())
 	})
 })
+

@@ -12,18 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package common
 
 import (
-	"github.com/uber/aresdb/memstore/common"
 	"sync"
 )
 
 // BatchReader defines the interface to retrieve a DataValue given a row index and
 // column index.
 type BatchReader interface {
-	GetDataValue(row, columnID int) common.DataValue
-	GetDataValueWithDefault(row, columnID int, defaultValue common.DataValue) common.DataValue
+	GetDataValue(row, columnID int) DataValue
+	GetDataValueWithDefault(row, columnID int, defaultValue DataValue) DataValue
 }
 
 // Batch represents a sorted or live batch.
@@ -42,12 +41,12 @@ type Batch struct {
 	// mode 0 for the corresponding VectorParty.
 	// For archive batches, index out of bound and nil VectorParty indicates that
 	// the corresponding VectorParty has not been loaded into memory from disk.
-	Columns []common.VectorParty
+	Columns []VectorParty
 }
 
 // GetVectorParty returns the VectorParty for the specified column from
 // the batch. It requires the batch to be locked for reading.
-func (b *Batch) GetVectorParty(columnID int) common.VectorParty {
+func (b *Batch) GetVectorParty(columnID int) VectorParty {
 	if columnID >= len(b.Columns) {
 		return nil
 	}
@@ -55,20 +54,20 @@ func (b *Batch) GetVectorParty(columnID int) common.VectorParty {
 }
 
 // GetDataValue read value from underlying columns.
-func (b *Batch) GetDataValue(row, columnID int) common.DataValue {
+func (b *Batch) GetDataValue(row, columnID int) DataValue {
 	if columnID >= len(b.Columns) {
-		return common.NullDataValue
+		return NullDataValue
 	}
 	vp := b.Columns[columnID]
 	if vp == nil {
-		return common.NullDataValue
+		return NullDataValue
 	}
 	return vp.GetDataValue(row)
 }
 
 // GetDataValueWithDefault read value from underlying columns and if it's missing, it will return
 // passed value instead.
-func (b *Batch) GetDataValueWithDefault(row, columnID int, defaultValue common.DataValue) common.DataValue {
+func (b *Batch) GetDataValueWithDefault(row, columnID int, defaultValue DataValue) DataValue {
 	if columnID >= len(b.Columns) {
 		return defaultValue
 	}

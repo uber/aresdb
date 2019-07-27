@@ -26,7 +26,7 @@ import (
 
 // ArchiveBatch represents a archive batch.
 type ArchiveBatch struct {
-	Batch
+	common.Batch
 
 	// Size of the batch (number of rows). Notice that compression changes the
 	// length of some columns, does not change the size of the batch.
@@ -144,7 +144,7 @@ func (v *ArchiveStoreVersion) RequestBatch(batchID int32) *ArchiveBatch {
 		Size:    size,
 		BatchID: batchID,
 		Shard:   v.shard,
-		Batch:   Batch{RWMutex: &sync.RWMutex{}},
+		Batch:   common.Batch{RWMutex: &sync.RWMutex{}},
 	}
 	v.Batches[batchID] = batch
 	return batch
@@ -154,7 +154,7 @@ func (v *ArchiveStoreVersion) RequestBatch(batchID int32) *ArchiveBatch {
 // stage for merged archive batch so there is no need to lock it.
 func (b *ArchiveBatch) WriteToDisk() error {
 	for columnID, column := range b.Columns {
-		serializer := NewVectorPartyArchiveSerializer(
+		serializer := common.NewVectorPartyArchiveSerializer(
 			b.Shard.HostMemoryManager, b.Shard.diskStore, b.Shard.Schema.Schema.Name, b.Shard.ShardID, columnID, int(b.BatchID), b.Version, b.SeqNum)
 		if err := serializer.WriteVectorParty(column); err != nil {
 			return err
@@ -375,7 +375,7 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 // for holding the lock (if necessary).
 func (b *ArchiveBatch) Clone() *ArchiveBatch {
 	newBatch := &ArchiveBatch{
-		Batch: Batch{
+		Batch:  common.Batch{
 			RWMutex: b.Batch.RWMutex,
 			Columns: make([]common.VectorParty, len(b.Columns)),
 		},

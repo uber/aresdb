@@ -250,7 +250,7 @@ var _ = ginkgo.Describe("backfill", func() {
 			PrimaryKeyBytes: 8,
 		}
 		baseBatch := &ArchiveBatch{
-			Batch: Batch{RWMutex: &sync.RWMutex{}},
+			Batch: memCom.Batch{RWMutex: &sync.RWMutex{}},
 		}
 		patch := &backfillPatch{}
 		backfillCtx := newBackfillContext(baseBatch, patch, tableSchema, tableSchema.GetColumnDeletions(),

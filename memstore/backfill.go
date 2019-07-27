@@ -383,7 +383,7 @@ func newBackfillContext(baseBatch *ArchiveBatch, patch *backfillPatch, tableSche
 	initBuckets := (baseBatch.Size + len(patch.recordIDs)) / memCom.BucketSize
 	// allocate more space for insertion.
 	initBuckets += initBuckets / 8
-	// column delection will be blocked during backfill, so we are safe to get column deletions from schema without
+	// column deletion will be blocked during backfill, so we are safe to get column deletions from schema without
 	// lock.
 	return backfillContext{
 		backfillStore: newBackfillStore(tableSchema, hostMemoryManager, initBuckets),
@@ -493,7 +493,7 @@ func (ctx *backfillContext) backfill(reporter BackfillJobDetailReporter, jobKey 
 		if exists && recordID.BatchID >= 0 {
 			// record is already in base batch.
 
-			// first detect if there are any changes to sort columns.
+			// first detect if there are any changes to sort columns or array columns.
 			changedBaseRow := ctx.getChangedBaseRow(recordID, changedPatchRow)
 			// we should write to live store.
 			if changedBaseRow != nil {
@@ -505,11 +505,11 @@ func (ctx *backfillContext) backfill(reporter BackfillJobDetailReporter, jobKey 
 				ctx.backfillStore.PrimaryKey.Update(primaryKeyValues, recordID)
 				ctx.applyChangedRowToLiveStore(recordID, changedBaseRow)
 			} else {
-				// only unsorted columns are changed
-				if !ctx.writePatchValueForUnsortedColumn(recordID, changedPatchRow) {
-					noEffectRecords++
-				} else {
+				// only unsorted columns are changed, or array column has value change while size not changed
+				if ctx.writePatchValueForUnsortedColumn(recordID, changedPatchRow) {
 					inplaceUpdateRecords++
+				} else {
+					noEffectRecords++
 				}
 			}
 		} else {
@@ -587,16 +587,18 @@ func (ctx *backfillContext) getChangedPatchRow(patchRecordID memCom.RecordID, up
 	return changedRow, nil
 }
 
-// getChangedBaseRow get changed row from base batch if there are any changes to sort columns. It will fetch the whole
+// getChangedBaseRow get changed row from base batch if there are any changes to sort columns or array columns. It will fetch the whole
 // row in base batch and apply patch value to it.
+// for array columns, only when array size change will trigger the base batch change, value change while size not change will be covered in
+// the unsorted column change
 func (ctx *backfillContext) getChangedBaseRow(baseRecordID memCom.RecordID, changedPatchRow []*common.DataValue) []*common.DataValue {
 	var changedBaseRow []*common.DataValue
 	for columnID, patchValue := range changedPatchRow {
-		// loop through sorted columns
-		if patchValue != nil && utils.IndexOfInt(ctx.sortColumns, columnID) >= 0 {
+		// loop through sorted columns and array columns
+		if patchValue != nil && (utils.IndexOfInt(ctx.sortColumns, columnID) >= 0 || ctx.new.Columns[columnID].IsList()) {
 			baseDataValue := ctx.new.Columns[columnID].GetDataValueByRow(int(baseRecordID.Index))
-			// there's change
-			if baseDataValue.Compare(*patchValue) != 0 {
+			// there's change in sorted column or size change in array column
+			if (ctx.new.Columns[columnID].IsList() && common.ArrayLengthCompare(&baseDataValue, patchValue) != 0) || (!ctx.new.Columns[columnID].IsList() && baseDataValue.Compare(*patchValue) != 0) {
 				changedBaseRow = make([]*common.DataValue, len(ctx.new.Columns))
 				// Mark deletion for this row.
 				ctx.baseRowDeleted = append(ctx.baseRowDeleted, int(baseRecordID.Index))
@@ -625,7 +627,7 @@ func (ctx *backfillContext) getChangedBaseRow(baseRecordID memCom.RecordID, chan
 // this function return false if no column update happens
 func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID memCom.RecordID, changedPatchRow []*common.DataValue) (updated bool) {
 	for columnID, patchValue := range changedPatchRow {
-		if patchValue != nil {
+		if patchValue != nil && utils.IndexOfInt(ctx.sortColumns, columnID) < 0 {
 			baseDataValue := ctx.new.Columns[columnID].GetDataValueByRow(int(baseRecordID.Index))
 			if baseDataValue.Compare(*patchValue) != 0 {
 				// For updates to unsorted columns, if the value changes, fork the column, and update in place
@@ -634,17 +636,22 @@ func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID memCom
 					ctx.columnsToPurge = append(ctx.columnsToPurge, ctx.base.Columns[columnID].(common.ArchiveVectorParty))
 					// For the forked columns, we will always allocate space for value vector and null vector despite
 					// of the mode of the original vector.
-					bytes := int64(CalculateVectorPartyBytes(
-						ctx.base.Columns[columnID].GetDataType(), ctx.base.Size, true, false))
+					var bytes int64
+					if ctx.base.Columns[columnID].IsList() {
+						// will use original size for array vp
+						bytes = ctx.base.Columns[columnID].GetBytes()
+					} else {
+						bytes = int64(memCom.CalculateVectorPartyBytes(
+							ctx.base.Columns[columnID].GetDataType(), ctx.base.Size, true, false))
+					}
 					ctx.unmanagedMemoryBytes += bytes
 					// Report before allocation.
 					ctx.backfillStore.HostMemoryManager.ReportUnmanagedSpaceUsageChange(bytes)
 					ctx.new.Columns[columnID] = ctx.base.Columns[columnID].(common.ArchiveVectorParty).CopyOnWrite(ctx.base.Size)
 					ctx.columnsForked[columnID] = true
 				}
-				ctx.new.Columns[columnID].SetDataValue(int(baseRecordID.Index), *patchValue, CheckExistingCount)
+				ctx.new.Columns[columnID].SetDataValue(int(baseRecordID.Index), *patchValue, common.CheckExistingCount)
 				updated = true
-
 			}
 		}
 	}
@@ -658,7 +665,7 @@ func (ctx backfillContext) applyChangedRowToLiveStore(recordID memCom.RecordID, 
 	for columnID, changedDataValue := range changedRow {
 		if changedDataValue != nil {
 			backfillStoreVP := backfillBatch.GetOrCreateVectorParty(columnID, true)
-			backfillStoreVP.SetDataValue(int(recordID.Index), *changedDataValue, IgnoreCount)
+			backfillStoreVP.SetDataValue(int(recordID.Index), *changedDataValue, common.IgnoreCount)
 		}
 	}
 }

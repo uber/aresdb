@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/memstore"
 	"github.com/uber/aresdb/memstore/common"
 	"sync"
 )
@@ -29,12 +28,12 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 
 	ginkgo.BeforeEach(func() {
 		var err error
-		expectedUint32LiveStoreVP, err = GetFactory().ReadListVectorParty("live_vp_uint32")
+		expectedUint32LiveStoreVP, err = GetFactory().ReadLiveVectorParty("list/live_vp_uint32")
 		Ω(err).Should(BeNil())
 		Ω(expectedUint32LiveStoreVP).ShouldNot(BeNil())
 		uint32ArchiveTotalBytes = getCompactedTotalBytes(expectedUint32LiveStoreVP.(common.LiveVectorParty))
 
-		expectedBoolLiveStoreVP, err = GetFactory().ReadListVectorParty("live_vp_bool")
+		expectedBoolLiveStoreVP, err = GetFactory().ReadLiveVectorParty("list/live_vp_bool")
 		Ω(err).Should(BeNil())
 		Ω(expectedBoolLiveStoreVP).ShouldNot(BeNil())
 		boolArchiveTotalBytes = getCompactedTotalBytes(expectedBoolLiveStoreVP.(common.LiveVectorParty))
@@ -54,8 +53,8 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(listVP.GetDataType()).Should(Equal(common.Uint32))
 		Ω(func() { listVP.SetCount(0, 0) }).Should(Panic())
 		Ω(func() { listVP.Prune() }).ShouldNot(Panic())
-		Ω(func() { listVP.CopyOnWrite(0) }).Should(Panic())
-		Ω(func() { listVP.SetDataValue(0, common.NullDataValue, memstore.IgnoreCount) }).Should(Panic())
+		Ω(func() { listVP.CopyOnWrite(0) }).ShouldNot(Panic())
+		Ω(func() { listVP.SetDataValue(0, common.NullDataValue, common.IgnoreCount) }).Should(Panic())
 		Ω(func() { listVP.SliceByValue(0, 0, nil) }).Should(Panic())
 
 		lowerBoundRow := 0
@@ -132,7 +131,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 				Valid:    valid,
 				OtherVal: val,
 				DataType: common.Uint32,
-			}, memstore.IgnoreCount)
+			}, common.IgnoreCount)
 		}
 
 		//check data in vp is correct

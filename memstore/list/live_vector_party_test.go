@@ -94,11 +94,11 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 
 	ginkgo.BeforeEach(func() {
 		var err error
-		expectedUint32LiveStoreVP, err = GetFactory().ReadListVectorParty("live_vp_uint32")
+		expectedUint32LiveStoreVP, err = GetFactory().ReadLiveVectorParty("list/live_vp_uint32")
 		Ω(err).Should(BeNil())
 		Ω(expectedUint32LiveStoreVP).ShouldNot(BeNil())
 
-		expectedBoolLiveStoreVP, err = GetFactory().ReadListVectorParty("live_vp_bool")
+		expectedBoolLiveStoreVP, err = GetFactory().ReadLiveVectorParty("list/live_vp_bool")
 		Ω(err).Should(BeNil())
 		Ω(expectedBoolLiveStoreVP).ShouldNot(BeNil())
 	})
@@ -112,7 +112,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		// Test basics
 		listVP := NewLiveVectorParty(4, common.Uint32, nil)
 		Ω(listVP.GetLength()).Should(Equal(4))
-		Ω(listVP.GetBytes()).Should(BeZero())
+		Ω(listVP.(*LiveVectorParty).GetTotalBytes()).Should(BeZero())
 		Ω(listVP.GetDataType()).Should(Equal(common.Uint32))
 
 		Ω(func() { listVP.GetMinMaxValue() }).Should(Panic())
@@ -126,7 +126,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 
 		// Test allocation.
 		listVP.Allocate(false)
-		Ω(listVP.GetBytes()).Should(BeEquivalentTo(128))
+		Ω(listVP.(*LiveVectorParty).GetTotalBytes()).Should(BeEquivalentTo(128))
 
 		// Test read and write
 		lengthToWrite := expectedUint32LiveStoreVP.GetLength()
@@ -137,22 +137,21 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 			value, valid := expectedVP.GetListValue(i)
 			listVP.AsList().SetListValue(i, value, valid)
 		}
-		Ω(listVP.GetBytes()).Should(BeEquivalentTo(nativeChunkSize + 128))
-
+		Ω(listVP.(*LiveVectorParty).GetTotalBytes()).Should(BeEquivalentTo(nativeChunkSize + 128))
 		Ω(listVP.Equals(expectedUint32LiveStoreVP)).Should(BeTrue())
 		// Test Destroy.
 		listVP.SafeDestruct()
-		Ω(listVP.GetBytes()).Should(BeZero())
+		Ω(listVP.(*LiveVectorParty).GetTotalBytes()).Should(BeZero())
 	})
 
 	ginkgo.It("live list vector: test basics for bool type", func() {
 		// Test basics
 		listVP := NewLiveVectorParty(4, common.Bool, nil)
-		Ω(listVP.GetBytes()).Should(BeZero())
+		Ω(listVP.(*LiveVectorParty).GetTotalBytes()).Should(BeZero())
 
 		// Test allocation.
 		listVP.Allocate(false)
-		Ω(listVP.GetBytes()).Should(BeEquivalentTo(128))
+		Ω(listVP.(*LiveVectorParty).GetTotalBytes()).Should(BeEquivalentTo(128))
 
 		// Test read and write
 		lengthToWrite := expectedBoolLiveStoreVP.GetLength()
@@ -167,7 +166,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(listVP.Equals(expectedBoolLiveStoreVP)).Should(BeTrue())
 		// Test Destroy.
 		listVP.SafeDestruct()
-		Ω(listVP.GetBytes()).Should(BeZero())
+		Ω(listVP.(*LiveVectorParty).GetTotalBytes()).Should(BeZero())
 	})
 
 	ginkgo.It("live list vectorparty read write should work", func() {

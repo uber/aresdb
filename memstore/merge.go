@@ -18,6 +18,7 @@ import (
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"sync"
+	"github.com/uber/aresdb/memstore/list"
 )
 
 // mergeContext carries all context information used during merge
@@ -367,7 +368,7 @@ func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
 		Size:    ctx.totalSize,
 		BatchID: ctx.base.BatchID,
 		Shard:   ctx.base.Shard,
-		Batch:   Batch{RWMutex: &sync.RWMutex{}},
+		Batch:   common.Batch{RWMutex: &sync.RWMutex{}},
 	}
 
 	for columnID := 0; columnID < ctx.numColumns; columnID++ {
@@ -377,23 +378,62 @@ func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
 		var bytes int64
 		if i := utils.IndexOfInt(ctx.patch.sortColumns, columnID); i >= 0 {
 			// Sort columns.
-			bytes = int64(CalculateVectorPartyBytes(dataType, ctx.mergedLengths[i], true, true))
-			ctx.base.Shard.HostMemoryManager.ReportUnmanagedSpaceUsageChange(bytes)
+			bytes = int64(common.CalculateVectorPartyBytes(dataType, ctx.mergedLengths[i], true, true))
 			columns[columnID] = newArchiveVectorParty(ctx.mergedLengths[i], dataType, defaultValue, ctx.merged.RWMutex)
 			columns[columnID].Allocate(true)
 		} else {
 			// Non-sort columns.
-			bytes = int64(CalculateVectorPartyBytes(dataType, ctx.totalSize, true, false))
-			ctx.base.Shard.HostMemoryManager.ReportUnmanagedSpaceUsageChange(bytes)
-			columns[columnID] = newArchiveVectorParty(ctx.totalSize, dataType, defaultValue, ctx.merged.RWMutex)
+			if common.IsArrayType(dataType) {
+				// array will never appear in sort columns
+				offsetBytes := int64(common.CalculateVectorBytes(common.Uint32, ctx.totalSize * 2))
+				valueBytes := ctx.calculateArrayVectorPartyBytes(columnID, dataType)
+				bytes = offsetBytes + valueBytes
+				columns[columnID] = list.NewArchiveVectorParty(ctx.totalSize, dataType, valueBytes, ctx.merged.RWMutex)
+			} else {
+				bytes = int64(common.CalculateVectorPartyBytes(dataType, ctx.totalSize, true, false))
+				columns[columnID] = newArchiveVectorParty(ctx.totalSize, dataType, defaultValue, ctx.merged.RWMutex)
+			}
 			if !ctx.columnDeletions[columnID] {
 				columns[columnID].Allocate(false)
 			}
 			ctx.unsortedColumns = append(ctx.unsortedColumns, columnID)
 		}
-		ctx.unmanagedMemoryBytes += bytes
+		if !ctx.columnDeletions[columnID] {
+			ctx.base.Shard.HostMemoryManager.ReportUnmanagedSpaceUsageChange(bytes)
+			ctx.unmanagedMemoryBytes += bytes
+		}
 	}
 	ctx.merged.Columns = columns
+}
+
+// calculate value vector bytes needed for Array ArchiveParty
+func (ctx *mergeContext) calculateArrayVectorPartyBytes(columnID int, dataType common.DataType) int64 {
+	var totalBytes int64
+	// bytes for patch
+	for i := 0; i< len(ctx.patch.recordIDs); i++ {
+		totalBytes += int64(common.CalculateListElementBytes(dataType, ctx.patch.GetCount(i, columnID)))
+	}
+
+	// bytes for original archive patch
+	vp := ctx.base.GetVectorParty(columnID)
+	if vp == nil {
+		return totalBytes
+	}
+	if !vp.IsList() {
+		return totalBytes
+	}
+
+	rowsDeletedIndex := 0
+	listVP := vp.AsList()
+	for i := 0; i< ctx.baseSize; i++ {
+		if rowsDeletedIndex < len(ctx.baseRowDeleted) && ctx.baseRowDeleted[rowsDeletedIndex] == i {
+			// skip the deleted row
+			rowsDeletedIndex++
+			continue
+		}
+		totalBytes += int64(common.CalculateListElementBytes(dataType, int(listVP.GetElemCount(i))))
+	}
+	return totalBytes
 }
 
 // common function signature for both preallocate and merge.
@@ -404,7 +444,7 @@ func (ctx *mergeContext) preAllocate(baseIter, patchIter sortedColumnIterator, s
 	ctx.mergedLengths[sortColIdx]++
 }
 
-func (ctx *mergeContext) writeUnsortedColumns(start, end int, reader BatchReader, skipRows []int) {
+func (ctx *mergeContext) writeUnsortedColumns(start, end int, reader common.BatchReader, skipRows []int) {
 	// Base batch is possible to be nil for a particular day.
 	if reader != nil {
 		for i := start; i < end; i++ {
@@ -418,7 +458,7 @@ func (ctx *mergeContext) writeUnsortedColumns(start, end int, reader BatchReader
 				if !ctx.columnDeletions[columnID] {
 					mergedVP := ctx.merged.Columns[columnID]
 					val := reader.GetDataValueWithDefault(int(i), columnID, *ctx.defaultValues[columnID])
-					mergedVP.SetDataValue(ctx.outputBegins[columnID], val, IncrementCount)
+					mergedVP.SetDataValue(ctx.outputBegins[columnID], val, common.IncrementCount)
 					ctx.outputBegins[columnID]++
 				}
 			}
@@ -457,7 +497,7 @@ func (ctx *mergeContext) writeOutput(baseIter, patchIter sortedColumnIterator, s
 
 	columnID := ctx.patch.sortColumns[sortColIdx]
 	// Set value on the mergedVP.
-	mergedVP.SetDataValue(ctx.outputBegins[columnID], val, IncrementCount, count)
+	mergedVP.SetDataValue(ctx.outputBegins[columnID], val, common.IncrementCount, count)
 	mergedVP.SetCount(ctx.outputBegins[columnID], ctx.outputCounts[sortColIdx])
 	ctx.outputBegins[columnID]++
 }
