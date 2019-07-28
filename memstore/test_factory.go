@@ -22,6 +22,7 @@ import (
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+	"github.com/uber/aresdb/memstore/list"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
@@ -63,6 +64,9 @@ func (t TestFactoryT) NewMockMemStore() *memStoreImpl {
 }
 
 func toArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.ArchiveVectorParty {
+	if vp.IsList() {
+		return list.ToArrayArchiveVectorParty(vp, locker)
+	}
 	archiveColumn := &archiveVectorParty{
 		cVectorParty: *vp.(*cVectorParty),
 	}
@@ -72,6 +76,9 @@ func toArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.Arch
 }
 
 func toLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
+	if vp.IsList() {
+		return list.ToArrayLiveVectorParty(vp)
+	}
 	return &cLiveVectorParty{
 		cVectorParty: *vp.(*cVectorParty),
 	}
@@ -91,6 +98,10 @@ func toVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (memCom.VectorPar
 			len(rvp.Values),
 			rvp.Length,
 		)
+	}
+
+	if memCom.IsArrayType(dataType) {
+		return list.ToArrayVectorParty(rvp, forLiveVP)
 	}
 
 	var countsVec *memCom.Vector

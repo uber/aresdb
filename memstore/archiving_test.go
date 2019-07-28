@@ -17,18 +17,18 @@ package memstore
 import (
 	"sort"
 
-	//diskMocks "github.com/uber/aresdb/diskstore/mocks"
-	//metaMocks "github.com/uber/aresdb/metastore/mocks"
-	//utilsMocks "github.com/uber/aresdb/utils/mocks"
+	diskMocks "github.com/uber/aresdb/diskstore/mocks"
+	metaMocks "github.com/uber/aresdb/metastore/mocks"
+	utilsMocks "github.com/uber/aresdb/utils/mocks"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	//"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/redolog"
-	//"github.com/uber/aresdb/utils"
+	"github.com/uber/aresdb/utils"
 )
 
 var _ = ginkgo.Describe("archiving", func() {
@@ -45,7 +45,7 @@ var _ = ginkgo.Describe("archiving", func() {
 	table := "table1"
 	shardID := 0
 	key := getIdentifier(table, shardID, memCom.ArchivingJobType)
-	//day := 0
+	day := 0
 
 	m = GetFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
@@ -213,7 +213,7 @@ var _ = ginkgo.Describe("archiving", func() {
 			[]int{1, 2},
 		))
 	})
-/* todo davidw
+
 	ginkgo.It("archive", func() {
 		tableShard := shardMap[shardID]
 
@@ -263,23 +263,27 @@ var _ = ginkgo.Describe("archiving", func() {
 		Ω(tableShard.ArchiveStore.CurrentVersion.Batches).Should(HaveKey(int32(0)))
 		mergedBatch := tableShard.ArchiveStore.CurrentVersion.Batches[0]
 		Ω(mergedBatch.Size).Should(BeEquivalentTo(12))
-		Ω(mergedBatch.Columns).Should(HaveLen(3))
+		Ω(mergedBatch.Columns).Should(HaveLen(4))
 
 		timeColumn := mergedBatch.Columns[0]
 		Ω(timeColumn.GetLength()).Should(BeEquivalentTo(12))
 		Ω(timeColumn.(memCom.CVectorParty).GetMode()).Should(BeEquivalentTo(memCom.AllValuesPresent))
 
 		// Old version of archiving store should be purged.
-		for _, column := range archiveBatch0.Columns {
-			Ω(column.(*archiveVectorParty).values).Should(BeNil())
-			Ω(column.(*archiveVectorParty).nulls).Should(BeNil())
-			Ω(column.(*archiveVectorParty).counts).Should(BeNil())
+		for i, column := range archiveBatch0.Columns {
+			if i != 3 {
+				Ω(column.(*archiveVectorParty).values).Should(BeNil())
+				Ω(column.(*archiveVectorParty).nulls).Should(BeNil())
+				Ω(column.(*archiveVectorParty).counts).Should(BeNil())
+			}
 		}
 
 		// If a batch is partially read, it should not be purged
-		for _, column := range batch101.Columns {
-			Ω(column.(*cLiveVectorParty).GetMode()).ShouldNot(BeEquivalentTo(memCom.AllValuesDefault))
-			Ω(column.(*cLiveVectorParty).values).ShouldNot(BeNil())
+		for i, column := range batch101.Columns {
+			if i != 3 {
+				Ω(column.(*cLiveVectorParty).GetMode()).ShouldNot(BeEquivalentTo(memCom.AllValuesDefault))
+				Ω(column.(*cLiveVectorParty).values).ShouldNot(BeNil())
+			}
 		}
 
 		// MaxEventTimePerFile should be purged.
@@ -289,7 +293,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		Ω(m.Archive(table, shardID, cutoff+100, jobManager.reportArchiveJobDetail)).Should(BeNil())
 		utils.ResetClockImplementation()
 	})
-*/
+
 	ginkgo.It("create patch for table with invalid event time", func() {
 		table := "table2"
 		shardID := 0

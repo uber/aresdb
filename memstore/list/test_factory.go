@@ -25,9 +25,9 @@ var (
 		TestFactoryT: memCom.TestFactoryT{
 			RootPath:             "../../testing/data",
 			FileSystem:           utils.OSFileSystem{},
-			ToArchiveVectorParty: toArchiveVectorParty,
-			ToLiveVectorParty:    toLiveVectorParty,
-			ToVectorParty:        toVectorParty,
+			ToArchiveVectorParty: ToArrayArchiveVectorParty,
+			ToLiveVectorParty:    ToArrayLiveVectorParty,
+			ToVectorParty:        ToArrayVectorParty,
 		},
 	}
 )
@@ -41,15 +41,15 @@ func GetFactory() TestFactoryT {
 	return testFactory
 }
 
-func toArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.ArchiveVectorParty {
+func ToArrayArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.ArchiveVectorParty {
 	return vp.(memCom.ArchiveVectorParty)
 }
 
-func toLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
+func ToArrayLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
 	return vp.(memCom.LiveVectorParty)
 }
 
-func toVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (vp memCom.VectorParty, err error) {
+func ToArrayVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (vp memCom.VectorParty, err error) {
 	dataType := memCom.DataTypeFromString(rvp.DataType)
 	if dataType == memCom.Unknown {
 		return nil, utils.StackError(nil,
@@ -93,6 +93,7 @@ func toVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (vp memCom.Vector
 	}
 
 	vp = NewArchiveVectorParty(rvp.Length, dataType, totalBytes, &sync.RWMutex{})
+	vp.Allocate(false)
 	for i, val := range values {
 		vp.SetDataValue(i, val, memCom.IgnoreCount)
 	}

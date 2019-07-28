@@ -77,12 +77,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	table := "table1"
 	shardID := 0
 
-	testFactory := memstore.TestFactoryT{
-		TestFactoryT: memCom.TestFactoryT{
-			RootPath:   "../testing/data",
-			FileSystem: utils.OSFileSystem{},
-		},
-	}
+	testFactory := memstore.GetFactory()
 
 	ginkgo.BeforeEach(func() {
 		hostMemoryManager = new(memComMocks.HostMemoryManager)
