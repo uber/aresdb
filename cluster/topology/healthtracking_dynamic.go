@@ -108,6 +108,7 @@ func (ht *healthTrackingDynamicTopoImpl) changeHostHealthState(host Host, health
 }
 
 // dummy implementation, don't use
+// TODO: implement when needed
 func (ht *healthTrackingDynamicTopoImpl) Watch() (MapWatch, error) {
 	return nil, nil
 }
