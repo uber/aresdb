@@ -133,6 +133,7 @@ func NewAssignmentFromController(from *models.IngestionAssignment) (*Assignment,
 
 	for instanceName, instance := range from.Instances {
 		sinkConfig := config.SinkConfig{
+			SinkModeStr: "aresDB",
 			AresDBConnectorConfig: client.ConnectorConfig{
 				Address: instance.Address,
 			},
