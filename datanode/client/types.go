@@ -24,7 +24,7 @@ import (
 // WithConnectionFn defines function with PeerDataNodeClient
 type WithConnectionFn func(peerID string, client rpc.PeerDataNodeClient)
 
-// PeerConnDialer defines the dial function for PeerDataDodeClient
+// PeerConnDialer defines the dial function for PeerDataNodeClient
 type PeerConnDialer func(target string, opts ...grpc.DialOption) (client rpc.PeerDataNodeClient, closeFn func() error, err error)
 
 type Peer interface {
