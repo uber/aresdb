@@ -17,6 +17,7 @@ import (
 	"context"
 	"io"
 	"math"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -154,6 +155,12 @@ func (shard *TableShard) Bootstrap(
 			With("shardID", shard.ShardID).
 			With("peers", peerNodes).
 			Info("found peer to bootstrap from")
+
+
+		// shuffle peer nodes randomly
+		rand.New(rand.NewSource(utils.Now().Unix())).Shuffle(len(peerNodes), func(i, j int) {
+			peerNodes[i], peerNodes[j] = peerNodes[j], peerNodes[i]
+		})
 
 		var dataStreamErr error
 		borrowErr := peerSource.BorrowConnection(peerNodes, func(peerID string, nodeClient rpc.PeerDataNodeClient) {

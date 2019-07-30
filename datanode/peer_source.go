@@ -21,7 +21,7 @@ var (
 )
 
 var grpcDialer = func(target string, opts ...grpc.DialOption) (client rpc.PeerDataNodeClient, closeFn func() error, err error) {
-	conn, err := grpc.Dial(fmt.Sprintf(target, grpc.WithInsecure()))
+	conn, err := grpc.Dial(target, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -148,9 +148,10 @@ func (ps *peerSource) BorrowConnection(hostIDs []string, fn client.WithConnectio
 	for _, hostID := range hostIDs {
 		err := ps.borrowConnection(hostID, fn)
 		if err != nil {
-			ps.logger.With("host", hostID, "error", err.Error()).Warn("not able to borrow connection")
+			ps.logger.With("peer", hostID, "error", err.Error()).Warn("failed to borrow connection from peer")
 			multiError = multiError.Add(err)
 		} else {
+			ps.logger.With("peer", hostID).Debug("successfully borrowed connection from peer")
 			return nil
 		}
 	}
