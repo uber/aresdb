@@ -15,6 +15,8 @@
 package common
 
 import (
+	"fmt"
+	"os"
 	"sync"
 )
 
@@ -104,4 +106,14 @@ func (b *Batch) Equals(other *Batch) bool {
 		}
 	}
 	return true
+}
+
+func (b *Batch) Dump(file *os.File) {
+	fmt.Fprintf(file, "Dump Batch, columns: %d\n", len(b.Columns))
+	for i, col := range b.Columns {
+		fmt.Fprintf(file, "col: %d\n", i)
+		if col != nil {
+			col.Dump(file)
+		}
+	}
 }

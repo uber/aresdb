@@ -110,10 +110,10 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 
 	ginkgo.It("live list vector: test basics for uint32 type", func() {
 		// Test basics
-		listVP := NewLiveVectorParty(4, common.Uint32, nil)
+		listVP := NewLiveVectorParty(4, common.ArrayUint32, nil)
 		Ω(listVP.GetLength()).Should(Equal(4))
 		Ω(listVP.(*LiveVectorParty).GetTotalBytes()).Should(BeZero())
-		Ω(listVP.GetDataType()).Should(Equal(common.Uint32))
+		Ω(listVP.GetDataType()).Should(Equal(common.ArrayUint32))
 
 		Ω(func() { listVP.GetMinMaxValue() }).Should(Panic())
 		Ω(listVP.GetNonDefaultValueCount()).Should(Equal(listVP.GetLength()))
@@ -146,7 +146,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 
 	ginkgo.It("live list vector: test basics for bool type", func() {
 		// Test basics
-		listVP := NewLiveVectorParty(4, common.Bool, nil)
+		listVP := NewLiveVectorParty(4, common.ArrayBool, nil)
 		Ω(listVP.(*LiveVectorParty).GetTotalBytes()).Should(BeZero())
 
 		// Test allocation.

@@ -9,6 +9,6 @@ columns:
     - column_id: 5
       data_type: Uint32
 rows:
-    - 0,0,0,0 # value does not change
-    - 1,0,1,11 # value changed
-    - 11,11,0,11 # new entry
+    - 0;0;0;0 # value does not change
+    - 1;0;1;11 # value changed
+    - 11;11;0;11 # new entry

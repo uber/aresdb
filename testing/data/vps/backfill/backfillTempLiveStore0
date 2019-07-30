@@ -1,8 +1,12 @@
 data_type: Uint32
-length: 3
+length: 7
 has_counts: false
 values:
   - 1
   - 11
   - 4
+  - 6
+  - 7
+  - 9
+  - 12
 

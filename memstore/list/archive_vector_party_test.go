@@ -46,11 +46,11 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 
 	ginkgo.It("archiving list vector: test basics for uint32 type", func() {
 		// Test basics
-		listVP := NewArchiveVectorParty(4, common.Uint32, uint32ArchiveTotalBytes, &sync.RWMutex{})
+		listVP := NewArchiveVectorParty(4, common.ArrayUint32, uint32ArchiveTotalBytes, &sync.RWMutex{})
 		Ω(listVP.GetLength()).Should(Equal(4))
 		Ω(listVP.GetBytes()).Should(BeZero())
 		Ω(listVP.GetCount(1)).Should(BeEquivalentTo(1))
-		Ω(listVP.GetDataType()).Should(Equal(common.Uint32))
+		Ω(listVP.GetDataType()).Should(Equal(common.ArrayUint32))
 		Ω(func() { listVP.SetCount(0, 0) }).Should(Panic())
 		Ω(func() { listVP.Prune() }).ShouldNot(Panic())
 		Ω(func() { listVP.CopyOnWrite(0) }).ShouldNot(Panic())
@@ -94,7 +94,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 
 	ginkgo.It("archiving list vector: test basics for bool type", func() {
 		// Test basics
-		listVP := NewArchiveVectorParty(4, common.Bool, boolArchiveTotalBytes, &sync.RWMutex{})
+		listVP := NewArchiveVectorParty(4, common.ArrayBool, boolArchiveTotalBytes, &sync.RWMutex{})
 		Ω(listVP.GetBytes()).Should(BeZero())
 
 		// Test allocation.

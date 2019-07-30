@@ -1,10 +1,14 @@
 # sort columns, pk
 data_type: Uint32
-length: 5
+length: 9
 has_counts: true
 values:
   - 0,1
   - 11,2
   - 1,4
   - 12,5
-  - 11,6
+  - 3,8
+  - 4,9
+  - 94,10
+  - 11,11
+  - 12,12

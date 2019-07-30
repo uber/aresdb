@@ -497,7 +497,7 @@ func (ctx *backfillContext) backfill(reporter BackfillJobDetailReporter, jobKey 
 			changedBaseRow := ctx.getChangedBaseRow(recordID, changedPatchRow)
 			// we should write to live store.
 			if changedBaseRow != nil {
-				// sorted column changed
+				// sorted column or array column size changed
 				deleteThenInsertRecords++
 				recordID = nextWriteRecord
 				ctx.backfillStore.AdvanceNextWriteRecord()
@@ -598,7 +598,8 @@ func (ctx *backfillContext) getChangedBaseRow(baseRecordID memCom.RecordID, chan
 		if patchValue != nil && (utils.IndexOfInt(ctx.sortColumns, columnID) >= 0 || ctx.new.Columns[columnID].IsList()) {
 			baseDataValue := ctx.new.Columns[columnID].GetDataValueByRow(int(baseRecordID.Index))
 			// there's change in sorted column or size change in array column
-			if (ctx.new.Columns[columnID].IsList() && common.ArrayLengthCompare(&baseDataValue, patchValue) != 0) || (!ctx.new.Columns[columnID].IsList() && baseDataValue.Compare(*patchValue) != 0) {
+			if (ctx.new.Columns[columnID].IsList() && common.ArrayLengthCompare(&baseDataValue, patchValue) != 0) ||
+				(!ctx.new.Columns[columnID].IsList() && baseDataValue.Compare(*patchValue) != 0) {
 				changedBaseRow = make([]*common.DataValue, len(ctx.new.Columns))
 				// Mark deletion for this row.
 				ctx.baseRowDeleted = append(ctx.baseRowDeleted, int(baseRecordID.Index))

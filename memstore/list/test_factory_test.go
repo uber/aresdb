@@ -48,7 +48,7 @@ var _ = ginkgo.Describe("test factory", func() {
 		Ω(vp).ShouldNot(BeNil())
 
 		Ω(vp.GetLength()).Should(Equal(4))
-		Ω(vp.GetDataType()).Should(Equal(common.Uint32))
+		Ω(vp.GetDataType()).Should(Equal(common.ArrayUint32))
 		Ω(vp.IsList()).Should(BeTrue())
 
 		listVP := vp.AsList()

@@ -15,11 +15,13 @@
 package list
 
 import (
+	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"io"
+	"os"
 	"sync"
 	"unsafe"
 )
@@ -33,13 +35,16 @@ const (
 // via appending to the tail during archiving and backfill.
 // It use a single value vector to store the values and validities so that it has the same
 // in memory representation except archiving vp does not have cap vector.
+// The only update supported is same length value in place change
 type ArchiveVectorParty struct {
 	baseVectorParty
 	common.Pinnable
 	values *common.Vector
 	// bytesWritten should only be used when archiving or backfilling. It's used to record the current position
 	// in values vector.
-	bytesWritten    int64
+	bytesWritten int64
+	// lengthFilled is to record the number of records appended, which can not exceed length
+	lengthFilled    int
 	totalValueBytes int64
 	// Used in archive batches to allow requesters to wait until the vector party
 	// is fully loaded from disk.
@@ -53,7 +58,7 @@ type ArchiveVectorParty struct {
 // store values and validities.
 func NewArchiveVectorParty(length int, dataType common.DataType,
 	totalValueBytes int64, locker sync.Locker) common.ArchiveVectorParty {
-		return newArchiveVectorParty(length, dataType, totalValueBytes, locker)
+	return newArchiveVectorParty(length, dataType, totalValueBytes, locker)
 }
 
 func newArchiveVectorParty(length int, dataType common.DataType,
@@ -137,19 +142,35 @@ func (vp *ArchiveVectorParty) setValue(row int, val unsafe.Pointer, valid bool) 
 		var zero uint32
 		vp.offsets.SetValue(2*row, unsafe.Pointer(&zero))
 		vp.offsets.SetValue(2*row+1, unsafe.Pointer(&zero))
+		if row >= vp.lengthFilled {
+			vp.lengthFilled++
+		}
 		return
 	}
-	newLen := int(*(*uint32)(val))
-	newBytes := common.CalculateListElementBytes(vp.dataType, newLen)
-	// Set offset.
-	vp.offsets.SetValue(2*row, unsafe.Pointer(&vp.bytesWritten))
-	// Set length.
-	vp.offsets.SetValue(2*row+1, unsafe.Pointer(&newLen))
-
-	baseAddr := uintptr(vp.values.Buffer()) + uintptr(vp.bytesWritten)
-	utils.MemCopy(unsafe.Pointer(baseAddr), val, newBytes)
-
-	vp.bytesWritten += int64(newBytes)
+	newLen := *(*uint32)(val)
+	newBytes := common.CalculateListElementBytes(vp.dataType, int(newLen))
+	if row < vp.lengthFilled {
+		oldOffset, oldLen := vp.GetOffsetLength(row)
+		if oldLen != newLen {
+			// invalid in-place update, should never happen
+			utils.GetLogger().Panic("in-place update array archive vp with different length")
+		} else {
+			baseAddr := uintptr(vp.values.Buffer()) + uintptr(oldOffset)
+			utils.MemCopy(unsafe.Pointer(baseAddr), val, newBytes)
+		}
+	} else if row == vp.lengthFilled {
+		// Set offset.
+		vp.offsets.SetValue(2*row, unsafe.Pointer(&vp.bytesWritten))
+		// Set length.
+		vp.offsets.SetValue(2*row+1, unsafe.Pointer(&newLen))
+		baseAddr := uintptr(vp.values.Buffer()) + uintptr(vp.bytesWritten)
+		utils.MemCopy(unsafe.Pointer(baseAddr), val, newBytes)
+		vp.lengthFilled++
+		vp.bytesWritten += int64(newBytes)
+	} else {
+		// invalid jump update, should never happen
+		utils.GetLogger().Panic("jump update array archive vp")
+	}
 }
 
 // SetDataValue is the implentation of common.VecotrParty
@@ -305,6 +326,8 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.values.Buffer()), vp.values.Bytes)); err != nil {
 		return err
 	}
+	vp.bytesWritten = vp.totalValueBytes
+	vp.lengthFilled = vp.length
 
 	if s != nil {
 		// memory usage:
@@ -358,6 +381,19 @@ func (vp *ArchiveVectorParty) SliceIndex(lowerBoundRow, upperBoundRow int) (
 	return lowerBoundRow, upperBoundRow
 }
 
+// Dump is for testing purpose
+func (vp *ArchiveVectorParty) Dump(file *os.File) {
+	fmt.Fprintf(file, "\nArray ArchiveVectorParty, type: %s, length: %d, value: \n", common.DataTypeName[vp.dataType], vp.GetLength())
+	for i := 0; i < vp.GetLength(); i++ {
+		val := vp.GetDataValue(i)
+		if val.Valid {
+			fmt.Fprintf(file, "\t%v\n", val.ConvertToHumanReadable(vp.dataType))
+		} else {
+			fmt.Println(file, "\tnil")
+		}
+	}
+}
+
 // CopyOnWrite clone vector party for updates, the update can only for in-place change with same length for update row
 func (vp *ArchiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorParty {
 	// archive vector party should always have allUsersDone initialized correctly with batch rwlock
@@ -369,5 +405,8 @@ func (vp *ArchiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorPar
 	if vp.offsets != nil {
 		utils.MemCopy(unsafe.Pointer(newVP.offsets.Buffer()), unsafe.Pointer(vp.offsets.Buffer()), vp.offsets.Bytes)
 	}
+	newVP.totalValueBytes = vp.totalValueBytes
+	newVP.bytesWritten = vp.bytesWritten
+	newVP.lengthFilled = vp.lengthFilled
 	return newVP
 }

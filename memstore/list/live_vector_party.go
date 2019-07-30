@@ -15,10 +15,12 @@
 package list
 
 import (
+	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"io"
+	"os"
 	"sync"
 	"unsafe"
 )
@@ -370,6 +372,24 @@ func (vp *LiveVectorParty) Allocate(hasCount bool) {
 	vp.memoryPool = NewHighLevelMemoryPool(vp.reporter)
 }
 
+// Dump is for testing purpose
+func (vp *LiveVectorParty) Dump(file *os.File) {
+	fmt.Fprintf(file, "\nArray LiveVectorParty, type: %s, length: %d, value: \n", common.DataTypeName[vp.dataType], vp.GetLength())
+	for i := 0; i < vp.GetLength(); i++ {
+		val := vp.GetDataValue(i)
+		if val.Valid {
+			fmt.Fprintf(file, "\t%v\n", val.ConvertToHumanReadable(vp.dataType))
+		} else {
+			fmt.Println(file, "\tnil")
+		}
+	}
+}
+
+// SetLength is only for testing purpose, do NOT use this function in real code
+func (vp *LiveVectorParty) SetLength(length int) {
+	vp.length = length
+}
+
 // NewLiveVectorParty returns a LiveVectorParty pointer which implements ListVectorParty.
 // It's safe to pass nil HostMemoryManager.
 func NewLiveVectorParty(length int, dataType common.DataType,
@@ -377,7 +397,7 @@ func NewLiveVectorParty(length int, dataType common.DataType,
 	return &LiveVectorParty{
 		baseVectorParty: baseVectorParty{
 			length:   length,
-			dataType: common.GetItemDataType(dataType),
+			dataType: dataType,
 			reporter: func(bytes int64) {
 				if hmm != nil {
 					hmm.ReportUnmanagedSpaceUsageChange(bytes)

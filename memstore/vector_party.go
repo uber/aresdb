@@ -15,13 +15,14 @@
 package memstore
 
 import (
+	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"io"
+	"os"
 	"unsafe"
 )
-
 
 // TransferableVectorParty is vector party that can be transferred to gpu for processing
 type TransferableVectorParty interface {
@@ -257,7 +258,6 @@ func (vp *cVectorParty) JudgeMode() common.ColumnMode {
 	// uncompressed columns
 	return common.HasNullVector
 }
-
 
 // Equals checks whether two vector parties are the same. **Only for unit test use.**
 func (vp *cVectorParty) Equals(other common.VectorParty) bool {
@@ -648,5 +648,18 @@ func (vp *cVectorParty) Allocate(hasCount bool) {
 	if hasCount {
 		vp.counts = common.NewVector(common.Int32, vp.length+1)
 		vp.columnMode = common.HasCountVector
+	}
+}
+
+// Dump is for testing purpose
+func (vp *cVectorParty) Dump(file *os.File) {
+	fmt.Fprintf(file, "\nVectorParty, type: %s, length: %d, value: \n", common.DataTypeName[vp.dataType], vp.GetLength())
+	for i := 0; i < vp.GetLength(); i++ {
+		val := vp.GetDataValue(i)
+		if val.Valid {
+			fmt.Fprintf(file, "\t%v\n", val.ConvertToHumanReadable(vp.dataType))
+		} else {
+			fmt.Println(file, "\tnil")
+		}
 	}
 }

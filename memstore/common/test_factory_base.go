@@ -264,7 +264,7 @@ func (ru *rawUpsertBatch) toUpsertBatch() (*UpsertBatch, error) {
 
 	for row, rowStr := range ru.Rows {
 		builder.AddRow()
-		rawValues := strings.Split(rowStr, ",")
+		rawValues := strings.Split(rowStr, ";")
 		if len(rawValues) != len(ru.Columns) {
 			return nil, utils.StackError(nil,
 				"Length of rawValues %d on row %d is different from number of columns %d", len(rawValues), row, len(ru.Columns))

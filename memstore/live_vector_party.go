@@ -16,12 +16,14 @@ package memstore
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/list"
 	"github.com/uber/aresdb/utils"
 	"io"
+	"os"
 	"reflect"
 	"unsafe"
-	"github.com/uber/aresdb/memstore/list"
 )
 
 // cLiveVectorParty is the implementation of LiveVectorParty with c allocated memory
@@ -317,6 +319,18 @@ func (vp *goLiveVectorParty) Equals(other common.VectorParty) bool {
 		}
 	}
 	return true
+}
+
+func (vp *goLiveVectorParty) Dump(file *os.File) {
+	fmt.Fprintf(file, "\nGO LiveVectorParty, type: %s, length: %d, value: \n", common.DataTypeName[vp.dataType], vp.GetLength())
+	for i := 0; i < vp.GetLength(); i++ {
+		val := vp.GetDataValue(i)
+		if val.Valid {
+			fmt.Fprintf(file, "\t%v\n", val.ConvertToHumanReadable(vp.dataType))
+		} else {
+			fmt.Println(file, "\tnil")
+		}
+	}
 }
 
 // NewLiveVectorParty creates LiveVectorParty

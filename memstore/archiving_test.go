@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/list"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
@@ -275,6 +276,8 @@ var _ = ginkgo.Describe("archiving", func() {
 				Ω(column.(*archiveVectorParty).values).Should(BeNil())
 				Ω(column.(*archiveVectorParty).nulls).Should(BeNil())
 				Ω(column.(*archiveVectorParty).counts).Should(BeNil())
+			} else {
+				Ω(column.(*list.ArchiveVectorParty).GetBytes()).Should(Equal(int64(0)))
 			}
 		}
 
@@ -283,8 +286,18 @@ var _ = ginkgo.Describe("archiving", func() {
 			if i != 3 {
 				Ω(column.(*cLiveVectorParty).GetMode()).ShouldNot(BeEquivalentTo(memCom.AllValuesDefault))
 				Ω(column.(*cLiveVectorParty).values).ShouldNot(BeNil())
+			} else {
+				Ω(column.(*list.LiveVectorParty).GetBytes()).ShouldNot(Equal(int64(0)))
 			}
 		}
+
+		// array value validation
+		arrayColumn := mergedBatch.Columns[3]
+		Ω(arrayColumn.GetLength()).Should(BeEquivalentTo(12))
+		val, valid := arrayColumn.AsList().GetListValue(11)
+		Ω(valid).Should(BeTrue())
+		reader := memCom.NewArrayValueReader(memCom.ArrayInt16, val)
+		Ω(*(*uint16)(reader.Get(0))).Should(Equal(uint16(21)))
 
 		// MaxEventTimePerFile should be purged.
 		Ω(redologManager.MaxEventTimePerFile).ShouldNot(HaveKey(int64(1)))

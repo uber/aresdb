@@ -17,6 +17,7 @@ package common
 import (
 	"github.com/uber/aresdb/diskstore"
 	"io"
+	"os"
 	"unsafe"
 )
 
@@ -143,6 +144,8 @@ type VectorParty interface {
 	// Caller should always call IsList before conversion, otherwise panic may happens
 	// for incompatible vps.
 	AsList() ListVectorParty
+	// Dump is for testing purpose
+	Dump(file *os.File)
 }
 
 // CVectorParty is vector party that is backed by c
