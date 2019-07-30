@@ -115,6 +115,13 @@ func (p *PeerDataNodeServerImpl) getNextSequence() int64 {
 	return atomic.AddInt64(&p.sequenceID, 1)
 }
 
+// Health return the healthiness status of the data server
+func (p *PeerDataNodeServerImpl) Health(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
+	return &pb.HealthCheckResponse{
+		Status: pb.HealthCheckResponse_SERVING,
+	}, nil
+}
+
 // StartSession create new session for one table/shard/node, only One session can be established on one table/shard from one node
 func (p *PeerDataNodeServerImpl) StartSession(ctx context.Context, req *pb.StartSessionRequest) (*pb.Session, error) {
 	var err error

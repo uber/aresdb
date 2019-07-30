@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/utils"
 	"sync"
 )
 
@@ -16,7 +17,9 @@ const (
 type bootstrapDetails struct {
 	*sync.RWMutex
 
+	Source         string         `json:"source"`
 	BootstrapStage BootstrapStage `json:"stage"`
+	StartedAt      int64          `json:"startedAt"`
 	NumColumns     int            `json:"numColumns"`
 	// map from batch id to slice of all columns
 	Batches map[int32][]status `json:"batches"`
@@ -28,6 +31,12 @@ func NewBootstrapDetails() BootstrapDetails {
 		BootstrapStage: Waiting,
 		Batches:        make(map[int32][]status),
 	}
+}
+
+func (b *bootstrapDetails) SetSource(source string) {
+	b.Lock()
+	defer b.Unlock()
+	b.Source = source
 }
 
 func (b *bootstrapDetails) SetNumColumns(numColumns int) {
@@ -53,6 +62,7 @@ func (b *bootstrapDetails) SetBootstrapStage(stage BootstrapStage) {
 	b.Lock()
 	defer b.Unlock()
 	b.BootstrapStage = stage
+	b.StartedAt = utils.Now().Unix()
 }
 
 func (b *bootstrapDetails) MarkVPFinished(batchID int32, columnID uint32) {
