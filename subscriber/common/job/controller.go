@@ -142,7 +142,7 @@ func NewController(params Params) *Controller {
 	if params.ServiceConfig.ControllerConfig.Enable {
 		params.ServiceConfig.Logger.Info("aresDB Controller is enabled")
 
-		if params.ServiceConfig.HeartbeatConfig.Enabled {
+		if params.ServiceConfig.HeartbeatConfig != nil && params.ServiceConfig.HeartbeatConfig.Enabled {
 			params.ServiceConfig.Logger.Info("heartbeat config",
 				zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))
 			controller.etcdServices, err = connectEtcdServices(params)
@@ -166,7 +166,7 @@ func NewController(params Params) *Controller {
 			}
 			params.ServiceConfig.Logger.Info("Registered subscriber in zk")
 		}
-
+		
 		go controller.SyncUpJobConfigs()
 	}
 
