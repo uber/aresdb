@@ -141,12 +141,26 @@ type BlockingScanNode struct {
 	qc             QueryContext
 	host           topology.Host
 	dataNodeClient dataCli.DataNodeQueryClient
+	topo           topology.HealthTrackingDynamicTopoloy
 }
 
 func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
 	isHll := common.CallNameToAggType[sn.qc.AQLQuery.Measures[0].ExprParsed.(*expr.Call).Name] == common.Hll
 
 	trial := 0
+	hostHealthy := true
+	defer func() {
+		var markErr error
+		if hostHealthy {
+			markErr = sn.topo.MarkHostHealthy(sn.host)
+		} else {
+			markErr = sn.topo.MarkHostUnhealthy(sn.host)
+		}
+		if markErr != nil {
+			utils.GetLogger().With("host", sn.host, "healthy", hostHealthy).Error("failed to mark host healthiness")
+		}
+	}()
+
 	for trial < rpcRetries {
 		trial++
 
@@ -161,6 +175,9 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 				"query", sn.qc.AQLQuery,
 				"requestID", sn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
+			if fetchErr == dataCli.ErrFailedToConnect {
+				hostHealthy = false
+			}
 			err = utils.StackError(fetchErr, "fetch from datanode failed")
 			continue
 		}
@@ -170,6 +187,7 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 		break
 	}
 	if result != nil {
+		hostHealthy = true
 		err = nil
 	}
 	return
@@ -183,7 +201,7 @@ type AggQueryPlan struct {
 }
 
 // NewAggQueryPlan creates a new agg query plan
-func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan *AggQueryPlan, err error) {
+func NewAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTopoloy, client dataCli.DataNodeQueryClient) (plan *AggQueryPlan, err error) {
 	var root common.MergeNode
 
 	var assignments map[topology.Host][]uint32
@@ -361,7 +379,7 @@ func splitAvgQuery(qc QueryContext) (sumqc QueryContext, countqc QueryContext) {
 	return
 }
 
-func buildSubPlan(agg common.AggType, qc QueryContext, assignments map[topology.Host][]uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
+func buildSubPlan(agg common.AggType, qc QueryContext, assignments map[topology.Host][]uint32, topo topology.HealthTrackingDynamicTopoloy, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
 	for host, shardIDs := range assignments {
 		// make deep copy
@@ -375,6 +393,7 @@ func buildSubPlan(agg common.AggType, qc QueryContext, assignments map[topology.
 			qc:             currQc,
 			host:           host,
 			dataNodeClient: client,
+			topo:           topo,
 		})
 	}
 	return root

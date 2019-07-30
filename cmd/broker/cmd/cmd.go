@@ -99,7 +99,7 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	}
 
 	var (
-		topo        topology.Topology
+		topo        topology.HealthTrackingDynamicTopoloy
 		clusterName = cfg.Cluster.Namespace
 		serviceName = utils.BrokerServiceName(clusterName)
 		store       kv.TxnStore

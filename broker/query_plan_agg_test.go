@@ -14,6 +14,7 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
 	common3 "github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/datanode/client"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
@@ -130,10 +131,10 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		qc := QueryContext{
 			AQLQuery: &q,
 		}
-		mockTopo := topoMock.Topology{}
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockMap := topoMock.Map{}
 		mockShardSet := shardMock.ShardSet{}
-		mockTopo.On("Get").Return(&mockMap)
+		mockTopo.On("Get").Return(&mockMap).Once()
 		mockMap.On("ShardSet").Return(&mockShardSet)
 		mockShardIds := []uint32{0, 1, 2, 3, 4, 5}
 		mockShardSet.On("AllIDs").Return(mockShardIds)
@@ -182,7 +183,7 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		qc := QueryContext{
 			AQLQuery: &q,
 		}
-		mockTopo := topoMock.Topology{}
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockMap := topoMock.Map{}
 		mockShardSet := shardMock.ShardSet{}
 		mockTopo.On("Get").Return(&mockMap)
@@ -231,21 +232,18 @@ var _ = ginkgo.Describe("agg query plan", func() {
 			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
 		}
 
-		mockTopo := topoMock.Topology{}
-		mockMap := topoMock.Map{}
-		mockTopo.On("Get").Return(&mockMap)
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockHost1 := topoMock.Host{}
-		mockHost2 := topoMock.Host{}
-		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{&mockHost1, &mockHost2}, nil)
-
+		mockTopo.On("MarkHostHealthy", &mockHost1).Return(nil).Once()
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
-
 		myResult := common2.AQLQueryResult{"foo": 1}
 		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
 
 		sn := BlockingScanNode{
 			qc:             QueryContext{AQLQuery: &q},
 			dataNodeClient: &mockDatanodeCli,
+			host:           &mockHost1,
+			topo:           &mockTopo,
 		}
 
 		res, err := sn.Execute(context.TODO())
@@ -258,13 +256,10 @@ var _ = ginkgo.Describe("agg query plan", func() {
 			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "hll"}}},
 		}
 
-		mockTopo := topoMock.Topology{}
-		mockMap := topoMock.Map{}
-		mockTopo.On("Get").Return(&mockMap)
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
+		mockTopo.On("MarkHostHealthy").Return(nil).Once()
 		mockHost1 := topoMock.Host{}
-		mockHost2 := topoMock.Host{}
-		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{&mockHost1, &mockHost2}, nil)
-
+		mockTopo.On("MarkHostHealthy", &mockHost1).Return(nil).Once()
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
 		myResult := common2.AQLQueryResult{"foo": 1}
@@ -273,6 +268,8 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		sn := BlockingScanNode{
 			qc:             QueryContext{AQLQuery: &q},
 			dataNodeClient: &mockDatanodeCli,
+			host:           &mockHost1,
+			topo:           &mockTopo,
 		}
 
 		res, err := sn.Execute(context.TODO())
@@ -285,12 +282,9 @@ var _ = ginkgo.Describe("agg query plan", func() {
 			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
 		}
 
-		mockTopo := topoMock.Topology{}
-		mockMap := topoMock.Map{}
-		mockTopo.On("Get").Return(&mockMap)
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockHost1 := topoMock.Host{}
-		mockHost2 := topoMock.Host{}
-		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{&mockHost1, &mockHost2}, nil).Times(rpcRetries)
+		mockTopo.On("MarkHostHealthy", &mockHost1).Return(nil).Once()
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
@@ -298,10 +292,38 @@ var _ = ginkgo.Describe("agg query plan", func() {
 
 		sn := BlockingScanNode{
 			qc:             QueryContext{AQLQuery: &q},
+			host:           &mockHost1,
 			dataNodeClient: &mockDatanodeCli,
+			topo:           &mockTopo,
 		}
 
 		_, err := sn.Execute(context.TODO())
+		Ω(err).ShouldNot(BeNil())
+		Ω(err.Error()).Should(ContainSubstring("fetch from datanode failed"))
+	})
+
+	ginkgo.It("BlockingScanNode Execute should mark host unhealthy on datanode connection error", func() {
+		q := common2.AQLQuery{
+			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
+		}
+
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
+		mockHost1 := topoMock.Host{}
+		mockTopo.On("MarkHostUnhealthy", &mockHost1).Return(nil).Once()
+
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
+
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, client.ErrFailedToConnect).Times(rpcRetries)
+
+		sn := BlockingScanNode{
+			qc:             QueryContext{AQLQuery: &q},
+			host:           &mockHost1,
+			dataNodeClient: &mockDatanodeCli,
+			topo:           &mockTopo,
+		}
+
+		_, err := sn.Execute(context.TODO())
+		Ω(err).ShouldNot(BeNil())
 		Ω(err.Error()).Should(ContainSubstring("fetch from datanode failed"))
 	})
 
@@ -310,12 +332,9 @@ var _ = ginkgo.Describe("agg query plan", func() {
 			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
 		}
 
-		mockTopo := topoMock.Topology{}
-		mockMap := topoMock.Map{}
-		mockTopo.On("Get").Return(&mockMap)
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockHost1 := topoMock.Host{}
-		mockHost2 := topoMock.Host{}
-		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{&mockHost1, &mockHost2}, nil).Times(rpcRetries)
+		mockTopo.On("MarkHostHealthy", &mockHost1).Return(nil).Once()
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
@@ -326,6 +345,8 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		sn := BlockingScanNode{
 			qc:             QueryContext{AQLQuery: &q},
 			dataNodeClient: &mockDatanodeCli,
+			host:           &mockHost1,
+			topo:           &mockTopo,
 		}
 
 		res, err := sn.Execute(context.TODO())

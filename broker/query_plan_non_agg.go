@@ -29,10 +29,23 @@ type StreamingScanNode struct {
 	qc             QueryContext
 	host           topology.Host
 	dataNodeClient dataCli.DataNodeQueryClient
+	topo           topology.HealthTrackingDynamicTopoloy
 }
 
 func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error) {
 
+	hostHealthy := true
+	defer func() {
+		var markErr error
+		if hostHealthy {
+			markErr = ssn.topo.MarkHostHealthy(ssn.host)
+		} else {
+			markErr = ssn.topo.MarkHostUnhealthy(ssn.host)
+		}
+		if markErr != nil {
+			utils.GetLogger().With("host", ssn.host, "healthy", hostHealthy).Error("failed to mark host healthiness")
+		}
+	}()
 	for trial := 1; trial <= rpcRetries; trial++ {
 
 		var fetchErr error
@@ -47,6 +60,9 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 				"query", ssn.qc.AQLQuery,
 				"requestID", ssn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
+			if fetchErr == dataCli.ErrFailedToConnect {
+				hostHealthy = false
+			}
 			err = utils.StackError(fetchErr, "fetch from datanode failed")
 			continue
 		}
@@ -56,12 +72,13 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 		break
 	}
 	if bs != nil {
+		hostHealthy = true
 		err = nil
 	}
 	return
 }
 
-func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan *NonAggQueryPlan, err error) {
+func NewNonAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTopoloy, client dataCli.DataNodeQueryClient) (plan *NonAggQueryPlan, err error) {
 	headers := make([]string, len(qc.AQLQuery.Dimensions))
 	for i, dim := range qc.AQLQuery.Dimensions {
 		headers[i] = dim.Expr
@@ -93,6 +110,7 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli
 			qc:             currQc,
 			host:           host,
 			dataNodeClient: client,
+			topo:           topo,
 		}
 		i++
 	}
