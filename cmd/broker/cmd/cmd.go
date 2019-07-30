@@ -144,9 +144,9 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	go schemaFetchJob.Run()
 
 	dynamicOptions := topology.NewDynamicOptions().SetConfigServiceClient(configServiceCli).SetServiceID(services.NewServiceID().SetZone(cfg.Cluster.Etcd.Zone).SetName(serviceName).SetEnvironment(cfg.Cluster.Etcd.Env))
-	topo, err = topology.NewDynamicInitializer(dynamicOptions).Init()
+	topo, err = topology.NewHealthTrackingDynamicTopology(dynamicOptions)
 	if err != nil {
-		logger.Fatal("Failed to initialize dynamic topology,", err)
+		logger.Fatal("Failed to create health tracking dynamic topology,", err)
 	}
 
 	// executor
