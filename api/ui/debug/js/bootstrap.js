@@ -40,7 +40,6 @@ function getOwnedTableShards() {
                     }
                 })
             })).then(tableShardSummaries => {
-                // console.log(tableShardSummaries);
                 renderTableShardTable(tableShardSummaries);
             })
         });
@@ -103,7 +102,6 @@ function renderTableShardTable(tableShardSummaries) {
 
     //TODO(@jshencode)
     //  1. column level tracking
-    //  2. source + started time of each stage
     var tableShardsTable = $('#table-shards-table').DataTable({
         paging: false,
         autoWidth: false,
@@ -111,6 +109,14 @@ function renderTableShardTable(tableShardSummaries) {
             {title: "Table", data: "table"},
             {title: "Shard", data: "shard"},
             {title: "Stage", data: "bootstrapDetails.stage", render: renderBootstrapStage},
+            {
+                title: "StartedAt",
+                data: "bootstrapDetails.startedAt",
+                render: function (data) {
+                    return new Date(data * 1000).toLocaleString()
+                }
+            },
+            {title: "Source", data: "bootstrapDetails.source"},
             {title: "Peer Copy Progress", data: "bootstrapDetails", render: renderProgress},
             {title: "Status", data: "BootstrapState", render: renderBootstrapStatus},
         ],
