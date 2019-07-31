@@ -78,7 +78,7 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 		}
 		res := queryCom.AQLQuery{
 			Table:      "trips",
-			Measures:   []queryCom.Measure{{Alias: "trip_status", Expr: "status"}, {Expr: "count(*)"}},
+			Measures:   []queryCom.Measure{{Expr: "count(*)"}},
 			Dimensions: []queryCom.Dimension{{Alias: "trip_status", Expr: "status"}},
 		}
 		runTest(sqls, res, logger)

@@ -1638,6 +1638,19 @@ func (v *ASTBuilder) GetAQL() *queryCom.AQLQuery {
 			Limit:      v.SQL2AqlCtx.MapLimit[0],
 			Sorts:      v.SQL2AqlCtx.MapOrderBy[0],
 		}
+		// remove measures that should be dimensions
+		dimsMap := make(map[string]bool)
+		for _, d := range v.aql.Dimensions {
+			dimsMap[d.Expr] = true
+		}
+		measuresOld := v.aql.Measures
+		v.aql.Measures = []queryCom.Measure{}
+		for _, m := range measuresOld {
+			if !dimsMap[m.Expr] {
+				v.aql.Measures = append(v.aql.Measures, m)
+			}
+		}
+
 	} else {
 		v.aql = &queryCom.AQLQuery{
 			SupportingMeasures:   make([]queryCom.Measure, 0, defaultSliceCap),
