@@ -389,6 +389,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	})
 
 	ginkgo.It("Test HostMemoryManager tryPreload and triggerPreload", func() {
+		logger.Infof("Test HostMemoryManager tryPreload and triggerPreload Started")
 		testTableName := "myTable"
 		testTable := &metaCom.Table{
 			Name:        testTableName,
@@ -535,6 +536,8 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		testHostMemoryManager.preloadJobChan <- preloadJob{}
 
 		Ω(testHostMemoryManager.managedObjectExists(testTableName, 0, today, 0)).Should(BeTrue())
+
+		logger.Infof("Test HostMemoryManager tryPreload and triggerPreload Finished")
 	})
 
 	ginkgo.It("Test HostMemoryManager tryEviction", func() {
@@ -702,6 +705,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	})
 
 	ginkgo.It("Test HostMemoryManager triggerEviction", func() {
+		logger.Infof("Test HostMemoryManager triggerEviction Started")
 		testTableName := "myTable"
 		testTable := &metaCom.Table{
 			Name:        testTableName,
@@ -788,6 +792,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			Should(BeFalse())
 		Ω(testHostMemoryManager.managedObjectExists(testTableName, 0, 15740, 0)).
 			Should(BeTrue())
+		logger.Infof("Test HostMemoryManager triggerEviction Finished")
 	})
 
 	ginkgo.It("Test HostMemoryManager eviction with rlock", func() {
@@ -899,6 +904,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	})
 
 	ginkgo.It("GetMemoryUsageDetails", func() {
+		logger.Infof("Test GetMemoryUsageDetails Started")
 		testTableName := "myTable"
 		testTable := &metaCom.Table{
 			Name:        testTableName,
@@ -970,6 +976,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 				"pk": 2320
 			}
 		}`))
+		logger.Infof("Test GetMemoryUsageDetails Finished")
 	})
 })
 
