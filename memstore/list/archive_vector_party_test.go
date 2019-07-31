@@ -18,9 +18,40 @@ import (
 	"bytes"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
+	diskMock "github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/memstore/common"
+	testingUtils "github.com/uber/aresdb/testing"
 	"sync"
+	commMock "github.com/uber/aresdb/memstore/common/mocks"
 )
+
+func createArchiveVP() common.ArchiveVectorParty {
+	upsertBatch, err := createArrayUpsertBatch()
+	Ω(err).Should(BeNil())
+
+	var totalBytes int64
+	for i := 0; i < upsertBatch.NumRows; i++ {
+		val, valid, _ := upsertBatch.GetValue(i, 1)
+		if valid {
+			reader := common.NewArrayValueReader(common.ArrayUint32, val)
+			totalBytes += int64(reader.GetBytes())
+		}
+	}
+	// store into vp
+	vp := NewArchiveVectorParty(4, common.ArrayUint32, totalBytes, &sync.RWMutex{})
+	vp.Allocate(false)
+	for i := 0; i < upsertBatch.NumRows; i++ {
+		val, valid, err := upsertBatch.GetValue(i, 1)
+		Ω(err).Should(BeNil())
+		vp.SetDataValue(i, common.DataValue{
+			Valid:    valid,
+			OtherVal: val,
+			DataType: common.Uint32,
+		}, common.IgnoreCount)
+	}
+	return vp
+}
 
 var _ = ginkgo.Describe("list vector party tests", func() {
 	var expectedUint32LiveStoreVP, expectedBoolLiveStoreVP common.VectorParty
@@ -118,29 +149,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 	})
 
 	ginkgo.It("archive list vectorparty read write should work", func() {
-		upsertBatch, err := createArrayUpsertBatch()
-		Ω(err).Should(BeNil())
-
-		var totalBytes int64
-		for i := 0; i < upsertBatch.NumRows; i++ {
-			val, valid, _ := upsertBatch.GetValue(i, 1)
-			if valid {
-				reader := common.NewArrayValueReader(common.ArrayUint32, val)
-				totalBytes += int64(reader.GetBytes())
-			}
-		}
-		// store into vp
-		vp := NewArchiveVectorParty(4, common.ArrayUint32, totalBytes, &sync.RWMutex{})
-		vp.Allocate(false)
-		for i := 0; i < upsertBatch.NumRows; i++ {
-			val, valid, err := upsertBatch.GetValue(i, 1)
-			Ω(err).Should(BeNil())
-			vp.SetDataValue(i, common.DataValue{
-				Valid:    valid,
-				OtherVal: val,
-				DataType: common.Uint32,
-			}, common.IgnoreCount)
-		}
+		vp := createArchiveVP()
 
 		//check data in vp is correct
 		// row 0
@@ -183,7 +192,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 
 		// save to buffer
 		buf := &bytes.Buffer{}
-		err = vp.Write(buf)
+		err := vp.Write(buf)
 		Ω(err).Should(BeNil())
 
 		// read from buffer
@@ -216,5 +225,28 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		err = newVP.Read(buf, nil)
 		Ω(err).Should(BeNil())
 		Ω(newVP.Equals(vp)).Should(BeTrue())
+	})
+
+	ginkgo.It("LoadFromDisk should work for Array Archive VP", func() {
+		vp1 := createArchiveVP()
+		table := "test"
+		buf := &testingUtils.TestReadWriteCloser{}
+
+		hostMemoryManager := &commMock.HostMemoryManager{}
+		hostMemoryManager.On("ReportManagedObject", mock.Anything, mock.Anything,
+			mock.Anything, mock.Anything, mock.Anything).Return()
+
+		diskStore := &diskMock.DiskStore{}
+		diskStore.On("OpenVectorPartyFileForWrite", table, 1, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(buf, nil).Once()
+		diskStore.On("OpenVectorPartyFileForRead", table, 1, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(buf, nil).Once()
+
+		serializer := common.NewVectorPartyArchiveSerializer(hostMemoryManager, diskStore, table, 0, 1, 1, 1, 0)
+		err := serializer.WriteVectorParty(vp1)
+		Ω(err).Should(BeNil())
+
+		vp2 := NewArchiveVectorParty(4, common.ArrayUint32, 0, &sync.RWMutex{})
+		vp2.LoadFromDisk(hostMemoryManager, diskStore, table, 0, 1, 1, 1, 0)
+		vp2.WaitForDiskLoad()
+		Ω(vp2.Equals(vp1)).Should(BeTrue())
 	})
 })

@@ -22,6 +22,7 @@ import (
 
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
+	"github.com/uber/aresdb/memstore/list"
 )
 
 // ArchiveBatch represents a archive batch.
@@ -219,7 +220,11 @@ func (b *ArchiveBatch) RequestVectorParty(columnID int) common.ArchiveVectorPart
 	// columnID should always be smaller than len(ValueTypeByColumn).
 	dataType := b.Shard.Schema.ValueTypeByColumn[columnID]
 	defaultValue := b.Shard.Schema.DefaultValues[columnID]
-	vp = newArchiveVectorParty(b.Size, dataType, *defaultValue, b.RWMutex)
+	if common.IsArrayType(dataType) {
+		vp = list.NewArchiveVectorParty(b.Size, dataType, 0, b.RWMutex)
+	} else {
+		vp = newArchiveVectorParty(b.Size, dataType, *defaultValue, b.RWMutex)
+	}
 	b.Columns[columnID] = vp
 
 	archiveVP := vp.(common.ArchiveVectorParty)

@@ -46,9 +46,6 @@ type ArchiveVectorParty struct {
 	// lengthFilled is to record the number of records appended, which can not exceed length
 	lengthFilled    int
 	totalValueBytes int64
-	// Used in archive batches to allow requesters to wait until the vector party
-	// is fully loaded from disk.
-	Loader sync.WaitGroup
 }
 
 // NewArchiveVectorParty returns a new ArchiveVectorParty.
@@ -392,7 +389,7 @@ func (vp *ArchiveVectorParty) Dump(file *os.File) {
 		if val.Valid {
 			fmt.Fprintf(file, "\t%v\n", val.ConvertToHumanReadable(vp.dataType))
 		} else {
-			fmt.Println(file, "\tnil")
+			fmt.Fprintf(file, "\tnil\n")
 		}
 	}
 }

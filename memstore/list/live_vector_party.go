@@ -52,12 +52,18 @@ func (vp *LiveVectorParty) GetBytes() int64 {
 	return bytes
 }
 
-// GetTotalBytes return the bytes this vp occpuies including memory pool
+// GetTotalBytes return the bytes this vp occupies including memory pool
 func (vp *LiveVectorParty) GetTotalBytes() int64 {
-	bytes := vp.GetBytes()
-
 	vp.RLock()
 	defer vp.RUnlock()
+
+	var bytes int64
+	if vp.offsets != nil {
+		bytes += int64(vp.offsets.Bytes)
+	}
+	if vp.caps != nil {
+		bytes += int64(vp.caps.Bytes)
+	}
 
 	if vp.memoryPool != nil {
 		bytes += vp.memoryPool.GetNativeMemoryAllocator().GetTotalBytes()
