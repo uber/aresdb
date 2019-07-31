@@ -31,7 +31,9 @@ var _ = ginkgo.Describe("datanode query client", func() {
 	var server *httptest.Server
 
 	ginkgo.AfterEach(func() {
-		server.Close()
+		if server != nil {
+			server.Close()
+		}
 	})
 
 	ginkgo.It("should work happy path", func() {
@@ -84,5 +86,15 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		client := NewDataNodeQueryClient()
 		_, err := client.Query(context.TODO(), "", &mockHost, common.AQLQuery{}, false)
 		Ω(err.Error()).Should(ContainSubstring("invalid response from datanode"))
+	})
+
+	ginkgo.It("should return expected error on connection failure", func() {
+		add := "http://localhost:9999"
+		mockHost := topoMocks.Host{}
+		mockHost.On("Address").Return(add)
+
+		client := NewDataNodeQueryClient()
+		_, err := client.Query(context.TODO(), "", &mockHost, common.AQLQuery{}, false)
+		Ω(err).Should(Equal(ErrFailedToConnect))
 	})
 })

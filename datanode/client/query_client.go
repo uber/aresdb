@@ -32,6 +32,8 @@ const (
 	requestIDHeaderKey = "RequestID"
 )
 
+var ErrFailedToConnect = errors.New("Datanode query client failed to connect")
+
 func NewDataNodeQueryClient() DataNodeQueryClient {
 	return &dataNodeQueryClientImpl{
 		client: http.Client{},
@@ -129,6 +131,7 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, requestID strin
 		defer res.Body.Close()
 	}
 	if err != nil {
+		err = ErrFailedToConnect
 		return
 	}
 	if res.StatusCode != http.StatusOK {

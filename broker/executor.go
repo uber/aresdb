@@ -25,7 +25,7 @@ import (
 )
 
 // NewQueryExecutor creates a new QueryExecutor
-func NewQueryExecutor(tsr memCom.TableSchemaReader, topo topology.Topology, client dataCli.DataNodeQueryClient) common.QueryExecutor {
+func NewQueryExecutor(tsr memCom.TableSchemaReader, topo topology.HealthTrackingDynamicTopoloy, client dataCli.DataNodeQueryClient) common.QueryExecutor {
 	return &queryExecutorImpl{
 		tableSchemaReader: tsr,
 		topo:              topo,
@@ -36,7 +36,7 @@ func NewQueryExecutor(tsr memCom.TableSchemaReader, topo topology.Topology, clie
 // queryExecutorImpl will be reused across all queries
 type queryExecutorImpl struct {
 	tableSchemaReader memCom.TableSchemaReader
-	topo              topology.Topology
+	topo              topology.HealthTrackingDynamicTopoloy
 	dataNodeClient    dataCli.DataNodeQueryClient
 }
 
