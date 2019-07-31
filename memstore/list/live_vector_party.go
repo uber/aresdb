@@ -250,6 +250,10 @@ func (vp *LiveVectorParty) Read(reader io.Reader, serializer common.VectorPartyS
 			vp.caps.SetValue(i, unsafe.Pointer(&zero))
 		}
 	}
+	if serializer != nil {
+		serializer.ReportVectorPartyMemoryUsage(int64(vp.GetBytes()))
+	}
+
 	return
 }
 

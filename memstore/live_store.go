@@ -250,14 +250,9 @@ func (s *LiveStore) PurgeBatch(id int32) {
 		// SafeDestruct.
 		for _, vp := range batch.Columns {
 			if vp != nil {
-				if !vp.IsList() {
-					bytes := -vp.GetBytes()
-					vp.SafeDestruct()
-					s.HostMemoryManager.ReportUnmanagedSpaceUsageChange(bytes)
-				} else {
-					vp.SafeDestruct()
-
-				}
+				bytes := -vp.GetBytes()
+				vp.SafeDestruct()
+				s.HostMemoryManager.ReportUnmanagedSpaceUsageChange(bytes)
 			}
 		}
 	}
