@@ -152,6 +152,7 @@ var _ = ginkgo.Describe("backfill", func() {
 
 	ginkgo.It("createBackfillPatches should work", func() {
 		logger.Infof("Test createBackfillPatches should work Started")
+		Ω(newBatch).ShouldNot(BeNil()) //TODO remove
 
 		var upsertBatches [3]*memCom.UpsertBatch
 
