@@ -239,7 +239,7 @@ func (ap *archivingPatch) GetCount(row, columnID int) int {
 		return 0
 	}
 	if vp.IsList() {
-		return int(vp.AsList().GetElemCount(row))
+		return int(vp.AsList().GetElemCount(int(recordID.Index)))
 	}
 	return 0
 }

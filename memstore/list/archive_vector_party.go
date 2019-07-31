@@ -159,6 +159,9 @@ func (vp *ArchiveVectorParty) setValue(row int, val unsafe.Pointer, valid bool) 
 			utils.MemCopy(unsafe.Pointer(baseAddr), val, newBytes)
 		}
 	} else if row == vp.lengthFilled {
+		if vp.bytesWritten + int64(newBytes) > vp.totalValueBytes {
+			utils.GetLogger().Panicf("Array ArchiveVectorParty SetValue exceeded buffer limit")
+		}
 		// Set offset.
 		vp.offsets.SetValue(2*row, unsafe.Pointer(&vp.bytesWritten))
 		// Set length.

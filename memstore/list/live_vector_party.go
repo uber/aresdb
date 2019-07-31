@@ -67,6 +67,9 @@ func (vp *LiveVectorParty) GetTotalBytes() int64 {
 
 // SafeDestruct destructs vector party memory.
 func (vp *LiveVectorParty) SafeDestruct() {
+	vp.Lock()
+	defer vp.Unlock()
+
 	if vp != nil {
 		if vp.offsets != nil {
 			vp.offsets.SafeDestruct()

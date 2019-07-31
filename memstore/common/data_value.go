@@ -735,6 +735,11 @@ func (reader *ArrayValueReader) GetLength() int {
 	return reader.length
 }
 
+// GetBytes returns the bytes counts this value occopies
+func (reader *ArrayValueReader) GetBytes() int {
+	return CalculateListElementBytes(reader.itemType, reader.length)
+}
+
 // GetBool returns bool value for Bool item type at index
 func (reader *ArrayValueReader) GetBool(index int) bool {
 	if index < 0 || index >= reader.length {

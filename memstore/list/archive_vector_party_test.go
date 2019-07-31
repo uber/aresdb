@@ -121,8 +121,16 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		upsertBatch, err := createArrayUpsertBatch()
 		Ω(err).Should(BeNil())
 
+		var totalBytes int64
+		for i := 0; i < upsertBatch.NumRows; i++ {
+			val, valid, _ := upsertBatch.GetValue(i, 1)
+			if valid {
+				reader := common.NewArrayValueReader(common.ArrayUint32, val)
+				totalBytes += int64(reader.GetBytes())
+			}
+		}
 		// store into vp
-		vp := NewArchiveVectorParty(4, common.ArrayUint32, 64, &sync.RWMutex{})
+		vp := NewArchiveVectorParty(4, common.ArrayUint32, totalBytes, &sync.RWMutex{})
 		vp.Allocate(false)
 		for i := 0; i < upsertBatch.NumRows; i++ {
 			val, valid, err := upsertBatch.GetValue(i, 1)

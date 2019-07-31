@@ -20,10 +20,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/list"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	utilsMocks "github.com/uber/aresdb/utils/mocks"
 	"go.uber.org/zap"
+	"sync"
 )
 
 var _ = ginkgo.Describe("backfill", func() {
@@ -246,7 +248,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		Ω(backfillStore.PrimaryKey).ShouldNot(BeNil())
 		logger.Infof("Test newBackfillStore should work Finished")
 	})
-/*
+
 	ginkgo.It("newBackfillContext should work", func() {
 		logger.Infof("Test newBackfillContext should work Started")
 		tableSchema := &memCom.TableSchema{
@@ -291,7 +293,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		Ω(backfillCtx.new.Equals(&baseBatch.Batch)).Should(BeTrue())
 		logger.Infof("Test empty patch should work Finished")
 	})
-*/
+
 	ginkgo.It("getChangedBaseRow should work", func() {
 		logger.Infof("Test getChangedBaseRow should work Started")
 
@@ -385,7 +387,7 @@ var _ = ginkgo.Describe("backfill", func() {
 
 		logger.Infof("Test writePatchValueForUnsortColumn should work Finished")
 	})
-/*
+
 	ginkgo.It("apply backfill patch should work", func() {
 		logger.Infof("Test apply backfill patch should work Started")
 		err := backfillCtx.backfill(jobManager.reportBackfillJobDetail, jobKey)
@@ -416,7 +418,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		Ω(newBatch.Equals(&backfillCtx.new.Batch)).Should(BeTrue())
 		logger.Infof("Test apply backfill patch should work Finished")
 	})
-*/
+
 	ginkgo.It("createArchivingPatch should work", func() {
 		logger.Infof("Test createArchivingPatch should work Started")
 		err := backfillCtx.backfill(jobManager.reportBackfillJobDetail, jobKey)
