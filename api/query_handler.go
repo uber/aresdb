@@ -150,6 +150,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 	var requestResponseWriter QueryResponseWriter
 
 	if !returnHLL && canEagerFlush(aqlRequest.Body.Queries) {
+		statusCode = http.StatusOK
 		aqlQuery := aqlRequest.Body.Queries[0]
 		qc := &query.AQLQueryContext{
 			Query:         &aqlQuery,
