@@ -186,7 +186,8 @@ func NewServiceConfig(p Params) (Result, error) {
 	serviceConfig.ActiveAresClusters = make(map[string]SinkConfig)
 
 	// set serviceConfig.ActiveAresClusters
-	if serviceConfig.AresNSConfig.AresClusters == nil || serviceConfig.AresNSConfig.AresNameSpaces == nil {
+	if (serviceConfig.AresNSConfig.AresClusters == nil || serviceConfig.AresNSConfig.AresNameSpaces == nil) &&
+		!serviceConfig.ControllerConfig.Enable {
 		return Result{
 			ServiceConfig: serviceConfig,
 		}, errors.New("Ares namespaces and clusters must be configured")
@@ -202,21 +203,14 @@ func NewServiceConfig(p Params) (Result, error) {
 				ServiceConfig: serviceConfig,
 			}, fmt.Errorf("No ares cluster configure is found for namespace %s", ActiveAresNameSpace)
 		}
-	} else {
+	} else if !serviceConfig.ControllerConfig.Enable {
 		return Result{
 			ServiceConfig: serviceConfig,
 		}, fmt.Errorf("No ares clusters are defined for namespace %s", ActiveAresNameSpace)
 	}
 
-	// Skip local job config if controller is enabled
-	if serviceConfig.ControllerConfig.Enable {
-		return Result{
-			ServiceConfig: serviceConfig,
-		}, nil
-	}
-
 	// set serviceConfig.ActiveJobs
-	if serviceConfig.JobNSConfig.Jobs == nil {
+	if serviceConfig.JobNSConfig.Jobs == nil && !serviceConfig.ControllerConfig.Enable {
 		return Result{
 			ServiceConfig: serviceConfig,
 		}, errors.New("Job namespace config not found")
