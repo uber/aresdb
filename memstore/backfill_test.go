@@ -277,7 +277,6 @@ var _ = ginkgo.Describe("backfill", func() {
 			tableSchema.ValueTypeByColumn, tableSchema.DefaultValues, hostMemoryManager)
 		Ω(backfillCtx.base).Should(Equal(baseBatch))
 		Ω(backfillCtx.patch).Should(Equal(patch))
-		backfillCtx.release()
 		logger.Infof("Test newBackfillContext should work Finished")
 	})
 
