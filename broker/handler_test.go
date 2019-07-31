@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package broker
 
 import (
-	"github.com/uber/aresdb/common"
+	"fmt"
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-type BrokerConfig struct {
-	// HTTP port for serving.
-	Port int `yaml:"port"`
-
-	HTTP    common.HTTPConfig    `yaml:"http"`
-	Cluster common.ClusterConfig `yaml:"cluster"`
-}
+var _ = ginkgo.Describe("broker handler", func() {
+	ginkgo.It("getRequestID should work", func() {
+		h := NewQueryHandler(nil, "inst1")
+		for i := 0; i < 10; i++ {
+			Ω(h.getReqestID()).Should(Equal(fmt.Sprintf("inst1_%d", i+1)))
+		}
+	})
+})

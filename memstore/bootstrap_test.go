@@ -91,10 +91,11 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 
 		mockPeerDataNodeClient := &rpcMocks.PeerDataNodeClient{}
 		mockSession := &rpc.Session{ID: 0}
+		mockPeerDataNodeClient.On("Health", mock.Anything).Return(mock.Anything, &rpc.HealthCheckResponse{Status: rpc.HealthCheckResponse_SERVING}, nil)
 		mockPeerDataNodeClient.On("StartSession", mock.Anything, mock.Anything).Return(mockSession, nil)
-		peerSource.On("BorrowConnection", host1.ID(), mock.Anything).Run(func(args mock.Arguments) {
+		peerSource.On("BorrowConnection", []string{host1.ID()}, mock.Anything).Run(func(args mock.Arguments) {
 			fn := args.Get(1).(client.WithConnectionFn)
-			fn(mockPeerDataNodeClient)
+			fn(host1.String(), mockPeerDataNodeClient)
 		}).Return(nil)
 
 		mockKeepAliveStream := &rpcMocks.PeerDataNode_KeepAliveClient{}

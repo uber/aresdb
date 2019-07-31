@@ -1,9 +1,12 @@
 package datanode
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
+	xerrors "github.com/m3db/m3/src/x/errors"
 	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
 	"github.com/uber/aresdb/utils"
@@ -17,13 +20,24 @@ var (
 	errPeerNotExist = errors.New("peer does not exist")
 )
 
+var grpcDialer = func(target string, opts ...grpc.DialOption) (client rpc.PeerDataNodeClient, closeFn func() error, err error) {
+	conn, err := grpc.Dial(target, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+	return rpc.NewPeerDataNodeClient(conn), func() error { return conn.Close() }, nil
+}
+
 type peer struct {
 	sync.RWMutex
 	sync.WaitGroup
 
 	host topology.Host
 
-	conn   *grpc.ClientConn
+	dialer  client.PeerConnDialer
+	conn    rpc.PeerDataNodeClient
+	closeFn func() error
+
 	closed bool
 }
 
@@ -46,7 +60,7 @@ func (p *peer) BorrowConnection(fn client.WithConnectionFn) (err error) {
 			return err
 		}
 
-		p.conn, err = grpc.Dial(fmt.Sprintf("%s:%s", parsedURL.Hostname(), parsedURL.Port()), grpc.WithInsecure())
+		p.conn, p.closeFn, err = p.dialer(fmt.Sprintf("%s:%s", parsedURL.Hostname(), parsedURL.Port()), grpc.WithInsecure())
 		if err != nil {
 			p.Unlock()
 			return err
@@ -57,8 +71,26 @@ func (p *peer) BorrowConnection(fn client.WithConnectionFn) (err error) {
 	p.Add(1)
 	p.Unlock()
 
-	fn(rpc.NewPeerDataNodeClient(conn))
-	p.Done()
+	defer p.Done()
+
+	err = p.checkHealth(conn)
+	if err != nil {
+		return err
+	}
+
+	fn(p.host.ID(), conn)
+	return nil
+}
+
+func (p *peer) checkHealth(peerNodeClient rpc.PeerDataNodeClient) error {
+	healthCheckResponse, err := peerNodeClient.Health(context.Background(), &rpc.HealthCheckRequest{Service: "PeerData"})
+	if err != nil {
+		return xerrors.Wrapf(err, "failed to check health of %s", p.host.ID())
+	}
+	status := healthCheckResponse.GetStatus()
+	if status != rpc.HealthCheckResponse_SERVING {
+		return fmt.Errorf("unhealthy peer id: %s, status: %s", p.host.ID(), status.String())
+	}
 	return nil
 }
 
@@ -70,8 +102,8 @@ func (p *peer) Close() {
 
 	p.Lock()
 	defer p.Unlock()
-	if p.conn != nil {
-		err := p.conn.Close()
+	if p.conn != nil && p.closeFn != nil {
+		err := p.closeFn()
 		if err != nil {
 			utils.GetLogger().With("host", p.host.String(), "error", err.Error()).Error("failed to close grpc connection")
 		}
@@ -81,22 +113,25 @@ func (p *peer) Close() {
 }
 
 // newPeer create a new peer object
-func newPeer(host topology.Host) *peer {
+func newPeer(host topology.Host, dialer client.PeerConnDialer) *peer {
 	return &peer{
-		host: host,
+		host:   host,
+		dialer: dialer,
 	}
 }
 
 type peerSource struct {
 	sync.RWMutex
 
-	watch topology.MapWatch
-	peers map[string]*peer
+	logger common.Logger
+	watch  topology.MapWatch
+	peers  map[string]*peer
+	dialer client.PeerConnDialer
 
 	done chan struct{}
 }
 
-func (ps *peerSource) BorrowConnection(hostID string, fn client.WithConnectionFn) error {
+func (ps *peerSource) borrowConnection(hostID string, fn client.WithConnectionFn) error {
 	ps.RLock()
 	peer, exist := ps.peers[hostID]
 	if !exist {
@@ -106,6 +141,21 @@ func (ps *peerSource) BorrowConnection(hostID string, fn client.WithConnectionFn
 	ps.RUnlock()
 
 	return peer.BorrowConnection(fn)
+}
+
+func (ps *peerSource) BorrowConnection(hostIDs []string, fn client.WithConnectionFn) error {
+	multiError := xerrors.NewMultiError()
+	for _, hostID := range hostIDs {
+		err := ps.borrowConnection(hostID, fn)
+		if err != nil {
+			ps.logger.With("peer", hostID, "error", err.Error()).Warn("failed to borrow connection from peer")
+			multiError = multiError.Add(err)
+		} else {
+			ps.logger.With("peer", hostID).Debug("successfully borrowed connection from peer")
+			return nil
+		}
+	}
+	return multiError.FinalError()
 }
 
 func (ps *peerSource) watchTopoChange() {
@@ -138,7 +188,7 @@ func (ps *peerSource) updateTopoMap(topoMap topology.Map) {
 	for _, host := range topoMap.Hosts() {
 		knownHosts[host.ID()] = struct{}{}
 		if _, exist := ps.peers[host.ID()]; !exist {
-			ps.peers[host.ID()] = newPeer(host)
+			ps.peers[host.ID()] = newPeer(host, ps.dialer)
 		}
 	}
 
@@ -153,7 +203,12 @@ func (ps *peerSource) updateTopoMap(topoMap topology.Map) {
 }
 
 // NewPeerSource creates PeerSource
-func NewPeerSource(topo topology.Topology) (client.PeerSource, error) {
+func NewPeerSource(logger common.Logger, topo topology.Topology, dialerOverride client.PeerConnDialer) (client.PeerSource, error) {
+	dialer := grpcDialer
+	if dialerOverride != nil {
+		dialer = dialerOverride
+	}
+
 	mapWatch, err := topo.Watch()
 	if err != nil {
 		return nil, err
@@ -163,9 +218,11 @@ func NewPeerSource(topo topology.Topology) (client.PeerSource, error) {
 	topoMap := mapWatch.Get()
 
 	ps := &peerSource{
-		watch: mapWatch,
-		done:  make(chan struct{}),
-		peers: make(map[string]*peer),
+		logger: logger,
+		watch:  mapWatch,
+		dialer: dialer,
+		done:   make(chan struct{}),
+		peers:  make(map[string]*peer),
 	}
 
 	ps.updateTopoMap(topoMap)

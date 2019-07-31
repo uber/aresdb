@@ -235,6 +235,7 @@ func handleQuery(memStore memstore.MemStore, shardOwner topology.ShardOwner, dev
 	qc = &query.AQLQueryContext{
 		Query:         &aqlQuery,
 		ReturnHLLData: aqlRequest.Accept == utils.HTTPContentTypeHyperLogLog,
+		DataOnly:      aqlRequest.DataOnly != 0,
 	}
 	qc.Compile(memStore, shardOwner)
 
@@ -360,14 +361,14 @@ func (w *JSONQueryResponseWriter) GetStatusCode() int {
 // HLLQueryResponseWriter writes query result as application/hll. For more inforamtion, please refer to
 // https://github.com/uber/aresdb/wiki/HyperLogLog.
 type HLLQueryResponseWriter struct {
-	response   *query.HLLQueryResults
+	response   *queryCom.HLLQueryResults
 	statusCode int
 }
 
 // NewHLLQueryResponseWriter creates a new HLLQueryResponseWriter.
 func NewHLLQueryResponseWriter() QueryResponseWriter {
 	w := HLLQueryResponseWriter{
-		response:   query.NewHLLQueryResults(),
+		response:   queryCom.NewHLLQueryResults(),
 		statusCode: http.StatusOK,
 	}
 	return &w

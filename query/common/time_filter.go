@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package query
+package common
 
 import (
-	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"strconv"
@@ -35,8 +34,8 @@ var timeUnitMap = map[string]string{
 	"second":       "s",
 }
 
-// Time that is calendar aligned to the unit.
-type alignedTime struct {
+// AlignedTime  is time that is calendar aligned to the unit.
+type AlignedTime struct {
 	Time time.Time `json:"time"`
 	// Values for unit: y, q, M, w, d, {12, 8, 6, 4, 3, 2}h, h, {30, 20, 15, 12, 10, 6, 5, 4, 3, 2}m, m
 	Unit string `json:"unit"`
@@ -66,7 +65,8 @@ func adjustMidnight(t time.Time) time.Time {
 	return t
 }
 
-func parseTimezone(timezone string) (*time.Location, error) {
+// ParseTimezone parses timezone
+func ParseTimezone(timezone string) (*time.Location, error) {
 	segments := strings.Split(timezone, ":")
 	hours, err := strconv.Atoi(segments[0])
 	if err == nil {
@@ -337,14 +337,15 @@ func parseTimeFilterExpression(expression string, now time.Time) (start, end tim
 	return
 }
 
-func parseTimeFilter(filter queryCom.TimeFilter, loc *time.Location, now time.Time) (from, to *alignedTime, err error) {
+// ParseTimeFilter parses time filter
+func ParseTimeFilter(filter TimeFilter, loc *time.Location, now time.Time) (from, to *AlignedTime, err error) {
 	if loc == nil {
 		loc = time.UTC
 	}
 	now = now.In(loc).Round(time.Second)
 
 	if filter.From != "" {
-		from = &alignedTime{}
+		from = &AlignedTime{}
 		from.Time, _, from.Unit, err = parseTimeFilterExpression(filter.From, now)
 		if err != nil {
 			err = utils.StackError(err, "failed to parse time filter `from` expression: %s", filter.From)
@@ -353,7 +354,7 @@ func parseTimeFilter(filter queryCom.TimeFilter, loc *time.Location, now time.Ti
 	}
 
 	if filter.To != "" {
-		to = &alignedTime{}
+		to = &AlignedTime{}
 		_, to.Time, to.Unit, err = parseTimeFilterExpression(filter.To, now)
 		if err != nil {
 			err = utils.StackError(err, "failed to parse time filter `to` expression: %s", filter.To)
@@ -361,12 +362,13 @@ func parseTimeFilter(filter queryCom.TimeFilter, loc *time.Location, now time.Ti
 		}
 	} else if from != nil {
 		// Populate to with now if from is present.
-		to = &alignedTime{now, "s"}
+		to = &AlignedTime{Time: now, Unit: "s"}
 	}
 	return
 }
 
-func createTimeFilterExpr(expression expr.Expr, from, to *alignedTime) (fromExpr, toExpr expr.Expr) {
+// CreateTimeFilterExpr creates time filter expr
+func CreateTimeFilterExpr(expression expr.Expr, from, to *AlignedTime) (fromExpr, toExpr expr.Expr) {
 	if from != nil && from.Unit != "" {
 		fromExpr = &expr.BinaryExpr{
 			ExprType: expr.Boolean,

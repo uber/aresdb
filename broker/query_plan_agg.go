@@ -16,14 +16,17 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/uber/aresdb/broker/common"
 	"github.com/uber/aresdb/broker/util"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
+	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"net/http"
 	"strings"
 	"sync"
 )
@@ -135,28 +138,46 @@ func (mn *mergeNodeImpl) Execute(ctx context.Context) (result queryCom.AQLQueryR
 type BlockingScanNode struct {
 	blockingPlanNodeImpl
 
-	query          queryCom.AQLQuery
+	qc             QueryContext
 	host           topology.Host
 	dataNodeClient dataCli.DataNodeQueryClient
+	topo           topology.HealthTrackingDynamicTopoloy
 }
 
 func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
-	isHll := common.CallNameToAggType[sn.query.Measures[0].ExprParsed.(*expr.Call).Name] == common.Hll
+	isHll := common.CallNameToAggType[sn.qc.AQLQuery.Measures[0].ExprParsed.(*expr.Call).Name] == common.Hll
 
 	trial := 0
+	hostHealthy := true
+	defer func() {
+		var markErr error
+		if hostHealthy {
+			markErr = sn.topo.MarkHostHealthy(sn.host)
+		} else {
+			markErr = sn.topo.MarkHostUnhealthy(sn.host)
+		}
+		if markErr != nil {
+			utils.GetLogger().With("host", sn.host, "healthy", hostHealthy).Error("failed to mark host healthiness")
+		}
+	}()
+
 	for trial < rpcRetries {
 		trial++
 
 		var fetchErr error
-		utils.GetLogger().With("host", sn.host, "query", sn.query).Debug("sending query to datanode")
-		result, fetchErr = sn.dataNodeClient.Query(ctx, sn.host, sn.query, isHll)
+		utils.GetLogger().With("host", sn.host, "query", sn.qc.AQLQuery).Debug("sending query to datanode")
+		result, fetchErr = sn.dataNodeClient.Query(ctx, sn.qc.RequestID, sn.host, *sn.qc.AQLQuery, isHll)
 		if fetchErr != nil {
 			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(
 				"error", fetchErr,
 				"host", sn.host,
-				"query", sn.query,
+				"query", sn.qc.AQLQuery,
+				"requestID", sn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
+			if fetchErr == dataCli.ErrFailedToConnect {
+				hostHealthy = false
+			}
 			err = utils.StackError(fetchErr, "fetch from datanode failed")
 			continue
 		}
@@ -166,6 +187,7 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 		break
 	}
 	if result != nil {
+		hostHealthy = true
 		err = nil
 	}
 	return
@@ -173,11 +195,13 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 
 // AggQueryPlan is the plan for aggregate queries
 type AggQueryPlan struct {
-	root common.BlockingPlanNode
+	aggType common.AggType
+	qc      *QueryContext
+	root    common.BlockingPlanNode
 }
 
 // NewAggQueryPlan creates a new agg query plan
-func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient) (plan AggQueryPlan, err error) {
+func NewAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTopoloy, client dataCli.DataNodeQueryClient) (plan *AggQueryPlan, err error) {
 	var root common.MergeNode
 
 	var assignments map[topology.Host][]uint32
@@ -193,29 +217,140 @@ func NewAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.Da
 	switch agg {
 	case common.Avg:
 		root = NewMergeNode(common.Avg)
-		sumQuery, countQuery := splitAvgQuery(*qc.AQLQuery)
+		sumQuery, countQuery := splitAvgQuery(*qc)
 		root.Add(
-			buildSubPlan(common.Sum, &sumQuery, assignments, topo, client),
-			buildSubPlan(common.Count, &countQuery, assignments, topo, client))
+			buildSubPlan(common.Sum, sumQuery, assignments, topo, client),
+			buildSubPlan(common.Count, countQuery, assignments, topo, client))
 	default:
-		root = buildSubPlan(agg, qc.AQLQuery, assignments, topo, client)
+		root = buildSubPlan(agg, *qc, assignments, topo, client)
 	}
 
-	plan = AggQueryPlan{
-		root: root,
+	plan = &AggQueryPlan{
+		aggType: agg,
+		qc:      qc,
+		root:    root,
 	}
 	return
 }
 
-func (ap *AggQueryPlan) Execute(ctx context.Context) (results queryCom.AQLQueryResult, err error) {
-	return ap.root.Execute(ctx)
+func (ap *AggQueryPlan) postProcess(results queryCom.AQLQueryResult, execErr error, w http.ResponseWriter) (err error) {
+	var data []byte
+	// for now post process for HLL binary only
+	// TODO: move post processing logic for non-agg and other agg queries here
+	if ap.qc.ReturnHLLBinary {
+		w.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
+		data, err = ap.postProcessHLLBinary(results, execErr)
+	} else {
+		data, err = json.Marshal(results)
+	}
+
+	if err != nil {
+		return
+	}
+
+	_, err = w.Write([]byte(data))
+	return
+}
+
+// convert HLL to binary format
+func (ap *AggQueryPlan) postProcessHLLBinary(res queryCom.AQLQueryResult, execErr error) (data []byte, err error) {
+	hllQueryResults := queryCom.NewHLLQueryResults()
+	if execErr != nil {
+		hllQueryResults.WriteError(execErr)
+		data = hllQueryResults.GetBytes()
+		return
+	}
+
+	var (
+		qc           = ap.qc
+		dimDataTypes = make([]memCom.DataType, len(qc.AQLQuery.Dimensions))
+		reverseDicts = make(map[int][]string)
+		enumDicts    = make(map[int]map[string]int)
+		resultSize   = len(res)
+		hllVector    []byte
+		dimVector    []byte
+		countVector  []byte
+	)
+
+	// build dataTypes and enumDicts
+	for dimIdx, dim := range qc.AQLQuery.Dimensions {
+		dimDataTypes[dimIdx] = queryCom.GetDimensionDataType(dim.ExprParsed)
+		if memCom.IsEnumType(dimDataTypes[dimIdx]) {
+			var (
+				tableID  int
+				columnID int
+			)
+			tableID, columnID, err = qc.resolveColumn(dim.Expr)
+			if err != nil {
+				return
+			}
+			table := qc.Tables[tableID]
+			reverseDicts[dimIdx] = table.EnumDicts[table.Schema.Columns[columnID].Name].ReverseDict
+			enumDicts[dimIdx] = table.EnumDicts[table.Schema.Columns[columnID].Name].Dict
+		}
+	}
+
+	// build HLL binary
+	hllVector, dimVector, countVector, err = queryCom.BuildVectorsFromHLLResult(res, dimDataTypes, enumDicts, qc.DimensionVectorIndex)
+	if err != nil {
+		return
+	}
+	paddedRawDimValuesVectorLength := (uint32(queryCom.DimValResVectorSize(resultSize, qc.NumDimsPerDimWidth)) + 7) / 8 * 8
+	paddedHLLVectorLength := (int64(len(hllVector)) + 7) / 8 * 8
+
+	builder := queryCom.HLLDataWriter{
+		HLLData: queryCom.HLLData{
+			ResultSize:                     uint32(resultSize),
+			NumDimsPerDimWidth:             qc.NumDimsPerDimWidth,
+			DimIndexes:                     qc.DimensionVectorIndex,
+			DataTypes:                      dimDataTypes,
+			EnumDicts:                      reverseDicts,
+			PaddedRawDimValuesVectorLength: paddedRawDimValuesVectorLength,
+			PaddedHLLVectorLength:          paddedHLLVectorLength,
+		},
+	}
+
+	headerSize, totalSize := builder.CalculateSizes()
+	builder.Buffer = make([]byte, totalSize)
+	err = builder.SerializeHeader()
+	if err != nil {
+		return
+	}
+
+	writer := utils.NewBufferWriter(builder.Buffer)
+	writer.SkipBytes(int(headerSize))
+	_, err = writer.Write(dimVector)
+	if err != nil {
+		return
+	}
+	writer.AlignBytes(8)
+	_, err = writer.Write(countVector)
+	if err != nil {
+		return
+	}
+	writer.AlignBytes(8)
+	_, err = writer.Write(hllVector)
+	if err != nil {
+		return
+	}
+
+	// write hll binary to hll result, and return
+	hllQueryResults.WriteResult(builder.Buffer)
+	return hllQueryResults.GetBytes(), nil
+}
+
+func (ap *AggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) (err error) {
+	var results queryCom.AQLQueryResult
+	results, err = ap.root.Execute(ctx)
+	return ap.postProcess(results, err, w)
 }
 
 // splitAvgQuery to sum and count queries
-func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom.AQLQuery) {
+func splitAvgQuery(qc QueryContext) (sumqc QueryContext, countqc QueryContext) {
+	q := qc.AQLQuery
 	measure := q.Measures[0]
 
-	sumq = q
+	sumq := *q
 	sumq.Measures = []queryCom.Measure{
 		{
 			Alias:   measure.Alias,
@@ -226,7 +361,7 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 	sumq.Measures[0].Expr = strings.Replace(strings.ToLower(sumq.Measures[0].Expr), "avg", "sum", 1)
 	sumq.Measures[0].ExprParsed, _ = expr.ParseExpr(sumq.Measures[0].Expr)
 
-	countq = q
+	countq := *q
 	countq.Measures = []queryCom.Measure{
 		{
 			Alias:   measure.Alias,
@@ -236,21 +371,29 @@ func splitAvgQuery(q queryCom.AQLQuery) (sumq queryCom.AQLQuery, countq queryCom
 	}
 	countq.Measures[0].Expr = "count(*)"
 	countq.Measures[0].ExprParsed, _ = expr.ParseExpr(countq.Measures[0].Expr)
+
+	sumqc = qc
+	sumqc.AQLQuery = &sumq
+	countqc = qc
+	countqc.AQLQuery = &countq
 	return
 }
 
-func buildSubPlan(agg common.AggType, q *queryCom.AQLQuery, assignments map[topology.Host][]uint32, topo topology.Topology, client dataCli.DataNodeQueryClient) common.MergeNode {
+func buildSubPlan(agg common.AggType, qc QueryContext, assignments map[topology.Host][]uint32, topo topology.HealthTrackingDynamicTopoloy, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
 	for host, shardIDs := range assignments {
 		// make deep copy
-		newQ := *q
+		currQ := *qc.AQLQuery
 		for _, shard := range shardIDs {
-			newQ.Shards = append(newQ.Shards, int(shard))
+			currQ.Shards = append(currQ.Shards, int(shard))
 		}
+		currQc := qc
+		currQc.AQLQuery = &currQ
 		root.Add(&BlockingScanNode{
-			query:          newQ,
+			qc:             currQc,
 			host:           host,
 			dataNodeClient: client,
+			topo:           topo,
 		})
 	}
 	return root

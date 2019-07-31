@@ -32,24 +32,6 @@ import (
 	"strconv"
 )
 
-// DataTypeToExprType maps data type from the column schema format to
-// expression AST format.
-var DataTypeToExprType = map[memCom.DataType]expr.Type{
-	memCom.Bool:      expr.Boolean,
-	memCom.Int8:      expr.Signed,
-	memCom.Int16:     expr.Signed,
-	memCom.Int32:     expr.Signed,
-	memCom.Int64:     expr.Signed,
-	memCom.Uint8:     expr.Unsigned,
-	memCom.Uint16:    expr.Unsigned,
-	memCom.Uint32:    expr.Unsigned,
-	memCom.Float32:   expr.Float,
-	memCom.SmallEnum: expr.Unsigned,
-	memCom.BigEnum:   expr.Unsigned,
-	memCom.GeoPoint:  expr.GeoPoint,
-	memCom.GeoShape:  expr.GeoShape,
-}
-
 const (
 	unsupportedInputType      = "unsupported input type for %s: %s"
 	defaultTimezoneTableAlias = "__timezone_lookup"
@@ -173,7 +155,7 @@ func (qc *AQLQueryContext) adjustFilterToTimeFilter() {
 	}
 	if timeFilter.From != "" || timeFilter.To != "" {
 		// processTimeFilter will handle the from is nil case
-		if qc.fromTime, qc.toTime, qc.Error = parseTimeFilter(timeFilter, qc.fixedTimezone, utils.Now()); qc.Error != nil {
+		if qc.fromTime, qc.toTime, qc.Error = common.ParseTimeFilter(timeFilter, qc.fixedTimezone, utils.Now()); qc.Error != nil {
 			return
 		}
 		// remove from original query filter
@@ -376,7 +358,7 @@ func (qc *AQLQueryContext) parseExprs() {
 		qc.Query.Joins[i] = join
 	}
 
-	qc.fromTime, qc.toTime, qc.Error = parseTimeFilter(qc.Query.TimeFilter, qc.fixedTimezone, utils.Now())
+	qc.fromTime, qc.toTime, qc.Error = common.ParseTimeFilter(qc.Query.TimeFilter, qc.fixedTimezone, utils.Now())
 	if qc.Error != nil {
 		return
 	}
@@ -474,7 +456,7 @@ func (qc *AQLQueryContext) processTimezone() {
 			})
 		}
 	} else {
-		loc, err := parseTimezone(qc.Query.Timezone)
+		loc, err := common.ParseTimezone(qc.Query.Timezone)
 		if err != nil {
 			qc.Error = utils.StackError(err, "timezone Failed to parse: %s", qc.Query.Timezone)
 			return
@@ -590,29 +572,6 @@ func (qc *AQLQueryContext) resolveColumn(identifier string) (int, int, error) {
 	return tableID, columnID, nil
 }
 
-// cast returns an expression that casts the input to the desired type.
-// The returned expression AST will be used directly for VM instruction
-// generation of the desired types.
-func cast(e expr.Expr, t expr.Type) expr.Expr {
-	// Input type is already desired.
-	if e.Type() == t {
-		return e
-	}
-	// Type casting is only required if at least one side is float.
-	// We do not cast (or check for overflow) among boolean, signed and unsigned.
-	if e.Type() != expr.Float && t != expr.Float {
-		return e
-	}
-	// Data type for NumberLiteral can be changed directly.
-	l, _ := e.(*expr.NumberLiteral)
-	if l != nil {
-		l.ExprType = t
-		return l
-	}
-	// Use ParenExpr to respresent a VM type cast.
-	return &expr.ParenExpr{Expr: e, ExprType: t}
-}
-
 func blockNumericOpsForColumnOverFourBytes(token expr.Token, expressions ...expr.Expr) error {
 	if token == expr.UNARY_MINUS || token == expr.BITWISE_NOT ||
 		(token >= expr.ADD && token <= expr.BITWISE_LEFT_SHIFT) {
@@ -623,13 +582,6 @@ func blockNumericOpsForColumnOverFourBytes(token expr.Token, expressions ...expr
 		}
 	}
 	return nil
-}
-
-func isUUIDColumn(expression expr.Expr) bool {
-	if varRef, ok := expression.(*expr.VarRef); ok {
-		return varRef.DataType == memCom.UUID
-	}
-	return false
 }
 
 // Rewrite walks the expresison AST and resolves data types bottom up.
@@ -652,7 +604,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			return expression
 		}
 		dataType := qc.TableScanners[tableID].Schema.ValueTypeByColumn[columnID]
-		e.ExprType = DataTypeToExprType[dataType]
+		e.ExprType = common.DataTypeToExprType[dataType]
 		e.TableID = tableID
 		e.ColumnID = columnID
 		dict := qc.TableScanners[tableID].Schema.EnumDicts[column.Name]
@@ -661,7 +613,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 		e.DataType = dataType
 		e.IsHLLColumn = column.HLLConfig.IsHLLColumn
 	case *expr.UnaryExpr:
-		if isUUIDColumn(e.Expr) && e.Op != expr.GET_HLL_VALUE {
+		if expr.IsUUIDColumn(e.Expr) && e.Op != expr.GET_HLL_VALUE {
 			qc.Error = utils.StackError(nil, "uuid column type only supports countdistincthll unary expression")
 			return expression
 		}
@@ -677,7 +629,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			e.ExprType = expr.Boolean
 			// Normalize the operator.
 			e.Op = expr.NOT
-			e.Expr = cast(e.Expr, expr.Boolean)
+			e.Expr = expr.Cast(e.Expr, expr.Boolean)
 			childExpr := e.Expr
 			callRef, isCallRef := childExpr.(*expr.Call)
 			if isCallRef && callRef.Name == expr.GeographyIntersectsCallName {
@@ -699,23 +651,23 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			// Rewrite to NOT(NOT(child)).
 			e.ExprType = expr.Boolean
 			e.Op = expr.NOT
-			e.Expr = cast(e.Expr, expr.Boolean)
+			e.Expr = expr.Cast(e.Expr, expr.Boolean)
 			return &expr.UnaryExpr{Expr: e, Op: expr.NOT, ExprType: expr.Boolean}
 		case expr.BITWISE_NOT:
 			// Cast child to unsigned.
 			e.ExprType = expr.Unsigned
-			e.Expr = cast(e.Expr, expr.Unsigned)
+			e.Expr = expr.Cast(e.Expr, expr.Unsigned)
 		case expr.GET_MONTH_START, expr.GET_QUARTER_START, expr.GET_YEAR_START, expr.GET_WEEK_START:
 			// Cast child to unsigned.
 			e.ExprType = expr.Unsigned
-			e.Expr = cast(e.Expr, expr.Unsigned)
+			e.Expr = expr.Cast(e.Expr, expr.Unsigned)
 		case expr.GET_DAY_OF_MONTH, expr.GET_DAY_OF_YEAR, expr.GET_MONTH_OF_YEAR, expr.GET_QUARTER_OF_YEAR:
 			// Cast child to unsigned.
 			e.ExprType = expr.Unsigned
-			e.Expr = cast(e.Expr, expr.Unsigned)
+			e.Expr = expr.Cast(e.Expr, expr.Unsigned)
 		case expr.GET_HLL_VALUE:
 			e.ExprType = expr.Unsigned
-			e.Expr = cast(e.Expr, expr.Unsigned)
+			e.Expr = expr.Cast(e.Expr, expr.Unsigned)
 		default:
 			qc.Error = utils.StackError(nil, "unsupported unary expression %s",
 				e.String())
@@ -743,8 +695,8 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			// Upgrade and cast to highestType.
 			e.ExprType = highestType
 			if highestType == expr.Float {
-				e.LHS = cast(e.LHS, expr.Float)
-				e.RHS = cast(e.RHS, expr.Float)
+				e.LHS = expr.Cast(e.LHS, expr.Float)
+				e.RHS = expr.Cast(e.RHS, expr.Float)
 			} else if e.Op == expr.SUB {
 				// For lhs - rhs, upgrade to signed at least.
 				e.ExprType = expr.Signed
@@ -752,29 +704,29 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 		case expr.MUL, expr.MOD:
 			// Upgrade and cast to highestType.
 			e.ExprType = highestType
-			e.LHS = cast(e.LHS, highestType)
-			e.RHS = cast(e.RHS, highestType)
+			e.LHS = expr.Cast(e.LHS, highestType)
+			e.RHS = expr.Cast(e.RHS, highestType)
 		case expr.DIV:
 			// Upgrade and cast to float.
 			e.ExprType = expr.Float
-			e.LHS = cast(e.LHS, expr.Float)
-			e.RHS = cast(e.RHS, expr.Float)
+			e.LHS = expr.Cast(e.LHS, expr.Float)
+			e.RHS = expr.Cast(e.RHS, expr.Float)
 		case expr.BITWISE_AND, expr.BITWISE_OR, expr.BITWISE_XOR,
 			expr.BITWISE_LEFT_SHIFT, expr.BITWISE_RIGHT_SHIFT, expr.FLOOR, expr.CONVERT_TZ:
 			// Cast to unsigned.
 			e.ExprType = expr.Unsigned
-			e.LHS = cast(e.LHS, expr.Unsigned)
-			e.RHS = cast(e.RHS, expr.Unsigned)
+			e.LHS = expr.Cast(e.LHS, expr.Unsigned)
+			e.RHS = expr.Cast(e.RHS, expr.Unsigned)
 		case expr.AND, expr.OR:
 			// Cast to boolean.
 			e.ExprType = expr.Boolean
-			e.LHS = cast(e.LHS, expr.Boolean)
-			e.RHS = cast(e.RHS, expr.Boolean)
+			e.LHS = expr.Cast(e.LHS, expr.Boolean)
+			e.RHS = expr.Cast(e.RHS, expr.Boolean)
 		case expr.LT, expr.LTE, expr.GT, expr.GTE:
 			// Cast to boolean.
 			e.ExprType = expr.Boolean
-			e.LHS = cast(e.LHS, highestType)
-			e.RHS = cast(e.RHS, highestType)
+			e.LHS = expr.Cast(e.LHS, highestType)
+			e.RHS = expr.Cast(e.RHS, highestType)
 		case expr.NEQ, expr.EQ:
 			// swap lhs and rhs if rhs is VarRef but lhs is not.
 			if _, lhsVarRef := e.LHS.(*expr.VarRef); !lhsVarRef {
@@ -810,8 +762,8 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				e.RHS = &expr.NumberLiteral{Int: value, ExprType: expr.Unsigned}
 			} else {
 				// Cast to highestType.
-				e.LHS = cast(e.LHS, highestType)
-				e.RHS = cast(e.RHS, highestType)
+				e.LHS = expr.Cast(e.LHS, highestType)
+				e.RHS = expr.Cast(e.RHS, highestType)
 			}
 
 			if rhs != nil && lhs.DataType == memCom.GeoPoint {
@@ -854,12 +806,12 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				qc.Error = utils.StackError(nil, "3rd argument of convert_tz must be a string")
 				break
 			}
-			fromTz, err := parseTimezone(fromTzStringExpr.Val)
+			fromTz, err := common.ParseTimezone(fromTzStringExpr.Val)
 			if err != nil {
 				qc.Error = utils.StackError(err, "failed to rewrite convert_tz")
 				break
 			}
-			toTz, err := parseTimezone(toTzStringExpr.Val)
+			toTz, err := common.ParseTimezone(toTzStringExpr.Val)
 			if err != nil {
 				qc.Error = utils.StackError(err, "failed to rewrite convert_tz")
 				break
@@ -1075,7 +1027,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			}
 			// For avg, the expression type should always be float.
 			if e.Name == expr.AvgCallName {
-				e.Args[0] = cast(e.Args[0], expr.Float)
+				e.Args[0] = expr.Cast(e.Args[0], expr.Float)
 			}
 			e.ExprType = e.Args[0].Type()
 		default:
@@ -1089,10 +1041,10 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			}
 		}
 		// Cast else and thens to highestType, cast whens to boolean.
-		e.Else = cast(e.Else, highestType)
+		e.Else = expr.Cast(e.Else, highestType)
 		for i, whenThen := range e.WhenThens {
-			whenThen.When = cast(whenThen.When, expr.Boolean)
-			whenThen.Then = cast(whenThen.Then, highestType)
+			whenThen.When = expr.Cast(whenThen.When, expr.Boolean)
+			whenThen.Then = expr.Cast(whenThen.Then, highestType)
 			e.WhenThens[i] = whenThen
 		}
 		e.ExprType = highestType
@@ -1600,7 +1552,7 @@ func (qc *AQLQueryContext) processTimeFilter() {
 			return
 		}
 	}
-	fromExpr, toExpr := createTimeFilterExpr(&expr.VarRef{
+	fromExpr, toExpr := common.CreateTimeFilterExpr(&expr.VarRef{
 		Val:      qc.Query.TimeFilter.Column,
 		ExprType: expr.Unsigned,
 		TableID:  0,
@@ -1863,28 +1815,6 @@ func (qc *AQLQueryContext) processDimensions() {
 	}
 }
 
-func getDimensionDataType(expression expr.Expr) memCom.DataType {
-	if e, ok := expression.(*expr.VarRef); ok {
-		return e.DataType
-	}
-	switch expression.Type() {
-	case expr.Boolean:
-		return memCom.Bool
-	case expr.Unsigned:
-		return memCom.Uint32
-	case expr.Signed:
-		return memCom.Int32
-	case expr.Float:
-		return memCom.Float32
-	default:
-		return memCom.Uint32
-	}
-}
-
-func getDimensionDataBytes(expression expr.Expr) int {
-	return memCom.DataTypeBytes(getDimensionDataType(expression))
-}
-
 // Sort dimension columns based on the data width in bytes
 // dimension columns in OOPK will not be reordered, but a mapping
 // from original id to ordered offsets (value and validity) in
@@ -1898,7 +1828,7 @@ func (qc *AQLQueryContext) sortDimensionColumns() {
 	byteWidth := 1 << uint(len(qc.OOPK.NumDimsPerDimWidth)-1)
 	for byteIndex := range qc.OOPK.NumDimsPerDimWidth {
 		for originIndex, dim := range qc.OOPK.Dimensions {
-			dataBytes := getDimensionDataBytes(dim)
+			dataBytes := common.GetDimensionDataBytes(dim)
 			if dataBytes == byteWidth {
 				// record value offset, null offset pair
 				// null offsets will have to add total dim bytes later

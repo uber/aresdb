@@ -50,7 +50,7 @@ type bootstrapManagerImpl struct {
 
 // NewBootstrapManager creates bootstrap manager
 func NewBootstrapManager(origin string, bootstrappable bootstrap.Bootstrapable, opts Options, topo topology.Topology) BootstrapManager {
-	peerSource, err := NewPeerSource(topo)
+	peerSource, err := NewPeerSource(opts.InstrumentOptions().Logger(), topo, nil)
 	if err != nil {
 		opts.InstrumentOptions().Logger().With("error", err.Error()).Fatal("failed to initalize peer source")
 	}

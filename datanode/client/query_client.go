@@ -28,6 +28,12 @@ import (
 	"net/url"
 )
 
+const (
+	requestIDHeaderKey = "RequestID"
+)
+
+var ErrFailedToConnect = errors.New("Datanode query client failed to connect")
+
 func NewDataNodeQueryClient() DataNodeQueryClient {
 	return &dataNodeQueryClientImpl{
 		client: http.Client{},
@@ -46,9 +52,9 @@ type aqlRespBody struct {
 	Results []queryCom.AQLQueryResult `json:"results"`
 }
 
-func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery, hll bool) (result queryCom.AQLQueryResult, err error) {
+func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, requestID string, host topology.Host, query queryCom.AQLQuery, hll bool) (result queryCom.AQLQueryResult, err error) {
 	var bs []byte
-	bs, err = dc.queryRaw(ctx, host, query, hll)
+	bs, err = dc.queryRaw(ctx, requestID, host, query, hll)
 	if err != nil {
 		return
 	}
@@ -79,15 +85,15 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, host topology.Host
 	return
 }
 
-func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery) (bs []byte, err error) {
-	bs, err = dc.queryRaw(ctx, host, query, false)
+func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, requestID string, host topology.Host, query queryCom.AQLQuery) (bs []byte, err error) {
+	bs, err = dc.queryRaw(ctx, requestID, host, query, false)
 	if err == nil {
 		utils.GetLogger().With("host", host, "query", query).Debug("datanode query client QueryRaw succeeded")
 	}
 	return
 }
 
-func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery, hll bool) (bs []byte, err error) {
+func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, requestID string, host topology.Host, query queryCom.AQLQuery, hll bool) (bs []byte, err error) {
 	var u *url.URL
 	u, err = url.Parse(host.Address())
 	if err != nil {
@@ -112,6 +118,8 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.H
 	if err != nil {
 		return
 	}
+
+	req.Header.Add(requestIDHeaderKey, requestID)
 	if hll {
 		req.Header.Add(utils.HTTPAcceptTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
 	}
@@ -123,6 +131,7 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, host topology.H
 		defer res.Body.Close()
 	}
 	if err != nil {
+		err = ErrFailedToConnect
 		return
 	}
 	if res.StatusCode != http.StatusOK {

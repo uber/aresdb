@@ -93,20 +93,20 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	defer serverRestartTimer.Stop()
 
 	// fetch and keep syncing schema
-	controllerClientCfg := cfg.ControllerConfig
+	controllerClientCfg := cfg.Cluster.Controller
 	if controllerClientCfg == nil {
 		logger.Fatal("Missing controller client config", err)
 	}
 
 	var (
-		topo        topology.Topology
+		topo        topology.HealthTrackingDynamicTopoloy
 		clusterName = cfg.Cluster.Namespace
 		serviceName = utils.BrokerServiceName(clusterName)
 		store       kv.TxnStore
 	)
 
-	cfg.Etcd.Service = serviceName
-	configServiceCli, err := cfg.Etcd.NewClient(
+	cfg.Cluster.Etcd.Service = serviceName
+	configServiceCli, err := cfg.Cluster.Etcd.NewClient(
 		instrument.NewOptions().SetLogger(zap.NewExample()))
 	if err != nil {
 		logger.Fatal("Failed to create config service client,", err)
@@ -143,17 +143,17 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	schemaFetchJob.FetchEnum()
 	go schemaFetchJob.Run()
 
-	dynamicOptions := topology.NewDynamicOptions().SetConfigServiceClient(configServiceCli).SetServiceID(services.NewServiceID().SetZone(cfg.Etcd.Zone).SetName(serviceName).SetEnvironment(cfg.Etcd.Env))
-	topo, err = topology.NewDynamicInitializer(dynamicOptions).Init()
+	dynamicOptions := topology.NewDynamicOptions().SetConfigServiceClient(configServiceCli).SetServiceID(services.NewServiceID().SetZone(cfg.Cluster.Etcd.Zone).SetName(serviceName).SetEnvironment(cfg.Cluster.Etcd.Env))
+	topo, err = topology.NewHealthTrackingDynamicTopology(dynamicOptions)
 	if err != nil {
-		logger.Fatal("Failed to initialize dynamic topology,", err)
+		logger.Fatal("Failed to create health tracking dynamic topology,", err)
 	}
 
 	// executor
 	exec := broker.NewQueryExecutor(brokerSchemaMutator, topo, dataNodeCli.NewDataNodeQueryClient())
 
 	// init handlers
-	queryHandler := broker.NewQueryHandler(exec)
+	queryHandler := broker.NewQueryHandler(exec, cfg.Cluster.InstanceID)
 
 	// start HTTP server
 	router := mux.NewRouter()

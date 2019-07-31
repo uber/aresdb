@@ -617,3 +617,34 @@ func RewriteFunc(e Expr, fn func(Expr) Expr) Expr {
 type rewriterFunc func(Expr) Expr
 
 func (fn rewriterFunc) Rewrite(e Expr) Expr { return fn(e) }
+
+// IsUUIDColumn returns whether an Expr is UUID
+func IsUUIDColumn(expression Expr) bool {
+	if varRef, ok := expression.(*VarRef); ok {
+		return varRef.DataType == memCom.UUID
+	}
+	return false
+}
+
+// Cast returns an expression that casts the input to the desired type.
+// The returned expression AST will be used directly for VM instruction
+// generation of the desired types.
+func Cast(e Expr, t Type) Expr {
+	// Input type is already desired.
+	if e.Type() == t {
+		return e
+	}
+	// Type casting is only required if at least one side is float.
+	// We do not cast (or check for overflow) among boolean, signed and unsigned.
+	if e.Type() != Float && t != Float {
+		return e
+	}
+	// Data type for NumberLiteral can be changed directly.
+	l, _ := e.(*NumberLiteral)
+	if l != nil {
+		l.ExprType = t
+		return l
+	}
+	// Use ParenExpr to respresent a VM type cast.
+	return &ParenExpr{Expr: e, ExprType: t}
+}

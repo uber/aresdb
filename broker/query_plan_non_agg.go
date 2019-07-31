@@ -20,34 +20,49 @@ import (
 	"github.com/uber/aresdb/broker/util"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
-	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 )
 
 // StreamingScanNode implements StreamingPlanNode
 type StreamingScanNode struct {
-	query          queryCom.AQLQuery
+	qc             QueryContext
 	host           topology.Host
 	dataNodeClient dataCli.DataNodeQueryClient
+	topo           topology.HealthTrackingDynamicTopoloy
 }
 
 func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error) {
-	trial := 0
-	for trial < rpcRetries {
-		trial++
+
+	hostHealthy := true
+	defer func() {
+		var markErr error
+		if hostHealthy {
+			markErr = ssn.topo.MarkHostHealthy(ssn.host)
+		} else {
+			markErr = ssn.topo.MarkHostUnhealthy(ssn.host)
+		}
+		if markErr != nil {
+			utils.GetLogger().With("host", ssn.host, "healthy", hostHealthy).Error("failed to mark host healthiness")
+		}
+	}()
+	for trial := 1; trial <= rpcRetries; trial++ {
 
 		var fetchErr error
 
-		utils.GetLogger().With("host", ssn.host, "query", ssn.query).Debug("sending query to datanode")
-		bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.host, ssn.query)
+		utils.GetLogger().With("host", ssn.host, "query", ssn.qc.AQLQuery).Debug("sending query to datanode")
+		bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.qc.RequestID, ssn.host, *ssn.qc.AQLQuery)
 		if fetchErr != nil {
 			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(
 				"error", fetchErr,
 				"host", ssn.host,
-				"query", ssn.query,
+				"query", ssn.qc.AQLQuery,
+				"requestID", ssn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
+			if fetchErr == dataCli.ErrFailedToConnect {
+				hostHealthy = false
+			}
 			err = utils.StackError(fetchErr, "fetch from datanode failed")
 			continue
 		}
@@ -57,20 +72,23 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 		break
 	}
 	if bs != nil {
+		hostHealthy = true
 		err = nil
 	}
 	return
 }
 
-func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli.DataNodeQueryClient, w http.ResponseWriter) (plan NonAggQueryPlan, err error) {
+func NewNonAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTopoloy, client dataCli.DataNodeQueryClient) (plan *NonAggQueryPlan, err error) {
 	headers := make([]string, len(qc.AQLQuery.Dimensions))
 	for i, dim := range qc.AQLQuery.Dimensions {
 		headers[i] = dim.Expr
 	}
-	plan.headers = headers
-	plan.w = w
-	plan.resultChan = make(chan streamingScanNoderesult)
-	plan.limit = qc.AQLQuery.Limit
+
+	plan = &NonAggQueryPlan{
+		headers:    headers,
+		resultChan: make(chan streamingScanNoderesult),
+		limit:      qc.AQLQuery.Limit,
+	}
 
 	var assignment map[topology.Host][]uint32
 	assignment, err = util.CalculateShardAssignment(topo)
@@ -82,14 +100,17 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.Topology, client dataCli
 	i := 0
 	for host, shards := range assignment {
 		// make deep copy
-		q := *qc.AQLQuery
+		currQ := *qc.AQLQuery
 		for _, shard := range shards {
-			q.Shards = append(q.Shards, int(shard))
+			currQ.Shards = append(currQ.Shards, int(shard))
 		}
+		currQc := *qc
+		currQc.AQLQuery = &currQ
 		plan.nodes[i] = &StreamingScanNode{
-			query:          q,
+			qc:             currQc,
 			host:           host,
 			dataNodeClient: client,
+			topo:           topo,
 		}
 		i++
 	}
@@ -104,7 +125,6 @@ type streamingScanNoderesult struct {
 
 // NonAggQueryPlan implements QueryPlan
 type NonAggQueryPlan struct {
-	w          http.ResponseWriter
 	resultChan chan streamingScanNoderesult
 	headers    []string
 	nodes      []*StreamingScanNode
@@ -114,21 +134,21 @@ type NonAggQueryPlan struct {
 	flushed int
 }
 
-func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
+func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) (err error) {
 	var headersBytes []byte
 	headersBytes, err = json.Marshal(nqp.headers)
 	if err != nil {
 		return
 	}
-	_, err = nqp.w.Write([]byte(`{"headers":`))
+	_, err = w.Write([]byte(`{"headers":`))
 	if err != nil {
 		return
 	}
-	_, err = nqp.w.Write(headersBytes)
+	_, err = w.Write(headersBytes)
 	if err != nil {
 		return
 	}
-	_, err = nqp.w.Write([]byte(`,"matrixData":[`))
+	_, err = w.Write([]byte(`,"matrixData":[`))
 	if err != nil {
 		return
 	}
@@ -147,6 +167,8 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 
 	dataNodeWaitStart := utils.Now()
 
+	// the first result
+	processedFirtBatch := false
 	for i := 0; i < len(nqp.nodes); i++ {
 		if nqp.getRowsWanted() == 0 {
 			utils.GetLogger().Debug("got enough rows, exiting")
@@ -163,10 +185,18 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 			err = res.err
 			return
 		}
+
+		if len(res.data) == 0 {
+			continue
+		}
+
 		// write rows
 		if nqp.limit < 0 {
 			// when no limit, flush data directly
-			nqp.w.Write(res.data)
+			if processedFirtBatch {
+				w.Write([]byte(`,`))
+			}
+			w.Write(res.data)
 		} else {
 			// with limit, we have to deserialize
 			serDeStart := utils.Now()
@@ -181,7 +211,10 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 			}
 
 			if len(resultData) <= nqp.getRowsWanted() {
-				nqp.w.Write(res.data[1 : len(res.data)-1])
+				if processedFirtBatch {
+					w.Write([]byte(`,`))
+				}
+				w.Write(res.data[1 : len(res.data)-1])
 				nqp.flushed += len(resultData)
 				utils.GetLogger().With("nrows", len(resultData)).Debug("flushed batch")
 			} else {
@@ -192,18 +225,20 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context) (err error) {
 				if err != nil {
 					return
 				}
-				nqp.w.Write(bs[1 : len(bs)-1])
+				if processedFirtBatch {
+					w.Write([]byte(`,`))
+				}
+				// strip brackets
+				w.Write(bs[1 : len(bs)-1])
 				nqp.flushed += rowsToFlush
 				utils.GetLogger().With("nrows", rowsToFlush).Debug("flushed rows")
 			}
 			utils.GetRootReporter().GetTimer(utils.TimeSerDeDataNodeResponse).Record(utils.Now().Sub(serDeStart))
 		}
-		if !(nqp.getRowsWanted() == 0) && i != len(nqp.nodes)-1 {
-			nqp.w.Write([]byte(`,`))
-		}
+		processedFirtBatch = true
 	}
 
-	_, err = nqp.w.Write([]byte(`]}`))
+	_, err = w.Write([]byte(`]}`))
 	return
 }
 

@@ -73,7 +73,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 		f, err := NewKafkaRedoLogManagerMaster(namespace, redoLogConfig, &diskMocks.DiskStore{}, mockMetaStore, consumer)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
-		m, err := f.NewRedologManager(table, shard, tableConfig)
+		m, err := f.NewRedologManager(table, shard, false, tableConfig)
 
 		Ω(err).Should(BeNil())
 		Ω(m).ShouldNot(BeNil())
@@ -156,7 +156,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 		f, err := NewKafkaRedoLogManagerMaster(namespace, redoLogConfig, diskStore, mockMetaStore, consumer)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
-		m, err := f.NewRedologManager(table, shard, tableConfig)
+		m, err := f.NewRedologManager(table, shard, false, tableConfig)
 		Ω(err).Should(BeNil())
 		Ω(m).ShouldNot(BeNil())
 

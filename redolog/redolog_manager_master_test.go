@@ -46,7 +46,7 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 		f, err = NewRedoLogManagerMaster(namespace, c, diskStore, metaStore)
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
-		m, err := f.NewRedologManager(table, shard, tableConfig)
+		m, err := f.NewRedologManager(table, shard, false, tableConfig)
 		Ω(m.(*FileRedoLogManager)).ShouldNot(BeNil())
 
 		c = &common.RedoLogConfig{
@@ -60,7 +60,7 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 		}
 		f, err = NewRedoLogManagerMaster(namespace, c, diskStore, metaStore)
 		Ω(err).Should(BeNil())
-		m, err = f.NewRedologManager(table, shard, tableConfig)
+		m, err = f.NewRedologManager(table, shard, false, tableConfig)
 		Ω(m.(*FileRedoLogManager)).ShouldNot(BeNil())
 
 		c = &common.RedoLogConfig{
@@ -101,7 +101,7 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
 		Ω(f.consumer).ShouldNot(BeNil())
-		m, err = f.NewRedologManager(table, shard, tableConfig)
+		m, err = f.NewRedologManager(table, shard, false, tableConfig)
 		Ω(m.(*compositeRedoLogManager)).ShouldNot(BeNil())
 
 		c = &common.RedoLogConfig{
@@ -120,19 +120,35 @@ var _ = ginkgo.Describe("redolog manager master tests", func() {
 		Ω(err).Should(BeNil())
 		Ω(f).ShouldNot(BeNil())
 		Ω(f.consumer).ShouldNot(BeNil())
-		m, err = f.NewRedologManager(table, shard, tableConfig)
+		m, err = f.NewRedologManager(table, shard, false, tableConfig)
 		Ω(m.(*kafkaRedoLogManager)).ShouldNot(BeNil())
+
+		// file redolog manager for unsharded table when diskOnlyForUnsharded enabled
+		c = &common.RedoLogConfig{
+			DiskConfig: common.DiskRedoLogConfig{
+				Disabled: false,
+			},
+			KafkaConfig: common.KafkaRedoLogConfig{
+				Enabled: false,
+				Brokers: []string{},
+			},
+			DiskOnlyForUnsharded: true,
+		}
+		f, err = NewRedoLogManagerMaster(namespace, c, diskStore, metaStore)
+		Ω(err).Should(BeNil())
+		m, err = f.NewRedologManager(table, shard, true, tableConfig)
+		Ω(m.(*FileRedoLogManager)).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("NewRedologManager and close", func() {
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
 		f, _ := NewKafkaRedoLogManagerMaster(namespace, nil, diskStore, metaStore, consumer)
-		_, err := f.NewRedologManager("table1", 0, &metaCom.TableConfig{})
+		_, err := f.NewRedologManager("table1", 0, false, &metaCom.TableConfig{})
 		Ω(err).Should(BeNil())
-		f.NewRedologManager("table1", 1, &metaCom.TableConfig{})
-		f.NewRedologManager("table2", 0, &metaCom.TableConfig{})
-		f.NewRedologManager("table2", 1, &metaCom.TableConfig{})
-		_, err = f.NewRedologManager("table2", 1, &metaCom.TableConfig{})
+		f.NewRedologManager("table1", 1, false, &metaCom.TableConfig{})
+		f.NewRedologManager("table2", 0, false, &metaCom.TableConfig{})
+		f.NewRedologManager("table2", 1, false, &metaCom.TableConfig{})
+		_, err = f.NewRedologManager("table2", 1, false, &metaCom.TableConfig{})
 		// repeat create redolog manager on same table/shard should fail
 		Ω(err).ShouldNot(BeNil())
 

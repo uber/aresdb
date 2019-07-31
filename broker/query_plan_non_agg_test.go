@@ -24,6 +24,7 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
 	common2 "github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/datanode/client"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
@@ -50,7 +51,110 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 			AQLQuery:              &q,
 			IsNonAggregationQuery: true,
 		}
-		mockTopo := topoMock.Topology{}
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
+		mockMap := topoMock.Map{}
+		mockShardSet := shardMock.ShardSet{}
+		mockTopo.On("Get").Return(&mockMap)
+		mockMap.On("ShardSet").Return(&mockShardSet)
+		mockShardIds := []uint32{0, 1, 2, 3, 4, 5}
+		mockShardSet.On("AllIDs").Return(mockShardIds)
+		mockHost1 := &topoMock.Host{}
+		mockHost2 := &topoMock.Host{}
+		mockHost3 := &topoMock.Host{}
+		mockHosts := []topology.Host{
+			mockHost1,
+			mockHost2,
+			mockHost3,
+		}
+		mockTopo.On("MarkHostHealthy", mock.Anything).Return(nil).Times(3)
+		mockMap.On("Hosts").Return(mockHosts)
+		//host1: 0,1,2,3
+		//host2: 4,5,0,1
+		//host3: 2,3,4,5
+		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(1)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(2)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(3)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(4)).Return([]topology.Host{mockHost2, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(5)).Return([]topology.Host{mockHost2, mockHost3}, nil)
+
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
+
+		// test negative limit (no limit)
+		w := httptest.NewRecorder()
+		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
+
+		Ω(plan.nodes).Should(HaveLen(len(mockHosts)))
+		Ω(plan.headers).Should(Equal([]string{"field1", "field2"}))
+
+		bs := []byte(`["foo","1"],["bar","2"]`)
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockHosts))
+
+		Ω(plan.nodes[0].qc.AQLQuery.Shards).Should(HaveLen(2))
+		Ω(plan.nodes[1].qc.AQLQuery.Shards).Should(HaveLen(2))
+
+		err = plan.Execute(context.TODO(), w)
+		Ω(err).Should(BeNil())
+
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"],["bar","2"],["foo","1"],["bar","2"]]}`))
+
+		// test limit no enough data
+		qc.AQLQuery.Limit = 3
+		w = httptest.NewRecorder()
+		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
+		bsEmpty := []byte(``)
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Once()
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bsEmpty, nil).Times(len(mockHosts) - 1)
+		mockTopo.On("MarkHostHealthy", mock.Anything).Return(nil).Times(3)
+		err = plan.Execute(context.TODO(), w)
+		Ω(err).Should(BeNil())
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"]]}`))
+
+		// test limit with enough data 1
+		qc.AQLQuery.Limit = 3
+		w = httptest.NewRecorder()
+		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
+
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bsEmpty, nil).Times(len(mockHosts) - 2)
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(2)
+		mockTopo.On("MarkHostHealthy", mock.Anything).Return(nil).Times(3)
+		err = plan.Execute(context.TODO(), w)
+		Ω(err).Should(BeNil())
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))
+
+		// test limit with enough data 2
+		w = httptest.NewRecorder()
+		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
+
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(2)
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bsEmpty, nil).Times(len(mockHosts) - 2)
+		mockTopo.On("MarkHostHealthy", mock.Anything).Return(nil).Times(3)
+		err = plan.Execute(context.TODO(), w)
+		Ω(err).Should(BeNil())
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))
+	})
+
+	ginkgo.It("should mark host unhealthy on connection error", func() {
+		q := common.AQLQuery{
+			Table: "table1",
+			Measures: []common.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []common.Dimension{
+				{Expr: "field1"},
+				{Expr: "field2"},
+			},
+			Limit: -1,
+		}
+		qc := QueryContext{
+			AQLQuery:              &q,
+			IsNonAggregationQuery: true,
+		}
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockMap := topoMock.Map{}
 		mockShardSet := shardMock.ShardSet{}
 		mockTopo.On("Get").Return(&mockMap)
@@ -78,34 +182,17 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
 
-		// test negative limit (no limit)
 		w := httptest.NewRecorder()
-		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
+		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
 		Ω(err).Should(BeNil())
 
 		Ω(plan.nodes).Should(HaveLen(len(mockHosts)))
 		Ω(plan.headers).Should(Equal([]string{"field1", "field2"}))
 
-		bs := []byte(`["foo","1"],["bar","2"]`)
-		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
+		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, client.ErrFailedToConnect).Times(len(mockHosts) * 2)
+		mockTopo.On("MarkHostUnhealthy", mock.Anything).Return(nil).Times(len(mockHosts))
 
-		Ω(plan.nodes[0].query.Shards).Should(HaveLen(2))
-		Ω(plan.nodes[1].query.Shards).Should(HaveLen(2))
-
-		err = plan.Execute(context.TODO())
-		Ω(err).Should(BeNil())
-
-		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"],["bar","2"],["foo","1"],["bar","2"]]}`))
-
-		// test limit
-		qc.AQLQuery.Limit = 3
-		w = httptest.NewRecorder()
-		plan, err = NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli, w)
-		Ω(err).Should(BeNil())
-		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockShardIds))
-		err = plan.Execute(context.TODO())
-		Ω(err).Should(BeNil())
-		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))
-
+		err = plan.Execute(context.TODO(), w)
+		Ω(err.Error()).Should(ContainSubstring("Datanode query client failed to connect"))
 	})
 })

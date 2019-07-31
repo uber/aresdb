@@ -74,7 +74,7 @@ var _ = ginkgo.Describe("kafka redolog manager", func() {
 		upsertBatchBytes := []byte{1, 0, 237, 254, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 51, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 0, 123, 0, 1, 0, 0, 0, 0, 0, 135, 0, 0, 0, 0, 0, 0, 0}
 		m, err := NewKafkaRedoLogManagerMaster("", redoLogCfg, nil, metaStore, consumer)
 		Ω(err).Should(BeNil())
-		r, err := m.NewRedologManager(table, shard, tableConfig)
+		r, err := m.NewRedologManager(table, shard, false, tableConfig)
 		Ω(err).Should(BeNil())
 		Ω(r.(*kafkaRedoLogManager)).ShouldNot(BeNil())
 

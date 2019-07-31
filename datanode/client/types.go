@@ -18,10 +18,14 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
 	queryCom "github.com/uber/aresdb/query/common"
+	"google.golang.org/grpc"
 )
 
 // WithConnectionFn defines function with PeerDataNodeClient
-type WithConnectionFn func(rpc.PeerDataNodeClient)
+type WithConnectionFn func(peerID string, client rpc.PeerDataNodeClient)
+
+// PeerConnDialer defines the dial function for PeerDataNodeClient
+type PeerConnDialer func(target string, opts ...grpc.DialOption) (client rpc.PeerDataNodeClient, closeFn func() error, err error)
 
 type Peer interface {
 	BorrowConnection(fn WithConnectionFn) error
@@ -32,13 +36,13 @@ type Peer interface {
 // PeerSource represent a peer source which manages peer connections
 type PeerSource interface {
 	// BorrowConnection will borrow a connection and execute a user function.
-	BorrowConnection(hostID string, fn WithConnectionFn) error
+	BorrowConnection(hostIDs []string, fn WithConnectionFn) error
 	Close()
 }
 
 type DataNodeQueryClient interface {
 	// used for agg query
-	Query(ctx context.Context, host topology.Host, query queryCom.AQLQuery, hll bool) (queryCom.AQLQueryResult, error)
+	Query(ctx context.Context, requestID string, host topology.Host, query queryCom.AQLQuery, hll bool) (queryCom.AQLQueryResult, error)
 	// used for non agg query, header is left out, only matrixData returned as raw bytes
-	QueryRaw(ctx context.Context, host topology.Host, query queryCom.AQLQuery) ([]byte, error)
+	QueryRaw(ctx context.Context, requestID string, host topology.Host, query queryCom.AQLQuery) ([]byte, error)
 }

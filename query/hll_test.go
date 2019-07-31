@@ -157,8 +157,8 @@ var _ = ginkgo.Describe("hll", func() {
 				DimensionVectorIndex: []int{0, 2, 1},
 			},
 			fixedTimezone: loc,
-			fromTime:      &alignedTime{Time: time.Now().In(loc), Unit: "week"},
-			toTime:        &alignedTime{Time: time.Now().In(loc), Unit: "week"},
+			fromTime:      &queryCom.AlignedTime{Time: time.Now().In(loc), Unit: "week"},
+			toTime:        &queryCom.AlignedTime{Time: time.Now().In(loc), Unit: "week"},
 		}
 
 		dataTypes := []memCom.DataType{memCom.Uint32, memCom.Uint8, memCom.Int16}
@@ -237,7 +237,7 @@ var _ = ginkgo.Describe("hll", func() {
 		//queryE.WriteResult([]byte{})
 		//err := ioutil.WriteFile("../testing/data/query/hll_empty_results", queryE.GetBytes(), 0644)
 
-		queryResults := NewHLLQueryResults()
+		queryResults := queryCom.NewHLLQueryResults()
 		data, err := qc.SerializeHLL(dataTypes, enumReverseDict, nil)
 		Ω(err).Should(BeNil())
 

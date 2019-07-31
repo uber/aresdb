@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package sql
 
 import (
-	"github.com/uber/aresdb/common"
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/onsi/ginkgo/reporters"
+	"testing"
 )
 
-type BrokerConfig struct {
-	// HTTP port for serving.
-	Port int `yaml:"port"`
-
-	HTTP    common.HTTPConfig    `yaml:"http"`
-	Cluster common.ClusterConfig `yaml:"cluster"`
+func TestQuery(t *testing.T) {
+	RegisterFailHandler(ginkgo.Fail)
+	junitReporter := reporters.NewJUnitReporter("junit.xml")
+	ginkgo.RunSpecsWithDefaultAndCustomReporters(
+		t, "Ares SQL Suite", []ginkgo.Reporter{junitReporter})
 }
