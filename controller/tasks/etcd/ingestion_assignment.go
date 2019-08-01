@@ -32,11 +32,11 @@ import (
 )
 
 const (
-	ingestionAssignmentConfigKey = "ingestionAssignmentTask"
-	taskTagValue                 = "ingestionAssignmentTask"
 	assignmentChangeMetricName   = "ingestion_assignment_changed"
 	assignmentErrorMetricName    = "ingestion_assignment_error"
 	assignmentSuccessMetricName  = "ingestion_assignment_success"
+	ingestionAssignmentConfigKey = "ingestionAssignmentTask"
+	taskTagValue                 = "ingestionAssignmentTask"
 )
 
 type ingestionAssignmentTaskConfig struct {
@@ -83,8 +83,11 @@ type configHash struct {
 // NewIngestionAssignmentTask creates a new instance of ingestionAssignmentTask
 func NewIngestionAssignmentTask(p common.IngestionAssignmentTaskParams) common.Task {
 	var iaconfig ingestionAssignmentTaskConfig
+	logger := p.Logger.With("task", taskTagValue)
+	scope := p.Scope.Tagged(map[string]string{"task": taskTagValue})
+
 	if err := p.ConfigProvider.Get(ingestionAssignmentConfigKey).Populate(&iaconfig); err != nil {
-		p.Logger.Fatal("failed to load config for ingestionAssignmentTask")
+		logger.Fatal("failed to load config")
 	}
 
 	serviceID := services.NewServiceID().
@@ -93,13 +96,13 @@ func NewIngestionAssignmentTask(p common.IngestionAssignmentTaskParams) common.T
 		SetName(p.EtcdClient.ServiceName)
 	leaderService, err := p.EtcdClient.Services.LeaderService(serviceID, nil)
 	if err != nil {
-		p.Logger.Fatal("failed to create leader service for ingestionAssignmentTask")
+		logger.Fatal("failed to create leader service")
 	}
 
 	task := &ingestionAssignmentTask{
 		intervalSeconds: iaconfig.IntervalInSeconds,
-		logger:          p.Logger,
-		scope:           p.Scope,
+		logger:          logger,
+		scope:           scope,
 		stopChan:        make(chan struct{}, 1),
 
 		zone:        p.EtcdClient.Zone,
@@ -132,10 +135,7 @@ func (ia *ingestionAssignmentTask) Run() {
 
 	if err := ia.leaderElection.Start(); err != nil {
 		ia.logger.With("host", hostName, "error", err.Error()).Error("failed to start leader election")
-		ia.scope.Tagged(
-			map[string]string{
-				"task": taskTagValue,
-			}).Counter("task_failed").Inc(1)
+		ia.scope.Counter("task_failed").Inc(1)
 		return
 	}
 
@@ -341,7 +341,7 @@ func (ia *ingestionAssignmentTask) processIngestionAssignment(state jobSubscribe
 			processorsPerSubscriber = 1
 		}
 
-		// calcualte starting node of task assignment base on kafka topic name
+		// calculate starting node of task assignment base on kafka topic name
 		startingIndex, _ := ring.Get(job.StreamingConfig.Topic)
 		for i := 0; processorsNeeded > 0; i++ {
 			processorsToAssign := processorsPerSubscriber
@@ -413,7 +413,7 @@ func (ia *ingestionAssignmentTask) processIngestionAssignment(state jobSubscribe
 	for k, v := range existingAssignmentsMap {
 		if v != nil {
 			ia.logger.With(
-				"assginment", k,
+				"assignment", k,
 			).Info("deleting assignment")
 			err = ia.assignmentsMutator.DeleteIngestionAssignment(state.namespace, k)
 			if err != nil {
