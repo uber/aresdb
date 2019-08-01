@@ -163,7 +163,7 @@ func (cf *CachedSchemaHandler) FetchSchemas() {
 	cf.RLock()
 	tables := make([]string, 0, len(cf.schemas))
 	for tableName := range cf.schemas {
-		tables = append(tables,	tableName)
+		tables = append(tables, tableName)
 	}
 	cf.RUnlock()
 

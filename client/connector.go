@@ -39,7 +39,7 @@ const (
 	defaultSchemaRefreshInterval = 600
 	dataIngestionHeader          = "application/upsert-data"
 	applicationJSONHeader        = "application/json"
-	defaultStringEnumLength = 1024
+	defaultStringEnumLength      = 1024
 )
 
 // Row represents a row of insert data.
