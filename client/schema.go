@@ -94,27 +94,20 @@ func NewHttpSchemaFetcher(httpClient http.Client, address string, scope tally.Sc
 }
 
 // Start starts the CachedSchemaHandler, if interval > 0, will start periodical refresh
-func (cf *CachedSchemaHandler) Start(interval int) error {
-	err := cf.FetchAllSchema()
-	if err != nil {
-		return err
-	}
+func (cf *CachedSchemaHandler) Start(interval int) {
+	cf.FetchSchemas()
 
 	if interval <= 0 {
-		return nil
+		return
 	}
 
 	go func(refreshInterval int) {
 		ticks := time.Tick(time.Duration(refreshInterval) * time.Second)
 		for range ticks {
-			err = cf.FetchAllSchema()
-			if err != nil {
-				cf.logger.With(
-					"error", err.Error()).Errorf("Failed to fetch table schema")
-			}
+			cf.FetchSchemas()
 		}
 	}(interval)
-	return nil
+	return
 }
 
 // TranslateEnum translates given enum value to its enumID
@@ -165,6 +158,23 @@ func (cf *CachedSchemaHandler) FetchAllSchema() error {
 	return nil
 }
 
+// FetchSchemas fetch schemas in schemas of CachedSchemaHandler
+func (cf *CachedSchemaHandler) FetchSchemas() {
+	cf.RLock()
+	tables := cf.schemas
+	cf.RUnlock()
+
+	for tableName := range tables {
+		_, err := cf.FetchSchema(tableName)
+		if err != nil {
+			cf.logger.With("error", err.Error(),
+				"table", tableName).Errorf("Failed to fetch table schema")
+		}
+	}
+
+	return
+}
+
 // FetchSchema fetchs the schema of given table name
 func (cf *CachedSchemaHandler) FetchSchema(tableName string) (*TableSchema, error) {
 	cf.RLock()
@@ -206,7 +216,8 @@ func (cf *CachedSchemaHandler) PrepareEnumCases(tableName, columnName string, en
 	}
 	cf.RUnlock()
 
-	if disableAutoExpand {
+	numNewEnumCases := len(newEnumCases)
+	if disableAutoExpand && numNewEnumCases > 0 {
 		// It's recommended to set up elk or sentry logging to catch this error.
 		cf.logger.With(
 			"TableName", tableName,
@@ -220,7 +231,7 @@ func (cf *CachedSchemaHandler) PrepareEnumCases(tableName, columnName string, en
 				"TableName": tableName,
 				"ColumnID":  strconv.Itoa(columnID),
 			},
-		).Counter("new_enum_cases_ignored").Inc(int64(len(newEnumCases)))
+		).Counter("new_enum_cases_ignored").Inc(int64(numNewEnumCases))
 		return nil
 	}
 

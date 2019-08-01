@@ -39,6 +39,7 @@ const (
 	defaultSchemaRefreshInterval = 600
 	dataIngestionHeader          = "application/upsert-data"
 	applicationJSONHeader        = "application/json"
+	defaultStringEnumLength = 1024
 )
 
 // Row represents a row of insert data.
@@ -126,10 +127,7 @@ func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope t
 
 	httpSchemaFetcher := NewHttpSchemaFetcher(httpClient, cfg.Address, metricScope)
 	cachedSchemaHandler := NewCachedSchemaHandler(logger, metricScope, httpSchemaFetcher)
-	err := cachedSchemaHandler.Start(cfg.SchemaRefreshInterval)
-	if err != nil {
-		return nil, err
-	}
+	cachedSchemaHandler.Start(cfg.SchemaRefreshInterval)
 
 	connector := &connector{
 		cfg:        cfg,
@@ -287,18 +285,33 @@ func (u *UpsertBatchBuilderImpl) prepareEnumCases(tableName, columnName string, 
 			continue
 		}
 
+		abandonRow := false
 		if enumCase, ok := value.(string); ok {
-			if caseInsensitive {
-				enumCase = strings.ToLower(enumCase)
+			if len(enumCase) > defaultStringEnumLength {
+				abandonRow = true
+				u.logger.With(
+					"name", "prepareEnumCases",
+					"error", "Enum string value is too long",
+					"table", tableName,
+					"columnID", columnID,
+					"value", value).Debug("Enum string value is too long")
+			} else {
+				if caseInsensitive {
+					enumCase = strings.ToLower(enumCase)
+				}
+				enumCaseSet[enumCase] = struct{}{}
 			}
-			enumCaseSet[enumCase] = struct{}{}
 		} else {
+			abandonRow = true
 			u.logger.With(
 				"name", "prepareEnumCases",
 				"error", "Enum value should be string",
 				"table", tableName,
 				"columnID", columnID,
 				"value", value).Debug("Enum value is not string")
+
+		}
+		if abandonRow {
 			u.metricScope.Tagged(map[string]string{"table": tableName, "columnID": strconv.Itoa(columnID)}).
 				Counter("abandoned_rows").Inc(1)
 			abandonRows[rowIndex] = struct{}{}

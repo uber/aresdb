@@ -127,6 +127,10 @@ type KafkaProducerConfig struct {
 	// TimeoutInMSec is the max duration the broker will wait
 	// the receipt of the number of RequiredAcks (defaults to 10 seconds)
 	TimeoutInSec int `yaml:"timeoutInSec" json:"timeoutInSec"`
+	// SchemaRefreshInterval is the interval in seconds for the connector to
+	// fetch and refresh schema from ares
+	// if <= 0, will use default
+	SchemaRefreshInterval int `yaml:"schemaRefreshInterval" json:"schemaRefreshInterval"`
 }
 
 // AresNSConfig defines the mapping b/w ares namespace and its clusters
