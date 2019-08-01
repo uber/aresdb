@@ -325,6 +325,9 @@ var _ = Describe("streaming_processor", func() {
 		p.Stop()
 	})
 	It("HandleFailure", func() {
+		mockConnector.On("Insert",
+			table, columnNames, rows).
+			Return(6, nil)
 		failureHandler := initFailureHandler(serviceConfig, jobConfig, aresDB)
 		failureHandler.(*RetryFailureHandler).interval = 1
 		failureHandler.(*RetryFailureHandler).maxElapsedTime = 2 * time.Microsecond
