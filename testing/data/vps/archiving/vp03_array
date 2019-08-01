@@ -1,0 +1,8 @@
+data_type: Int16[]
+length: 5
+values:
+    - 11,12,13
+    - 21,null
+    - null
+    - 31,null,33
+    - 41

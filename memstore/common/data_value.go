@@ -120,6 +120,37 @@ func CompareGeoPoint(a, b unsafe.Pointer) int {
 	return -1
 }
 
+// CompareArray compare array values, the main purpose of this comparsion is for equal comparison
+// larger/less comparision may not be accurate
+func CompareArray(dataType DataType, a, b unsafe.Pointer) int {
+	len1 := int(*(*uint32)(a))
+	len2 := int(*(*uint32)(b))
+	if len1 != len2 {
+		return len1 - len2
+	}
+	if len1 == 0 {
+		return 0
+	}
+	bytes := CalculateListElementBytes(dataType, len1)
+	// skip 4 bytes for length
+	return utils.MemCmp(a, b, 4, bytes)
+}
+
+// ArrayLengthCompare compare
+func ArrayLengthCompare(v1, v2 *DataValue) int {
+	if !v1.Valid && v2.Valid {
+		return 1
+	} else if v1.Valid && !v2.Valid {
+		return -1
+	} else if !v1.Valid && !v2.Valid {
+		return 0
+	}
+
+	len1 := int(*(*uint32)(v1.OtherVal))
+	len2 := int(*(*uint32)(v2.OtherVal))
+	return len1 - len2
+}
+
 // GetCompareFunc get the compare function for specific data type
 func GetCompareFunc(dataType DataType) CompareFunc {
 	switch dataType {
@@ -197,6 +228,9 @@ func (v1 DataValue) Compare(v2 DataValue) int {
 	}
 	if v1.CmpFunc != nil {
 		return v1.CmpFunc(v1.OtherVal, v2.OtherVal)
+	}
+	if IsArrayType(v1.DataType) {
+		return CompareArray(v1.DataType, v1.OtherVal, v2.OtherVal)
 	}
 	return 0
 }
@@ -691,6 +725,11 @@ func NewArrayValueReader(dataType DataType, value unsafe.Pointer) *ArrayValueRea
 // GetLength return item numbers inside the array
 func (reader *ArrayValueReader) GetLength() int {
 	return reader.length
+}
+
+// GetBytes returns the bytes counts this value occopies
+func (reader *ArrayValueReader) GetBytes() int {
+	return CalculateListElementBytes(reader.itemType, reader.length)
 }
 
 // GetBool returns bool value for Bool item type at index

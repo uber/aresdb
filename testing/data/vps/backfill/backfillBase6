@@ -1,0 +1,15 @@
+# array column
+data_type: Int16[]
+length: 10
+has_counts: true
+values:
+  - 1,2,3
+  - 11,12
+  - 21
+  - 31,32
+  - 41,42,43
+  - 51,52
+  - 61,62
+  - 71,72
+  - 81,82
+  - 91,92

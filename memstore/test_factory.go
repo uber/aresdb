@@ -22,11 +22,10 @@ import (
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+	"github.com/uber/aresdb/memstore/list"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
-	"gopkg.in/yaml.v2"
-	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -37,15 +36,19 @@ const (
 
 var (
 	testFactory = TestFactoryT{
-		RootPath:   "../testing/data",
-		FileSystem: utils.OSFileSystem{},
+		TestFactoryT: memCom.TestFactoryT{
+			RootPath:             "../testing/data",
+			FileSystem:           utils.OSFileSystem{},
+			ToArchiveVectorParty: toArchiveVectorParty,
+			ToLiveVectorParty:    toLiveVectorParty,
+			ToVectorParty:        toVectorParty,
+		},
 	}
 )
 
 // TestFactoryT creates memstore test objects from text file
 type TestFactoryT struct {
-	RootPath string
-	utils.FileSystem
+	memCom.TestFactoryT
 }
 
 // NewMockMemStore returns a new memstore with mocked diskstore and metastore.
@@ -60,145 +63,28 @@ func (t TestFactoryT) NewMockMemStore() *memStoreImpl {
 	return NewMemStore(metaStore, diskStore, NewOptions(bootstrapToken, redoLogManagerMaster)).(*memStoreImpl)
 }
 
-// ReadArchiveBatch read batch and do pruning for every columns.
-func (t TestFactoryT) ReadArchiveBatch(name string) (*Batch, error) {
-	batch, err := t.ReadBatch(name)
-	if err != nil {
-		return nil, err
+func toArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.ArchiveVectorParty {
+	if vp.IsList() {
+		return list.ToArrayArchiveVectorParty(vp, locker)
 	}
-	for i, column := range batch.Columns {
-		if column != nil {
-			archiveColumn := convertToArchiveVectorParty(column.(*cVectorParty), batch)
-			batch.Columns[i] = archiveColumn
-		}
-	}
-	batch.RWMutex = &sync.RWMutex{}
-	return batch, nil
-}
-
-func convertCLiveVectorParty(vp *cVectorParty) *cLiveVectorParty {
-	return &cLiveVectorParty{
-		cVectorParty: *vp,
-	}
-}
-
-func convertToArchiveVectorParty(vp *cVectorParty, locker sync.Locker) *archiveVectorParty {
 	archiveColumn := &archiveVectorParty{
-		cVectorParty: *vp,
+		cVectorParty: *vp.(*cVectorParty),
 	}
 	archiveColumn.AllUsersDone = sync.NewCond(locker)
 	archiveColumn.Prune()
 	return archiveColumn
 }
 
-// ReadLiveBatch read batch and skip pruning for every columns.
-func (t TestFactoryT) ReadLiveBatch(name string) (*Batch, error) {
-	batch, err := t.ReadBatch(name)
-	if err != nil {
-		return nil, err
+func toLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
+	if vp.IsList() {
+		return list.ToArrayLiveVectorParty(vp)
 	}
-	for i, column := range batch.Columns {
-		if column != nil {
-			liveColumn := convertCLiveVectorParty(column.(*cVectorParty))
-			batch.Columns[i] = liveColumn
-		}
+	return &cLiveVectorParty{
+		cVectorParty: *vp.(*cVectorParty),
 	}
-	batch.RWMutex = &sync.RWMutex{}
-	return batch, nil
 }
 
-// ReadBatch returns a batch given batch name. Batch will be searched
-// under testing/data/batches folder. Prune tells whether need to prune
-// the columns after column contruction.
-func (t TestFactoryT) ReadBatch(name string) (*Batch, error) {
-	path := filepath.Join(t.RootPath, "batches", name)
-	return t.readBatchFromFile(path)
-}
-
-type rawBatch struct {
-	Columns []string `yaml:"columns"`
-}
-
-func (t TestFactoryT) readBatchFromFile(path string) (*Batch, error) {
-	fileContent, err := t.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	rb := &rawBatch{}
-	if err = yaml.Unmarshal(fileContent, &rb); err != nil {
-		return nil, err
-	}
-	return rb.toBatch(t)
-}
-
-func (rb *rawBatch) toBatch(t TestFactoryT) (*Batch, error) {
-	batch := &Batch{
-		Columns: make([]memCom.VectorParty, len(rb.Columns)),
-	}
-	for i, name := range rb.Columns {
-		if len(name) == 0 {
-			continue
-		}
-		column, err := t.ReadVectorParty(name)
-		if err != nil {
-			return nil, utils.StackError(err,
-				"Failed to read vector party %s",
-				name,
-			)
-		}
-		batch.Columns[i] = column
-	}
-	return batch, nil
-}
-
-// ReadArchiveVectorParty loads a vector party and prune it after construction.
-func (t TestFactoryT) ReadArchiveVectorParty(name string, locker sync.Locker) (memCom.ArchiveVectorParty, error) {
-	vp, err := t.ReadVectorParty(name)
-	if err != nil {
-		return nil, err
-	}
-	return convertToArchiveVectorParty(vp, locker), nil
-}
-
-// ReadLiveVectorParty loads a vector party and skip pruning.
-func (t TestFactoryT) ReadLiveVectorParty(name string) (memCom.LiveVectorParty, error) {
-	vp, err := t.ReadVectorParty(name)
-	if err != nil {
-		return nil, err
-	}
-	return convertCLiveVectorParty(vp), nil
-}
-
-// ReadVectorParty returns a vector party given vector party name. Vector party
-// will be searched under testing/data/vps folder. Prune tells whether to prune this
-// column.
-func (t TestFactoryT) ReadVectorParty(name string) (*cVectorParty, error) {
-	path := filepath.Join(t.RootPath, "vps", name)
-	return t.readVectorPartyFromFile(path)
-}
-
-type rawVectorParty struct {
-	DataType  string   `yaml:"data_type"`
-	Length    int      `yaml:"length"`
-	Values    []string `yaml:"values"`
-	HasCounts bool     `yaml:"has_counts"`
-}
-
-func (t TestFactoryT) readVectorPartyFromFile(path string) (*cVectorParty, error) {
-	fileContent, err := t.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	rvp := &rawVectorParty{}
-	if err = yaml.Unmarshal(fileContent, &rvp); err != nil {
-		return nil, err
-	}
-	return rvp.toVectorParty()
-}
-
-func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
+func toVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (memCom.VectorParty, error) {
 	dataType := memCom.DataTypeFromString(rvp.DataType)
 	if dataType == memCom.Unknown {
 		return nil, utils.StackError(nil,
@@ -214,10 +100,14 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 		)
 	}
 
-	var countsVec *Vector
+	if memCom.IsArrayType(dataType) {
+		return list.ToArrayVectorParty(rvp, forLiveVP)
+	}
+
+	var countsVec *memCom.Vector
 	columnMode := memCom.HasNullVector
 	if rvp.HasCounts {
-		countsVec = NewVector(
+		countsVec = memCom.NewVector(
 			memCom.Uint32,
 			rvp.Length+1,
 		)
@@ -230,11 +120,11 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 			dataType: dataType,
 		},
 		columnMode: columnMode,
-		values: NewVector(
+		values: memCom.NewVector(
 			dataType,
 			rvp.Length,
 		),
-		nulls: NewVector(
+		nulls: memCom.NewVector(
 			dataType,
 			rvp.Length,
 		),
@@ -277,30 +167,17 @@ func (rvp *rawVectorParty) toVectorParty() (*cVectorParty, error) {
 			}
 			setDataValue(countsVec, i+1, currentCountVal)
 			currentCount := *(*uint32)(currentCountVal.OtherVal)
-			vp.SetDataValue(i, val, IncrementCount, currentCount-prevCount)
+			vp.SetDataValue(i, val, memCom.IncrementCount, currentCount-prevCount)
 			prevCount = currentCount
 		} else {
-			vp.SetDataValue(i, val, IncrementCount)
+			vp.SetDataValue(i, val, memCom.IncrementCount)
 		}
 	}
 
 	return vp, nil
 }
 
-// ReadVector returns a vector given vector name. Vector will
-// be searched under testing/data/vectors folder.
-func (t TestFactoryT) ReadVector(name string) (*Vector, error) {
-	path := filepath.Join(t.RootPath, "vectors", name)
-	return t.readVectorFromFile(path)
-}
-
-type rawVector struct {
-	DataType string   `yaml:"data_type"`
-	Length   int      `yaml:"length"`
-	Values   []string `yaml:"values"`
-}
-
-func setDataValue(v *Vector, idx int, val memCom.DataValue) {
+func setDataValue(v *memCom.Vector, idx int, val memCom.DataValue) {
 	if val.Valid {
 		if v.DataType == memCom.Bool {
 			v.SetBool(idx, val.BoolVal)
@@ -308,121 +185,6 @@ func setDataValue(v *Vector, idx int, val memCom.DataValue) {
 			v.SetValue(idx, val.OtherVal)
 		}
 	}
-}
-
-func (rv *rawVector) toVector() (*Vector, error) {
-	dataType := memCom.DataTypeFromString(rv.DataType)
-	if dataType == memCom.Unknown {
-		return nil, utils.StackError(nil,
-			"Unknown DataType when reading vector from file",
-		)
-	}
-
-	if len(rv.Values) != rv.Length {
-		return nil, utils.StackError(nil,
-			"Values length %d is not as expected: %d",
-			len(rv.Values),
-			rv.Length,
-		)
-	}
-
-	v := NewVector(dataType, rv.Length)
-
-	for i, row := range rv.Values {
-		val, err := memCom.ValueFromString(row, dataType)
-		if err != nil {
-			return nil, utils.StackError(err,
-				"Unable to parse value from string %s for data type %s",
-				row, rv.DataType)
-		}
-		setDataValue(v, i, val)
-	}
-	return v, nil
-}
-
-func (t TestFactoryT) readVectorFromFile(path string) (*Vector, error) {
-	fileContent, err := t.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	rv := &rawVector{}
-	if err = yaml.Unmarshal(fileContent, &rv); err != nil {
-		return nil, err
-	}
-
-	return rv.toVector()
-}
-
-// ReadUpsertBatch returns a pointer to UpsertBatch given the upsert batch name.
-func (t TestFactoryT) ReadUpsertBatch(name string) (*memCom.UpsertBatch, error) {
-	path := filepath.Join(t.RootPath, "upsert-batches", name)
-	return t.readUpsertBatchFromFile(path)
-}
-
-// rawUpsertBatch represents the upsert batch format in a yaml file. Each individual upsert batch consists of two parts
-// columns and rows. Each column needs to specify the column type and column id. Column type need to be a valid type
-// defined in common.data_type.go. Each row consists of column values which are comma splitted.
-type rawUpsertBatch struct {
-	Columns []struct {
-		ColumnID int    `yaml:"column_id"`
-		DataType string `yaml:"data_type"`
-	} `yaml:"columns"`
-	Rows []string `yaml:"rows"`
-}
-
-func (ru *rawUpsertBatch) toUpsertBatch() (*memCom.UpsertBatch, error) {
-	builder := memCom.NewUpsertBatchBuilder()
-	var dataTypes []memCom.DataType
-	for _, column := range ru.Columns {
-		dataType := memCom.DataTypeFromString(column.DataType)
-		if dataType == memCom.Unknown {
-			return nil, utils.StackError(nil,
-				"Unknown DataType when reading vector from file",
-			)
-		}
-		dataTypes = append(dataTypes, dataType)
-		if err := builder.AddColumn(column.ColumnID, dataType); err != nil {
-			return nil, err
-		}
-	}
-
-	for row, rowStr := range ru.Rows {
-		builder.AddRow()
-		rawValues := strings.Split(rowStr, ",")
-		if len(rawValues) != len(ru.Columns) {
-			return nil, utils.StackError(nil,
-				"Length of rawValues %d on row %d is different from number of columns %d", len(rawValues), row, len(ru.Columns))
-		}
-
-		for col, rawValue := range rawValues {
-			value, err := memCom.ValueFromString(rawValue, dataTypes[col])
-			if err != nil {
-				return nil, err
-			}
-			builder.SetValue(row, col, value.ConvertToHumanReadable(dataTypes[col]))
-		}
-	}
-
-	bytes, err := builder.ToByteArray()
-	if err != nil {
-		return nil, err
-	}
-	return memCom.NewUpsertBatch(bytes)
-}
-
-func (t TestFactoryT) readUpsertBatchFromFile(path string) (*memCom.UpsertBatch, error) {
-	fileContent, err := t.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	ru := &rawUpsertBatch{}
-	if err = yaml.Unmarshal(fileContent, &ru); err != nil {
-		return nil, err
-	}
-
-	return ru.toUpsertBatch()
 }
 
 func GetFactory() TestFactoryT {

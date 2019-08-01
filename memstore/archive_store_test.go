@@ -18,8 +18,6 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"unsafe"
-
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -47,7 +45,7 @@ var _ = ginkgo.Describe("archive store", func() {
 	ginkgo.It("WriteToDisk should work", func() {
 		ds := new(diskStoreMocks.DiskStore)
 		archiveBatch := &ArchiveBatch{
-			Batch: Batch{
+			Batch:  memCom.Batch{
 				RWMutex: &sync.RWMutex{},
 				Columns: []memCom.VectorParty{
 					&archiveVectorParty{
@@ -87,7 +85,7 @@ var _ = ginkgo.Describe("archive store", func() {
 		ds := new(diskStoreMocks.DiskStore)
 
 		archiveBatch := &ArchiveBatch{
-			Batch: Batch{
+			Batch: memCom.Batch{
 				RWMutex: &sync.RWMutex{},
 			},
 			Version: cutoff,
@@ -127,7 +125,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			SeqNum:  1,
 			Size:    5,
 			BatchID: 1,
-			Batch: Batch{
+			Batch: memCom.Batch{
 				RWMutex: &sync.RWMutex{},
 				Columns: make([]memCom.VectorParty, 3),
 			},
@@ -221,8 +219,8 @@ var _ = ginkgo.Describe("archive store", func() {
 		clonedVP := archiveBatch.Columns[0].(memCom.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size)
 		Ω(clonedVP.(*archiveVectorParty).nulls).ShouldNot(BeNil())
 		Ω(clonedVP.(*archiveVectorParty).nonDefaultValueCount).Should(BeEquivalentTo(3))
-		Ω(*(*[3]uint32)(unsafe.Pointer(clonedVP.(*archiveVectorParty).values.buffer))).Should(BeEquivalentTo([3]uint32{0, 1, 2}))
-		Ω(*(*uint8)(unsafe.Pointer(clonedVP.(*archiveVectorParty).nulls.buffer))).Should(BeEquivalentTo(0xFF))
+		Ω(*(*[3]uint32)(clonedVP.(*archiveVectorParty).values.Buffer())).Should(BeEquivalentTo([3]uint32{0, 1, 2}))
+		Ω(*(*uint8)(clonedVP.(*archiveVectorParty).nulls.Buffer())).Should(BeEquivalentTo(0xFF))
 
 		// we cannot clone sorted column.
 		Ω(func() { archiveBatch.Columns[1].(memCom.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size) }).Should(Panic())
@@ -237,8 +235,8 @@ var _ = ginkgo.Describe("archive store", func() {
 		clonedVP = archiveBatch.Columns[3].(memCom.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size)
 		Ω(clonedVP.(*archiveVectorParty).values).ShouldNot(BeNil())
 		Ω(clonedVP.(*archiveVectorParty).nulls).ShouldNot(BeNil())
-		Ω(*(*[3]uint32)(unsafe.Pointer(clonedVP.(*archiveVectorParty).values.buffer))).Should(BeEquivalentTo([3]uint32{0, 0, 2}))
-		Ω(*(*uint8)(unsafe.Pointer(clonedVP.(*archiveVectorParty).nulls.buffer))).Should(BeEquivalentTo(5))
+		Ω(*(*[3]uint32)(clonedVP.(*archiveVectorParty).values.Buffer())).Should(BeEquivalentTo([3]uint32{0, 0, 2}))
+		Ω(*(*uint8)(clonedVP.(*archiveVectorParty).nulls.Buffer())).Should(BeEquivalentTo(5))
 		Ω(clonedVP.(*archiveVectorParty).nonDefaultValueCount).Should(BeEquivalentTo(2))
 	})
 

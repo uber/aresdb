@@ -87,13 +87,8 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		testDiskStore.On("ListLogFiles", mock.Anything, mock.Anything).
 			Return(nil, nil).Once()
 
-		serializer := &vectorPartyArchiveSerializer{
-			vectorPartyBaseSerializer{
-				table:             "test",
-				diskstore:         testDiskStore,
-				hostMemoryManager: testHostMemoryManager,
-			},
-		}
+		serializer := memCom.NewVectorPartyArchiveSerializer(testHostMemoryManager, testDiskStore,
+			"test", 0, 0, 0,0, 0)
 
 		Ω(serializer.WriteVectorParty(c1)).Should(BeNil())
 	})
@@ -394,6 +389,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	})
 
 	ginkgo.It("Test HostMemoryManager tryPreload and triggerPreload", func() {
+		logger.Infof("Test HostMemoryManager tryPreload and triggerPreload Started")
 		testTableName := "myTable"
 		testTable := &metaCom.Table{
 			Name:        testTableName,
@@ -459,7 +455,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		for day := today + 1; day > today-10; day-- {
 			testMemStore.TableShards[testTableName][0].ArchiveStore.CurrentVersion.Batches[int32(day)] =
 				&ArchiveBatch{
-					Batch:   Batch{RWMutex: &sync.RWMutex{}},
+					Batch:   memCom.Batch{RWMutex: &sync.RWMutex{}},
 					Size:    4,
 					Shard:   testMemStore.TableShards[testTableName][0],
 					BatchID: int32(day),
@@ -540,6 +536,8 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		testHostMemoryManager.preloadJobChan <- preloadJob{}
 
 		Ω(testHostMemoryManager.managedObjectExists(testTableName, 0, today, 0)).Should(BeTrue())
+
+		logger.Infof("Test HostMemoryManager tryPreload and triggerPreload Finished")
 	})
 
 	ginkgo.It("Test HostMemoryManager tryEviction", func() {
@@ -707,6 +705,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	})
 
 	ginkgo.It("Test HostMemoryManager triggerEviction", func() {
+		logger.Infof("Test HostMemoryManager triggerEviction Started")
 		testTableName := "myTable"
 		testTable := &metaCom.Table{
 			Name:        testTableName,
@@ -793,6 +792,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			Should(BeFalse())
 		Ω(testHostMemoryManager.managedObjectExists(testTableName, 0, 15740, 0)).
 			Should(BeTrue())
+		logger.Infof("Test HostMemoryManager triggerEviction Finished")
 	})
 
 	ginkgo.It("Test HostMemoryManager eviction with rlock", func() {
@@ -904,6 +904,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	})
 
 	ginkgo.It("GetMemoryUsageDetails", func() {
+		logger.Infof("Test GetMemoryUsageDetails Started")
 		testTableName := "myTable"
 		testTable := &metaCom.Table{
 			Name:        testTableName,
@@ -932,14 +933,14 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 
 		for i := 0; i < 10; i++ {
 			liveBatch := &LiveBatch{
-				Batch: Batch{
+				Batch: memCom.Batch{
 					RWMutex: &sync.RWMutex{},
 					Columns: []memCom.VectorParty{
 						// create dummy to make vp not nil
 						&cLiveVectorParty{
 							cVectorParty: cVectorParty{
-								values: &Vector{Bytes: 128},
-								nulls:  &Vector{Bytes: 128},
+								values: &memCom.Vector{Bytes: 128},
+								nulls:  &memCom.Vector{Bytes: 128},
 							},
 						},
 					},
@@ -975,6 +976,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 				"pk": 2320
 			}
 		}`))
+		logger.Infof("Test GetMemoryUsageDetails Finished")
 	})
 })
 
@@ -993,7 +995,7 @@ func CreateTestArchiveBatchColumns() []memCom.VectorParty {
 
 func CreateTestArchiveBatch(shard *TableShard, batchID int) *ArchiveBatch {
 	return &ArchiveBatch{
-		Batch: Batch{
+		Batch: memCom.Batch{
 			RWMutex: &sync.RWMutex{},
 			Columns: CreateTestArchiveBatchColumns(),
 		},

@@ -17,6 +17,7 @@ package common
 import (
 	"github.com/uber/aresdb/diskstore"
 	"io"
+	"os"
 	"unsafe"
 )
 
@@ -62,6 +63,15 @@ type HostVectorPartySlice struct {
 // ValueCountsUpdateMode represents the way we update value counts when we are writing values to
 // vector parties.
 type ValueCountsUpdateMode int
+
+const (
+	// IgnoreCount skip setting value counts.
+	IgnoreCount ValueCountsUpdateMode = iota
+	// IncrementCount only increment count.
+	IncrementCount
+	// CheckExistingCount also check existing count.
+	CheckExistingCount
+)
 
 // SlicedVector is vector party data represented into human-readable slice format
 // consists of a value slice and count slice,
@@ -134,6 +144,8 @@ type VectorParty interface {
 	// Caller should always call IsList before conversion, otherwise panic may happens
 	// for incompatible vps.
 	AsList() ListVectorParty
+	// Dump is for testing purpose
+	Dump(file *os.File)
 }
 
 // CVectorParty is vector party that is backed by c
@@ -203,6 +215,18 @@ type ArchiveVectorParty interface {
 
 // ListVectorParty is the interface for list vector party to read and write list value.
 type ListVectorParty interface {
+	// GetElemCount is to get count of elements of n-th element in the VP
+	GetElemCount(row int) uint32
+	// GetListValue is to get the raw value of n-th element in the VP
 	GetListValue(row int) (unsafe.Pointer, bool)
+	// SetListValue is to set value for n-th element in the VP
 	SetListValue(row int, val unsafe.Pointer, valid bool)
+}
+
+// VectorPartyEquals covers nil VectorParty compare
+func VectorPartyEquals(v1 VectorParty, v2 VectorParty) bool {
+	if v1 == nil || v2 == nil {
+		return v1 == nil && v2 == nil
+	}
+	return v1.Equals(v2)
 }

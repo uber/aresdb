@@ -20,16 +20,18 @@ import (
 	"github.com/stretchr/testify/mock"
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/list"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	utilsMocks "github.com/uber/aresdb/utils/mocks"
+	"go.uber.org/zap"
 	"sync"
 )
 
 var _ = ginkgo.Describe("backfill", func() {
 	var tableSchema *memCom.TableSchema
 	var baseBatch, newBatch *ArchiveBatch
-	var upsertBatches [3]*memCom.UpsertBatch
+	var upsertBatches [4]*memCom.UpsertBatch
 	var patch *backfillPatch
 	var hostMemoryManager memCom.HostMemoryManager
 	var backfillCtx backfillContext
@@ -60,12 +62,13 @@ var _ = ginkgo.Describe("backfill", func() {
 					{Deleted: true},  // should skip this column.
 					{Deleted: false}, // unsort col
 					{Deleted: false}, // sort col, non pk
+					{Deleted: false}, // array column
 				},
 			},
 			PrimaryKeyBytes:   8,
-			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.Uint32},
+			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.Uint32, memCom.ArrayInt16},
 			DefaultValues: []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue,
-				&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
+				&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
 		}
 
 		var err error
@@ -75,6 +78,8 @@ var _ = ginkgo.Describe("backfill", func() {
 		upsertBatches[1], err = GetFactory().ReadUpsertBatch("backfill/upsertBatch1")
 		Ω(err).Should(BeNil())
 		upsertBatches[2], err = GetFactory().ReadUpsertBatch("backfill/upsertBatch2")
+		Ω(err).Should(BeNil())
+		upsertBatches[3], err = GetFactory().ReadUpsertBatch("backfill/upsertBatch3")
 		Ω(err).Should(BeNil())
 
 		patch = &backfillPatch{
@@ -86,6 +91,12 @@ var _ = ginkgo.Describe("backfill", func() {
 				{BatchID: 1, Index: 1},
 				{BatchID: 1, Index: 2},
 				{BatchID: 2, Index: 0},
+				{BatchID: 3, Index: 0},
+				{BatchID: 3, Index: 1},
+				{BatchID: 3, Index: 2},
+				{BatchID: 3, Index: 3},
+				{BatchID: 3, Index: 4},
+				{BatchID: 3, Index: 5},
 			},
 			backfillBatches: upsertBatches[:],
 		}
@@ -99,7 +110,7 @@ var _ = ginkgo.Describe("backfill", func() {
 				table, mock.Anything, shardID, 0, uint32(0), uint32(1)).Return(writer, nil)
 		(m.metaStore).(*metaMocks.MetaStore).On(
 			"AddArchiveBatchVersion", table, shardID,
-			0, uint32(0), uint32(1), 6).Return(nil)
+			0, uint32(0), uint32(1), 12).Return(nil)
 		(m.diskStore).(*diskMocks.DiskStore).On(
 			"DeleteBatchVersions", table, shardID,
 			0, uint32(0), uint32(0)).Return(nil)
@@ -109,7 +120,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		batch, err := GetFactory().ReadArchiveBatch("backfill/backfillBase")
 		Ω(err).Should(BeNil())
 		baseBatch = &ArchiveBatch{
-			Size:  5,
+			Size:  10,
 			Batch: *batch,
 			Shard: shard,
 		}
@@ -118,7 +129,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		batch, err = GetFactory().ReadArchiveBatch("backfill/backfillNew")
 		Ω(err).Should(BeNil())
 		newBatch = &ArchiveBatch{
-			Size:  6,
+			Size:  12,
 			Batch: *batch,
 			Shard: shard,
 		}
@@ -139,7 +150,12 @@ var _ = ginkgo.Describe("backfill", func() {
 		backfillCtx.release()
 	})
 
+	logger := zap.NewExample().Sugar()
+
 	ginkgo.It("createBackfillPatches should work", func() {
+		logger.Infof("Test createBackfillPatches should work Started")
+		Ω(newBatch).ShouldNot(BeNil()) //TODO remove
+
 		var upsertBatches [3]*memCom.UpsertBatch
 
 		// upsert batch 0
@@ -203,9 +219,11 @@ var _ = ginkgo.Describe("backfill", func() {
 			Stage: "create patch",
 		}))
 		scheduler.RUnlock()
-
+		logger.Infof("Test createBackfillPatches should work Finished")
 	})
 	ginkgo.It("newBackfillStore should work", func() {
+		logger.Infof("Test newBackfillStore should work Started")
+
 		tableSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: "test",
@@ -228,9 +246,11 @@ var _ = ginkgo.Describe("backfill", func() {
 		backfillStore := newBackfillStore(tableSchema, hostMemoryManager, 0)
 		Ω(backfillStore.Batches).ShouldNot(BeNil())
 		Ω(backfillStore.PrimaryKey).ShouldNot(BeNil())
+		logger.Infof("Test newBackfillStore should work Finished")
 	})
 
 	ginkgo.It("newBackfillContext should work", func() {
+		logger.Infof("Test newBackfillContext should work Started")
 		tableSchema := &memCom.TableSchema{
 			Schema: metaCom.Table{
 				Name: "test",
@@ -250,7 +270,7 @@ var _ = ginkgo.Describe("backfill", func() {
 			PrimaryKeyBytes: 8,
 		}
 		baseBatch := &ArchiveBatch{
-			Batch: Batch{RWMutex: &sync.RWMutex{}},
+			Batch: memCom.Batch{RWMutex: &sync.RWMutex{}},
 		}
 		patch := &backfillPatch{}
 		backfillCtx := newBackfillContext(baseBatch, patch, tableSchema, tableSchema.GetColumnDeletions(),
@@ -259,9 +279,11 @@ var _ = ginkgo.Describe("backfill", func() {
 		Ω(backfillCtx.base).Should(Equal(baseBatch))
 		Ω(backfillCtx.patch).Should(Equal(patch))
 		backfillCtx.release()
+		logger.Infof("Test newBackfillContext should work Finished")
 	})
 
 	ginkgo.It("empty patch should work", func() {
+		logger.Infof("Test empty patch should work Started")
 		patch := &backfillPatch{}
 		backfillCtx := newBackfillContext(baseBatch, patch, tableSchema, tableSchema.GetColumnDeletions(),
 			tableSchema.Schema.ArchivingSortColumns, tableSchema.Schema.PrimaryKeyColumns,
@@ -269,9 +291,12 @@ var _ = ginkgo.Describe("backfill", func() {
 		err := backfillCtx.backfill(jobManager.reportBackfillJobDetail, jobKey)
 		Ω(err).Should(BeNil())
 		Ω(backfillCtx.new.Equals(&baseBatch.Batch)).Should(BeTrue())
+		logger.Infof("Test empty patch should work Finished")
 	})
 
 	ginkgo.It("getChangedBaseRow should work", func() {
+		logger.Infof("Test getChangedBaseRow should work Started")
+
 		changedPatchRow, err := backfillCtx.getChangedPatchRow(memCom.RecordID{BatchID: 0, Index: 0}, upsertBatches[0])
 		Ω(err).Should(BeNil())
 		changedBaseRow := backfillCtx.getChangedBaseRow(memCom.RecordID{BatchID: 0, Index: 0}, changedPatchRow)
@@ -280,7 +305,7 @@ var _ = ginkgo.Describe("backfill", func() {
 		changedPatchRow, err = backfillCtx.getChangedPatchRow(memCom.RecordID{BatchID: 0, Index: 1}, upsertBatches[0])
 		Ω(err).Should(BeNil())
 		changedBaseRow = backfillCtx.getChangedBaseRow(memCom.RecordID{BatchID: 0, Index: 1}, changedPatchRow)
-		Ω(len(changedBaseRow)).Should(Equal(6))
+		Ω(len(changedBaseRow)).Should(Equal(7))
 
 		Ω(changedBaseRow[0].Valid).Should(BeTrue())
 		Ω(*(*uint32)(changedBaseRow[0].OtherVal)).Should(BeEquivalentTo(1))
@@ -298,12 +323,20 @@ var _ = ginkgo.Describe("backfill", func() {
 
 		Ω(changedBaseRow[5].Valid).Should(BeTrue())
 		Ω(*(*uint32)(changedBaseRow[5].OtherVal)).Should(BeEquivalentTo(11))
+
+		Ω(changedBaseRow[6].Valid).Should(BeTrue())
+		reader := memCom.NewArrayValueReader(changedBaseRow[6].DataType, changedBaseRow[6].OtherVal)
+		Ω(reader.GetLength()).Should(Equal(2))
+		Ω(*(*int16)(reader.Get(0))).Should(Equal(int16(11)))
+		Ω(*(*int16)(reader.Get(1))).Should(Equal(int16(12)))
+		logger.Infof("Test getChangedBaseRow should work Finished")
 	})
 
 	ginkgo.It("getChangedPatchRow should work", func() {
+		logger.Infof("Test getChangedPatchRow should work Started")
 		changedPatchRow, err := backfillCtx.getChangedPatchRow(memCom.RecordID{BatchID: 0, Index: 1}, upsertBatches[0])
 		Ω(err).Should(BeNil())
-		Ω(len(changedPatchRow)).Should(Equal(6))
+		Ω(len(changedPatchRow)).Should(Equal(7))
 
 		Ω(changedPatchRow[0].Valid).Should(BeTrue())
 		Ω(*(*uint32)(changedPatchRow[0].OtherVal)).Should(BeEquivalentTo(1))
@@ -316,13 +349,16 @@ var _ = ginkgo.Describe("backfill", func() {
 
 		Ω(changedPatchRow[3]).Should(BeNil())
 
-		Ω(changedPatchRow[3]).Should(BeNil())
+		Ω(changedPatchRow[4]).Should(BeNil())
 
 		Ω(changedPatchRow[5].Valid).Should(BeTrue())
 		Ω(*(*uint32)(changedPatchRow[5].OtherVal)).Should(BeEquivalentTo(11))
+		Ω(changedPatchRow[6]).Should(BeNil())
+		logger.Infof("Test getChangedPatchRow should work Finished")
 	})
 
 	ginkgo.It("writePatchValueForUnsortColumn should work", func() {
+		logger.Infof("Test writePatchValueForUnsortColumn should work Started")
 		changedPatchRow, err := backfillCtx.getChangedPatchRow(memCom.RecordID{BatchID: 1, Index: 1}, upsertBatches[1])
 		Ω(err).Should(BeNil())
 
@@ -348,16 +384,19 @@ var _ = ginkgo.Describe("backfill", func() {
 
 		// column should not be forked again.
 		Ω(forkedColumn).Should(Equal(backfillCtx.new.Columns[4]))
+
+		logger.Infof("Test writePatchValueForUnsortColumn should work Finished")
 	})
 
 	ginkgo.It("apply backfill patch should work", func() {
+		logger.Infof("Test apply backfill patch should work Started")
 		err := backfillCtx.backfill(jobManager.reportBackfillJobDetail, jobKey)
 		Ω(err).Should(BeNil())
 		Ω(len(backfillCtx.backfillStore.Batches)).Should(Equal(1))
-		Ω(backfillCtx.backfillStore.NextWriteRecord).Should(Equal(memCom.RecordID{BatchID: BaseBatchID, Index: 3}))
-		Ω(backfillCtx.columnsForked).Should(BeEquivalentTo([]bool{false, false, false, false, true, false}))
-		Ω(backfillCtx.baseRowDeleted).Should(HaveLen(2))
-		Ω(backfillCtx.baseRowDeleted).Should(ConsistOf(1, 4))
+		Ω(backfillCtx.backfillStore.NextWriteRecord).Should(Equal(memCom.RecordID{BatchID: BaseBatchID, Index: 7}))
+		Ω(backfillCtx.columnsForked).Should(BeEquivalentTo([]bool{false, false, false, false, true, false, true}))
+		Ω(backfillCtx.baseRowDeleted).Should(HaveLen(5))
+		Ω(backfillCtx.baseRowDeleted).Should(ConsistOf(1, 4, 6, 7, 9))
 
 		// Compare result batch with expected batch.
 		batch, err := GetFactory().ReadLiveBatch("backfill/backfillTempLiveStore")
@@ -366,24 +405,34 @@ var _ = ginkgo.Describe("backfill", func() {
 		defer backfillBatch.RUnlock()
 		for _, column := range backfillBatch.Columns {
 			if column != nil {
-				column.(*cLiveVectorParty).length = 3
+				if column.IsList() {
+					column.(*list.LiveVectorParty).SetLength(7)
+				} else {
+					column.(*cLiveVectorParty).length = 7
+				}
 			}
 		}
-
 		Ω(batch.Equals(&backfillBatch.Batch)).Should(BeTrue())
+		Ω(newBatch.Columns[6].IsList()).Should(BeTrue())
+		Ω(backfillCtx.new.Batch.Columns[6].IsList()).Should(BeTrue())
 		Ω(newBatch.Equals(&backfillCtx.new.Batch)).Should(BeTrue())
+		logger.Infof("Test apply backfill patch should work Finished")
 	})
 
 	ginkgo.It("createArchivingPatch should work", func() {
+		logger.Infof("Test createArchivingPatch should work Started")
 		err := backfillCtx.backfill(jobManager.reportBackfillJobDetail, jobKey)
 		Ω(err).Should(BeNil())
 		backfillCtx.backfillStore.AdvanceLastReadRecord()
 		ap := backfillCtx.backfillStore.snapshot().createArchivingPatch(tableSchema.GetArchivingSortColumns())
 		Ω(len(ap.data.batches)).Should(Equal(1))
-		Ω(len(ap.recordIDs)).Should(Equal(3))
+		Ω(len(ap.recordIDs)).Should(Equal(7))
+		logger.Infof("Test createArchivingPatch should work Finished")
 	})
 
 	ginkgo.It("createNewArchiveStoreVersionForBackfill should work", func() {
+		logger.Infof("Test createNewArchiveStoreVersionForBackfill should work Started")
+
 		backfillPatches, err := createBackfillPatches(upsertBatches[:], jobManager.reportBackfillJobDetail, jobKey)
 		Ω(err).Should(BeNil())
 		err = shard.createNewArchiveStoreVersionForBackfill(backfillPatches, jobManager.reportBackfillJobDetail, jobKey)
@@ -395,19 +444,22 @@ var _ = ginkgo.Describe("backfill", func() {
 			JobDetail: JobDetail{
 				Current:         1,
 				Total:           1,
-				NumRecords:      7,
+				NumRecords:      13,
 				NumAffectedDays: 1,
 			},
 			Stage: "apply patch",
 		}))
 		jobManager.RUnlock()
+		logger.Infof("Test createNewArchiveStoreVersionForBackfill should work Finished")
 	})
 
 	ginkgo.It("Live store with batch size of 1 should work", func() {
+		logger.Infof("Test Live store with batch size of 1 should work Started")
 		backfillCtx.backfillStore.BatchSize = 1
 		err := backfillCtx.backfill(jobManager.reportBackfillJobDetail, jobKey)
 		Ω(err).Should(BeNil())
-		Ω(len(backfillCtx.backfillStore.Batches)).Should(Equal(3))
-		Ω(backfillCtx.backfillStore.NextWriteRecord).Should(Equal(memCom.RecordID{BatchID: BaseBatchID + 3, Index: 0}))
+		Ω(len(backfillCtx.backfillStore.Batches)).Should(Equal(7))
+		Ω(backfillCtx.backfillStore.NextWriteRecord).Should(Equal(memCom.RecordID{BatchID: BaseBatchID + 7, Index: 0}))
+		logger.Infof("Test Live store with batch size of 1 should work Finished")
 	})
 })

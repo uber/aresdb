@@ -13,4 +13,4 @@ columns:
       data_type: Uint32
 
 rows:
-    - 4,2,4,12,14 # value changed on unsort column, but sort column is already changed.
+    - 4;2;4;12;14 # value changed on unsort column, but sort column is already changed.

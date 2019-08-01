@@ -4,6 +4,6 @@ columns:
     - column_id: 1
       data_type: Bool
 rows:
-    - 16,1
-    - null,0
-    - 0,1
+    - 16;1
+    - null;0
+    - 0;1

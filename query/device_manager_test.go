@@ -24,6 +24,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	"sync"
 	"time"
+	"github.com/uber/aresdb/memstore/common"
 )
 
 var _ = ginkgo.Describe("device_manager", func() {
@@ -192,15 +193,12 @@ var _ = ginkgo.Describe("device_manager", func() {
 	})
 
 	ginkgo.It("estimate memory usage", func() {
-		testFactory := memstore.TestFactoryT{
-			RootPath:   "../testing/data",
-			FileSystem: utils.OSFileSystem{},
-		}
+		testFactory := memstore.GetFactory()
 		batch110, err := testFactory.ReadLiveBatch("archiving/batch-110")
 		Ω(err).Should(BeNil())
 		liveBatch := &memstore.LiveBatch{
 			Capacity: 5,
-			Batch: memstore.Batch{
+			Batch: common.Batch{
 				RWMutex: &sync.RWMutex{},
 				Columns: batch110.Columns,
 			},
@@ -209,7 +207,7 @@ var _ = ginkgo.Describe("device_manager", func() {
 		batchArchive0, err := testFactory.ReadArchiveBatch("archiving/archiveBatch0")
 		Ω(err).Should(BeNil())
 		archiveBatch := &memstore.ArchiveBatch{
-			Batch: memstore.Batch{
+			Batch: common.Batch{
 				RWMutex: &sync.RWMutex{},
 				Columns: batchArchive0.Columns,
 			},
