@@ -112,7 +112,7 @@ func NewUpsertBatchBuilderImpl(logger *zap.SugaredLogger, scope tally.Scope, sch
 }
 
 // NewConnector returns a new ares Connector
-func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope tally.Scope) (Connector, error) {
+func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope tally.Scope) Connector {
 	if cfg.SchemaRefreshInterval <= 0 {
 		cfg.SchemaRefreshInterval = defaultSchemaRefreshInterval
 	}
@@ -139,7 +139,7 @@ func (cfg ConnectorConfig) NewConnector(logger *zap.SugaredLogger, metricScope t
 		},
 		schemaHandler: cachedSchemaHandler,
 	}
-	return connector, nil
+	return connector
 }
 
 // Insert inserts a batch of rows into ares
@@ -295,6 +295,8 @@ func (u *UpsertBatchBuilderImpl) prepareEnumCases(tableName, columnName string, 
 					"table", tableName,
 					"columnID", columnID,
 					"value", value).Debug("Enum string value is too long")
+				u.metricScope.Tagged(map[string]string{"table": tableName, "columnID": strconv.Itoa(columnID)}).
+					Counter("abandoned_rows_long_string").Inc(1)
 			} else {
 				if caseInsensitive {
 					enumCase = strings.ToLower(enumCase)

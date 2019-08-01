@@ -149,14 +149,19 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		errConfig := ConnectorConfig{
 			Address: "localhost:8888",
 		}
-		connector, err := errConfig.NewConnector(logger, rootScope)
-		Ω(err).ShouldNot(BeNil())
-
-		connector, err = config.NewConnector(logger, rootScope)
-		Ω(err).Should(BeNil())
+		errConnector := errConfig.NewConnector(logger, rootScope)
+		connector := config.NewConnector(logger, rootScope)
 
 		insertBytes = nil
-		n, err := connector.Insert("a", []string{"col0", "col1", "col2", "col3", "col4", "col5"}, []Row{
+		n, err := errConnector.Insert("a", []string{"col0", "col1", "col2", "col3", "col4", "col5"}, []Row{
+			{100, 1, "1", true, "a", "A"},
+			{200, int64(2), "2", false, "A", "a"},
+			{300, uint32(3), "2", "1", "b", "B"},
+			{400, int32(3), "1", "0", nil, nil},
+		})
+		Ω(err).ShouldNot(BeNil())
+
+		n, err = connector.Insert("a", []string{"col0", "col1", "col2", "col3", "col4", "col5"}, []Row{
 			{100, 1, "1", true, "a", "A"},
 			{200, int64(2), "2", false, "A", "a"},
 			{300, uint32(3), "2", "1", "b", "B"},
