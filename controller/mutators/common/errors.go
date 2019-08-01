@@ -48,6 +48,8 @@ var (
 	ErrNamespaceDoesNotExist = NotExist("Namespace does not exist")
 	// ErrInstanceDoesNotExist indicates an instance does not exist
 	ErrInstanceDoesNotExist = NotExist("Instance does not exist")
+	// ErrSubscriberDoesNotExist indicates an subscriber does not exist
+	ErrSubscriberDoesNotExist = NotExist("Subscriber does not exist")
 )
 
 // IsNonExist check whether error is non exist error

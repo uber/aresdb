@@ -16,8 +16,14 @@ package etcd
 import (
 	"encoding/json"
 	"sort"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/uber/aresdb/controller/tasks/common"
+	"go.uber.org/config"
+
+	"github.com/uber/aresdb/cluster/kvstore"
 
 	"github.com/golang/mock/gomock"
 	"github.com/m3db/m3/src/cluster/kv/mem"
@@ -27,7 +33,6 @@ import (
 
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
-	xwatch "github.com/m3db/m3/src/x/watch"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
 	pb "github.com/uber/aresdb/controller/generated/proto"
@@ -37,27 +42,14 @@ import (
 	"go.uber.org/zap"
 )
 
-type mockWatch struct {
-	c chan struct{}
-}
-
-func (m *mockWatch) C() <-chan struct{} {
-	return m.c
-}
-
-func (m *mockWatch) Close() {
-	close(m.c)
-}
-
-func (m *mockWatch) Get() interface{} {
-	return nil
-}
-
 func TestIngestionAssignmentTask(t *testing.T) {
 
 	subInstance1 := placement.NewInstance().SetID("sub1")
 	subInstance2 := placement.NewInstance().SetID("sub2")
 	subInstance3 := placement.NewInstance().SetID("sub3")
+
+	configProvider, err := config.NewYAML(config.Source(strings.NewReader("ingestionAssignmentTask: {intervalInSeconds: 1}")))
+	assert.NoError(t, err)
 
 	job1 := models.JobConfig{
 		Name:            "job1",
@@ -113,17 +105,12 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		mockPlacement.EXPECT().NumShards().Return(8)
 
 		subscribers := []string{subInstance1.ID(), subInstance2.ID(), subInstance3.ID()}
-		heartBeatChangeEvent1 := make(chan struct{}, 1)
-		heartBeatChangeEvent1 <- struct{}{}
-
-		heartBeatChangeEvent2 := make(chan struct{}, 1)
-		heartBeatChangeEvent2 <- struct{}{}
 
 		heartBeatService1 := services.NewMockHeartbeatService(ctrl)
-		heartBeatService1.EXPECT().Get().Return(subscribers, nil)
-		heartBeatService1.EXPECT().Watch().Return(&mockWatch{heartBeatChangeEvent1}, nil)
+		heartBeatService1.EXPECT().Get().Return(subscribers, nil).AnyTimes()
 
 		heartBeatService2 := services.NewMockHeartbeatService(ctrl)
+		heartBeatService1.EXPECT().Get().Return(subscribers, nil).AnyTimes()
 
 		_, err := txnStore.Set(utils.NamespaceListKey(), &pb.EntityList{
 			Entities: []*pb.EntityName{
@@ -182,9 +169,10 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		err = assignmentMutator.AddIngestionAssignment("ns1", as1)
 		assert.NoError(t, err)
 
-		// task1
+		// task 1
 		clusterServices1 := services.NewMockServices(ctrl)
 		leaderService1 := services.NewMockLeaderService(ctrl)
+		clusterServices1.EXPECT().LeaderService(gomock.Any(), gomock.Any()).Return(leaderService1, nil).AnyTimes()
 		clusterServices1.EXPECT().HeartbeatService(gomock.Any()).Return(heartBeatService1, nil).AnyTimes()
 		clusterServices1.EXPECT().PlacementService(gomock.Any(), gomock.Any()).Return(placementService, nil).AnyTimes()
 		statusChan1 := make(chan campaign.Status, 1)
@@ -192,38 +180,31 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		leaderService1.EXPECT().Campaign("", gomock.Any()).Return(statusChan1, nil)
 		leaderService1.EXPECT().Close().Return(nil).AnyTimes()
 
-		task1 := ingestionAssignmentTask{
-			intervalSeconds:    10,
-			logger:             sugaredLogger,
-			scope:              tally.NoopScope,
-			stopChan:           make(chan struct{}, 1),
-			namespaceMutator:   namespaceMutator,
-			jobMutator:         jobMutator,
-			schemaMutator:      schemaMutator,
-			assignmentsMutator: assignmentMutator,
-
-			zone:           "test",
-			environment:    "test",
-			etcdServices:   clusterServices1,
-			leaderElection: NewLeaderElector(leaderService1),
-			watchManager: NewWatchManager(func(namespace string) (xwatch.Updatable, error) {
-				serviceID := services.NewServiceID().
-					SetZone("test").
-					SetEnvironment("test").
-					SetName(utils.SubscriberServiceName(namespace))
-				hbSvc, err := clusterServices1.HeartbeatService(serviceID)
-				if err != nil {
-					return nil, err
-				}
-				return hbSvc.Watch()
-			}),
-
-			configHashes: make(map[string]configHash),
+		etcdClient1 := &kvstore.EtcdClient{
+			Zone:        "test",
+			Environment: "test",
+			ServiceName: "ares-controller",
+			TxnStore:    mem.NewStore(),
+			Services:    clusterServices1,
 		}
 
-		// client2
+		param1 := common.IngestionAssignmentTaskParams{
+			ConfigProvider:     configProvider,
+			Logger:             sugaredLogger,
+			Scope:              tally.NoopScope,
+			EtcdClient:         etcdClient1,
+			NamespaceMutator:   namespaceMutator,
+			JobMutator:         jobMutator,
+			SchemaMutator:      schemaMutator,
+			AssignmentsMutator: assignmentMutator,
+			SubscriberMutator:  mutators.NewSubscriberMutator(etcdClient1),
+		}
+		task1 := NewIngestionAssignmentTask(param1)
+
+		// task 2
 		clusterServices2 := services.NewMockServices(ctrl)
 		leaderService2 := services.NewMockLeaderService(ctrl)
+		clusterServices2.EXPECT().LeaderService(gomock.Any(), gomock.Any()).Return(leaderService2, nil).AnyTimes()
 		clusterServices2.EXPECT().HeartbeatService(gomock.Any()).Return(heartBeatService2, nil).AnyTimes()
 		clusterServices2.EXPECT().PlacementService(gomock.Any(), gomock.Any()).Return(placementService, nil).AnyTimes()
 		statusChan2 := make(chan campaign.Status, 1)
@@ -231,34 +212,26 @@ func TestIngestionAssignmentTask(t *testing.T) {
 		leaderService2.EXPECT().Campaign("", gomock.Any()).Return(statusChan2, nil)
 		leaderService2.EXPECT().Close().Return(nil).AnyTimes()
 
-		task2 := ingestionAssignmentTask{
-			intervalSeconds:    10,
-			logger:             sugaredLogger,
-			scope:              tally.NoopScope,
-			stopChan:           make(chan struct{}, 1),
-			namespaceMutator:   namespaceMutator,
-			jobMutator:         jobMutator,
-			schemaMutator:      schemaMutator,
-			assignmentsMutator: assignmentMutator,
-
-			zone:           "test",
-			environment:    "test",
-			etcdServices:   clusterServices2,
-			leaderElection: NewLeaderElector(leaderService2),
-			watchManager: NewWatchManager(func(namespace string) (xwatch.Updatable, error) {
-				serviceID := services.NewServiceID().
-					SetZone("test").
-					SetEnvironment("test").
-					SetName(utils.SubscriberServiceName(namespace))
-				hbSvc, err := clusterServices2.HeartbeatService(serviceID)
-				if err != nil {
-					return nil, err
-				}
-				return hbSvc.Watch()
-			}),
-			configHashes: make(map[string]configHash),
+		etcdClient2 := &kvstore.EtcdClient{
+			Zone:        "test",
+			Environment: "test",
+			ServiceName: "ares-controller",
+			TxnStore:    mem.NewStore(),
+			Services:    clusterServices2,
 		}
-		// test
+
+		param2 := common.IngestionAssignmentTaskParams{
+			ConfigProvider:     configProvider,
+			Logger:             sugaredLogger,
+			Scope:              tally.NoopScope,
+			EtcdClient:         etcdClient2,
+			NamespaceMutator:   namespaceMutator,
+			JobMutator:         jobMutator,
+			SchemaMutator:      schemaMutator,
+			AssignmentsMutator: assignmentMutator,
+			SubscriberMutator:  mutators.NewSubscriberMutator(etcdClient2),
+		}
+		task2 := NewIngestionAssignmentTask(param2)
 
 		// only 1 task should win election
 		go task1.Run()

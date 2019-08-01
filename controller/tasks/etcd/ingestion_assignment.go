@@ -24,7 +24,6 @@ import (
 	"github.com/uber/aresdb/controller/tasks/common"
 
 	"github.com/m3db/m3/src/cluster/services"
-	xwatch "github.com/m3db/m3/src/x/watch"
 	"github.com/uber-go/tally"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
@@ -61,11 +60,11 @@ type ingestionAssignmentTask struct {
 	namespaceMutator   mutators.NamespaceMutator
 	jobMutator         mutators.JobMutator
 	schemaMutator      mutators.TableSchemaMutator
+	subscriberMutator  mutators.SubscriberMutator
 	assignmentsMutator mutators.IngestionAssignmentMutator
 
 	etcdServices   services.Services
 	leaderElection LeaderElector
-	watchManager   WatchManager
 	configHashes   map[string]configHash
 }
 
@@ -76,15 +75,16 @@ type jobSubscriberState struct {
 }
 
 type configHash struct {
-	jobsHash   string
-	schemaHash string
+	jobsHash       string
+	schemaHash     string
+	subscriberHash string
 }
 
 // NewIngestionAssignmentTask creates a new instance of ingestionAssignmentTask
 func NewIngestionAssignmentTask(p common.IngestionAssignmentTaskParams) common.Task {
 	var iaconfig ingestionAssignmentTaskConfig
 	if err := p.ConfigProvider.Get(ingestionAssignmentConfigKey).Populate(&iaconfig); err != nil {
-		p.Logger.Fatal("Failed to load config for ingestionAssignmentTask")
+		p.Logger.Fatal("failed to load config for ingestionAssignmentTask")
 	}
 
 	serviceID := services.NewServiceID().
@@ -93,7 +93,7 @@ func NewIngestionAssignmentTask(p common.IngestionAssignmentTaskParams) common.T
 		SetName(p.EtcdClient.ServiceName)
 	leaderService, err := p.EtcdClient.Services.LeaderService(serviceID, nil)
 	if err != nil {
-		p.Logger.Fatal("Failed to create leader service for ingestionAssignmentTask")
+		p.Logger.Fatal("failed to create leader service for ingestionAssignmentTask")
 	}
 
 	task := &ingestionAssignmentTask{
@@ -105,29 +105,15 @@ func NewIngestionAssignmentTask(p common.IngestionAssignmentTaskParams) common.T
 		zone:        p.EtcdClient.Zone,
 		environment: p.EtcdClient.Environment,
 
-		etcdServices:   p.EtcdClient.Services,
-		leaderElection: NewLeaderElector(leaderService),
-		watchManager: NewWatchManager(
-			func(namespace string) (xwatch.Updatable, error) {
-				serviceID := services.NewServiceID().
-					SetZone(p.EtcdClient.Zone).
-					SetEnvironment(p.EtcdClient.Environment).
-					SetName(utils.SubscriberServiceName(namespace))
-				hbSvc, err := p.EtcdClient.Services.HeartbeatService(serviceID)
-				if err != nil {
-					return nil, err
-				}
-				return hbSvc.Watch()
-			}),
-
+		etcdServices:       p.EtcdClient.Services,
+		leaderElection:     NewLeaderElector(leaderService),
 		namespaceMutator:   p.NamespaceMutator,
 		jobMutator:         p.JobMutator,
 		schemaMutator:      p.SchemaMutator,
 		assignmentsMutator: p.AssignmentsMutator,
-
-		configHashes: make(map[string]configHash),
+		subscriberMutator:  p.SubscriberMutator,
+		configHashes:       make(map[string]configHash),
 	}
-	p.Logger.Info("Starting ingestionAssignmentTask")
 	return task
 }
 
@@ -142,10 +128,10 @@ func (ia *ingestionAssignmentTask) Run() {
 	ia.logger.With(
 		"host", hostName,
 		"waitedSeconds", waitSeconds,
-	).Info("Running Ingestion Assignment Job after waiting")
+	).Info("start ingestion assignment task after waiting")
 
 	if err := ia.leaderElection.Start(); err != nil {
-		ia.logger.With("host", hostName, "error", err.Error()).Error("Failed to start leader election")
+		ia.logger.With("host", hostName, "error", err.Error()).Error("failed to start leader election")
 		ia.scope.Tagged(
 			map[string]string{
 				"task": taskTagValue,
@@ -158,18 +144,18 @@ func (ia *ingestionAssignmentTask) Run() {
 		if err != nil {
 			ia.logger.Error(err)
 		} else {
-			ia.logger.With("host", hostName).Infof("Stopped leader election")
+			ia.logger.With("host", hostName).Infof("stopped leader election")
 		}
 	}()
 
-	ia.logger.With("host", hostName).Infof("Starting ingestion assignment calculation loop")
+	ia.logger.With("host", hostName).Infof("entering ingestion assignment calculation loop")
 	ia.startIngestionAssignment(hostName)
-	ia.logger.With("host", hostName).Infof("Exited ingestion assignment calculation loop")
+	ia.logger.With("host", hostName).Infof("exited ingestion assignment calculation loop")
 }
 
 // Done stops the task
 func (ia *ingestionAssignmentTask) Done() {
-	ia.logger.Info("Killing ingestionAssignmentTask")
+	ia.logger.Info("killing ingestion assignment task")
 	close(ia.stopChan)
 }
 
@@ -186,17 +172,6 @@ func (ia *ingestionAssignmentTask) startIngestionAssignment(hostName string) {
 		}
 
 		ia.logger.With("host", hostName).Infof("elected as leader")
-		namespaces, err := ia.namespaceMutator.ListNamespaces()
-		if err != nil {
-			ia.logger.Fatal(err)
-		}
-		for _, ns := range namespaces {
-			err = ia.watchManager.AddNamespace(ns)
-			if err != nil {
-				ia.logger.Fatal(err)
-			}
-		}
-
 		tickerChan := time.NewTicker(time.Duration(ia.intervalSeconds) * time.Second).C
 	loop:
 		for {
@@ -206,14 +181,6 @@ func (ia *ingestionAssignmentTask) startIngestionAssignment(hostName string) {
 					ia.logger.With("host", hostName).Infof("host is no longer the leader")
 					break loop
 				}
-			// watch change
-			case ns := <-ia.watchManager.C():
-				if !ia.isLeader() {
-					ia.logger.With("host", hostName).Infof("host is no longer the leader")
-					break loop
-				}
-				ia.recalculateForNamespace(ns)
-			// periodic updates
 			case <-tickerChan:
 				if !ia.isLeader() {
 					ia.logger.With("host", hostName).Infof("host is no longer the leader")
@@ -237,6 +204,10 @@ func (ia *ingestionAssignmentTask) checkConfigHashes(namespace string) (hashes c
 		return
 	}
 	hashes.schemaHash, err = ia.schemaMutator.GetHash(namespace)
+	if err != nil {
+		return
+	}
+	hashes.subscriberHash, err = ia.subscriberMutator.GetHash(namespace)
 	if err != nil {
 		return
 	}
@@ -303,6 +274,9 @@ func (ia *ingestionAssignmentTask) readCurrentState(namespace string) (jobSubscr
 }
 
 func (ia *ingestionAssignmentTask) recalculateForNamespace(ns string) {
+	ia.logger.With(
+		"namespace", ns,
+	).Info("recalculating assignment for namespace")
 	state, err := ia.readCurrentState(ns)
 	if err != nil {
 		ia.logger.Error(err)
@@ -318,18 +292,13 @@ func (ia *ingestionAssignmentTask) recalculateForNamespace(ns string) {
 }
 
 func (ia *ingestionAssignmentTask) tryRecalculateAllNamespaces() (errs int) {
-	ia.logger.Info("Calculating ingestion assignments")
+	ia.logger.Info("try recalculating ingestion assignments")
 	namespaces, err := ia.namespaceMutator.ListNamespaces()
 	if err != nil {
 		ia.reportError(err, &errs)
 		return
 	}
 	for _, ns := range namespaces {
-		err = ia.watchManager.AddNamespace(ns)
-		if err != nil {
-			ia.reportError(err, &errs)
-			return
-		}
 		hashes, err := ia.checkConfigHashes(ns)
 		if err != nil {
 			ia.reportError(err, &errs)
@@ -341,15 +310,11 @@ func (ia *ingestionAssignmentTask) tryRecalculateAllNamespaces() (errs int) {
 		}
 		ia.scope.Counter(assignmentSuccessMetricName).Inc(1)
 	}
-	ia.logger.Info("Ingestion assignments calculation finished")
+	ia.logger.Info("ingestion assignments calculation finished")
 	return
 }
 
 func (ia *ingestionAssignmentTask) processIngestionAssignment(state jobSubscriberState) (changes, errs int) {
-	ia.logger.With(
-		"namespace", state.namespace,
-	).Info("Processing namespace")
-
 	// build consistent hash ring where a ring node is a subscriber
 	// and resource key is the kafka topic name.
 	// this will guarantee minimum change for a topic's ingestion assignment
@@ -449,7 +414,7 @@ func (ia *ingestionAssignmentTask) processIngestionAssignment(state jobSubscribe
 		if v != nil {
 			ia.logger.With(
 				"assginment", k,
-			).Info("Deleting assignment")
+			).Info("deleting assignment")
 			err = ia.assignmentsMutator.DeleteIngestionAssignment(state.namespace, k)
 			if err != nil {
 				ia.reportError(err, &errs)
