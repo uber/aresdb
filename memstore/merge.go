@@ -384,7 +384,7 @@ func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
 		} else {
 			// Non-sort columns.
 			if common.IsArrayType(dataType) {
-				// array will never appear in sort columns
+				// array will never appear in sort columns, TODO davidw schema validation in array type support
 				offsetBytes := int64(common.CalculateVectorBytes(common.Uint32, ctx.totalSize * 2))
 				valueBytes := ctx.calculateArrayVectorPartyBytes(columnID, dataType)
 				bytes = offsetBytes + valueBytes

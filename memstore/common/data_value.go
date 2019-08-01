@@ -132,16 +132,8 @@ func CompareArray(dataType DataType, a, b unsafe.Pointer) int {
 		return 0
 	}
 	bytes := CalculateListElementBytes(dataType, len1)
-	base1 := uintptr(a)
-	base2 := uintptr(b)
-	var index uintptr
-	// skip length bytes
-	for index = 4; index < uintptr(bytes); index++ {
-		if *(*uint8)(unsafe.Pointer(base1+index)) != *(*uint8)(unsafe.Pointer(base2+index)) {
-			return int(*(*uint8)(unsafe.Pointer(base1+index))) - int(*(*uint8)(unsafe.Pointer(base2+index)))
-		}
-	}
-	return 0
+	// skip 4 bytes for length
+	return utils.MemCmp(a, b, 4, bytes)
 }
 
 // ArrayLengthCompare compare

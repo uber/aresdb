@@ -296,10 +296,7 @@ func (vp *LiveVectorParty) SetValue(row int, val unsafe.Pointer, valid bool) {
 
 	buf := vp.memoryPool.Reallocate([2]uintptr{uintptr(oldOffset), uintptr(oldCap)}, oldBytes, newBytes)
 
-	// Set offset.
-	vp.offsets.SetValue(2*row, unsafe.Pointer(&buf[0]))
-	// Set length.
-	vp.offsets.SetValue(2*row+1, unsafe.Pointer(&newLen))
+	vp.SetOffsetLength(row, unsafe.Pointer(&buf[0]), unsafe.Pointer(&newLen))
 	// Set footer offset.
 	vp.caps.SetValue(row, unsafe.Pointer(&buf[1]))
 

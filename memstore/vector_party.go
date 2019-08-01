@@ -656,10 +656,14 @@ func (vp *cVectorParty) Dump(file *os.File) {
 	fmt.Fprintf(file, "\nVectorParty, type: %s, length: %d, value: \n", common.DataTypeName[vp.dataType], vp.GetLength())
 	for i := 0; i < vp.GetLength(); i++ {
 		val := vp.GetDataValue(i)
+		count := 1
+		if vp.counts != nil {
+			count = int(*(*uint32)(vp.counts.GetValue(i + 1)) - *(*uint32)(vp.counts.GetValue(i)))
+		}
 		if val.Valid {
-			fmt.Fprintf(file, "\t%v\n", val.ConvertToHumanReadable(vp.dataType))
+			fmt.Fprintf(file, "\t%v, %d\n", val.ConvertToHumanReadable(vp.dataType), count)
 		} else {
-			fmt.Println(file, "\tnil")
+			fmt.Fprintf(file, "\tnil\n")
 		}
 	}
 }

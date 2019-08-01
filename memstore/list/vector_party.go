@@ -46,6 +46,12 @@ func (vp *baseVectorParty) GetOffsetLength(row int) (offset uint32, length uint3
 	return
 }
 
+// SetOffsetLength update offset/length for nth fow
+func (vp *baseVectorParty) SetOffsetLength(row int, offset, length unsafe.Pointer) {
+	vp.offsets.SetValue(2*row, offset)
+	vp.offsets.SetValue(2*row+1, length)
+}
+
 // GetElemCount return the number of element for value in n-th row
 func (vp *baseVectorParty) GetElemCount(row int) uint32 {
 	if vp.offsets == nil || row < 0 || row >= vp.length {
