@@ -161,10 +161,13 @@ func (cf *CachedSchemaHandler) FetchAllSchema() error {
 // FetchSchemas fetch schemas in schemas of CachedSchemaHandler
 func (cf *CachedSchemaHandler) FetchSchemas() {
 	cf.RLock()
-	tables := cf.schemas
+	tables := make([]string, 0, len(cf.schemas))
+	for tableName := range cf.schemas {
+		tables = append(tables,	tableName)
+	}
 	cf.RUnlock()
 
-	for tableName := range tables {
+	for _, tableName := range tables {
 		_, err := cf.FetchSchema(tableName)
 		if err != nil {
 			cf.logger.With("error", err.Error(),
