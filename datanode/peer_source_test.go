@@ -61,7 +61,7 @@ var _ = ginkgo.Describe("peer source", func() {
 		}
 
 		logger := common.NewLoggerFactory().GetDefaultLogger()
-		peerSource, err := NewPeerSource(logger, staticTopology, mockDialer)
+		peerSource, err := NewPeerSource(staticTopology, mockDialer)
 		Ω(err).Should(BeNil())
 		workWithConn := 0
 		err = peerSource.BorrowConnection([]string{"instance0", "instance1", "instance3"}, func(peerID string, client rpc.PeerDataNodeClient) {
