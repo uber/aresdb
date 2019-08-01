@@ -72,7 +72,7 @@ var _ = Describe("AresDatabase client", func() {
 			AresDBConnectorConfig: cfg,
 		}
 		_, err := NewAresDatabase(serviceConfig, &jobConfig, cluster, sinkCfg, nil)
-		Ω(err).ShouldNot(BeNil())
+		Ω(err).Should(BeNil())
 	})
 	It("Save", func() {
 		mockConnector.On("Insert",
