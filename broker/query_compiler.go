@@ -796,7 +796,7 @@ func (qc *QueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			vr, ok := firstArg.(*expr.VarRef)
 			if !ok || !memCom.IsArrayType(vr.DataType) {
 				qc.Error = utils.StackError(
-					nil, "array function %s requires first argument to be list type column, but got %s", e.Name, firstArg)
+					nil, "array function %s requires first argument to be array type column, but got %s", e.Name, firstArg)
 			}
 
 			if e.Name == expr.LengthCallName {
@@ -822,7 +822,7 @@ func (qc *QueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				}
 				if _, ok := e.Args[1].(*expr.NumberLiteral); !ok {
 					qc.Error = utils.StackError(
-						nil, "array function %s takes list type column and an index", e.Name)
+						nil, "array function %s takes array type column and an index", e.Name)
 				}
 				e.ExprType = vr.ExprType
 			}

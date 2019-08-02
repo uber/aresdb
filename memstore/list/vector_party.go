@@ -117,7 +117,7 @@ func arrayValueCompare(dataType common.DataType, left, right unsafe.Pointer) boo
 		return false
 	}
 
-	itemType := common.GetItemDataType(dataType)
+	itemType := common.GetElementDataType(dataType)
 	cmpFunc := common.GetCompareFunc(itemType)
 	for i := 0; i < lReader.GetLength(); i++ {
 		if itemType == common.Bool {

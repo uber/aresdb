@@ -425,7 +425,7 @@ func ValueFromString(str string, dataType DataType) (val DataValue, err error) {
 	default:
 		if IsArrayType(dataType) {
 			var value interface{}
-			value, err = ArrayValueFromString(str, GetItemDataType(dataType))
+			value, err = ArrayValueFromString(str, GetElementDataType(dataType))
 			if err != nil {
 				err = utils.StackError(err, "Failed to read array string: %s", str)
 				return
@@ -682,7 +682,7 @@ type ArrayValueReader struct {
 func NewArrayValueReader(dataType DataType, value unsafe.Pointer) *ArrayValueReader {
 	length := *((*uint32)(value))
 	return &ArrayValueReader{
-		itemType: GetItemDataType(dataType),
+		itemType: GetElementDataType(dataType),
 		value:    unsafe.Pointer(uintptr(value) + 4),
 		length:   int(length),
 	}

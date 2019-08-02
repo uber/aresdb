@@ -1041,7 +1041,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			vr, ok := firstArg.(*expr.VarRef)
 			if !ok || !memCom.IsArrayType(vr.DataType) {
 				qc.Error = utils.StackError(
-					nil, "array function %s requires first argument to be list type column, but got %s", e.Name, firstArg)
+					nil, "array function %s requires first argument to be array type column, but got %s", e.Name, firstArg)
 			}
 
 			if e.Name == expr.LengthCallName {
@@ -1065,7 +1065,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				secondArg := e.Args[1]
 				var literalExpr expr.Expr
 				// build rhs literal
-				t := memCom.GetItemDataType(vr.DataType)
+				t := memCom.GetElementDataType(vr.DataType)
 				switch t {
 				case memCom.Bool:
 					ok := false
@@ -1124,11 +1124,11 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				}
 				if _, ok := e.Args[1].(*expr.NumberLiteral); !ok {
 					qc.Error = utils.StackError(
-						nil, "array function %s takes list type column and an index", e.Name)
+						nil, "array function %s takes array type column and an index", e.Name)
 				}
 				return &expr.BinaryExpr{
 					Op:       expr.ARRAY_ELEMENT_AT,
-					ExprType: common.DataTypeToExprType[memCom.GetItemDataType(vr.DataType)],
+					ExprType: common.DataTypeToExprType[memCom.GetElementDataType(vr.DataType)],
 					LHS:      vr,
 					RHS:      e.Args[1],
 				}

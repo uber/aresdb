@@ -547,51 +547,51 @@ var _ = ginkgo.Describe("SQL Parser", func() {
 
 	ginkgo.It("Array functions should work", func() {
 		sqls := []string{
-			`SELECT length(list_field2) FROM table1
-			WHERE length(list_field1) > 1;`,
+			`SELECT length(array_field2) FROM table1
+			WHERE length(array_field1) > 1;`,
 		}
 		res := queryCom.AQLQuery{
 			Table: "table1",
 			Dimensions: []queryCom.Dimension{
 				{
-					Expr: "length(list_field2)",
+					Expr: "length(array_field2)",
 				},
 			},
 			Measures: []queryCom.Measure{{Expr: "1"}},
-			Filters:  []string{"length(list_field1) > 1"},
+			Filters:  []string{"length(array_field1) > 1"},
 		}
 
 		runTest(sqls, res, logger)
 
 		sqls = []string{
-			`SELECT element_at(list_field2, 1) FROM table1
-			WHERE element_at(list_field1, 0) > 4;`,
+			`SELECT element_at(array_field2, 1) FROM table1
+			WHERE element_at(array_field1, 0) > 4;`,
 		}
 		res = queryCom.AQLQuery{
 			Table: "table1",
 			Dimensions: []queryCom.Dimension{
 				{
-					Expr: "element_at(list_field2, 1)",
+					Expr: "element_at(array_field2, 1)",
 				},
 			},
 			Measures: []queryCom.Measure{{Expr: "1"}},
-			Filters:  []string{`element_at(list_field1, 0) > 4`},
+			Filters:  []string{`element_at(array_field1, 0) > 4`},
 		}
 		runTest(sqls, res, logger)
 
 		sqls = []string{
-			`SELECT contains(list_field2, 'bar') FROM table1
-			WHERE contains(list_field1, 'foo');`,
+			`SELECT contains(array_field2, 'bar') FROM table1
+			WHERE contains(array_field1, 'foo');`,
 		}
 		res = queryCom.AQLQuery{
 			Table: "table1",
 			Dimensions: []queryCom.Dimension{
 				{
-					Expr: "contains(list_field2, 'bar')",
+					Expr: "contains(array_field2, 'bar')",
 				},
 			},
 			Measures: []queryCom.Measure{{Expr: "1"}},
-			Filters:  []string{`contains(list_field1, 'foo')`},
+			Filters:  []string{`contains(array_field1, 'foo')`},
 		}
 		runTest(sqls, res, logger)
 

@@ -117,7 +117,7 @@ func (rvp *rawListVectorParty) toVectorParty() (memCom.VectorParty, error) {
 		)
 	}
 
-	vp := NewLiveVectorParty(rvp.Length, memCom.GetItemDataType(dataType), nil)
+	vp := NewLiveVectorParty(rvp.Length, memCom.GetElementDataType(dataType), nil)
 	vp.Allocate(false)
 
 	for i, row := range rvp.Values {
