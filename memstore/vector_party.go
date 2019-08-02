@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"os"
@@ -54,14 +55,14 @@ type cVectorParty struct {
 	// Set during archiving/backfill and stored on disk.
 	columnMode common.ColumnMode
 
-	values *common.Vector
+	values *vectors.Vector
 	// Stores the validity bitmap (0 means null) for each value in values.
-	nulls *common.Vector
+	nulls *vectors.Vector
 	// Stores the accumulative count from the beginning of the vector
 	// to the current position. Its length is vp.Length + 1 with first value to
 	// be 0 and last value to be vp.Length. We can get a count of current value
 	// by Counts[i+1] - Counts[i] for Values[i]
-	counts *common.Vector
+	counts *vectors.Vector
 }
 
 // IsList tells whether it's a list vector party or not.
@@ -561,7 +562,7 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 		return err
 	}
 
-	bytes := common.CalculateVectorPartyBytes(vp.GetDataType(), vp.GetLength(),
+	bytes := vectors.CalculateVectorPartyBytes(vp.GetDataType(), vp.GetLength(),
 		columnMode == common.HasNullVector || columnMode == common.HasCountVector, columnMode == common.HasCountVector)
 	s.ReportVectorPartyMemoryUsage(int64(bytes))
 
@@ -571,7 +572,7 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 	}
 
 	// Read value vector.
-	valueVector := common.NewVector(dataType, length)
+	valueVector := vectors.NewVector(dataType, length)
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(
 		cgoutils.MakeSliceFromCPtr(uintptr(valueVector.Buffer()), valueVector.Bytes),
@@ -587,7 +588,7 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 	}
 
 	// Read null vector.
-	nullVector := common.NewVector(common.Bool, length)
+	nullVector := vectors.NewVector(common.Bool, length)
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(
 		cgoutils.MakeSliceFromCPtr(uintptr(nullVector.Buffer()), nullVector.Bytes),
@@ -604,7 +605,7 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 	}
 
 	// Read count vector.
-	countVector := common.NewVector(common.Uint32, length+1)
+	countVector := vectors.NewVector(common.Uint32, length+1)
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(
 		cgoutils.MakeSliceFromCPtr(uintptr(countVector.Buffer()), countVector.Bytes),
@@ -642,11 +643,11 @@ func (vp *cVectorParty) GetHostVectorPartySlice(startIndex, length int) common.H
 
 // Allocates implements Allocate in cVectorParty
 func (vp *cVectorParty) Allocate(hasCount bool) {
-	vp.values = common.NewVector(vp.dataType, vp.length)
-	vp.nulls = common.NewVector(common.Bool, vp.length)
+	vp.values = vectors.NewVector(vp.dataType, vp.length)
+	vp.nulls = vectors.NewVector(common.Bool, vp.length)
 	vp.columnMode = common.HasNullVector
 	if hasCount {
-		vp.counts = common.NewVector(common.Int32, vp.length+1)
+		vp.counts = vectors.NewVector(common.Int32, vp.length+1)
 		vp.columnMode = common.HasCountVector
 	}
 }

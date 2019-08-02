@@ -16,13 +16,14 @@ package list
 
 import (
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/tests"
 	"github.com/uber/aresdb/utils"
 	"sync"
 )
 
 var (
 	testFactory = TestFactoryT{
-		TestFactoryT: memCom.TestFactoryT{
+		TestFactoryBase: tests.TestFactoryBase{
 			RootPath:             "../../testing/data",
 			FileSystem:           utils.OSFileSystem{},
 			ToArchiveVectorParty: ToArrayArchiveVectorParty,
@@ -34,7 +35,7 @@ var (
 
 // TestFactoryT creates test objects from text file
 type TestFactoryT struct {
-	memCom.TestFactoryT
+	tests.TestFactoryBase
 }
 
 func GetFactory() TestFactoryT {
@@ -49,7 +50,7 @@ func ToArrayLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
 	return vp.(memCom.LiveVectorParty)
 }
 
-func ToArrayVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (vp memCom.VectorParty, err error) {
+func ToArrayVectorParty(rvp *tests.RawVectorParty, forLiveVP bool) (vp memCom.VectorParty, err error) {
 	dataType := memCom.DataTypeFromString(rvp.DataType)
 	if dataType == memCom.Unknown {
 		return nil, utils.StackError(nil,

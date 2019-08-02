@@ -19,6 +19,7 @@ import (
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"os"
@@ -39,7 +40,7 @@ const (
 type ArchiveVectorParty struct {
 	baseVectorParty
 	common.Pinnable
-	values *common.Vector
+	values *vectors.Vector
 	// bytesWritten should only be used when archiving or backfilling. It's used to record the current position
 	// in values vector.
 	bytesWritten int64
@@ -77,8 +78,8 @@ func newArchiveVectorParty(length int, dataType common.DataType,
 // after switching to the new version of archive store. Before switching the memory
 // managed by this vp is counted as unmanaged memory.
 func (vp *ArchiveVectorParty) Allocate(hasCount bool) {
-	vp.offsets = common.NewVector(common.Uint32, vp.length*2)
-	vp.values = common.NewVector(common.Uint8, int(vp.totalValueBytes))
+	vp.offsets = vectors.NewVector(common.Uint32, vp.length*2)
+	vp.values = vectors.NewVector(common.Uint8, int(vp.totalValueBytes))
 }
 
 // GetBytes returns the bytes this vp occupies.
@@ -155,7 +156,7 @@ func (vp *ArchiveVectorParty) setValue(row int, val unsafe.Pointer, valid bool) 
 			utils.MemCopy(unsafe.Pointer(baseAddr), val, newBytes)
 		}
 	} else if row == vp.lengthFilled {
-		if vp.bytesWritten + int64(newBytes) > vp.totalValueBytes {
+		if vp.bytesWritten+int64(newBytes) > vp.totalValueBytes {
 			utils.GetLogger().Panicf("Array ArchiveVectorParty SetValue exceeded buffer limit")
 		}
 		// update offset/length
@@ -306,7 +307,7 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	vp.length = length
 	vp.dataType = dataType
 
-	vp.offsets = common.NewVector(common.Uint32, vp.length*2)
+	vp.offsets = vectors.NewVector(common.Uint32, vp.length*2)
 	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.offsets.Buffer()), vp.offsets.Bytes)); err != nil {
 		return err
 	}
@@ -318,7 +319,7 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	}
 	vp.totalValueBytes = int64(bytes)
 	// Read value vector.
-	vp.values = common.NewVector(common.Uint8, int(vp.totalValueBytes))
+	vp.values = vectors.NewVector(common.Uint8, int(vp.totalValueBytes))
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.values.Buffer()), vp.values.Bytes)); err != nil {
 		return err

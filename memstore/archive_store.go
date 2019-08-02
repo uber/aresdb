@@ -21,8 +21,8 @@ import (
 	"strconv"
 
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/utils"
 	"github.com/uber/aresdb/memstore/list"
+	"github.com/uber/aresdb/utils"
 )
 
 // ArchiveBatch represents a archive batch.
@@ -380,7 +380,7 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 // for holding the lock (if necessary).
 func (b *ArchiveBatch) Clone() *ArchiveBatch {
 	newBatch := &ArchiveBatch{
-		Batch:  common.Batch{
+		Batch: common.Batch{
 			RWMutex: b.Batch.RWMutex,
 			Columns: make([]common.VectorParty, len(b.Columns)),
 		},

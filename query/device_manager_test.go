@@ -19,12 +19,12 @@ import (
 	. "github.com/onsi/gomega"
 	aresdbCommon "github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/memstore"
+	"github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"sync"
 	"time"
-	"github.com/uber/aresdb/memstore/common"
 )
 
 var _ = ginkgo.Describe("device_manager", func() {

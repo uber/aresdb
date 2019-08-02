@@ -16,7 +16,6 @@ package memstore
 
 import (
 	"encoding/json"
-
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"

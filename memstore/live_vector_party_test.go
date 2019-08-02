@@ -15,10 +15,10 @@
 package memstore
 
 import (
+	"bytes"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
-	"bytes"
 )
 
 var _ = ginkgo.Describe("live vector party", func() {

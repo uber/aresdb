@@ -17,7 +17,6 @@ package memstore
 import (
 	"encoding/hex"
 	"errors"
-
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -45,7 +44,7 @@ var _ = ginkgo.Describe("archive store", func() {
 	ginkgo.It("WriteToDisk should work", func() {
 		ds := new(diskStoreMocks.DiskStore)
 		archiveBatch := &ArchiveBatch{
-			Batch:  memCom.Batch{
+			Batch: memCom.Batch{
 				RWMutex: &sync.RWMutex{},
 				Columns: []memCom.VectorParty{
 					&archiveVectorParty{

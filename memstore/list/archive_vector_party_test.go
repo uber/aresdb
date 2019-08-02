@@ -21,9 +21,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	diskMock "github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/memstore/common"
+	commMock "github.com/uber/aresdb/memstore/common/mocks"
 	testingUtils "github.com/uber/aresdb/testing"
 	"sync"
-	commMock "github.com/uber/aresdb/memstore/common/mocks"
 )
 
 func createArchiveVP() common.ArchiveVectorParty {

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"os"
@@ -32,7 +33,7 @@ import (
 type LiveVectorParty struct {
 	baseVectorParty
 	// storing the offset to slab footer offset for each row.
-	caps       *common.Vector
+	caps       *vectors.Vector
 	memoryPool HighLevelMemoryPool
 	sync.RWMutex
 }
@@ -376,8 +377,8 @@ func (vp *LiveVectorParty) GetDataValueByRow(row int) common.DataValue {
 
 // Allocate allocate underlying storage for vector party
 func (vp *LiveVectorParty) Allocate(hasCount bool) {
-	vp.caps = common.NewVector(common.Uint32, vp.length)
-	vp.offsets = common.NewVector(common.Uint32, vp.length*2)
+	vp.caps = vectors.NewVector(common.Uint32, vp.length)
+	vp.offsets = vectors.NewVector(common.Uint32, vp.length*2)
 
 	vp.memoryPool = NewHighLevelMemoryPool(vp.reporter)
 }

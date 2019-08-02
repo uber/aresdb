@@ -15,6 +15,7 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/memstore/vectors"
 	"unsafe"
 
 	"github.com/onsi/ginkgo"
@@ -185,8 +186,8 @@ var _ = ginkgo.Describe("VectorParty", func() {
 		}
 
 		vp := cVectorParty{
-			values: common.NewVector(common.Uint32, 100),
-			nulls:  common.NewVector(common.Bool, 100),
+			values: vectors.NewVector(common.Uint32, 100),
+			nulls:  vectors.NewVector(common.Bool, 100),
 			baseVectorParty: baseVectorParty{
 				dataType:     common.Uint32,
 				defaultValue: defaultValue,
@@ -202,7 +203,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 
 		Ω(func() {
 			vp := &cVectorParty{
-				values: common.NewVector(common.Uint32, 100),
+				values: vectors.NewVector(common.Uint32, 100),
 				baseVectorParty: baseVectorParty{
 					dataType:     common.Uint32,
 					defaultValue: defaultValue,
@@ -217,7 +218,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 					dataType:     common.Uint32,
 					defaultValue: defaultValue,
 				},
-				nulls: common.NewVector(common.Bool, 100),
+				nulls: vectors.NewVector(common.Bool, 100),
 			}
 			vp.fillWithDefaultValue()
 		}).Should(Panic())
@@ -238,8 +239,8 @@ var _ = ginkgo.Describe("VectorParty", func() {
 		}
 
 		vp = cVectorParty{
-			values: common.NewVector(common.Bool, 100),
-			nulls:  common.NewVector(common.Bool, 100),
+			values: vectors.NewVector(common.Bool, 100),
+			nulls:  vectors.NewVector(common.Bool, 100),
 			baseVectorParty: baseVectorParty{
 				dataType:     common.Bool,
 				defaultValue: defaultValue,
@@ -270,8 +271,8 @@ var _ = ginkgo.Describe("VectorParty", func() {
 					dataType:     common.Uint32,
 					defaultValue: defaultValue,
 				},
-				values: common.NewVector(common.Uint32, 100),
-				nulls:  common.NewVector(common.Bool, 100),
+				values: vectors.NewVector(common.Uint32, 100),
+				nulls:  vectors.NewVector(common.Bool, 100),
 			},
 		}
 
@@ -294,8 +295,8 @@ var _ = ginkgo.Describe("VectorParty", func() {
 
 		vp = archiveVectorParty{
 			cVectorParty: cVectorParty{
-				values: common.NewVector(common.Uint32, 100),
-				nulls:  common.NewVector(common.Bool, 100),
+				values: vectors.NewVector(common.Uint32, 100),
+				nulls:  vectors.NewVector(common.Bool, 100),
 				baseVectorParty: baseVectorParty{
 					dataType:     common.Uint32,
 					defaultValue: common.NullDataValue,
@@ -318,8 +319,8 @@ var _ = ginkgo.Describe("VectorParty", func() {
 					dataType:     common.Uint32,
 					defaultValue: defaultValue,
 				},
-				values: common.NewVector(common.Uint32, 100),
-				nulls:  common.NewVector(common.Bool, 100),
+				values: vectors.NewVector(common.Uint32, 100),
+				nulls:  vectors.NewVector(common.Bool, 100),
 			},
 		}
 

@@ -15,6 +15,7 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/memstore/vectors"
 	"os"
 
 	"github.com/uber/aresdb/common"
@@ -88,7 +89,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			Return(nil, nil).Once()
 
 		serializer := memCom.NewVectorPartyArchiveSerializer(testHostMemoryManager, testDiskStore,
-			"test", 0, 0, 0,0, 0)
+			"test", 0, 0, 0, 0, 0)
 
 		Ω(serializer.WriteVectorParty(c1)).Should(BeNil())
 	})
@@ -939,8 +940,8 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 						// create dummy to make vp not nil
 						&cLiveVectorParty{
 							cVectorParty: cVectorParty{
-								values: &memCom.Vector{Bytes: 128},
-								nulls:  &memCom.Vector{Bytes: 128},
+								values: &vectors.Vector{Bytes: 128},
+								nulls:  &vectors.Vector{Bytes: 128},
 							},
 						},
 					},

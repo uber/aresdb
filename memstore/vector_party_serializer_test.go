@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package memstore
+
 import (
 	"io"
 
@@ -215,7 +216,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		shard := NewTableShard(schema, nil, diskStore,
 			NewHostMemoryManager(GetFactory().NewMockMemStore(), 1<<32), 0, m.options)
 		archiveSerializer := common.NewVectorPartyArchiveSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID, 0, 0, 0, 0)
-		snapshotSerializer := common.NewVectorPartySnapshotSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID,0, 0, 0, 0, 0, 0)
+		snapshotSerializer := common.NewVectorPartySnapshotSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID, 0, 0, 0, 0, 0, 0)
 
 		// snapshotSerializer should always has no error
 		// goLiveVectoryParty should always has no error
@@ -297,4 +298,3 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		Ω(err).ShouldNot(BeNil())
 	})
 })
-

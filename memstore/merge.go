@@ -16,9 +16,10 @@ package memstore
 
 import (
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/list"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"sync"
-	"github.com/uber/aresdb/memstore/list"
 )
 
 // mergeContext carries all context information used during merge
@@ -378,19 +379,19 @@ func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
 		var bytes int64
 		if i := utils.IndexOfInt(ctx.patch.sortColumns, columnID); i >= 0 {
 			// Sort columns.
-			bytes = int64(common.CalculateVectorPartyBytes(dataType, ctx.mergedLengths[i], true, true))
+			bytes = int64(vectors.CalculateVectorPartyBytes(dataType, ctx.mergedLengths[i], true, true))
 			columns[columnID] = newArchiveVectorParty(ctx.mergedLengths[i], dataType, defaultValue, ctx.merged.RWMutex)
 			columns[columnID].Allocate(true)
 		} else {
 			// Non-sort columns.
 			if common.IsArrayType(dataType) {
 				// array will never appear in sort columns, TODO davidw schema validation in array type support
-				offsetBytes := int64(common.CalculateVectorBytes(common.Uint32, ctx.totalSize * 2))
+				offsetBytes := int64(vectors.CalculateVectorBytes(common.Uint32, ctx.totalSize*2))
 				valueBytes := ctx.calculateArrayVectorPartyBytes(columnID, dataType)
 				bytes = offsetBytes + valueBytes
 				columns[columnID] = list.NewArchiveVectorParty(ctx.totalSize, dataType, valueBytes, ctx.merged.RWMutex)
 			} else {
-				bytes = int64(common.CalculateVectorPartyBytes(dataType, ctx.totalSize, true, false))
+				bytes = int64(vectors.CalculateVectorPartyBytes(dataType, ctx.totalSize, true, false))
 				columns[columnID] = newArchiveVectorParty(ctx.totalSize, dataType, defaultValue, ctx.merged.RWMutex)
 			}
 			if !ctx.columnDeletions[columnID] {
@@ -410,7 +411,7 @@ func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
 func (ctx *mergeContext) calculateArrayVectorPartyBytes(columnID int, dataType common.DataType) int64 {
 	var totalBytes int64
 	// bytes for patch
-	for i := 0; i< len(ctx.patch.recordIDs); i++ {
+	for i := 0; i < len(ctx.patch.recordIDs); i++ {
 		totalBytes += int64(common.CalculateListElementBytes(dataType, ctx.patch.GetCount(i, columnID)))
 	}
 
@@ -425,7 +426,7 @@ func (ctx *mergeContext) calculateArrayVectorPartyBytes(columnID int, dataType c
 
 	rowsDeletedIndex := 0
 	listVP := vp.AsList()
-	for i := 0; i< ctx.baseSize; i++ {
+	for i := 0; i < ctx.baseSize; i++ {
 		if rowsDeletedIndex < len(ctx.baseRowDeleted) && ctx.baseRowDeleted[rowsDeletedIndex] == i {
 			// skip the deleted row
 			rowsDeletedIndex++

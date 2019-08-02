@@ -16,6 +16,7 @@ package memstore
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/memstore/vectors"
 	"math"
 	"sync"
 	"time"
@@ -421,7 +422,7 @@ func (b *LiveBatch) GetOrCreateVectorParty(columnID int, locked bool) common.Liv
 		defaultValue := *b.liveStore.tableSchema.DefaultValues[columnID]
 		b.liveStore.tableSchema.RUnlock()
 
-		bytes := common.CalculateVectorPartyBytes(dataType, b.Capacity, true, false)
+		bytes := vectors.CalculateVectorPartyBytes(dataType, b.Capacity, true, false)
 		b.liveStore.HostMemoryManager.ReportUnmanagedSpaceUsageChange(int64(bytes))
 		liveVP := NewLiveVectorParty(b.Capacity, dataType, defaultValue, b.liveStore.HostMemoryManager)
 		liveVP.Allocate(false)
