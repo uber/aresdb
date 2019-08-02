@@ -72,3 +72,17 @@ type EnumMutator interface {
 	// GetEnumCases get all enum cases for the given table column
 	GetEnumCases(namespace, table, column string) ([]string, error)
 }
+
+// MembershipMutator defines membership rw operations
+type MembershipMutator interface {
+	// Join registers an instance to a namespace
+	Join(namespace string, instance models.Instance) error
+	// GetInstance returns an instance
+	GetInstance(namespace, instanceName string) (models.Instance, error)
+	// GetInstances returns a list of instances in a namespace
+	GetInstances(namespace string) ([]models.Instance, error)
+	// Leave removes an instance
+	Leave(namespace, instanceName string) error
+	// GetHash returns hash of all instances
+	GetHash(namespace string) (string, error)
+}

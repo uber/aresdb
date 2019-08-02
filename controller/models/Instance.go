@@ -16,4 +16,7 @@ package models
 // Instance is the external view of instances
 type Instance struct {
 	Address string `json:"address"`
+	Host    string `json:"host"`
+	Port    uint32 `json:"port"`
+	Name    string `json:"name"`
 }

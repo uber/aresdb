@@ -5,7 +5,7 @@ import (
 	"github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/mock"
 	cCliMocks "github.com/uber/aresdb/controller/client/mocks"
-	cMuMocks "github.com/uber/aresdb/controller/mutators/common/mocks"
+	cMuMocks "github.com/uber/aresdb/controller/mutators/mocks"
 	memMocks "github.com/uber/aresdb/memstore/common/mocks"
 	"github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
