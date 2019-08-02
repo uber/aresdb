@@ -17,7 +17,6 @@ package common
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/memstore/vectors"
 )
 
 var _ = ginkgo.Describe("upsert batch header tests", func() {
@@ -25,7 +24,7 @@ var _ = ginkgo.Describe("upsert batch header tests", func() {
 		header := UpsertBatchHeader{
 			modeVector: []byte{0},
 		}
-		columnMode := vectors.AllValuesDefault
+		columnMode := AllValuesDefault
 		columnUpdateMode := UpdateOverwriteNotNull
 		header.WriteColumnFlag(columnMode, columnUpdateMode, 0)
 		newMode, newUpdateMode, err := header.ReadColumnFlag(0)
@@ -33,7 +32,7 @@ var _ = ginkgo.Describe("upsert batch header tests", func() {
 		Ω(newMode).Should(Equal(columnMode))
 		Ω(newUpdateMode).Should(Equal(columnUpdateMode))
 
-		columnMode = vectors.HasNullVector
+		columnMode = HasNullVector
 		columnUpdateMode = UpdateWithMax
 		header.WriteColumnFlag(columnMode, columnUpdateMode, 0)
 		newMode, newUpdateMode, err = header.ReadColumnFlag(0)
@@ -41,7 +40,7 @@ var _ = ginkgo.Describe("upsert batch header tests", func() {
 		Ω(newMode).Should(Equal(columnMode))
 		Ω(newUpdateMode).Should(Equal(columnUpdateMode))
 
-		columnMode = vectors.HasNullVector
+		columnMode = HasNullVector
 		columnUpdateMode = MaxColumnUpdateMode
 		header.WriteColumnFlag(columnMode, columnUpdateMode, 0)
 		newMode, newUpdateMode, err = header.ReadColumnFlag(0)
@@ -49,7 +48,7 @@ var _ = ginkgo.Describe("upsert batch header tests", func() {
 		Ω(newMode).Should(Equal(columnMode))
 		Ω(newUpdateMode).Should(Equal(columnUpdateMode))
 
-		columnMode = vectors.MaxColumnMode
+		columnMode = MaxColumnMode
 		columnUpdateMode = UpdateWithMax
 		header.WriteColumnFlag(columnMode, columnUpdateMode, 0)
 		newMode, newUpdateMode, err = header.ReadColumnFlag(0)

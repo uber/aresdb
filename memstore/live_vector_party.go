@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memstore/list"
-	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"os"
@@ -91,7 +90,7 @@ func (vp *goLiveVectorParty) Allocate(hasCount bool) {
 // SetDataValue implements SetDataValue in VectorParty interface
 // liveVectorParty ignores countsUpdateMode or counts
 func (vp *goLiveVectorParty) SetDataValue(offset int, value common.DataValue,
-	countsUpdateMode vectors.ValueCountsUpdateMode, counts ...uint32) {
+	countsUpdateMode common.ValueCountsUpdateMode, counts ...uint32) {
 	vp.SetGoValue(offset, value.GoVal, value.Valid)
 }
 
@@ -165,7 +164,7 @@ func (vp *goLiveVectorParty) GetBytes() int64 {
 }
 
 // Slice implements Slice in VectorParty interface
-func (vp *goLiveVectorParty) Slice(startRow, numRows int) vectors.SlicedVector {
+func (vp *goLiveVectorParty) Slice(startRow, numRows int) common.SlicedVector {
 	beginIndex := startRow
 	// size is the number of entries in the vector,
 	size := vp.length - beginIndex
@@ -176,7 +175,7 @@ func (vp *goLiveVectorParty) Slice(startRow, numRows int) vectors.SlicedVector {
 		size = numRows
 	}
 
-	vector := vectors.SlicedVector{
+	vector := common.SlicedVector{
 		Values: make([]interface{}, size),
 		Counts: make([]int, size),
 	}
@@ -239,7 +238,7 @@ func (vp *goLiveVectorParty) Write(writer io.Writer) error {
 }
 
 // Read implements Read in VectorParty interface
-func (vp *goLiveVectorParty) Read(reader io.Reader, serializer vectors.VectorPartySerializer) error {
+func (vp *goLiveVectorParty) Read(reader io.Reader, serializer common.VectorPartySerializer) error {
 	dataReader := utils.NewStreamDataReader(reader)
 	// read total bytes for reporting during loading
 	totalBytes, err := dataReader.ReadUint64()
@@ -290,7 +289,7 @@ func (vp *goLiveVectorParty) SafeDestruct() {
 }
 
 // Equals implements Equals in VectorParty interface
-func (vp *goLiveVectorParty) Equals(other vectors.VectorParty) bool {
+func (vp *goLiveVectorParty) Equals(other common.VectorParty) bool {
 	if vp == nil || other == nil {
 		return vp == nil && other == nil
 	}
@@ -335,7 +334,7 @@ func (vp *goLiveVectorParty) Dump(file *os.File) {
 }
 
 // NewLiveVectorParty creates LiveVectorParty
-func NewLiveVectorParty(length int, dataType common.DataType, defaultValue common.DataValue, hostMemoryManager common.HostMemoryManager) vectors.LiveVectorParty {
+func NewLiveVectorParty(length int, dataType common.DataType, defaultValue common.DataValue, hostMemoryManager common.HostMemoryManager) common.LiveVectorParty {
 	isGoType := common.IsGoType(dataType)
 	if isGoType {
 		return newGoLiveVetorParty(length, dataType, hostMemoryManager)

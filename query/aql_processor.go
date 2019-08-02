@@ -16,7 +16,6 @@ package query
 
 import (
 	"github.com/uber/aresdb/cgoutils"
-	"github.com/uber/aresdb/memstore/vectors"
 	"math"
 	"unsafe"
 
@@ -38,7 +37,7 @@ const (
 // from host memory to device memory. hostVPs will be the columns to be released after transfer. startRow
 // is used to slice the vector party.
 type batchTransferExecutor func(stream unsafe.Pointer) (deviceColumns []deviceVectorPartySlice,
-	hostVPs []vectors.VectorParty, firstColumn, startRow, totalBytes, numTransfers, sizeAfterPrefilter int)
+	hostVPs []memCom.VectorParty, firstColumn, startRow, totalBytes, numTransfers, sizeAfterPrefilter int)
 
 // customFilterExecutor is the functor to apply custom filters depends on the batch type. For archive batch,
 // the custom filter will be the time filter and will only be applied to first or last batch. For live batch,
@@ -504,7 +503,7 @@ func (qc *AQLQueryContext) prepareTimezoneTable(store memstore.MemStore) {
 // size of the batch or num records in last batch. hostColumns will always be empty since we should not release a vector
 // party of a live batch. Start row will always be zero as well.
 func (qc *AQLQueryContext) transferLiveBatch(batch *memstore.LiveBatch, size int) batchTransferExecutor {
-	return func(stream unsafe.Pointer) (deviceColumns []deviceVectorPartySlice, hostVPs []vectors.VectorParty,
+	return func(stream unsafe.Pointer) (deviceColumns []deviceVectorPartySlice, hostVPs []memCom.VectorParty,
 		firstColumn, startRow, totalBytes, numTransfers, sizeAfterPrefilter int) {
 		// Allocate column inputs.
 		firstColumn = -1
@@ -563,7 +562,7 @@ func (qc *AQLQueryContext) liveBatchCustomFilterExecutor(cutoff uint32) customFi
 // hostColumns after transfer completes.
 func (qc *AQLQueryContext) transferArchiveBatch(batch *memstore.ArchiveBatch,
 	isFirstOrLast bool) batchTransferExecutor {
-	return func(stream unsafe.Pointer) (deviceSlices []deviceVectorPartySlice, hostVPs []vectors.VectorParty,
+	return func(stream unsafe.Pointer) (deviceSlices []deviceVectorPartySlice, hostVPs []memCom.VectorParty,
 		firstColumn, startRow, totalBytes, numTransfers, sizeAfterPreFilter int) {
 		matchedColumnUsages := columnUsedByAllBatches
 		if isFirstOrLast {
@@ -572,8 +571,8 @@ func (qc *AQLQueryContext) transferArchiveBatch(batch *memstore.ArchiveBatch,
 
 		// Request columns, prefilter-slicing, allocate column inputs.
 		firstColumn = -1
-		hostVPs = make([]vectors.VectorParty, len(qc.TableScanners[0].Columns))
-		hostSlices := make([]vectors.HostVectorPartySlice, len(qc.TableScanners[0].Columns))
+		hostVPs = make([]memCom.VectorParty, len(qc.TableScanners[0].Columns))
+		hostSlices := make([]memCom.HostVectorPartySlice, len(qc.TableScanners[0].Columns))
 		deviceSlices = make([]deviceVectorPartySlice, len(qc.TableScanners[0].Columns))
 		endRow := batch.Size
 		prefilterIndex := 0
@@ -869,7 +868,7 @@ func (qc *AQLQueryContext) processBatch(
 	for _, vp := range hostVPs {
 		if vp != nil {
 			// only archive vector party will be returned after transfer function
-			vp.(vectors.ArchiveVectorParty).Release()
+			vp.(memCom.ArchiveVectorParty).Release()
 		}
 	}
 
@@ -913,7 +912,7 @@ func (qc *AQLQueryContext) processBatch(
 // 3. binary search on unmatched compressed columns for the row number range
 // 4. index slice on uncompressed columns for the row number range
 // 5. align/pad all slices to be pushed
-func (qc *AQLQueryContext) prefilterSlice(vp vectors.ArchiveVectorParty, prefilterIndex, startRow, endRow int) (int, int, vectors.HostVectorPartySlice) {
+func (qc *AQLQueryContext) prefilterSlice(vp memCom.ArchiveVectorParty, prefilterIndex, startRow, endRow int) (int, int, memCom.HostVectorPartySlice) {
 	startIndex, endIndex := 0, vp.GetLength()
 
 	unmatchedColumn := false
@@ -1064,7 +1063,7 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 	columnMemUsage := 0
 	var firstColumnSize int
 	startRow, endRow := 0, batch.Size
-	var hostSlice vectors.HostVectorPartySlice
+	var hostSlice memCom.HostVectorPartySlice
 
 	matchedColumnUsages := columnUsedByAllBatches
 	if isFirstOrLast {
@@ -1321,7 +1320,7 @@ func (qc *AQLQueryContext) runBatchExecutor(e BatchExecutor, isLastBatch bool) {
 }
 
 // copyHostToDevice copy vector party slice to device vector party slice
-func copyHostToDevice(vps vectors.HostVectorPartySlice, deviceVPSlice deviceVectorPartySlice, stream unsafe.Pointer, device int) (bytesCopied, numTransfers int) {
+func copyHostToDevice(vps memCom.HostVectorPartySlice, deviceVPSlice deviceVectorPartySlice, stream unsafe.Pointer, device int) (bytesCopied, numTransfers int) {
 	if vps.ValueBytes > 0 {
 		cgoutils.AsyncCopyHostToDevice(
 			deviceVPSlice.values.getPointer(), vps.Values, vps.ValueBytes,
@@ -1346,7 +1345,7 @@ func copyHostToDevice(vps vectors.HostVectorPartySlice, deviceVPSlice deviceVect
 	return
 }
 
-func hostToDeviceColumn(hostColumn vectors.HostVectorPartySlice, device int) deviceVectorPartySlice {
+func hostToDeviceColumn(hostColumn memCom.HostVectorPartySlice, device int) deviceVectorPartySlice {
 	deviceColumn := deviceVectorPartySlice{
 		length:          hostColumn.Length,
 		valueType:       hostColumn.ValueType,
@@ -1449,7 +1448,7 @@ func shouldSkipLiveBatchWithFilter(b *memstore.LiveBatch, filter expr.Expr) bool
 			}
 
 			num := int64(numExpr.Int)
-			minUint32, maxUint32 := vp.(vectors.LiveVectorParty).GetMinMaxValue()
+			minUint32, maxUint32 := vp.(memCom.LiveVectorParty).GetMinMaxValue()
 			min, max := int64(minUint32), int64(maxUint32)
 			switch op {
 			case expr.GTE:

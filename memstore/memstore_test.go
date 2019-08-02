@@ -15,7 +15,6 @@
 package memstore
 
 import (
-	"github.com/uber/aresdb/memstore/vectors"
 	"unsafe"
 
 	"github.com/stretchr/testify/mock"
@@ -108,7 +107,7 @@ func ReadShardBool(shard *TableShard, columnID int, primaryKey []byte) (bool, bo
 }
 
 // Read the vector party and record index.
-func getVectorParty(shard *TableShard, columnID int, primaryKey []byte) (vectors.VectorParty, int) {
+func getVectorParty(shard *TableShard, columnID int, primaryKey []byte) (memCom.VectorParty, int) {
 	existing, record, err := shard.LiveStore.PrimaryKey.FindOrInsert(primaryKey, memCom.RecordID{}, uint32(utils.Now().Unix()/1000))
 	if err != nil || !existing {
 		return nil, 0

@@ -65,7 +65,7 @@ func (t TestFactoryT) NewMockMemStore() *memStoreImpl {
 	return NewMemStore(metaStore, diskStore, NewOptions(bootstrapToken, redoLogManagerMaster)).(*memStoreImpl)
 }
 
-func toArchiveVectorParty(vp vectors.VectorParty, locker sync.Locker) vectors.ArchiveVectorParty {
+func toArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.ArchiveVectorParty {
 	if vp.IsList() {
 		return list.ToArrayArchiveVectorParty(vp, locker)
 	}
@@ -77,7 +77,7 @@ func toArchiveVectorParty(vp vectors.VectorParty, locker sync.Locker) vectors.Ar
 	return archiveColumn
 }
 
-func toLiveVectorParty(vp vectors.VectorParty) vectors.LiveVectorParty {
+func toLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
 	if vp.IsList() {
 		return list.ToArrayLiveVectorParty(vp)
 	}
@@ -86,7 +86,7 @@ func toLiveVectorParty(vp vectors.VectorParty) vectors.LiveVectorParty {
 	}
 }
 
-func toVectorParty(rvp *RawVectorParty, forLiveVP bool) (vectors.VectorParty, error) {
+func toVectorParty(rvp *tests.RawVectorParty, forLiveVP bool) (memCom.VectorParty, error) {
 	dataType := memCom.DataTypeFromString(rvp.DataType)
 	if dataType == memCom.Unknown {
 		return nil, utils.StackError(nil,
@@ -107,13 +107,13 @@ func toVectorParty(rvp *RawVectorParty, forLiveVP bool) (vectors.VectorParty, er
 	}
 
 	var countsVec *vectors.Vector
-	columnMode := vectors.HasNullVector
+	columnMode := memCom.HasNullVector
 	if rvp.HasCounts {
 		countsVec = vectors.NewVector(
 			memCom.Uint32,
 			rvp.Length+1,
 		)
-		columnMode = vectors.HasCountVector
+		columnMode = memCom.HasCountVector
 	}
 
 	vp := &cVectorParty{
@@ -169,10 +169,10 @@ func toVectorParty(rvp *RawVectorParty, forLiveVP bool) (vectors.VectorParty, er
 			}
 			setDataValue(countsVec, i+1, currentCountVal)
 			currentCount := *(*uint32)(currentCountVal.OtherVal)
-			vp.SetDataValue(i, val, vectors.IncrementCount, currentCount-prevCount)
+			vp.SetDataValue(i, val, memCom.IncrementCount, currentCount-prevCount)
 			prevCount = currentCount
 		} else {
-			vp.SetDataValue(i, val, vectors.IncrementCount)
+			vp.SetDataValue(i, val, memCom.IncrementCount)
 		}
 	}
 

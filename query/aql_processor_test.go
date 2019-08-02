@@ -17,7 +17,6 @@ package query
 import (
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/cluster/topology"
-	"github.com/uber/aresdb/memstore/vectors"
 	"unsafe"
 
 	"encoding/binary"
@@ -1331,11 +1330,11 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		isPointValid := [5]bool{true, true, true, true, false}
 		for i := 0; i < 5; i++ {
 			requestTime := uint32(0)
-			tripTimeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&requestTime)}, vectors.IgnoreCount)
+			tripTimeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&requestTime)}, memCom.IgnoreCount)
 			if isPointValid[i] {
-				pointLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&points[i])}, vectors.IgnoreCount)
+				pointLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&points[i])}, memCom.IgnoreCount)
 			} else {
-				pointLiveVP.SetDataValue(i, memCom.NullDataValue, vectors.IgnoreCount)
+				pointLiveVP.SetDataValue(i, memCom.NullDataValue, memCom.IgnoreCount)
 			}
 		}
 
@@ -1349,7 +1348,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					memstore.BaseBatchID: {
 						Batch: memCom.Batch{
 							RWMutex: &sync.RWMutex{},
-							Columns: []vectors.VectorParty{
+							Columns: []memCom.VectorParty{
 								tripTimeLiveVP,
 								pointLiveVP,
 							},
@@ -1413,7 +1412,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			memstore.BaseBatchID: {
 				Batch: memCom.Batch{
 					RWMutex: &sync.RWMutex{},
-					Columns: []vectors.VectorParty{
+					Columns: []memCom.VectorParty{
 						shapeUUIDLiveVP,
 						shapeLiveVP,
 					},
@@ -1424,8 +1423,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		geoFenceTableShard.LiveStore = geoFenceLiveStore
 		for i := 0; i < 3; i++ {
 			uuidValue, _ := memCom.ValueFromString(shapeUUIDs[i], memCom.UUID)
-			shapeUUIDLiveVP.SetDataValue(i, uuidValue, vectors.IgnoreCount)
-			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, vectors.IgnoreCount)
+			shapeUUIDLiveVP.SetDataValue(i, uuidValue, memCom.IgnoreCount)
+			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, memCom.IgnoreCount)
 			key, err := memCom.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
 			Ω(err).Should(BeNil())
 			geoFenceLiveStore.PrimaryKey.FindOrInsert(
@@ -1597,11 +1596,11 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		isPointValid := [5]bool{true, true, true, true, false}
 		for i := 0; i < 5; i++ {
 			requestTime := uint32(0)
-			tripTimeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&requestTime)}, vectors.IgnoreCount)
+			tripTimeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&requestTime)}, memCom.IgnoreCount)
 			if isPointValid[i] {
-				pointLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&points[i])}, vectors.IgnoreCount)
+				pointLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&points[i])}, memCom.IgnoreCount)
 			} else {
-				pointLiveVP.SetDataValue(i, memCom.NullDataValue, vectors.IgnoreCount)
+				pointLiveVP.SetDataValue(i, memCom.NullDataValue, memCom.IgnoreCount)
 			}
 		}
 
@@ -1615,7 +1614,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					memstore.BaseBatchID: {
 						Batch: memCom.Batch{
 							RWMutex: &sync.RWMutex{},
-							Columns: []vectors.VectorParty{
+							Columns: []memCom.VectorParty{
 								tripTimeLiveVP,
 								pointLiveVP,
 							},
@@ -1679,7 +1678,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			memstore.BaseBatchID: {
 				Batch: memCom.Batch{
 					RWMutex: &sync.RWMutex{},
-					Columns: []vectors.VectorParty{
+					Columns: []memCom.VectorParty{
 						shapeUUIDLiveVP,
 						shapeLiveVP,
 					},
@@ -1690,8 +1689,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		geoFenceTableShard.LiveStore = geoFenceLiveStore
 		for i := 0; i < 3; i++ {
 			uuidValue, _ := memCom.ValueFromString(shapeUUIDs[i], memCom.UUID)
-			shapeUUIDLiveVP.SetDataValue(i, uuidValue, vectors.IgnoreCount)
-			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, vectors.IgnoreCount)
+			shapeUUIDLiveVP.SetDataValue(i, uuidValue, memCom.IgnoreCount)
+			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, memCom.IgnoreCount)
 			key, err := memCom.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
 			Ω(err).Should(BeNil())
 			geoFenceLiveStore.PrimaryKey.FindOrInsert(
@@ -1861,7 +1860,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		batch := &memstore.LiveBatch{
 			Batch: memCom.Batch{
 				RWMutex: &sync.RWMutex{},
-				Columns: []vectors.VectorParty{
+				Columns: []memCom.VectorParty{
 					column0,
 					column1,
 					nil,
@@ -1985,11 +1984,11 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		isPointValid := [6]bool{true, true, true, true, true, false}
 		for i := 0; i < 6; i++ {
 			requestTime := uint32(0)
-			tripTimeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&requestTime)}, vectors.IgnoreCount)
+			tripTimeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&requestTime)}, memCom.IgnoreCount)
 			if isPointValid[i] {
-				pointLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&points[i])}, vectors.IgnoreCount)
+				pointLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&points[i])}, memCom.IgnoreCount)
 			} else {
-				pointLiveVP.SetDataValue(i, memCom.NullDataValue, vectors.IgnoreCount)
+				pointLiveVP.SetDataValue(i, memCom.NullDataValue, memCom.IgnoreCount)
 			}
 		}
 
@@ -2003,7 +2002,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					memstore.BaseBatchID: {
 						Batch: memCom.Batch{
 							RWMutex: &sync.RWMutex{},
-							Columns: []vectors.VectorParty{
+							Columns: []memCom.VectorParty{
 								tripTimeLiveVP,
 								pointLiveVP,
 							},

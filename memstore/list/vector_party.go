@@ -89,14 +89,14 @@ func (vp *baseVectorParty) GetLength() int {
 // Slice vector party into human readable SlicedVector format. For now just return an
 // empty slice.
 // TODO(lucafuji): implement slice vector on list vp.
-func (vp *baseVectorParty) Slice(startRow, numRows int) vectors.SlicedVector {
-	return vectors.SlicedVector{}
+func (vp *baseVectorParty) Slice(startRow, numRows int) common.SlicedVector {
+	return common.SlicedVector{}
 }
 
 // Check whether two vector parties are equal (used only in unit tests)
 // Check common properties like data type and length.
 // leftVP is vp underneath
-func (vp *baseVectorParty) equals(other vectors.VectorParty, leftVP vectors.ListVectorParty) bool {
+func (vp *baseVectorParty) equals(other common.VectorParty, leftVP common.ListVectorParty) bool {
 	if !other.IsList() {
 		return false
 	}

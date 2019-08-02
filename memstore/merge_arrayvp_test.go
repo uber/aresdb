@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/memstore/list"
-	"github.com/uber/aresdb/memstore/vectors"
 	"sync"
 	"unsafe"
 )
@@ -68,8 +67,8 @@ var _ = ginkgo.Describe("merge", func() {
 		"[27,28]",
 	}
 
-	createArrayVP := func(dataType common.DataType, strVals []string, isLive bool) vectors.VectorParty {
-		var vp vectors.VectorParty
+	createArrayVP := func(dataType common.DataType, strVals []string, isLive bool) common.VectorParty {
+		var vp common.VectorParty
 		if isLive {
 			vp = list.NewLiveVectorParty(len(strVals), dataType, hostMemoryManager)
 		} else {
@@ -79,12 +78,12 @@ var _ = ginkgo.Describe("merge", func() {
 		vp.Allocate(false)
 		for i, str := range strVals {
 			val, _ := common.ValueFromString(str, dataType)
-			vp.SetDataValue(i, val, vectors.IgnoreCount)
+			vp.SetDataValue(i, val, common.IgnoreCount)
 		}
 		return vp
 	}
 
-	createSortedVP := func(vals [][]uint16, isLive bool) vectors.VectorParty {
+	createSortedVP := func(vals [][]uint16, isLive bool) common.VectorParty {
 		if isLive {
 			var length int
 			for _, val := range vals {
@@ -111,7 +110,7 @@ var _ = ginkgo.Describe("merge", func() {
 				Valid:    true,
 				DataType: common.Uint16,
 			}
-			vp.SetDataValue(index, dataValue, vectors.IncrementCount)
+			vp.SetDataValue(index, dataValue, common.IncrementCount)
 			count += uint32(val[1])
 			vp.SetCount(index, count)
 		}
@@ -126,7 +125,7 @@ var _ = ginkgo.Describe("merge", func() {
 
 		batch0 = &common.Batch{
 			RWMutex: &sync.RWMutex{},
-			Columns: []vectors.VectorParty{
+			Columns: []common.VectorParty{
 				createSortedVP(sortColumnVals01, false),
 				createSortedVP(sortColumnVals11, false),
 				createArrayVP(common.ArrayUint8, strVals1, false),
@@ -138,7 +137,7 @@ var _ = ginkgo.Describe("merge", func() {
 		}
 		batch1 = &common.Batch{
 			RWMutex: &sync.RWMutex{},
-			Columns: []vectors.VectorParty{
+			Columns: []common.VectorParty{
 				createSortedVP(sortColumnVals02, true),
 				createSortedVP(sortColumnVals12, true),
 				createArrayVP(common.ArrayUint8, strVals2, true),
@@ -180,7 +179,7 @@ var _ = ginkgo.Describe("merge", func() {
 		}
 
 		expectedBatch = &common.Batch{
-			Columns: []vectors.VectorParty{
+			Columns: []common.VectorParty{
 				createSortedVP(mergedCol0, false),
 				createSortedVP(mergedCol1, false),
 				createArrayVP(common.ArrayUint8, mergedVals, false),

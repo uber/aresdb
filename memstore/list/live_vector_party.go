@@ -119,7 +119,7 @@ func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 	}
 
 	// columnMode, AllValuesPresent for now
-	columnMode := vectors.AllValuesPresent
+	columnMode := common.AllValuesPresent
 	if err = dataWriter.WriteUint16(uint16(columnMode)); err != nil {
 		return
 	}
@@ -168,7 +168,7 @@ func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 }
 
 // Read deserialize vector party
-func (vp *LiveVectorParty) Read(reader io.Reader, serializer vectors.VectorPartySerializer) (err error) {
+func (vp *LiveVectorParty) Read(reader io.Reader, serializer common.VectorPartySerializer) (err error) {
 	vp.Lock()
 	defer vp.Unlock()
 
@@ -216,8 +216,8 @@ func (vp *LiveVectorParty) Read(reader io.Reader, serializer vectors.VectorParty
 		return
 	}
 
-	columnMode := vectors.ColumnMode(m)
-	if columnMode >= vectors.MaxColumnMode {
+	columnMode := common.ColumnMode(m)
+	if columnMode >= common.MaxColumnMode {
 		return utils.StackError(nil, "Invalid mode %d", columnMode)
 	}
 
@@ -308,12 +308,12 @@ func (vp *LiveVectorParty) SetValue(row int, val unsafe.Pointer, valid bool) {
 }
 
 // AsList is the implementation from common.VectorParty
-func (vp *LiveVectorParty) AsList() vectors.ListVectorParty {
+func (vp *LiveVectorParty) AsList() common.ListVectorParty {
 	return vp
 }
 
 // Equals is the implementation from common.VectorParty
-func (vp *LiveVectorParty) Equals(other vectors.VectorParty) bool {
+func (vp *LiveVectorParty) Equals(other common.VectorParty) bool {
 	return vp.equals(other, vp.AsList())
 }
 
@@ -366,7 +366,7 @@ func (vp *LiveVectorParty) GetDataValue(row int) common.DataValue {
 
 // SetDataValue
 func (vp *LiveVectorParty) SetDataValue(row int, value common.DataValue,
-	countsUpdateMode vectors.ValueCountsUpdateMode, counts ...uint32) {
+	countsUpdateMode common.ValueCountsUpdateMode, counts ...uint32) {
 	vp.SetValue(row, value.OtherVal, value.Valid)
 }
 
@@ -404,7 +404,7 @@ func (vp *LiveVectorParty) SetLength(length int) {
 // NewLiveVectorParty returns a LiveVectorParty pointer which implements ListVectorParty.
 // It's safe to pass nil HostMemoryManager.
 func NewLiveVectorParty(length int, dataType common.DataType,
-	hmm common.HostMemoryManager) vectors.LiveVectorParty {
+	hmm common.HostMemoryManager) common.LiveVectorParty {
 	return &LiveVectorParty{
 		baseVectorParty: baseVectorParty{
 			length:   length,

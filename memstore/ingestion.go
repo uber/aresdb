@@ -16,7 +16,6 @@ package memstore
 
 import (
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"math"
 	"strconv"
@@ -400,7 +399,7 @@ func (shard *TableShard) writeBatchRecords(columnDeletions []bool,
 		// we will skip processing this column if
 		// 1. columnMode is AllValuesDefault
 		// 2. columnUpdateMode is UpdateOverwriteNotNull
-		if columnMode == vectors.AllValuesDefault && columnUpdateMode == common.UpdateOverwriteNotNull {
+		if columnMode == common.AllValuesDefault && columnUpdateMode == common.UpdateOverwriteNotNull {
 			continue
 		}
 

@@ -18,7 +18,6 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memstore/vectors"
 	"sync"
 )
 
@@ -780,7 +779,7 @@ var _ = ginkgo.Describe("merge", func() {
 
 		// Column 0 should be a mode 0 vector.
 		Ω(ctx.merged.Columns[0].GetLength()).Should(BeEquivalentTo(8))
-		Ω(ctx.merged.Columns[0].(*archiveVectorParty).JudgeMode()).Should(Equal(vectors.AllValuesDefault))
+		Ω(ctx.merged.Columns[0].(*archiveVectorParty).JudgeMode()).Should(Equal(common.AllValuesDefault))
 		Ω(ctx.merged.Columns[1].Equals(noSortColumnMerged.Columns[1])).Should(BeTrue())
 	})
 

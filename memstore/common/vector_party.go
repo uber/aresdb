@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vectors
+package common
 
 import (
 	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/memstore/common"
 	"io"
 	"os"
 	"unsafe"
@@ -49,8 +48,8 @@ type HostVectorPartySlice struct {
 	// The length of the count vector is Length+1
 	Counts       unsafe.Pointer
 	Length       int
-	ValueType    common.DataType
-	DefaultValue common.DataValue
+	ValueType    DataType
+	DefaultValue DataValue
 
 	ValueStartIndex int
 	NullStartIndex  int
@@ -108,20 +107,20 @@ type VectorParty interface {
 	// It first check validity of the value, then it check whether it's a
 	// boolean column to decide whether to load bool value or other value
 	// type. Index bound is not checked!
-	GetDataValue(offset int) common.DataValue
+	GetDataValue(offset int) DataValue
 	// SetDataValue writes a data value at given offset. Third parameter count should
 	// only be passed for compressed columns. checkValueCount is a flag to tell whether
 	// need to check value count (NonDefaultValueCount and ValidValueCount) while setting
 	// the value. It should be true for archive store and false for live store. **This does
 	// not set the count vector as this is not accumulated count.**
-	SetDataValue(offset int, value common.DataValue, countsUpdateMode ValueCountsUpdateMode, counts ...uint32)
+	SetDataValue(offset int, value DataValue, countsUpdateMode ValueCountsUpdateMode, counts ...uint32)
 	// GetDataValueByRow returns the DataValue for the specified row. It will do binary
 	// search on the count vector to find the correct offset if this is a mode 3 vector
 	// party. Otherwise it will behave same as GetDataValue.
 	// Caller needs to ensure row is within valid range.
-	GetDataValueByRow(row int) common.DataValue
+	GetDataValueByRow(row int) DataValue
 
-	GetDataType() common.DataType
+	GetDataType() DataType
 	GetLength() int
 	GetBytes() int64
 
@@ -169,7 +168,7 @@ type LiveVectorParty interface {
 	// Set value via a unsafe.Pointer directly.
 	SetValue(offset int, val unsafe.Pointer, valid bool)
 	// Set go value directly.
-	SetGoValue(offset int, val common.GoDataValue, valid bool)
+	SetGoValue(offset int, val GoDataValue, valid bool)
 	// Get value directly
 	GetValue(offset int) (unsafe.Pointer, bool)
 	// GetMinMaxValue get min and max value,
@@ -202,7 +201,7 @@ type ArchiveVectorParty interface {
 	CopyOnWrite(batchSize int) ArchiveVectorParty
 	// LoadFromDisk start loading vector party from disk,
 	// this is a non-blocking operation
-	LoadFromDisk(hostMemManager common.HostMemoryManager, diskStore diskstore.DiskStore, table string, shardID int, columnID, batchID int, batchVersion uint32, seqNum uint32)
+	LoadFromDisk(hostMemManager HostMemoryManager, diskStore diskstore.DiskStore, table string, shardID int, columnID, batchID int, batchVersion uint32, seqNum uint32)
 	// WaitForDiskLoad waits for vector party disk load to finish
 	WaitForDiskLoad()
 	// Prune prunes vector party based on column mode to clean memory if possible

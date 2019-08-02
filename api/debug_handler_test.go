@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/uber/aresdb/cluster/topology"
-	"github.com/uber/aresdb/memstore/vectors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -172,11 +171,11 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		liveBatch := testShard.LiveStore.GetBatchForWrite(memstore.BaseBatchID)
 		liveBatch.Unlock()
 		vp := liveBatch.GetOrCreateVectorParty(5, false)
-		vp.SetDataValue(0, memCom.DataValue{Valid: true}, vectors.IgnoreCount)
+		vp.SetDataValue(0, memCom.DataValue{Valid: true}, memCom.IgnoreCount)
 
 		var val uint8 = 0
 		vp = liveBatch.GetOrCreateVectorParty(6, false)
-		vp.SetDataValue(0, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&val)}, vectors.IgnoreCount)
+		vp.SetDataValue(0, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&val)}, memCom.IgnoreCount)
 
 		// redolog table.
 		redoLogTable, err := testMetaStore.GetTable(redoLogTableName)

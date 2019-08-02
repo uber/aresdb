@@ -4,7 +4,6 @@ package mocks
 
 import (
 	"github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/memstore/vectors"
 )
 import "io"
 import "github.com/stretchr/testify/mock"
@@ -21,15 +20,15 @@ func (_m *VectorParty) Allocate(hasCount bool) {
 }
 
 // AsList provides a mock function with given fields:
-func (_m *VectorParty) AsList() vectors.ListVectorParty {
+func (_m *VectorParty) AsList() common.ListVectorParty {
 	ret := _m.Called()
 
-	var r0 vectors.ListVectorParty
-	if rf, ok := ret.Get(0).(func() vectors.ListVectorParty); ok {
+	var r0 common.ListVectorParty
+	if rf, ok := ret.Get(0).(func() common.ListVectorParty); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(vectors.ListVectorParty)
+			r0 = ret.Get(0).(common.ListVectorParty)
 		}
 	}
 
@@ -42,11 +41,11 @@ func (_m *VectorParty) Dump(file *os.File) {
 }
 
 // Equals provides a mock function with given fields: other
-func (_m *VectorParty) Equals(other vectors.VectorParty) bool {
+func (_m *VectorParty) Equals(other common.VectorParty) bool {
 	ret := _m.Called(other)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(vectors.VectorParty) bool); ok {
+	if rf, ok := ret.Get(0).(func(common.VectorParty) bool); ok {
 		r0 = rf(other)
 	} else {
 		r0 = ret.Get(0).(bool)
@@ -168,11 +167,11 @@ func (_m *VectorParty) IsList() bool {
 }
 
 // Read provides a mock function with given fields: reader, serializer
-func (_m *VectorParty) Read(reader io.Reader, serializer vectors.VectorPartySerializer) error {
+func (_m *VectorParty) Read(reader io.Reader, serializer common.VectorPartySerializer) error {
 	ret := _m.Called(reader, serializer)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(io.Reader, vectors.VectorPartySerializer) error); ok {
+	if rf, ok := ret.Get(0).(func(io.Reader, common.VectorPartySerializer) error); ok {
 		r0 = rf(reader, serializer)
 	} else {
 		r0 = ret.Error(0)
@@ -187,7 +186,7 @@ func (_m *VectorParty) SafeDestruct() {
 }
 
 // SetDataValue provides a mock function with given fields: offset, value, countsUpdateMode, counts
-func (_m *VectorParty) SetDataValue(offset int, value common.DataValue, countsUpdateMode vectors.ValueCountsUpdateMode, counts ...uint32) {
+func (_m *VectorParty) SetDataValue(offset int, value common.DataValue, countsUpdateMode common.ValueCountsUpdateMode, counts ...uint32) {
 	_va := make([]interface{}, len(counts))
 	for _i := range counts {
 		_va[_i] = counts[_i]
@@ -199,14 +198,14 @@ func (_m *VectorParty) SetDataValue(offset int, value common.DataValue, countsUp
 }
 
 // Slice provides a mock function with given fields: startRow, numRows
-func (_m *VectorParty) Slice(startRow int, numRows int) vectors.SlicedVector {
+func (_m *VectorParty) Slice(startRow int, numRows int) common.SlicedVector {
 	ret := _m.Called(startRow, numRows)
 
-	var r0 vectors.SlicedVector
-	if rf, ok := ret.Get(0).(func(int, int) vectors.SlicedVector); ok {
+	var r0 common.SlicedVector
+	if rf, ok := ret.Get(0).(func(int, int) common.SlicedVector); ok {
 		r0 = rf(startRow, numRows)
 	} else {
-		r0 = ret.Get(0).(vectors.SlicedVector)
+		r0 = ret.Get(0).(common.SlicedVector)
 	}
 
 	return r0

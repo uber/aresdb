@@ -16,7 +16,6 @@ package common
 
 import (
 	"fmt"
-	"github.com/uber/aresdb/memstore/vectors"
 	"os"
 	"sync"
 )
@@ -44,12 +43,12 @@ type Batch struct {
 	// mode 0 for the corresponding VectorParty.
 	// For archive batches, index out of bound and nil VectorParty indicates that
 	// the corresponding VectorParty has not been loaded into memory from disk.
-	Columns []vectors.VectorParty
+	Columns []VectorParty
 }
 
 // GetVectorParty returns the VectorParty for the specified column from
 // the batch. It requires the batch to be locked for reading.
-func (b *Batch) GetVectorParty(columnID int) vectors.VectorParty {
+func (b *Batch) GetVectorParty(columnID int) VectorParty {
 	if columnID >= len(b.Columns) {
 		return nil
 	}
@@ -102,7 +101,7 @@ func (b *Batch) Equals(other *Batch) bool {
 		return false
 	}
 	for columnID := range b.Columns {
-		if !vectors.VectorPartyEquals(b.Columns[columnID], other.Columns[columnID]) {
+		if !VectorPartyEquals(b.Columns[columnID], other.Columns[columnID]) {
 			return false
 		}
 	}

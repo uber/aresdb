@@ -16,7 +16,6 @@ package common
 
 import (
 	"github.com/uber/aresdb/diskstore"
-	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"os"
 )
@@ -35,11 +34,11 @@ type vectorPartyBaseSerializer struct {
 }
 
 // CheckVectorPartySerializable check if the archive VectorParty is serializable
-func (s *vectorPartyBaseSerializer) CheckVectorPartySerializable(vp vectors.VectorParty) error {
-	if cvp, ok := vp.(vectors.CVectorParty); ok {
+func (s *vectorPartyBaseSerializer) CheckVectorPartySerializable(vp VectorParty) error {
+	if cvp, ok := vp.(CVectorParty); ok {
 		passed := true
 		switch cvp.GetMode() {
-		case vectors.AllValuesDefault:
+		case AllValuesDefault:
 			passed = vp.GetNonDefaultValueCount() == 0
 		default:
 			passed = vp.GetNonDefaultValueCount() > 0
@@ -67,7 +66,7 @@ type vectorPartySnapshotSerializer struct {
 
 // NewVectorPartyArchiveSerializer returns a new VectorPartySerializer
 func NewVectorPartyArchiveSerializer(hostMemManager HostMemoryManager, diskStore diskstore.DiskStore, table string, shardID int,
-	columnID int, batchID int, batchVersion uint32, seqNum uint32) vectors.VectorPartySerializer {
+	columnID int, batchID int, batchVersion uint32, seqNum uint32) VectorPartySerializer {
 	return &vectorPartyArchiveSerializer{
 		vectorPartyBaseSerializer{
 			table:             table,
@@ -84,7 +83,7 @@ func NewVectorPartyArchiveSerializer(hostMemManager HostMemoryManager, diskStore
 
 // NewVectorPartySnapshotSerializer returns a new VectorPartySerializer
 func NewVectorPartySnapshotSerializer(hostMemeManager HostMemoryManager, diskStore diskstore.DiskStore, table string, shardID int,
-	columnID, batchID int, batchVersion uint32, seqNum uint32, redoLogFile int64, offset uint32) vectors.VectorPartySerializer {
+	columnID, batchID int, batchVersion uint32, seqNum uint32, redoLogFile int64, offset uint32) VectorPartySerializer {
 	return &vectorPartySnapshotSerializer{
 		vectorPartyBaseSerializer{
 			table:             table,
@@ -102,7 +101,7 @@ func NewVectorPartySnapshotSerializer(hostMemeManager HostMemoryManager, diskSto
 }
 
 // ReadVectorParty reads vector party from disk and set fields in passed-in vp.
-func (s *vectorPartyArchiveSerializer) ReadVectorParty(vp vectors.VectorParty) error {
+func (s *vectorPartyArchiveSerializer) ReadVectorParty(vp VectorParty) error {
 	if vp == nil {
 		return nil
 	}
@@ -120,7 +119,7 @@ func (s *vectorPartyArchiveSerializer) ReadVectorParty(vp vectors.VectorParty) e
 }
 
 // WriteVectorParty writes vector party to disk
-func (s *vectorPartyArchiveSerializer) WriteVectorParty(vp vectors.VectorParty) error {
+func (s *vectorPartyArchiveSerializer) WriteVectorParty(vp VectorParty) error {
 	if vp == nil {
 		return nil
 	}
@@ -140,7 +139,7 @@ func (s *vectorPartyArchiveSerializer) ReportVectorPartyMemoryUsage(bytes int64)
 }
 
 // WriteVectorParty writes snapshot vector party to disk
-func (s *vectorPartySnapshotSerializer) WriteVectorParty(vp vectors.VectorParty) error {
+func (s *vectorPartySnapshotSerializer) WriteVectorParty(vp VectorParty) error {
 	if vp == nil {
 		return nil
 	}
@@ -153,7 +152,7 @@ func (s *vectorPartySnapshotSerializer) WriteVectorParty(vp vectors.VectorParty)
 }
 
 // ReadVectorParty reads snapshot vector party from disk
-func (s *vectorPartySnapshotSerializer) ReadVectorParty(vp vectors.VectorParty) error {
+func (s *vectorPartySnapshotSerializer) ReadVectorParty(vp VectorParty) error {
 	if vp == nil {
 		return nil
 	}
@@ -167,7 +166,7 @@ func (s *vectorPartySnapshotSerializer) ReadVectorParty(vp vectors.VectorParty) 
 }
 
 // CheckVectorPartySerializable check if the snapshot VectorParty is serializable, which is always true for now
-func (s *vectorPartySnapshotSerializer) CheckVectorPartySerializable(vp vectors.VectorParty) error {
+func (s *vectorPartySnapshotSerializer) CheckVectorPartySerializable(vp VectorParty) error {
 	return nil
 }
 

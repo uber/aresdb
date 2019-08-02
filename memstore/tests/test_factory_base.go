@@ -33,9 +33,9 @@ type TestFactoryBase struct {
 	RootPath string
 	utils.FileSystem
 	// functions to do real vp conversion, need to pass in from caller
-	ToArchiveVectorParty func(vectors.VectorParty, sync.Locker) vectors.ArchiveVectorParty
-	ToLiveVectorParty    func(vectors.VectorParty) vectors.LiveVectorParty
-	ToVectorParty        func(*RawVectorParty, bool) (vectors.VectorParty, error)
+	ToArchiveVectorParty func(common.VectorParty, sync.Locker) common.ArchiveVectorParty
+	ToLiveVectorParty    func(common.VectorParty) common.LiveVectorParty
+	ToVectorParty        func(*RawVectorParty, bool) (common.VectorParty, error)
 }
 
 type rawBatch struct {
@@ -124,7 +124,7 @@ func (t TestFactoryBase) readBatchFromFile(path string, forLiveVP bool) (*common
 
 func (rb *rawBatch) toBatch(t TestFactoryBase, forLiveVP bool) (*common.Batch, error) {
 	batch := &common.Batch{
-		Columns: make([]vectors.VectorParty, len(rb.Columns)),
+		Columns: make([]common.VectorParty, len(rb.Columns)),
 	}
 	for i, name := range rb.Columns {
 		if len(name) == 0 {
@@ -143,7 +143,7 @@ func (rb *rawBatch) toBatch(t TestFactoryBase, forLiveVP bool) (*common.Batch, e
 }
 
 // ReadArchiveVectorParty loads a vector party and prune it after construction.
-func (t TestFactoryBase) ReadArchiveVectorParty(name string, locker sync.Locker) (vectors.ArchiveVectorParty, error) {
+func (t TestFactoryBase) ReadArchiveVectorParty(name string, locker sync.Locker) (common.ArchiveVectorParty, error) {
 	vp, err := t.ReadVectorParty(name, false)
 	if err != nil {
 		return nil, err
@@ -152,7 +152,7 @@ func (t TestFactoryBase) ReadArchiveVectorParty(name string, locker sync.Locker)
 }
 
 // ReadLiveVectorParty loads a vector party and skip pruning.
-func (t TestFactoryBase) ReadLiveVectorParty(name string) (vectors.LiveVectorParty, error) {
+func (t TestFactoryBase) ReadLiveVectorParty(name string) (common.LiveVectorParty, error) {
 	vp, err := t.ReadVectorParty(name, true)
 	if err != nil {
 		return nil, err
@@ -163,12 +163,12 @@ func (t TestFactoryBase) ReadLiveVectorParty(name string) (vectors.LiveVectorPar
 // ReadVectorParty returns a vector party given vector party name. Vector party
 // will be searched under testing/data/vps folder. Prune tells whether to prune this
 // column.
-func (t TestFactoryBase) ReadVectorParty(name string, forLiveVP bool) (vectors.VectorParty, error) {
+func (t TestFactoryBase) ReadVectorParty(name string, forLiveVP bool) (common.VectorParty, error) {
 	path := filepath.Join(t.RootPath, "vps", name)
 	return t.readVectorPartyFromFile(path, forLiveVP)
 }
 
-func (t TestFactoryBase) readVectorPartyFromFile(path string, forLiveVP bool) (vectors.VectorParty, error) {
+func (t TestFactoryBase) readVectorPartyFromFile(path string, forLiveVP bool) (common.VectorParty, error) {
 	fileContent, err := t.ReadFile(path)
 	if err != nil {
 		return nil, err

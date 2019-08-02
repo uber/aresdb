@@ -15,7 +15,6 @@
 package common
 
 import (
-	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -108,7 +107,7 @@ func (u *UpsertBatchHeader) WriteColumnID(value int, col int) error {
 }
 
 // WriteColumnFlag writes the mode of a column.
-func (u *UpsertBatchHeader) WriteColumnFlag(columnMode vectors.ColumnMode, columnUpdateMode ColumnUpdateMode, col int) error {
+func (u *UpsertBatchHeader) WriteColumnFlag(columnMode ColumnMode, columnUpdateMode ColumnUpdateMode, col int) error {
 	value := uint8(columnMode&0x07) | uint8((columnUpdateMode&0x07)<<3)
 	writer := utils.NewBufferWriter(u.modeVector)
 	err := writer.WriteUint8(value, col)
@@ -159,14 +158,14 @@ func (u UpsertBatchHeader) ReadColumnID(col int) (int, error) {
 }
 
 // ReadColumnFlag returns the mode for a column.
-func (u UpsertBatchHeader) ReadColumnFlag(col int) (vectors.ColumnMode, ColumnUpdateMode, error) {
+func (u UpsertBatchHeader) ReadColumnFlag(col int) (ColumnMode, ColumnUpdateMode, error) {
 	result, err := utils.NewBufferReader(u.modeVector).ReadUint8(col)
 	if err != nil {
 		return 0, 0, err
 	}
-	columnMode := vectors.ColumnMode(result & 0x0007)
+	columnMode := ColumnMode(result & 0x0007)
 	columnUpdateMode := ColumnUpdateMode((result >> 3) & 0x0007)
-	if columnMode >= vectors.MaxColumnMode {
+	if columnMode >= MaxColumnMode {
 		return columnMode, columnUpdateMode, utils.StackError(err, "Invalid column mode %d", columnMode)
 	} else if columnUpdateMode >= MaxColumnUpdateMode {
 		return columnMode, columnUpdateMode, utils.StackError(err, "Invalid column update mode %d", columnUpdateMode)

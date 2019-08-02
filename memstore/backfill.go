@@ -139,7 +139,7 @@ func (shard *TableShard) createNewArchiveStoreVersionForBackfill(
 	for day, patch := range backfillPatches {
 		baseBatch := shard.ArchiveStore.CurrentVersion.RequestBatch(day)
 
-		var requestedVPs []vectors.ArchiveVectorParty
+		var requestedVPs []memCom.ArchiveVectorParty
 		for columnID := 0; columnID < numColumns; columnID++ {
 			requestedVP := baseBatch.RequestVectorParty(columnID)
 			requestedVP.WaitForDiskLoad()
@@ -354,7 +354,7 @@ type backfillContext struct {
 	//  2. old columns in base batch for merging.
 	// if there are no columns to be purged, it means the base batch is clean and therefore we don't
 	// need to advance the version for this batch.
-	columnsToPurge []vectors.ArchiveVectorParty
+	columnsToPurge []memCom.ArchiveVectorParty
 
 	// keep track of how much unmanaged memory bytes this day uses.
 	// this does not include the temp primary key.
@@ -527,7 +527,7 @@ func (ctx *backfillContext) backfill(reporter BackfillJobDetailReporter, jobKey 
 	// in case we fork the column but does not invoke the merge procedure (which also call column.Prune()).
 	// column.Prune is idempotent so it's safe to call multiple times.
 	for _, column := range ctx.new.Columns {
-		column.(vectors.ArchiveVectorParty).Prune()
+		column.(memCom.ArchiveVectorParty).Prune()
 	}
 
 	// original baseRowDeleted is not sorted.
@@ -555,7 +555,7 @@ func (ctx *backfillContext) merge(reporter BackfillJobDetailReporter, jobKey str
 		ctx.defaultValues, ctx.baseRowDeleted)
 	mergeCtx.merge(ctx.new.Version, ctx.new.SeqNum)
 	for _, column := range ctx.new.Columns {
-		ctx.columnsToPurge = append(ctx.columnsToPurge, column.(vectors.ArchiveVectorParty))
+		ctx.columnsToPurge = append(ctx.columnsToPurge, column.(memCom.ArchiveVectorParty))
 	}
 	ctx.new = mergeCtx.merged
 	ctx.unmanagedMemoryBytes += mergeCtx.unmanagedMemoryBytes
@@ -635,7 +635,7 @@ func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID memCom
 				// For updates to unsorted columns, if the value changes, fork the column, and update in place
 				// in the forked copy, this will make sure that ongoing queries do not see this change.
 				if !ctx.columnsForked[columnID] {
-					ctx.columnsToPurge = append(ctx.columnsToPurge, ctx.base.Columns[columnID].(vectors.ArchiveVectorParty))
+					ctx.columnsToPurge = append(ctx.columnsToPurge, ctx.base.Columns[columnID].(memCom.ArchiveVectorParty))
 					// For the forked columns, we will always allocate space for value vector and null vector despite
 					// of the mode of the original vector.
 					var bytes int64
@@ -649,10 +649,10 @@ func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID memCom
 					ctx.unmanagedMemoryBytes += bytes
 					// Report before allocation.
 					ctx.backfillStore.HostMemoryManager.ReportUnmanagedSpaceUsageChange(bytes)
-					ctx.new.Columns[columnID] = ctx.base.Columns[columnID].(vectors.ArchiveVectorParty).CopyOnWrite(ctx.base.Size)
+					ctx.new.Columns[columnID] = ctx.base.Columns[columnID].(memCom.ArchiveVectorParty).CopyOnWrite(ctx.base.Size)
 					ctx.columnsForked[columnID] = true
 				}
-				ctx.new.Columns[columnID].SetDataValue(int(baseRecordID.Index), *patchValue, vectors.CheckExistingCount)
+				ctx.new.Columns[columnID].SetDataValue(int(baseRecordID.Index), *patchValue, memCom.CheckExistingCount)
 				updated = true
 			}
 		}
@@ -667,7 +667,7 @@ func (ctx backfillContext) applyChangedRowToLiveStore(recordID memCom.RecordID, 
 	for columnID, changedDataValue := range changedRow {
 		if changedDataValue != nil {
 			backfillStoreVP := backfillBatch.GetOrCreateVectorParty(columnID, true)
-			backfillStoreVP.SetDataValue(int(recordID.Index), *changedDataValue, vectors.IgnoreCount)
+			backfillStoreVP.SetDataValue(int(recordID.Index), *changedDataValue, memCom.IgnoreCount)
 		}
 	}
 }

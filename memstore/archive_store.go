@@ -16,7 +16,6 @@ package memstore
 
 import (
 	"encoding/json"
-	"github.com/uber/aresdb/memstore/vectors"
 	"sync"
 
 	"strconv"
@@ -198,13 +197,13 @@ func (v *ArchiveStoreVersion) MarshalJSON() ([]byte, error) {
 //
 // Caller must call vp.WaitForDiskLoad() before using it,
 // and call vp.Release() afterwards.
-func (b *ArchiveBatch) RequestVectorParty(columnID int) vectors.ArchiveVectorParty {
+func (b *ArchiveBatch) RequestVectorParty(columnID int) common.ArchiveVectorParty {
 	b.Lock()
 	defer b.Unlock()
 
 	// This is a newly added column. We need to allocate more space to put this column.
 	if columnID >= len(b.Columns) {
-		b.Columns = append(b.Columns, make([]vectors.VectorParty, columnID-len(b.Columns)+1)...)
+		b.Columns = append(b.Columns, make([]common.VectorParty, columnID-len(b.Columns)+1)...)
 	}
 
 	// archive batch always have archive batch
@@ -212,7 +211,7 @@ func (b *ArchiveBatch) RequestVectorParty(columnID int) vectors.ArchiveVectorPar
 
 	if vp != nil {
 		// Release lock on batch and wait for vector party to be loaded
-		archiveVP := vp.(vectors.ArchiveVectorParty)
+		archiveVP := vp.(common.ArchiveVectorParty)
 		archiveVP.Pin()
 		return archiveVP
 	}
@@ -228,7 +227,7 @@ func (b *ArchiveBatch) RequestVectorParty(columnID int) vectors.ArchiveVectorPar
 	}
 	b.Columns[columnID] = vp
 
-	archiveVP := vp.(vectors.ArchiveVectorParty)
+	archiveVP := vp.(common.ArchiveVectorParty)
 	archiveVP.Pin()
 	archiveVP.LoadFromDisk(b.Shard.HostMemoryManager, b.Shard.diskStore, b.Shard.Schema.Schema.Name, b.Shard.ShardID, columnID, int(b.BatchID), b.Version, b.SeqNum)
 
@@ -239,21 +238,21 @@ func (b *ArchiveBatch) RequestVectorParty(columnID int) vectors.ArchiveVectorPar
 // batch. It will fail fast if the column is currently in use so that host
 // memory manager can try evicting other VPs immediately.
 // Returns vector party evicted if succeeded.
-func (b *ArchiveBatch) TryEvict(columnID int) vectors.ArchiveVectorParty {
+func (b *ArchiveBatch) TryEvict(columnID int) common.ArchiveVectorParty {
 	return b.evict(columnID, false)
 }
 
 // BlockingDelete blocks until all users are finished with the specified column,
 // and then deletes the column from the batch.
 // Returns the vector party deleted if any.
-func (b *ArchiveBatch) BlockingDelete(columnID int) vectors.ArchiveVectorParty {
+func (b *ArchiveBatch) BlockingDelete(columnID int) common.ArchiveVectorParty {
 	return b.evict(columnID, true)
 }
 
 // evict attempts to evict and destruct the specified column from the archive
 // batch. It will block if the blocking is set to true, other wise it will fail
 // fast.
-func (b *ArchiveBatch) evict(columnID int, blocking bool) vectors.ArchiveVectorParty {
+func (b *ArchiveBatch) evict(columnID int, blocking bool) common.ArchiveVectorParty {
 	b.Lock()
 	defer b.Unlock()
 
@@ -266,7 +265,7 @@ func (b *ArchiveBatch) evict(columnID int, blocking bool) vectors.ArchiveVectorP
 		return nil
 	}
 
-	vp := rawVP.(vectors.ArchiveVectorParty)
+	vp := rawVP.(common.ArchiveVectorParty)
 	if !vp.WaitForUsers(blocking) {
 		return nil
 	}
@@ -381,9 +380,9 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 // for holding the lock (if necessary).
 func (b *ArchiveBatch) Clone() *ArchiveBatch {
 	newBatch := &ArchiveBatch{
-		Batch:  common.Batch{
+		Batch: common.Batch{
 			RWMutex: b.Batch.RWMutex,
-			Columns: make([]vectors.VectorParty, len(b.Columns)),
+			Columns: make([]common.VectorParty, len(b.Columns)),
 		},
 		Version: b.Version,
 		SeqNum:  b.SeqNum,
@@ -397,7 +396,7 @@ func (b *ArchiveBatch) Clone() *ArchiveBatch {
 }
 
 // UnpinVectorParties unpins all vector parties in the slice.
-func UnpinVectorParties(requestedVPs []vectors.ArchiveVectorParty) {
+func UnpinVectorParties(requestedVPs []common.ArchiveVectorParty) {
 	for _, vp := range requestedVPs {
 		vp.Release()
 	}

@@ -13,8 +13,8 @@
 // limitations under the License.
 
 package memstore
+
 import (
-	"github.com/uber/aresdb/memstore/vectors"
 	"io"
 
 	"bytes"
@@ -30,8 +30,8 @@ import (
 )
 
 var _ = ginkgo.Describe("vector party serializer", func() {
-	var serializer vectors.VectorPartySerializer
-	var snapshotSerializer vectors.VectorPartySerializer
+	var serializer common.VectorPartySerializer
+	var snapshotSerializer common.VectorPartySerializer
 
 	var writer io.WriteCloser
 	var reader io.ReadCloser
@@ -216,11 +216,11 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		shard := NewTableShard(schema, nil, diskStore,
 			NewHostMemoryManager(GetFactory().NewMockMemStore(), 1<<32), 0, m.options)
 		archiveSerializer := common.NewVectorPartyArchiveSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID, 0, 0, 0, 0)
-		snapshotSerializer := common.NewVectorPartySnapshotSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID,0, 0, 0, 0, 0, 0)
+		snapshotSerializer := common.NewVectorPartySnapshotSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID, 0, 0, 0, 0, 0, 0)
 
 		// snapshotSerializer should always has no error
 		// goLiveVectoryParty should always has no error
-		columnModes := []vectors.ColumnMode{vectors.AllValuesDefault, vectors.AllValuesPresent, vectors.HasNullVector}
+		columnModes := []common.ColumnMode{common.AllValuesDefault, common.AllValuesPresent, common.HasNullVector}
 		nonDefaultValueCounts := []int{0, 2}
 		for i := 0; i < 3; i++ {
 			for _, columnMode := range columnModes {
@@ -236,7 +236,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 							},
 						}
 						err := archiveSerializer.CheckVectorPartySerializable(vp)
-						if (columnMode == vectors.AllValuesDefault && nonDefaultValueCount == 0) || (columnMode != vectors.AllValuesDefault && nonDefaultValueCount > 0) {
+						if (columnMode == common.AllValuesDefault && nonDefaultValueCount == 0) || (columnMode != common.AllValuesDefault && nonDefaultValueCount > 0) {
 							Ω(err).Should(BeNil())
 						} else {
 							Ω(err).ShouldNot(BeNil())
@@ -254,7 +254,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 							},
 						}
 						err := archiveSerializer.CheckVectorPartySerializable(vp)
-						if (columnMode == vectors.AllValuesDefault && nonDefaultValueCount == 0) || (columnMode != vectors.AllValuesDefault && nonDefaultValueCount > 0) {
+						if (columnMode == common.AllValuesDefault && nonDefaultValueCount == 0) || (columnMode != common.AllValuesDefault && nonDefaultValueCount > 0) {
 							Ω(err).Should(BeNil())
 						} else {
 							Ω(err).ShouldNot(BeNil())
@@ -298,4 +298,3 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 		Ω(err).ShouldNot(BeNil())
 	})
 })
-

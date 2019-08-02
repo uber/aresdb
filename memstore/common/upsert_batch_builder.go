@@ -15,7 +15,6 @@
 package common
 
 import (
-	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"math"
 	"unsafe"
@@ -104,13 +103,13 @@ func (c *columnBuilder) CalculateBufferSize(offset *int) {
 	isArrayType := IsArrayType(c.dataType)
 
 	switch c.GetMode() {
-	case vectors.AllValuesDefault:
-	case vectors.HasNullVector:
+	case AllValuesDefault:
+	case HasNullVector:
 		if !isGoType {
 			*offset += (len(c.values) + 7) / 8
 		}
 		fallthrough
-	case vectors.AllValuesPresent:
+	case AllValuesPresent:
 		// if golang memory or array type, align to 4 bytes for offset vector
 		if isGoType || isArrayType {
 			*offset = utils.AlignOffset(*offset, 4)
@@ -146,9 +145,9 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 	isVariableLength := IsGoType(c.dataType) || IsArrayType(c.dataType)
 
 	switch c.GetMode() {
-	case vectors.AllValuesDefault:
+	case AllValuesDefault:
 		return nil
-	case vectors.HasNullVector:
+	case HasNullVector:
 		// only non goType needs to write null vector
 		if !IsGoType(c.dataType) {
 			for row := 0; row < len(c.values); row++ {
@@ -159,7 +158,7 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 			}
 		}
 		fallthrough
-	case vectors.AllValuesPresent:
+	case AllValuesPresent:
 		var offsetWriter, valueWriter *utils.BufferWriter
 		// variable length data type needs to write offsetVector
 		if isVariableLength {
@@ -294,13 +293,13 @@ func (c *columnBuilder) AppendToBuffer(writer *utils.BufferWriter) error {
 }
 
 // GetMode get the mode based on number of valid values.
-func (c *columnBuilder) GetMode() vectors.ColumnMode {
+func (c *columnBuilder) GetMode() ColumnMode {
 	if c.numValidValues == 0 {
-		return vectors.AllValuesDefault
+		return AllValuesDefault
 	} else if c.numValidValues == len(c.values) {
-		return vectors.AllValuesPresent
+		return AllValuesPresent
 	} else {
-		return vectors.HasNullVector
+		return HasNullVector
 	}
 }
 

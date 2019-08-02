@@ -15,18 +15,18 @@
 package api
 
 import (
-	"github.com/uber/aresdb/memstore/vectors"
+	"github.com/uber/aresdb/memstore/common"
 )
 
 // ShowBatchResponse represents ShowBatch response.
 type ShowBatchResponse struct {
 	Body struct {
-		Columns  []string               `json:"columns"`
-		Types    []string               `json:"types"`
-		Deleted  []int                  `json:"deleted"`
-		Vectors  []vectors.SlicedVector `json:"vectors"`
-		StartRow int                    `json:"startRow"`
-		NumRows  int                    `json:"numRows"`
+		Columns  []string              `json:"columns"`
+		Types    []string              `json:"types"`
+		Deleted  []int                 `json:"deleted"`
+		Vectors  []common.SlicedVector `json:"vectors"`
+		StartRow int                   `json:"startRow"`
+		NumRows  int                   `json:"numRows"`
 	}
 }
 

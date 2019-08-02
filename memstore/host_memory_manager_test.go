@@ -45,7 +45,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	var today int
 	testBasePath := "/tmp/testHostMemoryManager"
 
-	var c1 vectors.VectorParty
+	var c1 memCom.VectorParty
 	var err error
 	var writer io.WriteCloser
 	var buf *bytes.Buffer
@@ -89,7 +89,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			Return(nil, nil).Once()
 
 		serializer := memCom.NewVectorPartyArchiveSerializer(testHostMemoryManager, testDiskStore,
-			"test", 0, 0, 0,0, 0)
+			"test", 0, 0, 0, 0, 0)
 
 		Ω(serializer.WriteVectorParty(c1)).Should(BeNil())
 	})
@@ -936,7 +936,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			liveBatch := &LiveBatch{
 				Batch: memCom.Batch{
 					RWMutex: &sync.RWMutex{},
-					Columns: []vectors.VectorParty{
+					Columns: []memCom.VectorParty{
 						// create dummy to make vp not nil
 						&cLiveVectorParty{
 							cVectorParty: cVectorParty{
@@ -987,8 +987,8 @@ func CreateMockMetaStore() *metaMocks.MetaStore {
 	return metaStore
 }
 
-func CreateTestArchiveBatchColumns() []vectors.VectorParty {
-	return []vectors.VectorParty{
+func CreateTestArchiveBatchColumns() []memCom.VectorParty {
+	return []memCom.VectorParty{
 		&archiveVectorParty{},
 		&archiveVectorParty{},
 	}

@@ -227,7 +227,7 @@ func (s *LiveStore) appendBatch(batchID int32) *LiveBatch {
 	batch := &LiveBatch{
 		Batch: common.Batch{
 			RWMutex: &sync.RWMutex{},
-			Columns: make([]vectors.VectorParty, numColumns),
+			Columns: make([]common.VectorParty, numColumns),
 		},
 		Capacity:  s.BatchSize,
 		liveStore: s,
@@ -401,7 +401,7 @@ func (s *LiveStore) GetMemoryUsageForColumn(valueType common.DataType, columnID 
 // GetOrCreateVectorParty returns LiveVectorParty for the specified column from
 // the live batch. locked specifies whether the batch has been locked.
 // The lock will be left in the same state after the function returns.
-func (b *LiveBatch) GetOrCreateVectorParty(columnID int, locked bool) vectors.LiveVectorParty {
+func (b *LiveBatch) GetOrCreateVectorParty(columnID int, locked bool) common.LiveVectorParty {
 	// Ensure that columnID is not out of bound.
 	if columnID >= len(b.Columns) {
 		if !locked {
@@ -436,7 +436,7 @@ func (b *LiveBatch) GetOrCreateVectorParty(columnID int, locked bool) vectors.Li
 		}
 		return liveVP
 	}
-	return b.Columns[columnID].(vectors.LiveVectorParty)
+	return b.Columns[columnID].(common.LiveVectorParty)
 }
 
 // MarshalJSON marshals a LiveBatch into json.

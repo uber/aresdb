@@ -15,7 +15,6 @@
 package memstore
 
 import (
-	"github.com/uber/aresdb/memstore/tests"
 	"github.com/uber/aresdb/memstore/vectors"
 	"unsafe"
 
@@ -29,11 +28,11 @@ var _ = ginkgo.Describe("VectorParty", func() {
 
 	ginkgo.It("GetHostVectorPartySlice should work", func() {
 		locker := &sync.RWMutex{}
-		sourceVP, err := tests.testFactory.ReadArchiveVectorParty("sortedVP4", locker)
+		sourceVP, err := testFactory.ReadArchiveVectorParty("sortedVP4", locker)
 		Ω(err).Should(BeNil())
 		vp := sourceVP.(*archiveVectorParty)
 		hostVPSlice := vp.GetHostVectorPartySlice(0, vp.length)
-		Ω(hostVPSlice).Should(Equal(vectors.HostVectorPartySlice{
+		Ω(hostVPSlice).Should(Equal(common.HostVectorPartySlice{
 			Values:          vp.values.Buffer(),
 			Nulls:           vp.nulls.Buffer(),
 			Counts:          vp.counts.Buffer(),
@@ -51,7 +50,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 
 	ginkgo.It("Slice should work", func() {
 		locker := &sync.RWMutex{}
-		vp, err := tests.testFactory.ReadArchiveVectorParty("sortedVP4", locker)
+		vp, err := testFactory.ReadArchiveVectorParty("sortedVP4", locker)
 		Ω(err).Should(BeNil())
 		vectorData := vp.Slice(0, 3)
 		Ω(vectorData.Values[0]).Should(BeEquivalentTo(1))
@@ -63,7 +62,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 		Ω(vectorData.Values).Should(Equal([]interface{}{}))
 		Ω(vectorData.Counts).Should(BeEquivalentTo([]int{}))
 
-		vp, err = tests.testFactory.ReadArchiveVectorParty("sortedVP5", locker)
+		vp, err = testFactory.ReadArchiveVectorParty("sortedVP5", locker)
 		Ω(err).Should(BeNil())
 		vectorData = vp.Slice(0, 6)
 		Ω(vectorData.Values).Should(ConsistOf(BeNil()))
@@ -80,7 +79,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 
 	ginkgo.It("SliceByValue", func() {
 		locker := &sync.RWMutex{}
-		vp1, err := tests.testFactory.ReadArchiveVectorParty("sortedVP6", locker)
+		vp1, err := testFactory.ReadArchiveVectorParty("sortedVP6", locker)
 		Ω(err).Should(BeNil())
 		value := 1
 		startRow, endRow, startIndex, endIndex := vp1.SliceByValue(
@@ -118,7 +117,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 		Ω(startIndex).Should(Equal(0))
 		Ω(endIndex).Should(Equal(2))
 
-		vp2, err := tests.testFactory.ReadArchiveVectorParty("sortedVP0", locker)
+		vp2, err := testFactory.ReadArchiveVectorParty("sortedVP0", locker)
 		value = 10
 		startRow, endRow, startIndex, endIndex = vp2.SliceByValue(
 			0, 5, unsafe.Pointer(&value))
@@ -127,7 +126,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 		Ω(startIndex).Should(Equal(1))
 		Ω(endIndex).Should(Equal(2))
 
-		vp5, err := tests.testFactory.ReadArchiveVectorParty("sortedVP5", locker)
+		vp5, err := testFactory.ReadArchiveVectorParty("sortedVP5", locker)
 
 		value = 1
 		startRow, endRow, startIndex, endIndex = vp5.SliceByValue(
@@ -155,7 +154,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 	})
 
 	ginkgo.It("SliceIndex", func() {
-		vp, err := tests.testFactory.ReadArchiveVectorParty("sortedVP6", nil)
+		vp, err := testFactory.ReadArchiveVectorParty("sortedVP6", nil)
 		Ω(err).Should(BeNil())
 		startIndex, endIndex := vp.SliceIndex(3, 15)
 		Ω(startIndex).Should(Equal(1))
@@ -167,7 +166,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 	})
 
 	ginkgo.It("GetDataValueByRow should work", func() {
-		vp, err := tests.testFactory.ReadArchiveVectorParty("sortedVP6", nil)
+		vp, err := testFactory.ReadArchiveVectorParty("sortedVP6", nil)
 		Ω(err).Should(BeNil())
 		Ω(*(*uint16)(vp.GetDataValueByRow(0).OtherVal)).Should(BeEquivalentTo(1))
 		Ω(*(*uint16)(vp.GetDataValueByRow(4).OtherVal)).Should(BeEquivalentTo(2))
@@ -193,7 +192,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 				dataType:     common.Uint32,
 				defaultValue: defaultValue,
 			},
-			columnMode: vectors.HasNullVector,
+			columnMode: common.HasNullVector,
 		}
 
 		vp.fillWithDefaultValue()
@@ -284,7 +283,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 		}
 
 		vp.Prune()
-		Ω(vp.GetMode()).Should(Equal(vectors.AllValuesDefault))
+		Ω(vp.GetMode()).Should(Equal(common.AllValuesDefault))
 		Ω(vp.values).Should(BeNil())
 		Ω(vp.nulls).Should(BeNil())
 		Ω(vp.counts).Should(BeNil())
@@ -306,7 +305,7 @@ var _ = ginkgo.Describe("VectorParty", func() {
 		}
 
 		vp.Prune()
-		Ω(vp.GetMode()).Should(Equal(vectors.AllValuesDefault))
+		Ω(vp.GetMode()).Should(Equal(common.AllValuesDefault))
 		Ω(vp.values).Should(BeNil())
 		Ω(vp.nulls).Should(BeNil())
 		Ω(vp.counts).Should(BeNil())
@@ -335,10 +334,10 @@ var _ = ginkgo.Describe("VectorParty", func() {
 			CmpFunc:  common.GetCompareFunc(common.Uint32),
 		}
 
-		vp.SetDataValue(0, zeroValue, vectors.IncrementCount)
+		vp.SetDataValue(0, zeroValue, common.IncrementCount)
 
 		vp.Prune()
-		Ω(vp.GetMode()).Should(Equal(vectors.AllValuesPresent))
+		Ω(vp.GetMode()).Should(Equal(common.AllValuesPresent))
 		Ω(vp.values).ShouldNot(BeNil())
 		Ω(vp.nulls).Should(BeNil())
 		Ω(vp.counts).Should(BeNil())
