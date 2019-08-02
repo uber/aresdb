@@ -238,8 +238,8 @@ var _ = Describe("streaming_processor", func() {
 	It("NewStreamingProcessor", func() {
 		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka2.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
-		Ω(p).Should(BeNil())
-		Ω(err).ShouldNot(BeNil())
+		Ω(p).ShouldNot(BeNil())
+		Ω(err).Should(BeNil())
 
 		sinkConfig := config.SinkConfig{
 			SinkModeStr:           "aresDB",
@@ -325,6 +325,9 @@ var _ = Describe("streaming_processor", func() {
 		p.Stop()
 	})
 	It("HandleFailure", func() {
+		mockConnector.On("Insert",
+			table, columnNames, rows).
+			Return(6, nil)
 		failureHandler := initFailureHandler(serviceConfig, jobConfig, aresDB)
 		failureHandler.(*RetryFailureHandler).interval = 1
 		failureHandler.(*RetryFailureHandler).maxElapsedTime = 2 * time.Microsecond
