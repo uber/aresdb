@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"os"
@@ -27,7 +28,7 @@ import (
 // TransferableVectorParty is vector party that can be transferred to gpu for processing
 type TransferableVectorParty interface {
 	// GetHostVectorPartySlice slice vector party between [startIndex, startIndex+length) before transfer to gpu
-	GetHostVectorPartySlice(startIndex, length int) common.HostVectorPartySlice
+	GetHostVectorPartySlice(startIndex, length int) vectors.HostVectorPartySlice
 }
 
 // baseVectorParty is the base vector party type
@@ -52,16 +53,16 @@ type cVectorParty struct {
 	baseVectorParty
 
 	// Set during archiving/backfill and stored on disk.
-	columnMode common.ColumnMode
+	columnMode vectors.ColumnMode
 
-	values *common.Vector
+	values *vectors.Vector
 	// Stores the validity bitmap (0 means null) for each value in values.
-	nulls *common.Vector
+	nulls *vectors.Vector
 	// Stores the accumulative count from the beginning of the vector
 	// to the current position. Its length is vp.Length + 1 with first value to
 	// be 0 and last value to be vp.Length. We can get a count of current value
 	// by Counts[i+1] - Counts[i] for Values[i]
-	counts *common.Vector
+	counts *vectors.Vector
 }
 
 // IsList tells whether it's a list vector party or not.
@@ -72,7 +73,7 @@ func (vp *baseVectorParty) IsList() bool {
 // AsList returns ListVectorParty representation of this vector party.
 // Caller should always call IsList before conversion, otherwise panic may happens
 // for incompatible vps.
-func (vp *baseVectorParty) AsList() common.ListVectorParty {
+func (vp *baseVectorParty) AsList() vectors.ListVectorParty {
 	utils.GetLogger().Panic("Cannot convert this vp to list vp")
 	return nil
 }
@@ -93,7 +94,7 @@ func (vp *baseVectorParty) GetNonDefaultValueCount() int {
 }
 
 // GetMode returns the stored column mode of this vector party.
-func (vp *cVectorParty) GetMode() common.ColumnMode {
+func (vp *cVectorParty) GetMode() vectors.ColumnMode {
 	return vp.columnMode
 }
 
@@ -158,7 +159,7 @@ func (vp *cVectorParty) setValidity(offset int, valid bool) {
 
 // GetValidity implements GetValidity in cVectorParty
 func (vp *cVectorParty) GetValidity(offset int) bool {
-	if vp.columnMode == common.AllValuesDefault {
+	if vp.columnMode == vectors.AllValuesDefault {
 		return vp.defaultValue.Valid
 	}
 	return vp.nulls == nil || vp.nulls.GetBool(offset)
@@ -169,7 +170,7 @@ func (vp *cVectorParty) GetValidity(offset int) bool {
 // boolean column to decide whether to load bool value or other value
 // type. Index bound is not checked!
 func (vp *cVectorParty) GetDataValue(offset int) common.DataValue {
-	if vp.columnMode == common.AllValuesDefault {
+	if vp.columnMode == vectors.AllValuesDefault {
 		return vp.defaultValue
 	}
 
@@ -194,14 +195,14 @@ func (vp *cVectorParty) GetDataValue(offset int) common.DataValue {
 // GetDataValueByRow implements GetDataValueByRow in cVectorParty
 func (vp *cVectorParty) GetDataValueByRow(row int) common.DataValue {
 	offset := row
-	if vp.GetMode() == common.HasCountVector {
+	if vp.GetMode() == vectors.HasCountVector {
 		offset = vp.counts.UpperBound(0, vp.counts.Size, unsafe.Pointer(&row)) - 1
 	}
 	return vp.GetDataValue(offset)
 }
 
 // SetDataValue implements SetDataValue in cVectorParty
-func (vp *cVectorParty) SetDataValue(offset int, value common.DataValue, countsUpdateMode common.ValueCountsUpdateMode, counts ...uint32) {
+func (vp *cVectorParty) SetDataValue(offset int, value common.DataValue, countsUpdateMode vectors.ValueCountsUpdateMode, counts ...uint32) {
 	vp.setValidity(offset, value.Valid)
 	if value.Valid {
 		if vp.values.DataType == common.Bool {
@@ -218,7 +219,7 @@ func (vp *cVectorParty) SetDataValue(offset int, value common.DataValue, countsU
 		}
 	}
 
-	if countsUpdateMode == common.IgnoreCount {
+	if countsUpdateMode == vectors.IgnoreCount {
 		return
 	}
 
@@ -229,11 +230,11 @@ func (vp *cVectorParty) SetDataValue(offset int, value common.DataValue, countsU
 		count = int(counts[0])
 	}
 
-	if countsUpdateMode == common.IncrementCount {
+	if countsUpdateMode == vectors.IncrementCount {
 		if isNonDefault {
 			vp.nonDefaultValueCount += count
 		}
-	} else if countsUpdateMode == common.CheckExistingCount {
+	} else if countsUpdateMode == vectors.CheckExistingCount {
 		existing := vp.GetDataValue(offset).Compare(vp.defaultValue) != 0
 		if !existing && isNonDefault {
 			vp.nonDefaultValueCount += count
@@ -244,23 +245,23 @@ func (vp *cVectorParty) SetDataValue(offset int, value common.DataValue, countsU
 }
 
 // JudgeMode judges column mode of current vector party according to value count fields.
-func (vp *cVectorParty) JudgeMode() common.ColumnMode {
+func (vp *cVectorParty) JudgeMode() vectors.ColumnMode {
 	if vp.nonDefaultValueCount == 0 {
 		// both
-		return common.AllValuesDefault
+		return vectors.AllValuesDefault
 	} else if vp.counts != nil {
 		// compressed columns.
-		return common.HasCountVector
+		return vectors.HasCountVector
 	} else if vp.nulls == nil || vp.nulls.CheckAllValid() {
 		// no null vector.
-		return common.AllValuesPresent
+		return vectors.AllValuesPresent
 	}
 	// uncompressed columns
-	return common.HasNullVector
+	return vectors.HasNullVector
 }
 
 // Equals checks whether two vector parties are the same. **Only for unit test use.**
-func (vp *cVectorParty) Equals(other common.VectorParty) bool {
+func (vp *cVectorParty) Equals(other vectors.VectorParty) bool {
 	if vp == nil || other == nil {
 		return vp == nil && other == nil
 	}
@@ -308,7 +309,7 @@ func (vp *cVectorParty) Equals(other common.VectorParty) bool {
 }
 
 // Slice slice the vector party into the interval of [startRow, startRow+numRows)
-func (vp *cVectorParty) Slice(startRow int, numRows int) (vector common.SlicedVector) {
+func (vp *cVectorParty) Slice(startRow int, numRows int) (vector vectors.SlicedVector) {
 	beginIndex := startRow
 	// size is the number of entries in the vector,
 	// size != numRows when compressed,
@@ -322,9 +323,9 @@ func (vp *cVectorParty) Slice(startRow int, numRows int) (vector common.SlicedVe
 	}
 
 	mode := vp.GetMode()
-	if mode == common.AllValuesDefault && size > 0 {
+	if mode == vectors.AllValuesDefault && size > 0 {
 		size = 1
-	} else if mode == common.HasCountVector {
+	} else if mode == vectors.HasCountVector {
 		// find the indexes [beginIndex, endIndex) based on [startRow, startRow + numRows)
 		lowerCount := uint32(startRow)
 		upperCount := uint32(startRow + numRows)
@@ -337,19 +338,19 @@ func (vp *cVectorParty) Slice(startRow int, numRows int) (vector common.SlicedVe
 		size = endIndex - beginIndex
 	}
 
-	vector = common.SlicedVector{
+	vector = vectors.SlicedVector{
 		Values: make([]interface{}, size),
 		Counts: make([]int, size),
 	}
 
 	for i := 0; i < size; i++ {
-		if mode == common.AllValuesDefault {
+		if mode == vectors.AllValuesDefault {
 			vector.Values[i] = vp.defaultValue.ConvertToHumanReadable(vp.dataType)
 			vector.Counts[i] = numRows
 			if vector.Counts[i] > vp.length {
 				vector.Counts[i] = vp.length
 			}
-		} else if mode == common.HasCountVector {
+		} else if mode == vectors.HasCountVector {
 			// compressed
 			vector.Values[i] = vp.GetDataValue(beginIndex + i).ConvertToHumanReadable(vp.dataType)
 			count := int(*(*uint32)(vp.counts.GetValue(beginIndex + i + 1))) - startRow
@@ -371,7 +372,7 @@ func (vp *cVectorParty) Slice(startRow int, numRows int) (vector common.SlicedVe
 func (vp *cVectorParty) SliceByValue(lowerBoundRow, upperBoundRow int, value unsafe.Pointer) (
 	startRow int, endRow int, startIndex int, endIndex int) {
 	// has counts
-	if vp.GetMode() == common.AllValuesDefault {
+	if vp.GetMode() == vectors.AllValuesDefault {
 		// TODO: check whether value itself is null, for IS_NULL
 		// return as if the slice is empty [upperBound, upperBound)
 		if vp.defaultValue.Valid {
@@ -393,7 +394,7 @@ func (vp *cVectorParty) SliceByValue(lowerBoundRow, upperBoundRow int, value uns
 			}
 		}
 		return upperBoundRow, upperBoundRow, upperBoundRow, upperBoundRow
-	} else if vp.GetMode() == common.HasCountVector {
+	} else if vp.GetMode() == vectors.HasCountVector {
 		startIndex := vp.counts.UpperBound(0, vp.counts.Size, unsafe.Pointer(&lowerBoundRow)) - 1
 		endIndex := vp.counts.LowerBound(startIndex, vp.counts.Size, unsafe.Pointer(&upperBoundRow))
 		// subtract endIndex by 1 when endIndex points to vp.length+1
@@ -417,7 +418,7 @@ func (vp *cVectorParty) SliceByValue(lowerBoundRow, upperBoundRow int, value uns
 // SliceIndex returns the startIndex and endIndex of the vector party slice given startRow and endRow of original vector
 // party.
 func (vp *cVectorParty) SliceIndex(lowerBoundRow, upperBoundRow int) (startIndex, endIndex int) {
-	if vp.GetMode() == common.HasCountVector {
+	if vp.GetMode() == vectors.HasCountVector {
 		startIndex = vp.counts.UpperBound(0, vp.counts.Size, unsafe.Pointer(&lowerBoundRow)) - 1
 		endIndex = vp.counts.LowerBound(startIndex, vp.counts.Size, unsafe.Pointer(&upperBoundRow))
 		// subtract endIndex by 1 when endIndex points to vp.length+1
@@ -461,7 +462,7 @@ func (vp *cVectorParty) Write(writer io.Writer) error {
 
 	// Starting writing vectors.
 	// Stop writing since there are no vectors in this vp.
-	if columnMode <= common.AllValuesDefault {
+	if columnMode <= vectors.AllValuesDefault {
 		return nil
 	}
 
@@ -474,7 +475,7 @@ func (vp *cVectorParty) Write(writer io.Writer) error {
 	}
 
 	// Stop writing since there are no more vectors in this vp.
-	if columnMode <= common.AllValuesPresent {
+	if columnMode <= vectors.AllValuesPresent {
 		return nil
 	}
 
@@ -487,7 +488,7 @@ func (vp *cVectorParty) Write(writer io.Writer) error {
 	}
 
 	// Stop writing since there are no more vectors in this vp.
-	if columnMode <= common.HasNullVector {
+	if columnMode <= vectors.HasNullVector {
 		return nil
 	}
 
@@ -504,7 +505,7 @@ func (vp *cVectorParty) Write(writer io.Writer) error {
 
 // Read reads a vector party from underlying reader. It first reads header from the reader and does
 // several sanity checks. Then it reads vectors based on vector party mode.
-func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) error {
+func (vp *cVectorParty) Read(reader io.Reader, s vectors.VectorPartySerializer) error {
 	dataReader := utils.NewStreamDataReader(reader)
 	magicNumber, err := dataReader.ReadUint32()
 	if err != nil {
@@ -541,8 +542,8 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 		return err
 	}
 
-	columnMode := common.ColumnMode(m)
-	if columnMode >= common.MaxColumnMode {
+	columnMode := vectors.ColumnMode(m)
+	if columnMode >= vectors.MaxColumnMode {
 		return utils.StackError(nil, "Invalid mode %d", columnMode)
 	}
 
@@ -561,17 +562,17 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 		return err
 	}
 
-	bytes := common.CalculateVectorPartyBytes(vp.GetDataType(), vp.GetLength(),
-		columnMode == common.HasNullVector || columnMode == common.HasCountVector, columnMode == common.HasCountVector)
+	bytes := vectors.CalculateVectorPartyBytes(vp.GetDataType(), vp.GetLength(),
+		columnMode == vectors.HasNullVector || columnMode == vectors.HasCountVector, columnMode == vectors.HasCountVector)
 	s.ReportVectorPartyMemoryUsage(int64(bytes))
 
 	// Stop reading since there are no vectors in this vp.
-	if columnMode <= common.AllValuesDefault {
+	if columnMode <= vectors.AllValuesDefault {
 		return nil
 	}
 
 	// Read value vector.
-	valueVector := common.NewVector(dataType, length)
+	valueVector := vectors.NewVector(dataType, length)
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(
 		cgoutils.MakeSliceFromCPtr(uintptr(valueVector.Buffer()), valueVector.Bytes),
@@ -582,12 +583,12 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 	vp.values = valueVector
 
 	// Stop reading since there are no more vectors in this vp.
-	if columnMode <= common.AllValuesPresent {
+	if columnMode <= vectors.AllValuesPresent {
 		return nil
 	}
 
 	// Read null vector.
-	nullVector := common.NewVector(common.Bool, length)
+	nullVector := vectors.NewVector(common.Bool, length)
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(
 		cgoutils.MakeSliceFromCPtr(uintptr(nullVector.Buffer()), nullVector.Bytes),
@@ -599,12 +600,12 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 	vp.nulls = nullVector
 
 	// Stop reading since there are no more vectors in this vp.
-	if columnMode <= common.HasNullVector {
+	if columnMode <= vectors.HasNullVector {
 		return nil
 	}
 
 	// Read count vector.
-	countVector := common.NewVector(common.Uint32, length+1)
+	countVector := vectors.NewVector(common.Uint32, length+1)
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(
 		cgoutils.MakeSliceFromCPtr(uintptr(countVector.Buffer()), countVector.Bytes),
@@ -619,12 +620,12 @@ func (vp *cVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) e
 }
 
 // GetHostVectorPartySlice implements GetHostVectorPartySlice in cVectorParty
-func (vp *cVectorParty) GetHostVectorPartySlice(startIndex, length int) common.HostVectorPartySlice {
+func (vp *cVectorParty) GetHostVectorPartySlice(startIndex, length int) vectors.HostVectorPartySlice {
 	endIndex := startIndex + length
 	values, valueStartIndex, valueBytes := vp.values.GetSliceBytesAligned(startIndex, endIndex)
 	nulls, nullStartIndex, nullBytes := vp.nulls.GetSliceBytesAligned(startIndex, endIndex)
 	counts, countStartIndex, countBytes := vp.counts.GetSliceBytesAligned(startIndex, endIndex+1)
-	return common.HostVectorPartySlice{
+	return vectors.HostVectorPartySlice{
 		Values:          values,
 		ValueStartIndex: valueStartIndex,
 		ValueBytes:      valueBytes,
@@ -642,12 +643,12 @@ func (vp *cVectorParty) GetHostVectorPartySlice(startIndex, length int) common.H
 
 // Allocates implements Allocate in cVectorParty
 func (vp *cVectorParty) Allocate(hasCount bool) {
-	vp.values = common.NewVector(vp.dataType, vp.length)
-	vp.nulls = common.NewVector(common.Bool, vp.length)
-	vp.columnMode = common.HasNullVector
+	vp.values = vectors.NewVector(vp.dataType, vp.length)
+	vp.nulls = vectors.NewVector(common.Bool, vp.length)
+	vp.columnMode = vectors.HasNullVector
 	if hasCount {
-		vp.counts = common.NewVector(common.Int32, vp.length+1)
-		vp.columnMode = common.HasCountVector
+		vp.counts = vectors.NewVector(common.Int32, vp.length+1)
+		vp.columnMode = vectors.HasCountVector
 	}
 }
 

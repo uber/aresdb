@@ -21,12 +21,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	diskMock "github.com/uber/aresdb/diskstore/mocks"
 	"github.com/uber/aresdb/memstore/common"
+	commMock "github.com/uber/aresdb/memstore/common/mocks"
+	"github.com/uber/aresdb/memstore/vectors"
 	testingUtils "github.com/uber/aresdb/testing"
 	"sync"
-	commMock "github.com/uber/aresdb/memstore/common/mocks"
 )
 
-func createArchiveVP() common.ArchiveVectorParty {
+func createArchiveVP() vectors.ArchiveVectorParty {
 	upsertBatch, err := createArrayUpsertBatch()
 	Ω(err).Should(BeNil())
 
@@ -48,13 +49,13 @@ func createArchiveVP() common.ArchiveVectorParty {
 			Valid:    valid,
 			OtherVal: val,
 			DataType: common.Uint32,
-		}, common.IgnoreCount)
+		}, vectors.IgnoreCount)
 	}
 	return vp
 }
 
 var _ = ginkgo.Describe("list vector party tests", func() {
-	var expectedUint32LiveStoreVP, expectedBoolLiveStoreVP common.VectorParty
+	var expectedUint32LiveStoreVP, expectedBoolLiveStoreVP vectors.VectorParty
 	var uint32ArchiveTotalBytes, boolArchiveTotalBytes int64
 
 	ginkgo.BeforeEach(func() {
@@ -62,12 +63,12 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		expectedUint32LiveStoreVP, err = GetFactory().ReadLiveVectorParty("list/live_vp_uint32")
 		Ω(err).Should(BeNil())
 		Ω(expectedUint32LiveStoreVP).ShouldNot(BeNil())
-		uint32ArchiveTotalBytes = getCompactedTotalBytes(expectedUint32LiveStoreVP.(common.LiveVectorParty))
+		uint32ArchiveTotalBytes = getCompactedTotalBytes(expectedUint32LiveStoreVP.(vectors.LiveVectorParty))
 
 		expectedBoolLiveStoreVP, err = GetFactory().ReadLiveVectorParty("list/live_vp_bool")
 		Ω(err).Should(BeNil())
 		Ω(expectedBoolLiveStoreVP).ShouldNot(BeNil())
-		boolArchiveTotalBytes = getCompactedTotalBytes(expectedBoolLiveStoreVP.(common.LiveVectorParty))
+		boolArchiveTotalBytes = getCompactedTotalBytes(expectedBoolLiveStoreVP.(vectors.LiveVectorParty))
 	})
 
 	ginkgo.AfterEach(func() {
@@ -85,7 +86,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(func() { listVP.SetCount(0, 0) }).Should(Panic())
 		Ω(func() { listVP.Prune() }).ShouldNot(Panic())
 		Ω(func() { listVP.CopyOnWrite(0) }).ShouldNot(Panic())
-		Ω(func() { listVP.SetDataValue(0, common.NullDataValue, common.IgnoreCount) }).Should(Panic())
+		Ω(func() { listVP.SetDataValue(0, common.NullDataValue, vectors.IgnoreCount) }).Should(Panic())
 		Ω(func() { listVP.SliceByValue(0, 0, nil) }).Should(Panic())
 
 		lowerBoundRow := 0

@@ -16,6 +16,7 @@ package common
 
 import (
 	"bytes"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"math"
 	"unsafe"
@@ -26,7 +27,7 @@ type columnReader struct {
 	// The logic id of the column.
 	columnID int
 	// The column mode.
-	columnMode ColumnMode
+	columnMode vectors.ColumnMode
 	// The column update mode
 	columnUpdateMode ColumnUpdateMode
 	// DataType of the column.
@@ -96,9 +97,9 @@ func (c *columnReader) readOffset(row int) uint32 {
 // readValidity return the validity value of a row in a column.
 func (c *columnReader) readValidity(row int) bool {
 	switch c.columnMode {
-	case AllValuesDefault:
+	case vectors.AllValuesDefault:
 		return false
-	case AllValuesPresent:
+	case vectors.AllValuesPresent:
 		return true
 	}
 	return readBool(c.nullVector, row)
@@ -190,7 +191,7 @@ func (u *UpsertBatch) GetColumnLen() int {
 }
 
 // convenient function to get ColumnMode, assume no out of index
-func (u *UpsertBatch) GetColumMode(col int) ColumnMode {
+func (u *UpsertBatch) GetColumMode(col int) vectors.ColumnMode {
 	return u.columns[col].columnMode
 }
 
@@ -364,8 +365,8 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 		newCol.offsetVector = nil
 
 		switch newCol.columnMode {
-		case AllValuesDefault:
-		case HasNullVector:
+		case vectors.AllValuesDefault:
+		case vectors.HasNullVector:
 			nullVectorLength := utils.AlignOffset(newBatch.NumRows, 8) / 8
 			newCol.nullVector = make([]byte, nullVectorLength)
 			newBatch.alternativeBytes += nullVectorLength
@@ -375,7 +376,7 @@ func (u *UpsertBatch) ExtractBackfillBatch(backfillRows []int) *UpsertBatch {
 				writeBool(newCol.nullVector, newRow, validity)
 			}
 			fallthrough
-		case AllValuesPresent:
+		case vectors.AllValuesPresent:
 			valueBits := DataTypeBits(newCol.dataType)
 			valueVectorLength := utils.AlignOffset(newBatch.NumRows*valueBits, 8) / 8
 			newCol.valueVector = make([]byte, valueVectorLength)
@@ -528,8 +529,8 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 
 		currentOffset := columnStartOffset
 		switch columnMode {
-		case AllValuesDefault:
-		case HasNullVector:
+		case vectors.AllValuesDefault:
+		case vectors.HasNullVector:
 			if !isGoType {
 				// Null vector points to the beginning of the column data section.
 				nullVectorLength := utils.AlignOffset(batch.NumRows, 8) / 8
@@ -537,7 +538,7 @@ func readUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 				currentOffset += nullVectorLength
 			}
 			fallthrough
-		case AllValuesPresent:
+		case vectors.AllValuesPresent:
 			if isGoType || isArrayType {
 				currentOffset = utils.AlignOffset(currentOffset, 4)
 				offsetVectorLength := (batch.NumRows + 1) * 4

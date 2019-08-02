@@ -14,6 +14,7 @@
 
 package memstore
 import (
+	"github.com/uber/aresdb/memstore/vectors"
 	"io"
 
 	"bytes"
@@ -29,8 +30,8 @@ import (
 )
 
 var _ = ginkgo.Describe("vector party serializer", func() {
-	var serializer common.VectorPartySerializer
-	var snapshotSerializer common.VectorPartySerializer
+	var serializer vectors.VectorPartySerializer
+	var snapshotSerializer vectors.VectorPartySerializer
 
 	var writer io.WriteCloser
 	var reader io.ReadCloser
@@ -219,7 +220,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 
 		// snapshotSerializer should always has no error
 		// goLiveVectoryParty should always has no error
-		columnModes := []common.ColumnMode{common.AllValuesDefault, common.AllValuesPresent, common.HasNullVector}
+		columnModes := []vectors.ColumnMode{vectors.AllValuesDefault, vectors.AllValuesPresent, vectors.HasNullVector}
 		nonDefaultValueCounts := []int{0, 2}
 		for i := 0; i < 3; i++ {
 			for _, columnMode := range columnModes {
@@ -235,7 +236,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 							},
 						}
 						err := archiveSerializer.CheckVectorPartySerializable(vp)
-						if (columnMode == common.AllValuesDefault && nonDefaultValueCount == 0) || (columnMode != common.AllValuesDefault && nonDefaultValueCount > 0) {
+						if (columnMode == vectors.AllValuesDefault && nonDefaultValueCount == 0) || (columnMode != vectors.AllValuesDefault && nonDefaultValueCount > 0) {
 							Ω(err).Should(BeNil())
 						} else {
 							Ω(err).ShouldNot(BeNil())
@@ -253,7 +254,7 @@ var _ = ginkgo.Describe("vector party serializer", func() {
 							},
 						}
 						err := archiveSerializer.CheckVectorPartySerializable(vp)
-						if (columnMode == common.AllValuesDefault && nonDefaultValueCount == 0) || (columnMode != common.AllValuesDefault && nonDefaultValueCount > 0) {
+						if (columnMode == vectors.AllValuesDefault && nonDefaultValueCount == 0) || (columnMode != vectors.AllValuesDefault && nonDefaultValueCount > 0) {
 							Ω(err).Should(BeNil())
 						} else {
 							Ω(err).ShouldNot(BeNil())

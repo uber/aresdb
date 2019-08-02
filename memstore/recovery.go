@@ -16,6 +16,7 @@ package memstore
 
 import (
 	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/memstore/vectors"
 	"sync"
 
 	"math"
@@ -398,7 +399,7 @@ func (shard *TableShard) loadTableShardSnapshot(
 	if cols, err = shard.diskStore.ListSnapshotVectorPartyFiles(tableName, shardID, redoLogFile, offset, int(batchID)); err != nil {
 		return 0, err
 	}
-	var vp memcom.LiveVectorParty
+	var vp vectors.LiveVectorParty
 
 	batch := shard.LiveStore.getOrCreateBatch(int32(batchID))
 	defer batch.Unlock()

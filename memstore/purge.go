@@ -16,6 +16,7 @@ package memstore
 
 import (
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -105,7 +106,7 @@ func (m *memStoreImpl) Purge(tableName string, shardID, batchIDStart, batchIDEnd
 		for columnID, vp := range batch.Columns {
 			if vp != nil {
 				// wait for users to finish
-				vp.(memCom.ArchiveVectorParty).WaitForUsers(true)
+				vp.(vectors.ArchiveVectorParty).WaitForUsers(true)
 				vp.SafeDestruct()
 				shard.HostMemoryManager.ReportManagedObject(tableName, shardID, int(batch.BatchID), columnID, 0)
 			}

@@ -16,9 +16,10 @@ package memstore
 
 import (
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/list"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"sync"
-	"github.com/uber/aresdb/memstore/list"
 )
 
 // mergeContext carries all context information used during merge
@@ -142,7 +143,7 @@ type sortedColumnIterator interface {
 
 type archiveBatchColumnIterator struct {
 	// Column being iterated.
-	vp common.ArchiveVectorParty
+	vp vectors.ArchiveVectorParty
 
 	// Iterator position.
 	idx int
@@ -170,9 +171,9 @@ type archiveBatchColumnIterator struct {
 // newArchiveBatchColumnIterator creates a new iterator that iterates through
 // a specific range of archive batch column.
 func newArchiveBatchColumnIterator(base *ArchiveBatch, columnID int, rowsDeleted []int) sortedColumnIterator {
-	var baseVP common.ArchiveVectorParty
+	var baseVP vectors.ArchiveVectorParty
 	if base != nil && columnID < len(base.Columns) {
-		baseVP = base.Columns[columnID].(common.ArchiveVectorParty)
+		baseVP = base.Columns[columnID].(vectors.ArchiveVectorParty)
 	}
 	return &archiveBatchColumnIterator{
 		vp:          baseVP,
@@ -193,9 +194,9 @@ func (itr *archiveBatchColumnIterator) read() {
 	}
 
 	// Sort columns of archive batch should be either mode 3 or mode 0.
-	mode := itr.vp.(common.CVectorParty).GetMode()
+	mode := itr.vp.(vectors.CVectorParty).GetMode()
 	itr.currentRowsDeletedStart = itr.currentRowsDeletedEnd
-	if mode == common.HasCountVector {
+	if mode == vectors.HasCountVector {
 		itr.nextCount = itr.vp.GetCount(itr.idx)
 	} else {
 		itr.nextCount = itr.endCount
@@ -354,13 +355,13 @@ func (ctx *mergeContext) merge(cutoff uint32, seqNum uint32) {
 	// Scan through all columns for mode 0 and 1 columns and remove unnecessary vectors.
 	for columnID := 0; columnID < len(ctx.merged.Columns); columnID++ {
 		column := ctx.merged.Columns[columnID]
-		column.(common.ArchiveVectorParty).Prune()
+		column.(vectors.ArchiveVectorParty).Prune()
 	}
 }
 
 // allocate space for merged archive batch based on calculated mergedLengths.
 func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
-	columns := make([]common.VectorParty, ctx.numColumns)
+	columns := make([]vectors.VectorParty, ctx.numColumns)
 	// Need to create batch in advance otherwise vector party's allUsersDone will have nil value.
 	ctx.merged = &ArchiveBatch{
 		Version: cutoff,
@@ -378,19 +379,19 @@ func (ctx *mergeContext) allocate(cutoff uint32, seqNum uint32) {
 		var bytes int64
 		if i := utils.IndexOfInt(ctx.patch.sortColumns, columnID); i >= 0 {
 			// Sort columns.
-			bytes = int64(common.CalculateVectorPartyBytes(dataType, ctx.mergedLengths[i], true, true))
+			bytes = int64(vectors.CalculateVectorPartyBytes(dataType, ctx.mergedLengths[i], true, true))
 			columns[columnID] = newArchiveVectorParty(ctx.mergedLengths[i], dataType, defaultValue, ctx.merged.RWMutex)
 			columns[columnID].Allocate(true)
 		} else {
 			// Non-sort columns.
 			if common.IsArrayType(dataType) {
 				// array will never appear in sort columns, TODO davidw schema validation in array type support
-				offsetBytes := int64(common.CalculateVectorBytes(common.Uint32, ctx.totalSize * 2))
+				offsetBytes := int64(vectors.CalculateVectorBytes(common.Uint32, ctx.totalSize * 2))
 				valueBytes := ctx.calculateArrayVectorPartyBytes(columnID, dataType)
 				bytes = offsetBytes + valueBytes
 				columns[columnID] = list.NewArchiveVectorParty(ctx.totalSize, dataType, valueBytes, ctx.merged.RWMutex)
 			} else {
-				bytes = int64(common.CalculateVectorPartyBytes(dataType, ctx.totalSize, true, false))
+				bytes = int64(vectors.CalculateVectorPartyBytes(dataType, ctx.totalSize, true, false))
 				columns[columnID] = newArchiveVectorParty(ctx.totalSize, dataType, defaultValue, ctx.merged.RWMutex)
 			}
 			if !ctx.columnDeletions[columnID] {
@@ -437,10 +438,10 @@ func (ctx *mergeContext) calculateArrayVectorPartyBytes(columnID int, dataType c
 }
 
 // common function signature for both preallocate and merge.
-type mergeAction func(baseIter, patchIter sortedColumnIterator, sortColIdx, compareRes int, mergedVP common.ArchiveVectorParty)
+type mergeAction func(baseIter, patchIter sortedColumnIterator, sortColIdx, compareRes int, mergedVP vectors.ArchiveVectorParty)
 
 // preAllocate called during first pass.
-func (ctx *mergeContext) preAllocate(baseIter, patchIter sortedColumnIterator, sortColIdx, compareRes int, mergedVP common.ArchiveVectorParty) {
+func (ctx *mergeContext) preAllocate(baseIter, patchIter sortedColumnIterator, sortColIdx, compareRes int, mergedVP vectors.ArchiveVectorParty) {
 	ctx.mergedLengths[sortColIdx]++
 }
 
@@ -458,7 +459,7 @@ func (ctx *mergeContext) writeUnsortedColumns(start, end int, reader common.Batc
 				if !ctx.columnDeletions[columnID] {
 					mergedVP := ctx.merged.Columns[columnID]
 					val := reader.GetDataValueWithDefault(int(i), columnID, *ctx.defaultValues[columnID])
-					mergedVP.SetDataValue(ctx.outputBegins[columnID], val, common.IncrementCount)
+					mergedVP.SetDataValue(ctx.outputBegins[columnID], val, vectors.IncrementCount)
 					ctx.outputBegins[columnID]++
 				}
 			}
@@ -466,7 +467,7 @@ func (ctx *mergeContext) writeUnsortedColumns(start, end int, reader common.Batc
 	}
 }
 
-func (ctx *mergeContext) writeOutput(baseIter, patchIter sortedColumnIterator, sortColIdx, compareRes int, mergedVP common.ArchiveVectorParty) {
+func (ctx *mergeContext) writeOutput(baseIter, patchIter sortedColumnIterator, sortColIdx, compareRes int, mergedVP vectors.ArchiveVectorParty) {
 	var val common.DataValue
 	var count uint32
 	ifWriteUnsortedColumns := sortColIdx == len(ctx.patch.sortColumns)-1
@@ -497,7 +498,7 @@ func (ctx *mergeContext) writeOutput(baseIter, patchIter sortedColumnIterator, s
 
 	columnID := ctx.patch.sortColumns[sortColIdx]
 	// Set value on the mergedVP.
-	mergedVP.SetDataValue(ctx.outputBegins[columnID], val, common.IncrementCount, count)
+	mergedVP.SetDataValue(ctx.outputBegins[columnID], val, vectors.IncrementCount, count)
 	mergedVP.SetCount(ctx.outputBegins[columnID], ctx.outputCounts[sortColIdx])
 	ctx.outputBegins[columnID]++
 }
@@ -511,11 +512,11 @@ func (ctx *mergeContext) mergeRecursive(sortColIdx int, baseEndPos uint32, patch
 	}
 
 	columnID := ctx.patch.sortColumns[sortColIdx]
-	var mergedVP common.ArchiveVectorParty
+	var mergedVP vectors.ArchiveVectorParty
 
 	// Only used by merge stage during preallocate stage ctx.merged will be nil
 	if ctx.merged != nil {
-		mergedVP = ctx.merged.Columns[columnID].(common.ArchiveVectorParty)
+		mergedVP = ctx.merged.Columns[columnID].(vectors.ArchiveVectorParty)
 	}
 
 	baseIter := ctx.baseIters[sortColIdx]

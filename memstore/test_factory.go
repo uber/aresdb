@@ -23,6 +23,8 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	"github.com/uber/aresdb/memstore/list"
+	"github.com/uber/aresdb/memstore/tests"
+	"github.com/uber/aresdb/memstore/vectors"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
@@ -36,7 +38,7 @@ const (
 
 var (
 	testFactory = TestFactoryT{
-		TestFactoryT: memCom.TestFactoryT{
+		TestFactoryBase: tests.TestFactoryBase{
 			RootPath:             "../testing/data",
 			FileSystem:           utils.OSFileSystem{},
 			ToArchiveVectorParty: toArchiveVectorParty,
@@ -48,7 +50,7 @@ var (
 
 // TestFactoryT creates memstore test objects from text file
 type TestFactoryT struct {
-	memCom.TestFactoryT
+	tests.TestFactoryBase
 }
 
 // NewMockMemStore returns a new memstore with mocked diskstore and metastore.
@@ -63,7 +65,7 @@ func (t TestFactoryT) NewMockMemStore() *memStoreImpl {
 	return NewMemStore(metaStore, diskStore, NewOptions(bootstrapToken, redoLogManagerMaster)).(*memStoreImpl)
 }
 
-func toArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.ArchiveVectorParty {
+func toArchiveVectorParty(vp vectors.VectorParty, locker sync.Locker) vectors.ArchiveVectorParty {
 	if vp.IsList() {
 		return list.ToArrayArchiveVectorParty(vp, locker)
 	}
@@ -75,7 +77,7 @@ func toArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.Arch
 	return archiveColumn
 }
 
-func toLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
+func toLiveVectorParty(vp vectors.VectorParty) vectors.LiveVectorParty {
 	if vp.IsList() {
 		return list.ToArrayLiveVectorParty(vp)
 	}
@@ -84,7 +86,7 @@ func toLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
 	}
 }
 
-func toVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (memCom.VectorParty, error) {
+func toVectorParty(rvp *RawVectorParty, forLiveVP bool) (vectors.VectorParty, error) {
 	dataType := memCom.DataTypeFromString(rvp.DataType)
 	if dataType == memCom.Unknown {
 		return nil, utils.StackError(nil,
@@ -104,14 +106,14 @@ func toVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (memCom.VectorPar
 		return list.ToArrayVectorParty(rvp, forLiveVP)
 	}
 
-	var countsVec *memCom.Vector
-	columnMode := memCom.HasNullVector
+	var countsVec *vectors.Vector
+	columnMode := vectors.HasNullVector
 	if rvp.HasCounts {
-		countsVec = memCom.NewVector(
+		countsVec = vectors.NewVector(
 			memCom.Uint32,
 			rvp.Length+1,
 		)
-		columnMode = memCom.HasCountVector
+		columnMode = vectors.HasCountVector
 	}
 
 	vp := &cVectorParty{
@@ -120,11 +122,11 @@ func toVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (memCom.VectorPar
 			dataType: dataType,
 		},
 		columnMode: columnMode,
-		values: memCom.NewVector(
+		values: vectors.NewVector(
 			dataType,
 			rvp.Length,
 		),
-		nulls: memCom.NewVector(
+		nulls: vectors.NewVector(
 			dataType,
 			rvp.Length,
 		),
@@ -167,17 +169,17 @@ func toVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (memCom.VectorPar
 			}
 			setDataValue(countsVec, i+1, currentCountVal)
 			currentCount := *(*uint32)(currentCountVal.OtherVal)
-			vp.SetDataValue(i, val, memCom.IncrementCount, currentCount-prevCount)
+			vp.SetDataValue(i, val, vectors.IncrementCount, currentCount-prevCount)
 			prevCount = currentCount
 		} else {
-			vp.SetDataValue(i, val, memCom.IncrementCount)
+			vp.SetDataValue(i, val, vectors.IncrementCount)
 		}
 	}
 
 	return vp, nil
 }
 
-func setDataValue(v *memCom.Vector, idx int, val memCom.DataValue) {
+func setDataValue(v *vectors.Vector, idx int, val memCom.DataValue) {
 	if val.Valid {
 		if v.DataType == memCom.Bool {
 			v.SetBool(idx, val.BoolVal)

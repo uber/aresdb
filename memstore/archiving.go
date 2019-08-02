@@ -15,6 +15,7 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/memstore/vectors"
 	"sort"
 
 	"github.com/uber/aresdb/memstore/common"
@@ -32,7 +33,7 @@ import (
 //    ongoing archiving completes).
 type liveStoreSnapshot struct {
 	// Stores the structure as [RandomBatchIndex][ColumnID].
-	batches [][]common.VectorParty
+	batches [][]vectors.VectorParty
 	// For purging live batch later.
 	batchIDs              []int32
 	numRecordsInLastBatch int
@@ -42,13 +43,13 @@ type liveStoreSnapshot struct {
 func (s *LiveStore) snapshot() (ss liveStoreSnapshot) {
 	batchIDs, numRecordsInLastBatch := s.GetBatchIDs()
 	ss.batchIDs = batchIDs
-	ss.batches = make([][]common.VectorParty, len(batchIDs))
+	ss.batches = make([][]vectors.VectorParty, len(batchIDs))
 	ss.numRecordsInLastBatch = numRecordsInLastBatch
 	for i, batchID := range batchIDs {
 		batch := s.GetBatchForRead(batchID)
 		// Live batches are purged by archiving so all batches returned here
 		// should be valid.
-		ss.batches[i] = make([]common.VectorParty, len(batch.Columns))
+		ss.batches[i] = make([]vectors.VectorParty, len(batch.Columns))
 		copy(ss.batches[i], batch.Columns)
 		batch.RUnlock()
 	}
@@ -88,7 +89,7 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 	for batchIdx, batch := range ss.batches {
 		timeColumn := batch[0]
 		numRecords := timeColumn.GetLength()
-		minValue, _ := timeColumn.(common.LiveVectorParty).GetMinMaxValue()
+		minValue, _ := timeColumn.(vectors.LiveVectorParty).GetMinMaxValue()
 		if batchIdx == len(ss.batches)-1 {
 			numRecords = ss.numRecordsInLastBatch
 		}
@@ -156,7 +157,7 @@ func (s *LiveStore) getBatchIDsToPurge(cutoff uint32) []int32 {
 
 		timeColumn := batch.Columns[0]
 		if timeColumn != nil {
-			if _, maxValue := timeColumn.(common.LiveVectorParty).GetMinMaxValue(); maxValue < cutoff {
+			if _, maxValue := timeColumn.(vectors.LiveVectorParty).GetMinMaxValue(); maxValue < cutoff {
 				if !allowMissingEventTime || timeColumn.GetNonDefaultValueCount() == batch.Capacity || batch.MaxArrivalTime < cutoff {
 					batchIDs = append(batchIDs, batchID)
 				}
@@ -405,7 +406,7 @@ func (shard *TableShard) createNewArchiveStoreVersion(cutoff uint32, reporter Ar
 
 		baseBatch := shard.ArchiveStore.CurrentVersion.RequestBatch(day)
 
-		var requestedVPs []common.ArchiveVectorParty
+		var requestedVPs []vectors.ArchiveVectorParty
 		// We need to load all columns into memory for archiving.
 		for columnID := 0; columnID < numColumns; columnID++ {
 			requestedVP := baseBatch.RequestVectorParty(columnID)

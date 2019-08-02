@@ -19,12 +19,13 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 )
 
 // getCompactedTotalBytes returns the total bytes if we store the list values continuously without holes (but with
 // paddings).
-func getCompactedTotalBytes(vp common.LiveVectorParty) int64 {
+func getCompactedTotalBytes(vp vectors.LiveVectorParty) int64 {
 	if !vp.IsList() {
 		utils.GetLogger().Panic("Expect a list live vp")
 	}
@@ -90,7 +91,7 @@ func createArrayUpsertBatch() (*common.UpsertBatch, error) {
 }
 
 var _ = ginkgo.Describe("list vector party tests", func() {
-	var expectedUint32LiveStoreVP, expectedBoolLiveStoreVP common.VectorParty
+	var expectedUint32LiveStoreVP, expectedBoolLiveStoreVP vectors.VectorParty
 
 	ginkgo.BeforeEach(func() {
 		var err error

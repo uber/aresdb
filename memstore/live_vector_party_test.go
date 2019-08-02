@@ -15,10 +15,11 @@
 package memstore
 
 import (
+	"bytes"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
-	"bytes"
+	"github.com/uber/aresdb/memstore/vectors"
 )
 
 var _ = ginkgo.Describe("live vector party", func() {
@@ -89,14 +90,14 @@ var _ = ginkgo.Describe("live vector party", func() {
 		vp1.SetDataValue(0, common.DataValue{
 			Valid: true,
 			GoVal: shape1,
-		}, common.IgnoreCount)
+		}, vectors.IgnoreCount)
 
 		Ω(vp1.GetBytes()).Should(Equal(int64(8)))
 		Ω(vp1.GetLength()).Should(Equal(10))
 		dv := vp1.GetDataValue(0)
 		Ω(dv.Valid).Should(BeTrue())
 
-		vp1.SetDataValue(0, common.NullDataValue, common.IgnoreCount)
+		vp1.SetDataValue(0, common.NullDataValue, vectors.IgnoreCount)
 		dv = vp1.GetDataValue(0)
 		Ω(dv.Valid).Should(BeFalse())
 		Ω(dv.DataType).Should(Equal(common.GeoShape))
@@ -125,7 +126,7 @@ var _ = ginkgo.Describe("live vector party", func() {
 		vp1.SetDataValue(0, common.DataValue{
 			Valid: true,
 			GoVal: shape1,
-		}, common.IgnoreCount)
+		}, vectors.IgnoreCount)
 
 		Ω(vp1.GetBytes()).Should(Equal(int64(8)))
 		Ω(vp1.GetLength()).Should(Equal(10))
@@ -137,7 +138,7 @@ var _ = ginkgo.Describe("live vector party", func() {
 		vp2 := NewLiveVectorParty(10, common.GeoShape, common.NullDataValue, hostMemoryManager)
 		err = vp2.Read(&buffer, vpSerializer)
 		Ω(err).Should(BeNil())
-		Ω(common.VectorPartyEquals(vp1, vp2)).Should(BeTrue())
+		Ω(vectors.VectorPartyEquals(vp1, vp2)).Should(BeTrue())
 
 		Ω(vp2.GetBytes()).Should(Equal(int64(8)))
 		Ω(vp2.GetLength()).Should(Equal(10))
@@ -161,9 +162,9 @@ var _ = ginkgo.Describe("live vector party", func() {
 		vp1.SetDataValue(0, common.DataValue{
 			Valid: true,
 			GoVal: shape1,
-		}, common.IgnoreCount)
+		}, vectors.IgnoreCount)
 
-		Ω(vp1.Slice(0, 100)).Should(Equal(common.SlicedVector{
+		Ω(vp1.Slice(0, 100)).Should(Equal(vectors.SlicedVector{
 			Values: []interface{}{
 				"Polygon((180.0000+90.0000))",
 				nil, nil, nil, nil, nil, nil, nil, nil, nil,

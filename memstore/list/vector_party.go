@@ -16,6 +16,7 @@ package list
 
 import (
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"unsafe"
 )
 
@@ -26,7 +27,7 @@ import (
 // 2. There is no default value concept for list at least for now, so we will not store default value.
 type baseVectorParty struct {
 	// offset is a pair of uint32 [offset, length]. therefore its length is 2 * length of vp.
-	offsets *common.Vector
+	offsets *vectors.Vector
 	// length of vp.
 	length int
 	// DataType of values. We need it since for mode 0 vector party, we cannot
@@ -88,14 +89,14 @@ func (vp *baseVectorParty) GetLength() int {
 // Slice vector party into human readable SlicedVector format. For now just return an
 // empty slice.
 // TODO(lucafuji): implement slice vector on list vp.
-func (vp *baseVectorParty) Slice(startRow, numRows int) common.SlicedVector {
-	return common.SlicedVector{}
+func (vp *baseVectorParty) Slice(startRow, numRows int) vectors.SlicedVector {
+	return vectors.SlicedVector{}
 }
 
 // Check whether two vector parties are equal (used only in unit tests)
 // Check common properties like data type and length.
 // leftVP is vp underneath
-func (vp *baseVectorParty) equals(other common.VectorParty, leftVP common.ListVectorParty) bool {
+func (vp *baseVectorParty) equals(other vectors.VectorParty, leftVP vectors.ListVectorParty) bool {
 	if !other.IsList() {
 		return false
 	}

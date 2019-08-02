@@ -15,14 +15,17 @@
 package list
 
 import (
+	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/tests"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"sync"
 )
 
 var (
 	testFactory = TestFactoryT{
-		TestFactoryT: memCom.TestFactoryT{
+		TestFactoryT: memstore.TestFactoryT{
 			RootPath:             "../../testing/data",
 			FileSystem:           utils.OSFileSystem{},
 			ToArchiveVectorParty: ToArrayArchiveVectorParty,
@@ -34,22 +37,22 @@ var (
 
 // TestFactoryT creates test objects from text file
 type TestFactoryT struct {
-	memCom.TestFactoryT
+	memstore.TestFactoryT
 }
 
 func GetFactory() TestFactoryT {
 	return testFactory
 }
 
-func ToArrayArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.ArchiveVectorParty {
-	return vp.(memCom.ArchiveVectorParty)
+func ToArrayArchiveVectorParty(vp vectors.VectorParty, locker sync.Locker) vectors.ArchiveVectorParty {
+	return vp.(vectors.ArchiveVectorParty)
 }
 
-func ToArrayLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
-	return vp.(memCom.LiveVectorParty)
+func ToArrayLiveVectorParty(vp memCom.VectorParty) vectors.LiveVectorParty {
+	return vp.(vectors.LiveVectorParty)
 }
 
-func ToArrayVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (vp memCom.VectorParty, err error) {
+func ToArrayVectorParty(rvp *tests.RawVectorParty, forLiveVP bool) (vp memCom.VectorParty, err error) {
 	dataType := memCom.DataTypeFromString(rvp.DataType)
 	if dataType == memCom.Unknown {
 		return nil, utils.StackError(nil,
@@ -74,7 +77,7 @@ func ToArrayVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (vp memCom.V
 			if err != nil {
 				return nil, err
 			}
-			vp.SetDataValue(i, val, memCom.IgnoreCount)
+			vp.SetDataValue(i, val, vectors.IgnoreCount)
 		}
 		return vp, nil
 	}
@@ -95,7 +98,7 @@ func ToArrayVectorParty(rvp *memCom.RawVectorParty, forLiveVP bool) (vp memCom.V
 	vp = NewArchiveVectorParty(rvp.Length, dataType, totalBytes, &sync.RWMutex{})
 	vp.Allocate(false)
 	for i, val := range values {
-		vp.SetDataValue(i, val, memCom.IgnoreCount)
+		vp.SetDataValue(i, val, vectors.IgnoreCount)
 	}
 	return
 }

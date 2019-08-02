@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"os"
@@ -32,7 +33,7 @@ import (
 type LiveVectorParty struct {
 	baseVectorParty
 	// storing the offset to slab footer offset for each row.
-	caps       *common.Vector
+	caps       *vectors.Vector
 	memoryPool HighLevelMemoryPool
 	sync.RWMutex
 }
@@ -118,7 +119,7 @@ func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 	}
 
 	// columnMode, AllValuesPresent for now
-	columnMode := common.AllValuesPresent
+	columnMode := vectors.AllValuesPresent
 	if err = dataWriter.WriteUint16(uint16(columnMode)); err != nil {
 		return
 	}
@@ -167,7 +168,7 @@ func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 }
 
 // Read deserialize vector party
-func (vp *LiveVectorParty) Read(reader io.Reader, serializer common.VectorPartySerializer) (err error) {
+func (vp *LiveVectorParty) Read(reader io.Reader, serializer vectors.VectorPartySerializer) (err error) {
 	vp.Lock()
 	defer vp.Unlock()
 
@@ -215,8 +216,8 @@ func (vp *LiveVectorParty) Read(reader io.Reader, serializer common.VectorPartyS
 		return
 	}
 
-	columnMode := common.ColumnMode(m)
-	if columnMode >= common.MaxColumnMode {
+	columnMode := vectors.ColumnMode(m)
+	if columnMode >= vectors.MaxColumnMode {
 		return utils.StackError(nil, "Invalid mode %d", columnMode)
 	}
 
@@ -307,12 +308,12 @@ func (vp *LiveVectorParty) SetValue(row int, val unsafe.Pointer, valid bool) {
 }
 
 // AsList is the implementation from common.VectorParty
-func (vp *LiveVectorParty) AsList() common.ListVectorParty {
+func (vp *LiveVectorParty) AsList() vectors.ListVectorParty {
 	return vp
 }
 
 // Equals is the implementation from common.VectorParty
-func (vp *LiveVectorParty) Equals(other common.VectorParty) bool {
+func (vp *LiveVectorParty) Equals(other vectors.VectorParty) bool {
 	return vp.equals(other, vp.AsList())
 }
 
@@ -365,7 +366,7 @@ func (vp *LiveVectorParty) GetDataValue(row int) common.DataValue {
 
 // SetDataValue
 func (vp *LiveVectorParty) SetDataValue(row int, value common.DataValue,
-	countsUpdateMode common.ValueCountsUpdateMode, counts ...uint32) {
+	countsUpdateMode vectors.ValueCountsUpdateMode, counts ...uint32) {
 	vp.SetValue(row, value.OtherVal, value.Valid)
 }
 
@@ -376,8 +377,8 @@ func (vp *LiveVectorParty) GetDataValueByRow(row int) common.DataValue {
 
 // Allocate allocate underlying storage for vector party
 func (vp *LiveVectorParty) Allocate(hasCount bool) {
-	vp.caps = common.NewVector(common.Uint32, vp.length)
-	vp.offsets = common.NewVector(common.Uint32, vp.length*2)
+	vp.caps = vectors.NewVector(common.Uint32, vp.length)
+	vp.offsets = vectors.NewVector(common.Uint32, vp.length*2)
 
 	vp.memoryPool = NewHighLevelMemoryPool(vp.reporter)
 }
@@ -403,7 +404,7 @@ func (vp *LiveVectorParty) SetLength(length int) {
 // NewLiveVectorParty returns a LiveVectorParty pointer which implements ListVectorParty.
 // It's safe to pass nil HostMemoryManager.
 func NewLiveVectorParty(length int, dataType common.DataType,
-	hmm common.HostMemoryManager) common.LiveVectorParty {
+	hmm common.HostMemoryManager) vectors.LiveVectorParty {
 	return &LiveVectorParty{
 		baseVectorParty: baseVectorParty{
 			length:   length,

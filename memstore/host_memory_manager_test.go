@@ -15,6 +15,7 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/memstore/vectors"
 	"os"
 
 	"github.com/uber/aresdb/common"
@@ -44,7 +45,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 	var today int
 	testBasePath := "/tmp/testHostMemoryManager"
 
-	var c1 memCom.VectorParty
+	var c1 vectors.VectorParty
 	var err error
 	var writer io.WriteCloser
 	var buf *bytes.Buffer
@@ -935,12 +936,12 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			liveBatch := &LiveBatch{
 				Batch: memCom.Batch{
 					RWMutex: &sync.RWMutex{},
-					Columns: []memCom.VectorParty{
+					Columns: []vectors.VectorParty{
 						// create dummy to make vp not nil
 						&cLiveVectorParty{
 							cVectorParty: cVectorParty{
-								values: &memCom.Vector{Bytes: 128},
-								nulls:  &memCom.Vector{Bytes: 128},
+								values: &vectors.Vector{Bytes: 128},
+								nulls:  &vectors.Vector{Bytes: 128},
 							},
 						},
 					},
@@ -986,8 +987,8 @@ func CreateMockMetaStore() *metaMocks.MetaStore {
 	return metaStore
 }
 
-func CreateTestArchiveBatchColumns() []memCom.VectorParty {
-	return []memCom.VectorParty{
+func CreateTestArchiveBatchColumns() []vectors.VectorParty {
+	return []vectors.VectorParty{
 		&archiveVectorParty{},
 		&archiveVectorParty{},
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"os"
@@ -39,7 +40,7 @@ const (
 type ArchiveVectorParty struct {
 	baseVectorParty
 	common.Pinnable
-	values *common.Vector
+	values *vectors.Vector
 	// bytesWritten should only be used when archiving or backfilling. It's used to record the current position
 	// in values vector.
 	bytesWritten int64
@@ -54,7 +55,7 @@ type ArchiveVectorParty struct {
 // Length is the number of total rows and totalValueBytes is the total bytes used to
 // store values and validities.
 func NewArchiveVectorParty(length int, dataType common.DataType,
-	totalValueBytes int64, locker sync.Locker) common.ArchiveVectorParty {
+	totalValueBytes int64, locker sync.Locker) vectors.ArchiveVectorParty {
 	return newArchiveVectorParty(length, dataType, totalValueBytes, locker)
 }
 
@@ -77,8 +78,8 @@ func newArchiveVectorParty(length int, dataType common.DataType,
 // after switching to the new version of archive store. Before switching the memory
 // managed by this vp is counted as unmanaged memory.
 func (vp *ArchiveVectorParty) Allocate(hasCount bool) {
-	vp.offsets = common.NewVector(common.Uint32, vp.length*2)
-	vp.values = common.NewVector(common.Uint8, int(vp.totalValueBytes))
+	vp.offsets = vectors.NewVector(common.Uint32, vp.length*2)
+	vp.values = vectors.NewVector(common.Uint8, int(vp.totalValueBytes))
 }
 
 // GetBytes returns the bytes this vp occupies.
@@ -100,12 +101,12 @@ func (vp *ArchiveVectorParty) SafeDestruct() {
 }
 
 // AsList is the implementation from common.VectorParty
-func (vp *ArchiveVectorParty) AsList() common.ListVectorParty {
+func (vp *ArchiveVectorParty) AsList() vectors.ListVectorParty {
 	return vp
 }
 
 // Equals is the implementation from common.VectorParty
-func (vp *ArchiveVectorParty) Equals(other common.VectorParty) bool {
+func (vp *ArchiveVectorParty) Equals(other vectors.VectorParty) bool {
 	return vp.equals(other, vp.AsList())
 }
 
@@ -172,7 +173,7 @@ func (vp *ArchiveVectorParty) setValue(row int, val unsafe.Pointer, valid bool) 
 
 // SetDataValue is the implentation of common.VecotrParty
 func (vp *ArchiveVectorParty) SetDataValue(row int, value common.DataValue,
-	countsUpdateMode common.ValueCountsUpdateMode, counts ...uint32) {
+	countsUpdateMode vectors.ValueCountsUpdateMode, counts ...uint32) {
 	vp.setValue(row, value.OtherVal, value.Valid)
 }
 
@@ -209,7 +210,7 @@ func (vp *ArchiveVectorParty) Write(writer io.Writer) error {
 	}
 
 	// columnMode, AllValuesPresent for now
-	columnMode := common.AllValuesPresent
+	columnMode := vectors.AllValuesPresent
 	if err := dataWriter.WriteUint16(uint16(columnMode)); err != nil {
 		return err
 	}
@@ -242,7 +243,7 @@ func (vp *ArchiveVectorParty) Write(writer io.Writer) error {
 
 // Read reads a vector party from underlying reader. It first reads header from the reader and does
 // several sanity checks. Then it reads vectors based on vector party mode.
-func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySerializer) error {
+func (vp *ArchiveVectorParty) Read(reader io.Reader, s vectors.VectorPartySerializer) error {
 	dataReader := utils.NewStreamDataReader(reader)
 	magicNumber, err := dataReader.ReadUint32()
 	defer func() {
@@ -292,8 +293,8 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 		return err
 	}
 
-	columnMode := common.ColumnMode(m)
-	if columnMode >= common.MaxColumnMode {
+	columnMode := vectors.ColumnMode(m)
+	if columnMode >= vectors.MaxColumnMode {
 		return utils.StackError(nil, "Invalid mode %d", columnMode)
 	}
 
@@ -306,7 +307,7 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	vp.length = length
 	vp.dataType = dataType
 
-	vp.offsets = common.NewVector(common.Uint32, vp.length*2)
+	vp.offsets = vectors.NewVector(common.Uint32, vp.length*2)
 	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.offsets.Buffer()), vp.offsets.Bytes)); err != nil {
 		return err
 	}
@@ -318,7 +319,7 @@ func (vp *ArchiveVectorParty) Read(reader io.Reader, s common.VectorPartySeriali
 	}
 	vp.totalValueBytes = int64(bytes)
 	// Read value vector.
-	vp.values = common.NewVector(common.Uint8, int(vp.totalValueBytes))
+	vp.values = vectors.NewVector(common.Uint8, int(vp.totalValueBytes))
 	// Here we directly read from reader into the c allocated bytes.
 	if err = dataReader.Read(cgoutils.MakeSliceFromCPtr(uintptr(vp.values.Buffer()), vp.values.Bytes)); err != nil {
 		return err
@@ -392,7 +393,7 @@ func (vp *ArchiveVectorParty) Dump(file *os.File) {
 }
 
 // CopyOnWrite clone vector party for updates, the update can only for in-place change with same length for update row
-func (vp *ArchiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorParty {
+func (vp *ArchiveVectorParty) CopyOnWrite(batchSize int) vectors.ArchiveVectorParty {
 	// archive vector party should always have allUsersDone initialized correctly with batch rwlock
 	newVP := newArchiveVectorParty(batchSize, vp.dataType, vp.totalValueBytes, vp.AllUsersDone.L)
 	newVP.Allocate(false)

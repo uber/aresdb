@@ -15,6 +15,7 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/memstore/vectors"
 	"sort"
 
 	diskMocks "github.com/uber/aresdb/diskstore/mocks"
@@ -157,7 +158,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		ss := vs.snapshot()
 		Ω(ss).Should(Equal(liveStoreSnapshot{
 			numRecordsInLastBatch: 3,
-			batches: [][]memCom.VectorParty{
+			batches: [][]vectors.VectorParty{
 				batch110.Columns,
 				batch101.Columns,
 			},
@@ -268,7 +269,7 @@ var _ = ginkgo.Describe("archiving", func() {
 
 		timeColumn := mergedBatch.Columns[0]
 		Ω(timeColumn.GetLength()).Should(BeEquivalentTo(12))
-		Ω(timeColumn.(memCom.CVectorParty).GetMode()).Should(BeEquivalentTo(memCom.AllValuesPresent))
+		Ω(timeColumn.(vectors.CVectorParty).GetMode()).Should(BeEquivalentTo(vectors.AllValuesPresent))
 
 		// Old version of archiving store should be purged.
 		for i, column := range archiveBatch0.Columns {
@@ -284,7 +285,7 @@ var _ = ginkgo.Describe("archiving", func() {
 		// If a batch is partially read, it should not be purged
 		for i, column := range batch101.Columns {
 			if i != 3 {
-				Ω(column.(*cLiveVectorParty).GetMode()).ShouldNot(BeEquivalentTo(memCom.AllValuesDefault))
+				Ω(column.(*cLiveVectorParty).GetMode()).ShouldNot(BeEquivalentTo(vectors.AllValuesDefault))
 				Ω(column.(*cLiveVectorParty).values).ShouldNot(BeNil())
 			} else {
 				Ω(column.(*list.LiveVectorParty).GetBytes()).ShouldNot(Equal(int64(0)))

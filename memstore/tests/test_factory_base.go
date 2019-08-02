@@ -15,9 +15,11 @@
 // Package memstore has to put test factory here since otherwise we will have a
 // memstore -> utils -> memstore import cycle.
 
-package common
+package tests
 
 import (
+	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"gopkg.in/yaml.v2"
 	"path/filepath"
@@ -27,13 +29,13 @@ import (
 )
 
 // TestFactoryT creates memstore test objects from text file
-type TestFactoryT struct {
+type TestFactoryBase struct {
 	RootPath string
 	utils.FileSystem
 	// functions to do real vp conversion, need to pass in from caller
-	ToArchiveVectorParty func(VectorParty, sync.Locker) ArchiveVectorParty
-	ToLiveVectorParty    func(VectorParty) LiveVectorParty
-	ToVectorParty        func(*RawVectorParty, bool) (VectorParty, error)
+	ToArchiveVectorParty func(vectors.VectorParty, sync.Locker) vectors.ArchiveVectorParty
+	ToLiveVectorParty    func(vectors.VectorParty) vectors.LiveVectorParty
+	ToVectorParty        func(*RawVectorParty, bool) (vectors.VectorParty, error)
 }
 
 type rawBatch struct {
@@ -65,7 +67,7 @@ type rawUpsertBatch struct {
 }
 
 // ReadArchiveBatch read batch and do pruning for every columns.
-func (t TestFactoryT) ReadArchiveBatch(name string) (*Batch, error) {
+func (t TestFactoryBase) ReadArchiveBatch(name string) (*common.Batch, error) {
 	batch, err := t.ReadBatch(name, false)
 	if err != nil {
 		return nil, err
@@ -82,7 +84,7 @@ func (t TestFactoryT) ReadArchiveBatch(name string) (*Batch, error) {
 }
 
 // ReadLiveBatch read batch and skip pruning for every columns.
-func (t TestFactoryT) ReadLiveBatch(name string) (*Batch, error) {
+func (t TestFactoryBase) ReadLiveBatch(name string) (*common.Batch, error) {
 	batch, err := t.ReadBatch(name, true)
 	if err != nil {
 		return nil, err
@@ -102,12 +104,12 @@ func (t TestFactoryT) ReadLiveBatch(name string) (*Batch, error) {
 // ReadBatch returns a batch given batch name. Batch will be searched
 // under testing/data/batches folder. Prune tells whether need to prune
 // the columns after column contruction.
-func (t TestFactoryT) ReadBatch(name string, forLiveVP bool) (*Batch, error) {
+func (t TestFactoryBase) ReadBatch(name string, forLiveVP bool) (*common.Batch, error) {
 	path := filepath.Join(t.RootPath, "batches", name)
 	return t.readBatchFromFile(path, forLiveVP)
 }
 
-func (t TestFactoryT) readBatchFromFile(path string, forLiveVP bool) (*Batch, error) {
+func (t TestFactoryBase) readBatchFromFile(path string, forLiveVP bool) (*common.Batch, error) {
 	fileContent, err := t.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -120,9 +122,9 @@ func (t TestFactoryT) readBatchFromFile(path string, forLiveVP bool) (*Batch, er
 	return rb.toBatch(t, forLiveVP)
 }
 
-func (rb *rawBatch) toBatch(t TestFactoryT, forLiveVP bool) (*Batch, error) {
-	batch := &Batch{
-		Columns: make([]VectorParty, len(rb.Columns)),
+func (rb *rawBatch) toBatch(t TestFactoryBase, forLiveVP bool) (*common.Batch, error) {
+	batch := &common.Batch{
+		Columns: make([]vectors.VectorParty, len(rb.Columns)),
 	}
 	for i, name := range rb.Columns {
 		if len(name) == 0 {
@@ -141,7 +143,7 @@ func (rb *rawBatch) toBatch(t TestFactoryT, forLiveVP bool) (*Batch, error) {
 }
 
 // ReadArchiveVectorParty loads a vector party and prune it after construction.
-func (t TestFactoryT) ReadArchiveVectorParty(name string, locker sync.Locker) (ArchiveVectorParty, error) {
+func (t TestFactoryBase) ReadArchiveVectorParty(name string, locker sync.Locker) (vectors.ArchiveVectorParty, error) {
 	vp, err := t.ReadVectorParty(name, false)
 	if err != nil {
 		return nil, err
@@ -150,7 +152,7 @@ func (t TestFactoryT) ReadArchiveVectorParty(name string, locker sync.Locker) (A
 }
 
 // ReadLiveVectorParty loads a vector party and skip pruning.
-func (t TestFactoryT) ReadLiveVectorParty(name string) (LiveVectorParty, error) {
+func (t TestFactoryBase) ReadLiveVectorParty(name string) (vectors.LiveVectorParty, error) {
 	vp, err := t.ReadVectorParty(name, true)
 	if err != nil {
 		return nil, err
@@ -161,12 +163,12 @@ func (t TestFactoryT) ReadLiveVectorParty(name string) (LiveVectorParty, error) 
 // ReadVectorParty returns a vector party given vector party name. Vector party
 // will be searched under testing/data/vps folder. Prune tells whether to prune this
 // column.
-func (t TestFactoryT) ReadVectorParty(name string, forLiveVP bool) (VectorParty, error) {
+func (t TestFactoryBase) ReadVectorParty(name string, forLiveVP bool) (vectors.VectorParty, error) {
 	path := filepath.Join(t.RootPath, "vps", name)
 	return t.readVectorPartyFromFile(path, forLiveVP)
 }
 
-func (t TestFactoryT) readVectorPartyFromFile(path string, forLiveVP bool) (VectorParty, error) {
+func (t TestFactoryBase) readVectorPartyFromFile(path string, forLiveVP bool) (vectors.VectorParty, error) {
 	fileContent, err := t.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -181,14 +183,14 @@ func (t TestFactoryT) readVectorPartyFromFile(path string, forLiveVP bool) (Vect
 
 // ReadVector returns a vector given vector name. Vector will
 // be searched under testing/data/vectors folder.
-func (t TestFactoryT) ReadVector(name string) (*Vector, error) {
+func (t TestFactoryBase) ReadVector(name string) (*vectors.Vector, error) {
 	path := filepath.Join(t.RootPath, "vectors", name)
 	return t.readVectorFromFile(path)
 }
 
-func setDataValue(v *Vector, idx int, val DataValue) {
+func setDataValue(v *vectors.Vector, idx int, val common.DataValue) {
 	if val.Valid {
-		if v.DataType == Bool {
+		if v.DataType == common.Bool {
 			v.SetBool(idx, val.BoolVal)
 		} else {
 			v.SetValue(idx, val.OtherVal)
@@ -196,9 +198,9 @@ func setDataValue(v *Vector, idx int, val DataValue) {
 	}
 }
 
-func (rv *rawVector) toVector() (*Vector, error) {
-	dataType := DataTypeFromString(rv.DataType)
-	if dataType == Unknown {
+func (rv *rawVector) toVector() (*vectors.Vector, error) {
+	dataType := common.DataTypeFromString(rv.DataType)
+	if dataType == common.Unknown {
 		return nil, utils.StackError(nil,
 			"Unknown DataType when reading vector from file",
 		)
@@ -212,10 +214,10 @@ func (rv *rawVector) toVector() (*Vector, error) {
 		)
 	}
 
-	v := NewVector(dataType, rv.Length)
+	v := vectors.NewVector(dataType, rv.Length)
 
 	for i, row := range rv.Values {
-		val, err := ValueFromString(row, dataType)
+		val, err := common.ValueFromString(row, dataType)
 		if err != nil {
 			return nil, utils.StackError(err,
 				"Unable to parse value from string %s for data type %s",
@@ -226,7 +228,7 @@ func (rv *rawVector) toVector() (*Vector, error) {
 	return v, nil
 }
 
-func (t TestFactoryT) readVectorFromFile(path string) (*Vector, error) {
+func (t TestFactoryBase) readVectorFromFile(path string) (*vectors.Vector, error) {
 	fileContent, err := t.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -241,17 +243,17 @@ func (t TestFactoryT) readVectorFromFile(path string) (*Vector, error) {
 }
 
 // ReadUpsertBatch returns a pointer to UpsertBatch given the upsert batch name.
-func (t TestFactoryT) ReadUpsertBatch(name string) (*UpsertBatch, error) {
+func (t TestFactoryBase) ReadUpsertBatch(name string) (*common.UpsertBatch, error) {
 	path := filepath.Join(t.RootPath, "upsert-batches", name)
 	return t.readUpsertBatchFromFile(path)
 }
 
-func (ru *rawUpsertBatch) toUpsertBatch() (*UpsertBatch, error) {
-	builder := NewUpsertBatchBuilder()
-	var dataTypes []DataType
+func (ru *rawUpsertBatch) toUpsertBatch() (*common.UpsertBatch, error) {
+	builder := common.NewUpsertBatchBuilder()
+	var dataTypes []common.DataType
 	for _, column := range ru.Columns {
-		dataType := DataTypeFromString(column.DataType)
-		if dataType == Unknown {
+		dataType := common.DataTypeFromString(column.DataType)
+		if dataType == common.Unknown {
 			return nil, utils.StackError(nil,
 				"Unknown DataType when reading vector from file",
 			)
@@ -271,7 +273,7 @@ func (ru *rawUpsertBatch) toUpsertBatch() (*UpsertBatch, error) {
 		}
 
 		for col, rawValue := range rawValues {
-			value, err := ValueFromString(rawValue, dataTypes[col])
+			value, err := common.ValueFromString(rawValue, dataTypes[col])
 			if err != nil {
 				return nil, err
 			}
@@ -283,10 +285,10 @@ func (ru *rawUpsertBatch) toUpsertBatch() (*UpsertBatch, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewUpsertBatch(bytes)
+	return common.NewUpsertBatch(bytes)
 }
 
-func (t TestFactoryT) readUpsertBatchFromFile(path string) (*UpsertBatch, error) {
+func (t TestFactoryBase) readUpsertBatchFromFile(path string) (*common.UpsertBatch, error) {
 	fileContent, err := t.ReadFile(path)
 	if err != nil {
 		return nil, err

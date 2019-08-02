@@ -16,6 +16,7 @@ package memstore
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/memstore/vectors"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,7 +35,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 
 	liveBatch := LiveBatch{Batch: common.Batch{
 		RWMutex: &sync.RWMutex{},
-		Columns: make([]common.VectorParty, 10),
+		Columns: make([]vectors.VectorParty, 10),
 	}}
 
 	tableConfig := &metaCom.TableConfig{
@@ -64,7 +65,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 	archiveBatch := ArchiveBatch{
 		Batch: common.Batch{
 			RWMutex: &sync.RWMutex{},
-			Columns: make([]common.VectorParty, 10),
+			Columns: make([]vectors.VectorParty, 10),
 		}}
 
 	archiveStore := ArchiveStore{

@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package vectors
 
 // #include <stdlib.h>
 // #include <string.h>
 
 import (
 	"github.com/uber/aresdb/cgoutils"
+	"github.com/uber/aresdb/memstore/common"
 	"math"
 	"unsafe"
 
@@ -29,8 +30,8 @@ import (
 // Vector stores a batch of columnar data (values, nulls, or counts) for a column.
 type Vector struct {
 	// The data type of the value stored in the vector.
-	DataType DataType
-	CmpFunc  CompareFunc
+	DataType common.DataType
+	CmpFunc  common.CompareFunc
 
 	// Max number of values that can be stored in the vector.
 	Size int
@@ -53,15 +54,15 @@ type Vector struct {
 
 // NewVector creates a vector with the specified bits per unit and size(capacity).
 // The majority of its storage space is managed in C.
-func NewVector(dataType DataType, size int) *Vector {
-	unitBits := DataTypeBits(dataType)
+func NewVector(dataType common.DataType, size int) *Vector {
+	unitBits := common.DataTypeBits(dataType)
 	bytes := CalculateVectorBytes(dataType, size)
 
 	buffer := cgoutils.HostAlloc(bytes)
 
 	return &Vector{
 		DataType: dataType,
-		CmpFunc:  GetCompareFunc(dataType),
+		CmpFunc:  common.GetCompareFunc(dataType),
 		unitBits: unitBits,
 		Size:     size,
 		Bytes:    bytes,
@@ -71,8 +72,8 @@ func NewVector(dataType DataType, size int) *Vector {
 }
 
 // CalculateVectorBytes calculates bytes the vector will occupy given data type and size without actual allocation.
-func CalculateVectorBytes(dataType DataType, size int) int {
-	unitBits := DataTypeBits(dataType)
+func CalculateVectorBytes(dataType common.DataType, size int) int {
+	unitBits := common.DataTypeBits(dataType)
 	bits := unitBits * size
 	// Round up to 512 bits (64 bytes).
 	remainder := bits % 512
@@ -84,28 +85,28 @@ func CalculateVectorBytes(dataType DataType, size int) int {
 
 // CalculateVectorPartyBytes calculates bytes the vector party will occupy.
 // Note: data type supported in go memory will report memory usage when value is actually set, therefore report 0 here
-func CalculateVectorPartyBytes(dataType DataType, size int, hasNulls bool, hasCounts bool) int {
-	if IsGoType(dataType) {
+func CalculateVectorPartyBytes(dataType common.DataType, size int, hasNulls bool, hasCounts bool) int {
+	if common.IsGoType(dataType) {
 		// batchSize * size of golang pointer
 		return size * 8
 	}
 
-	if IsArrayType(dataType) {
+	if common.IsArrayType(dataType) {
 		// this only calculates the offset and caps for list live vector party, value vector is controlled inside vp
 		// list archive vector party can not use this either
-		offsets := CalculateVectorBytes(Uint32, 2 * size)
-		caps := CalculateVectorBytes(Uint32, size)
+		offsets := CalculateVectorBytes(common.Uint32, 2 * size)
+		caps := CalculateVectorBytes(common.Uint32, size)
 		return offsets + caps
 	}
 
 	bytes := CalculateVectorBytes(dataType, size)
 
 	if hasNulls {
-		bytes += CalculateVectorBytes(Bool, size)
+		bytes += CalculateVectorBytes(common.Bool, size)
 	}
 
 	if hasCounts {
-		bytes += CalculateVectorBytes(Uint32, size+1)
+		bytes += CalculateVectorBytes(common.Uint32, size+1)
 	}
 
 	return bytes
@@ -214,8 +215,8 @@ func (v *Vector) LowerBound(first int, last int, value unsafe.Pointer) int {
 	for first < last {
 		mid := (last + first) / 2
 		cmpRes := 0
-		if v.DataType == Bool {
-			cmpRes = CompareBool(v.GetBool(mid), *(*uint32)(value) != 0)
+		if v.DataType == common.Bool {
+			cmpRes = common.CompareBool(v.GetBool(mid), *(*uint32)(value) != 0)
 		} else {
 			cmpRes = v.CmpFunc(v.GetValue(mid), value)
 		}
@@ -238,8 +239,8 @@ func (v *Vector) UpperBound(first int, last int, value unsafe.Pointer) int {
 		mid := (last + first) / 2
 
 		cmpRes := 0
-		if v.DataType == Bool {
-			cmpRes = CompareBool(v.GetBool(mid), *(*uint32)(value) != 0)
+		if v.DataType == common.Bool {
+			cmpRes = common.CompareBool(v.GetBool(mid), *(*uint32)(value) != 0)
 		} else {
 			cmpRes = v.CmpFunc(v.GetValue(mid), value)
 		}

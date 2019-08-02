@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/memstore/vectors"
 	"net/http"
 	"sort"
 	"strconv"
@@ -155,7 +156,7 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	schema.RLock()
-	response.Body.Vectors = make([]memCom.SlicedVector, 0, len(schema.Schema.Columns))
+	response.Body.Vectors = make([]vectors.SlicedVector, 0, len(schema.Schema.Columns))
 	response.Body.Columns = make([]string, 0, len(schema.Schema.Columns))
 	for columnID, column := range schema.Schema.Columns {
 		response.Body.Columns = append(response.Body.Columns, column.Name)
@@ -231,8 +232,8 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 	schema.RUnlock()
 }
 
-func readRows(vps []memCom.VectorParty, startRow, numRows int) (n int, vectors []memCom.SlicedVector) {
-	vectors = make([]memCom.SlicedVector, len(vps))
+func readRows(vps []vectors.VectorParty, startRow, numRows int) (n int, vectors []vectors.SlicedVector) {
+	vectors = make([]vectors.SlicedVector, len(vps))
 	for columnID, vp := range vps {
 		if vp != nil {
 			vectors[columnID] = vp.Slice(startRow, numRows)
@@ -240,7 +241,7 @@ func readRows(vps []memCom.VectorParty, startRow, numRows int) (n int, vectors [
 				n = vectors[columnID].Counts[len(vectors[columnID].Counts)-1]
 			}
 		} else {
-			vectors[columnID] = memCom.SlicedVector{
+			vectors[columnID] = vectors.SlicedVector{
 				Values: []interface{}{nil},
 				Counts: []int{numRows},
 			}
@@ -249,7 +250,7 @@ func readRows(vps []memCom.VectorParty, startRow, numRows int) (n int, vectors [
 	return n, vectors
 }
 
-func translateEnums(vector *memCom.SlicedVector, enumCases []string) error {
+func translateEnums(vector *vectors.SlicedVector, enumCases []string) error {
 	for index, value := range vector.Values {
 		if value != nil {
 			var id int

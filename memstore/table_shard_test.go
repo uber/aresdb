@@ -15,6 +15,7 @@
 package memstore
 
 import (
+	"github.com/uber/aresdb/memstore/vectors"
 	"sync"
 
 	"github.com/onsi/ginkgo"
@@ -80,7 +81,7 @@ var _ = ginkgo.Describe("table Shard", func() {
 			BatchID: 100,
 			Shard:   shard,
 		}
-		aBatch.Columns = []common.VectorParty{nil, nil, &archiveVectorParty{Pinnable: common.Pinnable{AllUsersDone: sync.NewCond(aBatch)}}}
+		aBatch.Columns = []vectors.VectorParty{nil, nil, &archiveVectorParty{Pinnable: common.Pinnable{AllUsersDone: sync.NewCond(aBatch)}}}
 		shard.ArchiveStore.CurrentVersion.Batches[100] = aBatch
 
 		// Test!

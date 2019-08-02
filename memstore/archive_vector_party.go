@@ -17,6 +17,7 @@ package memstore
 import (
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"sync"
 	"unsafe"
@@ -33,13 +34,13 @@ type archiveVectorParty struct {
 func (vp *archiveVectorParty) Prune() {
 	mode := vp.JudgeMode()
 	switch mode {
-	case common.AllValuesDefault:
+	case vectors.AllValuesDefault:
 		vp.values.SafeDestruct()
 		vp.values = nil
 		vp.counts.SafeDestruct()
 		vp.counts = nil
 		fallthrough
-	case common.AllValuesPresent:
+	case vectors.AllValuesPresent:
 		vp.nulls.SafeDestruct()
 		vp.nulls = nil
 	}
@@ -58,8 +59,8 @@ func (vp *archiveVectorParty) SetCount(offset int, count uint32) {
 
 // CopyOnWrite clone vector party for updates
 // Only work for uncompressed archive vector party, Mode 3 vector party (has count) cannot be cloned for write
-func (vp *archiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorParty {
-	if vp.GetMode() == common.HasCountVector {
+func (vp *archiveVectorParty) CopyOnWrite(batchSize int) vectors.ArchiveVectorParty {
+	if vp.GetMode() == vectors.HasCountVector {
 		utils.GetLogger().Panic("Mode 3 vector party should not be cloned for write.")
 	}
 
@@ -68,7 +69,7 @@ func (vp *archiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorPar
 	newVP.Allocate(false)
 	newVP.nonDefaultValueCount = vp.nonDefaultValueCount
 
-	if vp.GetMode() == common.AllValuesDefault {
+	if vp.GetMode() == vectors.AllValuesDefault {
 		newVP.fillWithDefaultValue()
 	} else {
 		if vp.values != nil {

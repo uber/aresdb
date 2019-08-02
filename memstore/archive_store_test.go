@@ -17,6 +17,7 @@ package memstore
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/uber/aresdb/memstore/vectors"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,7 +48,7 @@ var _ = ginkgo.Describe("archive store", func() {
 		archiveBatch := &ArchiveBatch{
 			Batch:  memCom.Batch{
 				RWMutex: &sync.RWMutex{},
-				Columns: []memCom.VectorParty{
+				Columns: []vectors.VectorParty{
 					&archiveVectorParty{
 						cVectorParty: cVectorParty{
 							baseVectorParty: baseVectorParty{
@@ -102,7 +103,7 @@ var _ = ginkgo.Describe("archive store", func() {
 		}
 
 		testVectorParty := newArchiveVectorParty(archiveBatch.Size, memCom.Bool, memCom.NullDataValue, archiveBatch.RWMutex)
-		archiveBatch.Batch.Columns = []memCom.VectorParty{
+		archiveBatch.Batch.Columns = []vectors.VectorParty{
 			nil,
 			testVectorParty,
 		}
@@ -127,10 +128,10 @@ var _ = ginkgo.Describe("archive store", func() {
 			BatchID: 1,
 			Batch: memCom.Batch{
 				RWMutex: &sync.RWMutex{},
-				Columns: make([]memCom.VectorParty, 3),
+				Columns: make([]vectors.VectorParty, 3),
 			},
 		}
-		batch.Columns = make([]memCom.VectorParty, 3)
+		batch.Columns = make([]vectors.VectorParty, 3)
 		batch.Columns[0] = &archiveVectorParty{}
 		batch.Columns[1] = &archiveVectorParty{}
 		batch.Columns[2] = &archiveVectorParty{}
@@ -216,23 +217,23 @@ var _ = ginkgo.Describe("archive store", func() {
 			},
 		}
 
-		clonedVP := archiveBatch.Columns[0].(memCom.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size)
+		clonedVP := archiveBatch.Columns[0].(vectors.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size)
 		Ω(clonedVP.(*archiveVectorParty).nulls).ShouldNot(BeNil())
 		Ω(clonedVP.(*archiveVectorParty).nonDefaultValueCount).Should(BeEquivalentTo(3))
 		Ω(*(*[3]uint32)(clonedVP.(*archiveVectorParty).values.Buffer())).Should(BeEquivalentTo([3]uint32{0, 1, 2}))
 		Ω(*(*uint8)(clonedVP.(*archiveVectorParty).nulls.Buffer())).Should(BeEquivalentTo(0xFF))
 
 		// we cannot clone sorted column.
-		Ω(func() { archiveBatch.Columns[1].(memCom.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size) }).Should(Panic())
+		Ω(func() { archiveBatch.Columns[1].(vectors.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size) }).Should(Panic())
 
-		clonedVP = archiveBatch.Columns[2].(memCom.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size)
+		clonedVP = archiveBatch.Columns[2].(vectors.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size)
 		Ω(clonedVP.(*archiveVectorParty).values).ShouldNot(BeNil())
 		Ω(clonedVP.(*archiveVectorParty).nulls).ShouldNot(BeNil())
 		Ω(clonedVP.(*archiveVectorParty).nonDefaultValueCount).Should(BeEquivalentTo(0))
 		Ω(*(*[3]uint32)(clonedVP.(*archiveVectorParty).values.Buffer())).Should(BeEquivalentTo([3]uint32{0, 0, 0}))
 		Ω(*(*uint8)(clonedVP.(*archiveVectorParty).nulls.Buffer())).Should(BeEquivalentTo(0x0))
 
-		clonedVP = archiveBatch.Columns[3].(memCom.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size)
+		clonedVP = archiveBatch.Columns[3].(vectors.ArchiveVectorParty).CopyOnWrite(archiveBatch.Size)
 		Ω(clonedVP.(*archiveVectorParty).values).ShouldNot(BeNil())
 		Ω(clonedVP.(*archiveVectorParty).nulls).ShouldNot(BeNil())
 		Ω(*(*[3]uint32)(clonedVP.(*archiveVectorParty).values.Buffer())).Should(BeEquivalentTo([3]uint32{0, 0, 2}))
@@ -266,7 +267,7 @@ var _ = ginkgo.Describe("archive store", func() {
 			},
 		}
 
-		var requestedVPs []memCom.ArchiveVectorParty
+		var requestedVPs []vectors.ArchiveVectorParty
 		for columnID := 0; columnID < 4; columnID++ {
 			requestedVP := archiveBatch.RequestVectorParty(columnID)
 			requestedVP.WaitForDiskLoad()

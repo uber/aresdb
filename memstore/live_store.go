@@ -16,6 +16,7 @@ package memstore
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/memstore/vectors"
 	"math"
 	"sync"
 	"time"
@@ -226,7 +227,7 @@ func (s *LiveStore) appendBatch(batchID int32) *LiveBatch {
 	batch := &LiveBatch{
 		Batch: common.Batch{
 			RWMutex: &sync.RWMutex{},
-			Columns: make([]common.VectorParty, numColumns),
+			Columns: make([]vectors.VectorParty, numColumns),
 		},
 		Capacity:  s.BatchSize,
 		liveStore: s,
@@ -400,7 +401,7 @@ func (s *LiveStore) GetMemoryUsageForColumn(valueType common.DataType, columnID 
 // GetOrCreateVectorParty returns LiveVectorParty for the specified column from
 // the live batch. locked specifies whether the batch has been locked.
 // The lock will be left in the same state after the function returns.
-func (b *LiveBatch) GetOrCreateVectorParty(columnID int, locked bool) common.LiveVectorParty {
+func (b *LiveBatch) GetOrCreateVectorParty(columnID int, locked bool) vectors.LiveVectorParty {
 	// Ensure that columnID is not out of bound.
 	if columnID >= len(b.Columns) {
 		if !locked {
@@ -421,7 +422,7 @@ func (b *LiveBatch) GetOrCreateVectorParty(columnID int, locked bool) common.Liv
 		defaultValue := *b.liveStore.tableSchema.DefaultValues[columnID]
 		b.liveStore.tableSchema.RUnlock()
 
-		bytes := common.CalculateVectorPartyBytes(dataType, b.Capacity, true, false)
+		bytes := vectors.CalculateVectorPartyBytes(dataType, b.Capacity, true, false)
 		b.liveStore.HostMemoryManager.ReportUnmanagedSpaceUsageChange(int64(bytes))
 		liveVP := NewLiveVectorParty(b.Capacity, dataType, defaultValue, b.liveStore.HostMemoryManager)
 		liveVP.Allocate(false)
@@ -435,7 +436,7 @@ func (b *LiveBatch) GetOrCreateVectorParty(columnID int, locked bool) common.Liv
 		}
 		return liveVP
 	}
-	return b.Columns[columnID].(common.LiveVectorParty)
+	return b.Columns[columnID].(vectors.LiveVectorParty)
 }
 
 // MarshalJSON marshals a LiveBatch into json.
