@@ -111,6 +111,258 @@ func TestParser_ParseExpr(t *testing.T) {
 			},
 		},
 
+		// Binary expression with IN.
+		{
+			s: "id IN (12, 18)",
+			expr: &expr.BinaryExpr{
+				Op:  expr.IN,
+				LHS: &expr.VarRef{Val: "id"},
+				RHS: &expr.Call{Name: "", Args: []expr.Expr{
+					&expr.NumberLiteral{Val: 12, Int: 12, Expr: "12", ExprType: expr.Unsigned},
+					&expr.NumberLiteral{Val: 18, Int: 18, Expr: "18", ExprType: expr.Unsigned},
+				}},
+			},
+		},
+		{
+			s: "id IN (12)",
+			expr: &expr.BinaryExpr{
+				Op:  expr.IN,
+				LHS: &expr.VarRef{Val: "id"},
+				RHS: &expr.Call{Name: "", Args: []expr.Expr{
+					&expr.NumberLiteral{Val: 12, Int: 12, Expr: "12", ExprType: expr.Unsigned},
+				}},
+			},
+		},
+		{
+			s: "id IN (12, 15)",
+			expr: &expr.BinaryExpr{
+				Op:  expr.IN,
+				LHS: &expr.VarRef{Val: "id"},
+				RHS: &expr.Call{Name: "", Args: []expr.Expr{
+					&expr.NumberLiteral{Val: 12, Int: 12, Expr: "12", ExprType: expr.Unsigned},
+					&expr.NumberLiteral{Val: 15, Int: 15, Expr: "15", ExprType: expr.Unsigned},
+				}},
+			},
+		},
+		// Binary expression with NOT IN.
+		{
+			s: "id NOT IN (12, 18)",
+			expr: &expr.BinaryExpr{
+				Op:  expr.NOT_IN,
+				LHS: &expr.VarRef{Val: "id"},
+				RHS: &expr.Call{Name: "", Args: []expr.Expr{
+					&expr.NumberLiteral{Val: 12, Int: 12, Expr: "12", ExprType: expr.Unsigned},
+					&expr.NumberLiteral{Val: 18, Int: 18, Expr: "18", ExprType: expr.Unsigned},
+				}},
+			},
+		},
+		{
+			s: "id NOT IN (12, 15)",
+			expr: &expr.BinaryExpr{
+				Op:  expr.NOT_IN,
+				LHS: &expr.VarRef{Val: "id"},
+				RHS: &expr.Call{Name: "", Args: []expr.Expr{
+					&expr.NumberLiteral{Val: 12, Int: 12, Expr: "12", ExprType: expr.Unsigned},
+					&expr.NumberLiteral{Val: 15, Int: 15, Expr: "15", ExprType: expr.Unsigned},
+				}},
+			},
+		},
+		// Unary expression.
+		{
+			s: "not now",
+			expr: &expr.UnaryExpr{
+				Op:   expr.NOT,
+				Expr: &expr.VarRef{Val: "now"},
+			},
+		},
+		{
+			s: "!today",
+			expr: &expr.UnaryExpr{
+				Op:   expr.EXCLAMATION,
+				Expr: &expr.VarRef{Val: "today"},
+			},
+		},
+		{
+			s: "-c",
+			expr: &expr.UnaryExpr{
+				Op:   expr.UNARY_MINUS,
+				Expr: &expr.VarRef{Val: "c"},
+			},
+		},
+		{
+			s: "not ! a + b and c",
+			expr: &expr.BinaryExpr{
+				Op: expr.AND,
+				LHS: &expr.UnaryExpr{
+					Op: expr.NOT,
+					Expr: &expr.BinaryExpr{
+						Op: expr.ADD,
+						LHS: &expr.UnaryExpr{
+							Op:   expr.EXCLAMATION,
+							Expr: &expr.VarRef{Val: "a"},
+						},
+						RHS: &expr.VarRef{Val: "b"},
+					},
+				},
+				RHS: &expr.VarRef{Val: "c"},
+			},
+		},
+		// Derived unary expression.
+		{
+			s: "a is null",
+			expr: &expr.UnaryExpr{
+				Op:   expr.IS_NULL,
+				Expr: &expr.VarRef{Val: "a"},
+			},
+		},
+		{
+			s: "a is not null",
+			expr: &expr.UnaryExpr{
+				Op:   expr.IS_NOT_NULL,
+				Expr: &expr.VarRef{Val: "a"},
+			},
+		},
+		{
+			s: "a is unknown",
+			expr: &expr.UnaryExpr{
+				Op:   expr.IS_NULL,
+				Expr: &expr.VarRef{Val: "a"},
+			},
+		},
+		{
+			s: "a is true",
+			expr: &expr.UnaryExpr{
+				Op:   expr.IS_TRUE,
+				Expr: &expr.VarRef{Val: "a"},
+			},
+		},
+		{
+			s: "a is not true",
+			expr: &expr.UnaryExpr{
+				Op:   expr.IS_FALSE,
+				Expr: &expr.VarRef{Val: "a"},
+			},
+		},
+		{
+			s: "not ! a is not true and c",
+			expr: &expr.BinaryExpr{
+				Op: expr.AND,
+				LHS: &expr.UnaryExpr{
+					Op: expr.NOT,
+					Expr: &expr.UnaryExpr{
+						Op: expr.IS_FALSE,
+						Expr: &expr.UnaryExpr{
+							Op:   expr.EXCLAMATION,
+							Expr: &expr.VarRef{Val: "a"},
+						},
+					},
+				},
+				RHS: &expr.VarRef{Val: "c"},
+			},
+		},
+
+		// Complex binary expression.
+		{
+			s: `value + 3 < 30 AND 1 + 2 OR true`,
+			expr: &expr.BinaryExpr{
+				Op: expr.OR,
+				LHS: &expr.BinaryExpr{
+					Op: expr.AND,
+					LHS: &expr.BinaryExpr{
+						Op: expr.LT,
+						LHS: &expr.BinaryExpr{
+							Op:  expr.ADD,
+							LHS: &expr.VarRef{Val: "value"},
+							RHS: &expr.NumberLiteral{Val: 3, Int: 3, Expr: "3", ExprType: expr.Unsigned},
+						},
+						RHS: &expr.NumberLiteral{Val: 30, Int: 30, Expr: "30", ExprType: expr.Unsigned},
+					},
+					RHS: &expr.BinaryExpr{
+						Op:  expr.ADD,
+						LHS: &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: expr.Unsigned},
+						RHS: &expr.NumberLiteral{Val: 2, Int: 2, Expr: "2", ExprType: expr.Unsigned},
+					},
+				},
+				RHS: &expr.BooleanLiteral{Val: true},
+			},
+		},
+
+		// Case
+		{
+			s: "case when a then b end",
+			expr: &expr.Case{
+				WhenThens: []expr.WhenThen{
+					{
+						When: &expr.VarRef{Val: "a"},
+						Then: &expr.VarRef{Val: "b"},
+					},
+				},
+			},
+		},
+		{
+			s: "case when a then b else c end",
+			expr: &expr.Case{
+				WhenThens: []expr.WhenThen{
+					{
+						When: &expr.VarRef{Val: "a"},
+						Then: &expr.VarRef{Val: "b"},
+					},
+				},
+				Else: &expr.VarRef{Val: "c"},
+			},
+		},
+		{
+			s: "case when a then b when a2 then b2 else c end",
+			expr: &expr.Case{
+				WhenThens: []expr.WhenThen{
+					{
+						When: &expr.VarRef{Val: "a"},
+						Then: &expr.VarRef{Val: "b"},
+					},
+					{
+						When: &expr.VarRef{Val: "a2"},
+						Then: &expr.VarRef{Val: "b2"},
+					},
+				},
+				Else: &expr.VarRef{Val: "c"},
+			},
+		},
+		{
+			s:   "case end",
+			err: "found END, expected WHEN at line 1, char 6",
+		},
+		{
+			s:   "case else b end",
+			err: "found ELSE, expected WHEN at line 1, char 6",
+		},
+		{
+			s:   "case when a then b",
+			err: "found EOF, expected END at line 1, char 20",
+		},
+
+		// Function call (empty)
+		{
+			s: `my_func()`,
+			expr: &expr.Call{
+				Name: "my_func",
+			},
+		},
+
+		// Function call (multi-arg)
+		{
+			s: `my_func(1, -2 + 3)`,
+			expr: &expr.Call{
+				Name: "my_func",
+				Args: []expr.Expr{
+					&expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: expr.Unsigned},
+					&expr.BinaryExpr{
+						Op:  expr.ADD,
+						LHS: &expr.NumberLiteral{Val: -2, Int: -2, Expr: "-2", ExprType: expr.Signed},
+						RHS: &expr.NumberLiteral{Val: 3, Int: 3, Expr: "3", ExprType: expr.Unsigned},
+					},
+				},
+			},
+		},
 		{
 			s: `my_func1(field1, 'foo')`,
 			expr: &expr.Call{
