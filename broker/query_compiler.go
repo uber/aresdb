@@ -785,6 +785,48 @@ func (qc *QueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				e.Args[0] = expr.Cast(e.Args[0], expr.Float)
 			}
 			e.ExprType = e.Args[0].Type()
+		case expr.LengthCallName, expr.ContainsCallName, expr.ElementAtCallName:
+			// validate first argument
+			if len(e.Args) == 0 {
+				qc.Error = utils.StackError(
+					nil, "array function %s requires arguments", e.Name)
+				break
+			}
+			firstArg := e.Args[0]
+			vr, ok := firstArg.(*expr.VarRef)
+			if !ok || !memCom.IsArrayType(vr.DataType) {
+				qc.Error = utils.StackError(
+					nil, "array function %s requires first argument to be list type column, but got %s", e.Name, firstArg)
+			}
+
+			if e.Name == expr.LengthCallName {
+				if len(e.Args) != 1 {
+					qc.Error = utils.StackError(
+						nil, "array function %s takes exactly 1 argument", e.Name)
+					break
+				}
+				e.ExprType = expr.Unsigned
+			} else if e.Name == expr.ContainsCallName {
+				if len(e.Args) != 2 {
+					qc.Error = utils.StackError(
+						nil, "array function %s takes exactly 2 arguments", e.Name)
+					break
+				}
+				e.ExprType = expr.Boolean
+				// we don't do type checks at broker
+			} else if e.Name == expr.ElementAtCallName {
+				if len(e.Args) != 2 {
+					qc.Error = utils.StackError(
+						nil, "array function %s takes exactly 2 arguments", e.Name)
+					break
+				}
+				if _, ok := e.Args[1].(*expr.NumberLiteral); !ok {
+					qc.Error = utils.StackError(
+						nil, "array function %s takes list type column and an index", e.Name)
+				}
+				e.ExprType = vr.ExprType
+			}
+
 		default:
 			qc.Error = utils.StackError(nil, "unknown function %s", e.Name)
 		}

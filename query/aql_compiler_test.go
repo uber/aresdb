@@ -3598,4 +3598,181 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.processFilters()
 		Ω(qc.Error).Should(BeNil())
 	})
+
+	ginkgo.It("rewrite array functions should work", func() {
+		schema := &memCom.TableSchema{
+			ValueTypeByColumn: []memCom.DataType{
+				memCom.Uint32,
+				memCom.ArrayInt32,
+				memCom.ArrayBool,
+				memCom.ArrayGeoPoint,
+				memCom.ArraySmallEnum,
+			},
+			ColumnIDs: map[string]int{
+				"request_at":           0,
+				"int_array_field":      1,
+				"bool_array_field":     2,
+				"geopoint_array_field": 3,
+				"enum_array_field":     4,
+			},
+			Schema: metaCom.Table{
+				Name:        "table1",
+				IsFactTable: true,
+				Columns: []metaCom.Column{
+					{Name: "request_at", Type: metaCom.Uint32},
+					{Name: "int_array_field", Type: metaCom.ArrayInt32},
+					{Name: "bool_array_field", Type: metaCom.ArrayBool},
+					{Name: "geopoint_array_field", Type: metaCom.ArrayGeoPoint},
+					{Name: "enum_array_field", Type: metaCom.ArraySmallEnum},
+				},
+			},
+			EnumDicts: map[string]memCom.EnumDict{
+				"enum_array_field": {
+					Dict: map[string]int{
+						"foo": 0,
+						"bar": 1,
+					},
+					ReverseDict: []string{"foo", "bar"},
+				},
+			},
+		}
+
+		// length works as filter and dimension
+		qc := &AQLQueryContext{
+			Query: &queryCom.AQLQuery{
+				Table: "table1",
+				Measures: []queryCom.Measure{
+					{Expr: "1"},
+				},
+				Dimensions: []queryCom.Dimension{
+					{Expr: "length(int_array_field)"},
+				},
+				Filters: []string{
+					"request_at >= 1540399140000",
+					"request_at < 1540399320000",
+					"length(int_array_field) > 1",
+				},
+			},
+			TableIDByAlias: map[string]int{
+				"table1": 0,
+			},
+			TableScanners: []*TableScanner{
+				{Schema: schema, ColumnUsages: map[int]columnUsage{0: columnUsedByLiveBatches}},
+			},
+		}
+		qc.parseExprs()
+		qc.resolveTypes()
+		qc.processFilters()
+		qc.processDimensions()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.GT,
+			ExprType: expr.Boolean,
+			LHS: &expr.UnaryExpr{
+				Op: expr.ARRAY_LENGTH,
+				Expr: &expr.VarRef{
+					Val:      "int_array_field",
+					DataType: memCom.ArrayInt32,
+					ColumnID: 1,
+				},
+				ExprType: expr.Unsigned,
+			},
+			RHS: &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: expr.Unsigned},
+		}))
+		Ω(qc.Query.Dimensions[0].ExprParsed).Should(Equal(&expr.UnaryExpr{
+			Op: expr.ARRAY_LENGTH,
+			Expr: &expr.VarRef{
+				Val:      "int_array_field",
+				DataType: memCom.ArrayInt32,
+				ColumnID: 1,
+			},
+			ExprType: expr.Unsigned,
+		}))
+
+		// contains works as dimension and filter
+		qc.Query = &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "contains(enum_array_field, 'foo')"},
+			},
+			Filters: []string{
+				"request_at >= 1540399140000",
+				"request_at < 1540399320000",
+				"contains(geopoint_array_field, 'point(-122.386177 37.617994)')",
+			},
+		}
+		qc.parseExprs()
+		qc.resolveTypes()
+		qc.processFilters()
+		qc.processDimensions()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.ARRAY_CONTAINS,
+			ExprType: expr.Boolean,
+			LHS: &expr.VarRef{
+				Val:      "geopoint_array_field",
+				DataType: memCom.ArrayGeoPoint,
+				ColumnID: 3,
+			},
+			RHS: &expr.GeopointLiteral{Val: [2]float32{37.617994, -122.386177}},
+		}))
+		Ω(qc.Query.Dimensions[0].ExprParsed).Should(Equal(&expr.BinaryExpr{
+			Op: expr.ARRAY_CONTAINS,
+			LHS: &expr.VarRef{
+				Val:             "enum_array_field",
+				DataType:        memCom.ArraySmallEnum,
+				EnumDict:        schema.EnumDicts["enum_array_field"].Dict,
+				EnumReverseDict: schema.EnumDicts["enum_array_field"].ReverseDict,
+				ColumnID:        4,
+			},
+			RHS:      &expr.NumberLiteral{Val: 0, Int: 0, ExprType: expr.Unsigned},
+			ExprType: expr.Boolean,
+		}))
+
+		// element_at works as dimension and filter
+		qc.Query = &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "element_at(enum_array_field, 1)"},
+			},
+			Filters: []string{
+				"request_at >= 1540399140000",
+				"request_at < 1540399320000",
+				"element_at(bool_array_field, 0)",
+			},
+		}
+		qc.parseExprs()
+		qc.resolveTypes()
+		qc.processFilters()
+		qc.processDimensions()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.ARRAY_ELEMENT_AT,
+			ExprType: expr.Boolean,
+			LHS: &expr.VarRef{
+				Val:      "bool_array_field",
+				DataType: memCom.ArrayBool,
+				ColumnID: 2,
+			},
+			RHS: &expr.NumberLiteral{Val: 0, Int: 0, Expr: "0", ExprType: expr.Unsigned},
+		}))
+		Ω(qc.Query.Dimensions[0].ExprParsed).Should(Equal(&expr.BinaryExpr{
+			Op: expr.ARRAY_ELEMENT_AT,
+			LHS: &expr.VarRef{
+				Val:             "enum_array_field",
+				DataType:        memCom.ArraySmallEnum,
+				EnumDict:        schema.EnumDicts["enum_array_field"].Dict,
+				EnumReverseDict: schema.EnumDicts["enum_array_field"].ReverseDict,
+				ColumnID:        4,
+			},
+			RHS:      &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: expr.Unsigned},
+			ExprType: expr.Unsigned,
+		}))
+	})
 })

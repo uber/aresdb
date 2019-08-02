@@ -71,6 +71,10 @@ const (
 	MinCallName              = "min"
 	SumCallName              = "sum"
 	AvgCallName              = "avg"
+	// array functions
+	LengthCallName    = "length"
+	ContainsCallName  = "contains"
+	ElementAtCallName = "element_at"
 )
 
 func (t Type) String() string {

@@ -533,6 +533,80 @@ var _ = ginkgo.Describe("query compiler", func() {
 			Op:       expr.EQ,
 			ExprType: expr.Boolean,
 		}))
+
+		// call
+
+		// array functions
+		Ω(qc.Rewrite(&expr.Call{
+			Name: "length",
+			Args: []expr.Expr{
+				&expr.VarRef{
+					Val: "array_field1",
+				},
+			},
+		})).Should(Equal(&expr.Call{
+			Name:     "length",
+			ExprType: expr.Unsigned,
+			Args: []expr.Expr{
+				&expr.VarRef{
+					Val: "array_field1",
+				},
+			},
+		}))
+		Ω(qc.Rewrite(&expr.Call{
+			Name: "contains",
+			Args: []expr.Expr{
+				&expr.VarRef{
+					Val: "array_field1",
+				},
+				&expr.NumberLiteral{
+					Expr: "1",
+					Val:  1,
+					Int:  1,
+				},
+			},
+		})).Should(Equal(&expr.Call{
+			Name:     "contains",
+			ExprType: expr.Boolean,
+			Args: []expr.Expr{
+				&expr.VarRef{
+					Val: "array_field1",
+				},
+				&expr.NumberLiteral{
+					Expr: "1",
+					Val:  1,
+					Int:  1,
+				},
+			},
+		}))
+		Ω(qc.Rewrite(&expr.Call{
+			Name: "element_at",
+			Args: []expr.Expr{
+				&expr.VarRef{
+					Val:      "array_field1",
+					ExprType: expr.Signed,
+				},
+				&expr.NumberLiteral{
+					Expr: "1",
+					Val:  1,
+					Int:  1,
+				},
+			},
+		})).Should(Equal(&expr.Call{
+			Name:     "element_at",
+			ExprType: expr.Signed,
+			Args: []expr.Expr{
+				&expr.VarRef{
+					Val:      "array_field1",
+					ExprType: expr.Signed,
+				},
+				&expr.NumberLiteral{
+					Expr: "1",
+					Val:  1,
+					Int:  1,
+				},
+			},
+		}))
 	})
 
 	ginkgo.It("rewrite should fail", func() {
