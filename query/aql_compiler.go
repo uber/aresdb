@@ -1030,6 +1030,110 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				e.Args[0] = expr.Cast(e.Args[0], expr.Float)
 			}
 			e.ExprType = e.Args[0].Type()
+		case expr.LengthCallName, expr.ContainsCallName, expr.ElementAtCallName:
+			// validate first argument
+			if len(e.Args) == 0 {
+				qc.Error = utils.StackError(
+					nil, "array function %s requires arguments", e.Name)
+				break
+			}
+			firstArg := e.Args[0]
+			vr, ok := firstArg.(*expr.VarRef)
+			if !ok || !memCom.IsArrayType(vr.DataType) {
+				qc.Error = utils.StackError(
+					nil, "array function %s requires first argument to be array type column, but got %s", e.Name, firstArg)
+			}
+
+			if e.Name == expr.LengthCallName {
+				if len(e.Args) != 1 {
+					qc.Error = utils.StackError(
+						nil, "array function %s takes exactly 1 argument", e.Name)
+					break
+				}
+				return &expr.UnaryExpr{
+					Op:       expr.ARRAY_LENGTH,
+					ExprType: expr.Unsigned,
+					Expr:     vr,
+				}
+			} else if e.Name == expr.ContainsCallName {
+				if len(e.Args) != 2 {
+					qc.Error = utils.StackError(
+						nil, "array function %s takes exactly 2 arguments", e.Name)
+					break
+				}
+
+				secondArg := e.Args[1]
+				var literalExpr expr.Expr
+				// build rhs literal
+				t := memCom.GetElementDataType(vr.DataType)
+				switch t {
+				case memCom.Bool:
+					ok := false
+					literalExpr, ok = secondArg.(*expr.BooleanLiteral)
+					if !ok {
+						qc.Error = utils.StackError(
+							nil, "array function %s argument type mismatch", e.Name)
+						break
+					}
+				case memCom.SmallEnum, memCom.BigEnum:
+					strLiteral, ok := secondArg.(*expr.StringLiteral)
+					if !ok {
+						qc.Error = utils.StackError(
+							nil, "array function %s argument type mismatch", e.Name)
+						break
+					}
+					if vr.EnumDict != nil {
+						// Enum dictionary translation
+						value, exists := vr.EnumDict[strLiteral.Val]
+						if !exists {
+							// Combination of nullable data with not/and/or operators on top makes
+							// short circuiting hard.
+							// To play it safe we match against an invalid value.
+							value = -1
+						}
+						literalExpr = &expr.NumberLiteral{Int: value, ExprType: expr.Unsigned}
+					}
+				case memCom.GeoPoint:
+					strLiteral, ok := secondArg.(*expr.StringLiteral)
+					if !ok {
+						qc.Error = utils.StackError(
+							nil, "array function %s argument type mismatch", e.Name)
+						break
+					}
+					if val, err := memCom.GeoPointFromString(strLiteral.Val); err != nil {
+						qc.Error = err
+						break
+					} else {
+						literalExpr = &expr.GeopointLiteral{
+							Val: val,
+						}
+					}
+				}
+
+				return &expr.BinaryExpr{
+					Op:       expr.ARRAY_CONTAINS,
+					ExprType: expr.Boolean,
+					LHS:      vr,
+					RHS:      literalExpr,
+				}
+			} else if e.Name == expr.ElementAtCallName {
+				if len(e.Args) != 2 {
+					qc.Error = utils.StackError(
+						nil, "array function %s takes exactly 2 arguments", e.Name)
+					break
+				}
+				if _, ok := e.Args[1].(*expr.NumberLiteral); !ok {
+					qc.Error = utils.StackError(
+						nil, "array function %s takes array type column and an index", e.Name)
+				}
+				return &expr.BinaryExpr{
+					Op:       expr.ARRAY_ELEMENT_AT,
+					ExprType: common.DataTypeToExprType[memCom.GetElementDataType(vr.DataType)],
+					LHS:      vr,
+					RHS:      e.Args[1],
+				}
+			}
+
 		default:
 			qc.Error = utils.StackError(nil, "unknown function %s", e.Name)
 		}

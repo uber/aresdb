@@ -363,14 +363,26 @@ func TestParser_ParseExpr(t *testing.T) {
 				},
 			},
 		},
+		{
+			s: `my_func1(field1, 'foo')`,
+			expr: &expr.Call{
+				Name: "my_func1",
+				Args: []expr.Expr{
+					&expr.VarRef{Val: "field1"},
+					&expr.StringLiteral{
+						Val: "foo",
+					},
+				},
+			},
+		},
 	}
 
 	for i, tt := range tests {
-		expr, err := expr.NewParser(strings.NewReader(tt.s)).ParseExpr(0)
+		exprV, err := expr.NewParser(strings.NewReader(tt.s)).ParseExpr(0)
 		if !reflect.DeepEqual(tt.err, errstring(err)) {
 			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, tt.s, tt.err, err)
-		} else if tt.err == "" && !reflect.DeepEqual(tt.expr, expr) {
-			t.Errorf("%d. %q\n\nexpr mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", i, tt.s, tt.expr, expr)
+		} else if tt.err == "" && !reflect.DeepEqual(tt.expr, exprV) {
+			t.Errorf("%d. %q\n\nexpr mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", i, tt.s, tt.expr, exprV)
 		}
 	}
 }

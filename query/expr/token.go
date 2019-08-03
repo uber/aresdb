@@ -66,6 +66,8 @@ const (
 	GET_QUARTER_OF_YEAR
 	// hll operator
 	GET_HLL_VALUE
+	// array operator
+	ARRAY_LENGTH
 	unary_operator_end
 
 	derived_unary_operator_beg
@@ -106,6 +108,9 @@ const (
 
 	// Geo intersects
 	GEOGRAPHY_INTERSECTS
+	// Array functions
+	ARRAY_CONTAINS
+	ARRAY_ELEMENT_AT
 	binary_operator_end
 	operator_end
 
@@ -216,6 +221,10 @@ var tokens = map[Token]string{
 	GTE:    ">=",
 
 	GEOGRAPHY_INTERSECTS: "GEOGRAPHY_INTERSECTS",
+
+	ARRAY_LENGTH:     "ARRAY_LENGTH",
+	ARRAY_CONTAINS:   "ARRAY_CONTAINS",
+	ARRAY_ELEMENT_AT: "ARRAY_ELEMENT_AT",
 
 	LPAREN: "(",
 	RPAREN: ")",

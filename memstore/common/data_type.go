@@ -188,8 +188,8 @@ func IsArrayType(dataType DataType) bool {
 	return (dataType & 0x01000000) > 0
 }
 
-// GetItemDataType retrieve item data type for Array DataType
-func GetItemDataType(dataType DataType) DataType {
+// GetElementDataType retrieve item data type for Array DataType
+func GetElementDataType(dataType DataType) DataType {
 	return dataType & 0x00FFFFFF
 }
 
@@ -546,9 +546,9 @@ func GetGoDataValue(dataType DataType) GoDataValue {
 func ConvertToArrayValue(dataType DataType, value interface{}) (interface{}, error) {
 	switch v := value.(type) {
 	case []interface{}:
-		return ArrayValueFromArray(v, GetItemDataType(dataType))
+		return ArrayValueFromArray(v, GetElementDataType(dataType))
 	case string:
-		return ArrayValueFromString(v, GetItemDataType(dataType))
+		return ArrayValueFromString(v, GetElementDataType(dataType))
 	}
 	return nil, errors.New(fmt.Sprintf("unknown data type %T", value))
 }
