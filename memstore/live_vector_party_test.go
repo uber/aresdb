@@ -89,14 +89,14 @@ var _ = ginkgo.Describe("live vector party", func() {
 		vp1.SetDataValue(0, common.DataValue{
 			Valid: true,
 			GoVal: shape1,
-		}, IgnoreCount)
+		}, common.IgnoreCount)
 
 		Ω(vp1.GetBytes()).Should(Equal(int64(8)))
 		Ω(vp1.GetLength()).Should(Equal(10))
 		dv := vp1.GetDataValue(0)
 		Ω(dv.Valid).Should(BeTrue())
 
-		vp1.SetDataValue(0, common.NullDataValue, IgnoreCount)
+		vp1.SetDataValue(0, common.NullDataValue, common.IgnoreCount)
 		dv = vp1.GetDataValue(0)
 		Ω(dv.Valid).Should(BeFalse())
 		Ω(dv.DataType).Should(Equal(common.GeoShape))
@@ -106,11 +106,7 @@ var _ = ginkgo.Describe("live vector party", func() {
 	})
 
 	ginkgo.It("Write and Read of goLiveVectorParty should work", func() {
-		vpSerializer := &vectorPartyArchiveSerializer{
-			vectorPartyBaseSerializer{
-				hostMemoryManager: hostMemoryManager,
-			},
-		}
+		vpSerializer := common.NewVectorPartyArchiveSerializer(hostMemoryManager, nil, "", 0, 0, 0, 0, 0)
 
 		vp1 := NewLiveVectorParty(10, common.GeoShape, common.NullDataValue, hostMemoryManager)
 		vp1.Allocate(false)
@@ -129,7 +125,7 @@ var _ = ginkgo.Describe("live vector party", func() {
 		vp1.SetDataValue(0, common.DataValue{
 			Valid: true,
 			GoVal: shape1,
-		}, IgnoreCount)
+		}, common.IgnoreCount)
 
 		Ω(vp1.GetBytes()).Should(Equal(int64(8)))
 		Ω(vp1.GetLength()).Should(Equal(10))
@@ -141,7 +137,7 @@ var _ = ginkgo.Describe("live vector party", func() {
 		vp2 := NewLiveVectorParty(10, common.GeoShape, common.NullDataValue, hostMemoryManager)
 		err = vp2.Read(&buffer, vpSerializer)
 		Ω(err).Should(BeNil())
-		Ω(VectorPartyEquals(vp1, vp2)).Should(BeTrue())
+		Ω(common.VectorPartyEquals(vp1, vp2)).Should(BeTrue())
 
 		Ω(vp2.GetBytes()).Should(Equal(int64(8)))
 		Ω(vp2.GetLength()).Should(Equal(10))
@@ -165,7 +161,7 @@ var _ = ginkgo.Describe("live vector party", func() {
 		vp1.SetDataValue(0, common.DataValue{
 			Valid: true,
 			GoVal: shape1,
-		}, IgnoreCount)
+		}, common.IgnoreCount)
 
 		Ω(vp1.Slice(0, 100)).Should(Equal(common.SlicedVector{
 			Values: []interface{}{

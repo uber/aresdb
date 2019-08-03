@@ -16,9 +16,12 @@ package memstore
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/list"
 	"github.com/uber/aresdb/utils"
 	"io"
+	"os"
 	"reflect"
 	"unsafe"
 )
@@ -70,7 +73,7 @@ type goLiveVectorParty struct {
 
 // GetMinMaxValue implements GetMinMaxValue in LiveVectorParty interface
 func (vp *cLiveVectorParty) GetMinMaxValue() (min uint32, max uint32) {
-	return vp.values.minValue, vp.values.maxValue
+	return vp.values.GetMinValue(), vp.values.GetMaxValue()
 }
 
 // Allocate implements Allocate in VectorParty interface
@@ -318,11 +321,26 @@ func (vp *goLiveVectorParty) Equals(other common.VectorParty) bool {
 	return true
 }
 
+func (vp *goLiveVectorParty) Dump(file *os.File) {
+	fmt.Fprintf(file, "\nGO LiveVectorParty, type: %s, length: %d, value: \n", common.DataTypeName[vp.dataType], vp.GetLength())
+	for i := 0; i < vp.GetLength(); i++ {
+		val := vp.GetDataValue(i)
+		if val.Valid {
+			fmt.Fprintf(file, "\t%v\n", val.ConvertToHumanReadable(vp.dataType))
+		} else {
+			fmt.Println(file, "\tnil")
+		}
+	}
+}
+
 // NewLiveVectorParty creates LiveVectorParty
 func NewLiveVectorParty(length int, dataType common.DataType, defaultValue common.DataValue, hostMemoryManager common.HostMemoryManager) common.LiveVectorParty {
 	isGoType := common.IsGoType(dataType)
 	if isGoType {
 		return newGoLiveVetorParty(length, dataType, hostMemoryManager)
+	}
+	if common.IsArrayType(dataType) {
+		return list.NewLiveVectorParty(length, dataType, hostMemoryManager)
 	}
 	return newCLiveVectorParty(length, dataType, defaultValue)
 }

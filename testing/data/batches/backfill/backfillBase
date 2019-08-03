@@ -5,3 +5,4 @@ columns:
     - backfill/backfillBase3
     - backfill/backfillBase4
     - backfill/backfillBase5
+    - backfill/backfillBase6

@@ -147,7 +147,7 @@ func NewDataNode(
 		readyCh:              make(chan struct{}),
 	}
 	d.handlers = d.newHandlers()
-	d.bootstrapManager = NewBootstrapManager(d.hostID, memStore, opts, topo)
+	d.bootstrapManager = NewBootstrapManager(d.hostID, memStore, opts.BootstrapOptions(), topo)
 	clusterClient, err := d.opts.ServerConfig().Cluster.Etcd.NewClient(instrument.NewOptions())
 	if err != nil {
 		return nil, utils.StackError(err, "failed to create etcd client")

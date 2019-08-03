@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package vectors
 
 import (
+	"github.com/uber/aresdb/memstore/common"
 	"unsafe"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/memstore/common"
 )
 
 var _ = ginkgo.Describe("vector", func() {
@@ -444,14 +444,14 @@ var _ = ginkgo.Describe("vector", func() {
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t1),
 			DataType: vector1.DataType,
-			CmpFunc:  vector1.cmpFunc,
+			CmpFunc:  vector1.CmpFunc,
 		}
 
 		v2 = common.DataValue{
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t2),
 			DataType: vector2.DataType,
-			CmpFunc:  vector2.cmpFunc,
+			CmpFunc:  vector2.CmpFunc,
 		}
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(0))
 
@@ -460,14 +460,14 @@ var _ = ginkgo.Describe("vector", func() {
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t1),
 			DataType: vector1.DataType,
-			CmpFunc:  vector1.cmpFunc,
+			CmpFunc:  vector1.CmpFunc,
 		}
 
 		v2 = common.DataValue{
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t2),
 			DataType: vector2.DataType,
-			CmpFunc:  vector2.cmpFunc,
+			CmpFunc:  vector2.CmpFunc,
 		}
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(-1))
 
@@ -476,14 +476,14 @@ var _ = ginkgo.Describe("vector", func() {
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t1),
 			DataType: vector1.DataType,
-			CmpFunc:  vector1.cmpFunc,
+			CmpFunc:  vector1.CmpFunc,
 		}
 
 		v2 = common.DataValue{
 			Valid:    true,
 			OtherVal: unsafe.Pointer(&t2),
 			DataType: vector2.DataType,
-			CmpFunc:  vector2.cmpFunc,
+			CmpFunc:  vector2.CmpFunc,
 		}
 		Ω(v1.Compare(v2)).Should(BeEquivalentTo(1))
 	})

@@ -12,96 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package memstore has to put test factory here since otherwise we will have a
-// memstore -> utils -> memstore import cycle.
 package list
 
 import (
-	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/tests"
 	"github.com/uber/aresdb/utils"
-	"gopkg.in/yaml.v2"
-	"path/filepath"
-	"unsafe"
-)
-
-const (
-	vpValueTestDelimiter = ','
+	"sync"
 )
 
 var (
 	testFactory = TestFactoryT{
-		TestFactoryT: memstore.TestFactoryT{
-			RootPath:   "../../testing/data",
-			FileSystem: utils.OSFileSystem{},
+		TestFactoryBase: tests.TestFactoryBase{
+			RootPath:             "../../testing/data",
+			FileSystem:           utils.OSFileSystem{},
+			ToArchiveVectorParty: ToArrayArchiveVectorParty,
+			ToLiveVectorParty:    ToArrayLiveVectorParty,
+			ToVectorParty:        ToArrayVectorParty,
 		},
-	}
-
-	// To ignore empty token which strings.Split cannot do.
-	vpValueSplitFunc = func(c rune) bool {
-		return c == vpValueTestDelimiter
 	}
 )
 
-// TestFactoryT creates list vp test objects from text file.
+// TestFactoryT creates test objects from text file
 type TestFactoryT struct {
-	memstore.TestFactoryT
+	tests.TestFactoryBase
 }
 
-// ReadListVectorParty loads a list vector party. To be simple, it will
-func (t TestFactoryT) ReadListVectorParty(name string) (memCom.VectorParty, error) {
-	path := filepath.Join(t.RootPath, "vps/list", name)
-	return t.readListVectorPartyFromFile(path)
+func GetFactory() TestFactoryT {
+	return testFactory
 }
 
-type rawListVectorParty struct {
-	DataType string   `yaml:"data_type"`
-	Length   int      `yaml:"length"`
-	Values   []string `yaml:"values"`
+func ToArrayArchiveVectorParty(vp memCom.VectorParty, locker sync.Locker) memCom.ArchiveVectorParty {
+	return vp.(memCom.ArchiveVectorParty)
 }
 
-func (t TestFactoryT) readListVectorPartyFromFile(path string) (memCom.VectorParty, error) {
-	fileContent, err := t.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	rvp := &rawListVectorParty{}
-	if err = yaml.Unmarshal(fileContent, &rvp); err != nil {
-		return nil, err
-	}
-	return rvp.toVectorParty()
+func ToArrayLiveVectorParty(vp memCom.VectorParty) memCom.LiveVectorParty {
+	return vp.(memCom.LiveVectorParty)
 }
 
-// testListDataValueReader implements the ListDataValueReader interface via pre-fetching everything into a 2d array of
-// DataValues
-type testListDataValueReader struct {
-	values [][]memCom.DataValue
-	length int
-}
-
-// ReadElementValue implements ReadElementValue in ListDataValueReader.
-func (r testListDataValueReader) ReadElementValue(row, column int) unsafe.Pointer {
-	return r.values[row][column].OtherVal
-}
-
-// ReadElementBool implements ReadElementBool in ListDataValueReader.
-func (r testListDataValueReader) ReadElementBool(row, column int) bool {
-	return r.values[row][column].BoolVal
-}
-
-// ReadElementValidity implements ReadElementValidity in ListDataValueReader.
-func (r testListDataValueReader) ReadElementValidity(row, column int) bool {
-	return r.values[row][column].Valid
-}
-
-// GetElementLength implements GetElementLength in ListDataValueReader.
-func (r testListDataValueReader) GetElementLength(row int) int {
-	return len(r.values[row])
-}
-
-// we use list.LiveVectorParty as the return struct as this vector party is easier to construct.
-func (rvp *rawListVectorParty) toVectorParty() (memCom.VectorParty, error) {
+func ToArrayVectorParty(rvp *tests.RawVectorParty, forLiveVP bool) (vp memCom.VectorParty, err error) {
 	dataType := memCom.DataTypeFromString(rvp.DataType)
 	if dataType == memCom.Unknown {
 		return nil, utils.StackError(nil,
@@ -109,7 +58,7 @@ func (rvp *rawListVectorParty) toVectorParty() (memCom.VectorParty, error) {
 		)
 	}
 
-	if len(rvp.Values) != rvp.Length {
+	if len(rvp.Values) != 0 && len(rvp.Values) != rvp.Length {
 		return nil, utils.StackError(nil,
 			"List values length %d is not as expected %d",
 			len(rvp.Values),
@@ -117,22 +66,37 @@ func (rvp *rawListVectorParty) toVectorParty() (memCom.VectorParty, error) {
 		)
 	}
 
-	vp := NewLiveVectorParty(rvp.Length, memCom.GetElementDataType(dataType), nil)
-	vp.Allocate(false)
-
-	for i, row := range rvp.Values {
-		val, err := memCom.ValueFromString(row, dataType)
-		if err != nil {
-			return nil, utils.StackError(err,
-				"Unable to parse value from string %s for data type %d", row, dataType)
+	// array live party
+	if forLiveVP {
+		vp = NewLiveVectorParty(rvp.Length, dataType, nil)
+		vp.Allocate(false)
+		for i, row := range rvp.Values {
+			val, err := memCom.ValueFromString(row, dataType)
+			if err != nil {
+				return nil, err
+			}
+			vp.SetDataValue(i, val, memCom.IgnoreCount)
 		}
-
-		vp.SetDataValue(i, val, memstore.IgnoreCount)
+		return vp, nil
 	}
 
-	return vp, nil
-}
+	// array archive party
+	var totalBytes int64
+	values := make([]memCom.DataValue, rvp.Length)
+	for i, row := range rvp.Values {
+		if values[i], err = memCom.ValueFromString(row, dataType); err != nil {
+			return nil, err
+		}
+		if values[i].Valid {
+			reader := memCom.NewArrayValueReader(dataType, values[i].OtherVal)
+			totalBytes += int64(memCom.CalculateListElementBytes(dataType, reader.GetLength()))
+		}
+	}
 
-func GetFactory() TestFactoryT {
-	return testFactory
+	vp = NewArchiveVectorParty(rvp.Length, dataType, totalBytes, &sync.RWMutex{})
+	vp.Allocate(false)
+	for i, val := range values {
+		vp.SetDataValue(i, val, memCom.IgnoreCount)
+	}
+	return
 }

@@ -166,7 +166,7 @@ func NewController(params Params) *Controller {
 			}
 			params.ServiceConfig.Logger.Info("Registered subscriber in zk")
 		}
-		
+
 		go controller.SyncUpJobConfigs()
 	}
 

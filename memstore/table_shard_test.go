@@ -75,12 +75,12 @@ var _ = ginkgo.Describe("table Shard", func() {
 
 		// Prepare archive store
 		aBatch := &ArchiveBatch{
-			Batch:   Batch{RWMutex: &sync.RWMutex{}},
+			Batch:   common.Batch{RWMutex: &sync.RWMutex{}},
 			Version: 1600,
 			BatchID: 100,
 			Shard:   shard,
 		}
-		aBatch.Columns = []common.VectorParty{nil, nil, &archiveVectorParty{Pinnable: Pinnable{AllUsersDone: sync.NewCond(aBatch)}}}
+		aBatch.Columns = []common.VectorParty{nil, nil, &archiveVectorParty{Pinnable: common.Pinnable{AllUsersDone: sync.NewCond(aBatch)}}}
 		shard.ArchiveStore.CurrentVersion.Batches[100] = aBatch
 
 		// Test!

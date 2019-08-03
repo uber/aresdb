@@ -114,8 +114,7 @@ func ingestDataForDataSet() {
 		Address: fmt.Sprintf("%s:%d", viper.GetString(hostKeyName), viper.GetInt(portKeyName)),
 	}
 
-	connector, err := cfg.NewConnector(logger, tally.NoopScope)
-	panicIfErr(err)
+	connector := cfg.NewConnector(logger, tally.NoopScope)
 
 	for _, dataFileInfo := range dataFiles {
 		baseName := dataFileInfo.Name()

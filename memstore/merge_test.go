@@ -23,7 +23,7 @@ import (
 
 var _ = ginkgo.Describe("merge", func() {
 	var cutoff uint32 = 200
-	var batch0, batch1, noSortColumnBatch *Batch
+	var batch0, batch1, noSortColumnBatch *common.Batch
 	var err error
 	//var scheduler *schedulerImpl
 	var hostMemoryManager common.HostMemoryManager
@@ -691,7 +691,7 @@ var _ = ginkgo.Describe("merge", func() {
 	})
 
 	ginkgo.It("merge with nil base", func() {
-		ctx := newMergeContext(&ArchiveBatch{Shard: shard, Batch: Batch{RWMutex: &sync.RWMutex{}}}, patch,
+		ctx := newMergeContext(&ArchiveBatch{Shard: shard, Batch: common.Batch{RWMutex: &sync.RWMutex{}}}, patch,
 			[]bool{false, false, false, false, false, false},
 			[]common.DataType{common.Uint32, common.Bool, common.Float32, common.Bool, common.Int32, common.Bool},
 			[]*common.DataValue{&common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue, &common.NullDataValue},

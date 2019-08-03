@@ -30,6 +30,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// default schema refresh interval in seconds
+const defaultSchemaRefreshInterval = 600
+
 type KafkaPublisher struct {
 	sarama.SyncProducer
 	client.UpsertBatchBuilder
@@ -74,7 +77,10 @@ func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobC
 		}), aresControllerClient)
 
 	// schema refresh is based on job assignment refresh, so disable at here
-	err = cachedSchemaHandler.Start(0)
+	if sinkCfg.KafkaProducerConfig.SchemaRefreshInterval <= 0 {
+		sinkCfg.KafkaProducerConfig.SchemaRefreshInterval = defaultSchemaRefreshInterval
+	}
+	cachedSchemaHandler.Start(sinkCfg.KafkaProducerConfig.SchemaRefreshInterval)
 	if err != nil {
 		return nil, err
 	}

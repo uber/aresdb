@@ -25,7 +25,7 @@ import (
 // archiveVectorParty is the implementation of ArchiveVectorParty
 type archiveVectorParty struct {
 	cVectorParty
-	Pinnable
+	common.Pinnable
 }
 
 // Prune judges column mode first and sets the mode to vector party.
@@ -72,11 +72,11 @@ func (vp *archiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorPar
 		newVP.fillWithDefaultValue()
 	} else {
 		if vp.values != nil {
-			utils.MemCopy(unsafe.Pointer(newVP.values.buffer), unsafe.Pointer(vp.values.buffer), vp.values.Bytes)
+			utils.MemCopy(newVP.values.Buffer(), vp.values.Buffer(), vp.values.Bytes)
 		}
 
 		if vp.nulls != nil {
-			utils.MemCopy(unsafe.Pointer(newVP.nulls.buffer), unsafe.Pointer(vp.nulls.buffer), vp.nulls.Bytes)
+			utils.MemCopy(newVP.nulls.Buffer(), vp.nulls.Buffer(), vp.nulls.Bytes)
 		} else if vp.values != nil {
 			// All values present, we need to set all bits to 1.
 			newVP.nulls.SetAllValid()
@@ -91,7 +91,7 @@ func (vp *archiveVectorParty) CopyOnWrite(batchSize int) common.ArchiveVectorPar
 func (vp *archiveVectorParty) LoadFromDisk(hostMemManager common.HostMemoryManager, diskStore diskstore.DiskStore, table string, shardID int, columnID, batchID int, batchVersion uint32, seqNum uint32) {
 	vp.Loader.Add(1)
 	go func() {
-		serializer := NewVectorPartyArchiveSerializer(hostMemManager, diskStore, table, shardID, columnID, batchID, batchVersion, seqNum)
+		serializer := common.NewVectorPartyArchiveSerializer(hostMemManager, diskStore, table, shardID, columnID, batchID, batchVersion, seqNum)
 		err := serializer.ReadVectorParty(vp)
 		if err != nil {
 			utils.GetLogger().Panic(err)
@@ -111,7 +111,7 @@ func newArchiveVectorParty(length int, dataType common.DataType, defaultValue co
 				defaultValue: defaultValue,
 			},
 		},
-		Pinnable: Pinnable{
+		Pinnable: common.Pinnable{
 			AllUsersDone: sync.NewCond(locker),
 		},
 	}

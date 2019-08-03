@@ -16,7 +16,6 @@ package memstore
 
 import (
 	"encoding/json"
-
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber/aresdb/memstore/common"
@@ -32,7 +31,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 	m := GetFactory().NewMockMemStore()
 	hostMemoryManager := NewHostMemoryManager(m, 1<<32)
 
-	liveBatch := LiveBatch{Batch: Batch{
+	liveBatch := LiveBatch{Batch: common.Batch{
 		RWMutex: &sync.RWMutex{},
 		Columns: make([]common.VectorParty, 10),
 	}}
@@ -62,7 +61,7 @@ var _ = ginkgo.Describe("json marshaller", func() {
 	}
 
 	archiveBatch := ArchiveBatch{
-		Batch: Batch{
+		Batch: common.Batch{
 			RWMutex: &sync.RWMutex{},
 			Columns: make([]common.VectorParty, 10),
 		}}

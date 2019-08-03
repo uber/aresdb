@@ -6,7 +6,6 @@ import (
 	"fmt"
 	xerrors "github.com/m3db/m3/src/x/errors"
 	"github.com/uber/aresdb/cluster/topology"
-	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
 	"github.com/uber/aresdb/utils"
@@ -123,7 +122,6 @@ func newPeer(host topology.Host, dialer client.PeerConnDialer) *peer {
 type peerSource struct {
 	sync.RWMutex
 
-	logger common.Logger
 	watch  topology.MapWatch
 	peers  map[string]*peer
 	dialer client.PeerConnDialer
@@ -148,10 +146,10 @@ func (ps *peerSource) BorrowConnection(hostIDs []string, fn client.WithConnectio
 	for _, hostID := range hostIDs {
 		err := ps.borrowConnection(hostID, fn)
 		if err != nil {
-			ps.logger.With("peer", hostID, "error", err.Error()).Warn("failed to borrow connection from peer")
+			utils.GetLogger().With("peer", hostID, "error", err.Error()).Warn("failed to borrow connection from peer")
 			multiError = multiError.Add(err)
 		} else {
-			ps.logger.With("peer", hostID).Debug("successfully borrowed connection from peer")
+			utils.GetLogger().With("peer", hostID).Debug("successfully borrowed connection from peer")
 			return nil
 		}
 	}
@@ -203,7 +201,7 @@ func (ps *peerSource) updateTopoMap(topoMap topology.Map) {
 }
 
 // NewPeerSource creates PeerSource
-func NewPeerSource(logger common.Logger, topo topology.Topology, dialerOverride client.PeerConnDialer) (client.PeerSource, error) {
+func NewPeerSource(topo topology.Topology, dialerOverride client.PeerConnDialer) (client.PeerSource, error) {
 	dialer := grpcDialer
 	if dialerOverride != nil {
 		dialer = dialerOverride
@@ -218,7 +216,6 @@ func NewPeerSource(logger common.Logger, topo topology.Topology, dialerOverride 
 	topoMap := mapWatch.Get()
 
 	ps := &peerSource{
-		logger: logger,
 		watch:  mapWatch,
 		dialer: dialer,
 		done:   make(chan struct{}),

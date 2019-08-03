@@ -5,3 +5,4 @@ columns:
     - null
     - backfill/backfillTempLiveStore4
     - backfill/backfillTempLiveStore5
+    - backfill/backfillTempLiveStore6

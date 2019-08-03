@@ -156,7 +156,6 @@ func (shard *TableShard) Bootstrap(
 			With("peers", peerNodes).
 			Info("found peer to bootstrap from")
 
-
 		// shuffle peer nodes randomly
 		rand.New(rand.NewSource(utils.Now().Unix())).Shuffle(len(peerNodes), func(i, j int) {
 			peerNodes[i], peerNodes[j] = peerNodes[j], peerNodes[i]

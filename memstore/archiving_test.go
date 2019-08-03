@@ -26,13 +26,14 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/list"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 )
 
 var _ = ginkgo.Describe("archiving", func() {
-	var batch99, batch101, batch110 *Batch
+	var batch99, batch101, batch110 *memCom.Batch
 	var archiveBatch0 *ArchiveBatch
 	var vs LiveStore
 	//var dataTypes []memCom.DataType
@@ -64,10 +65,11 @@ var _ = ginkgo.Describe("archiving", func() {
 				{Deleted: false},
 				{Deleted: false},
 				{Deleted: false},
+				{Deleted: false},
 			},
 		},
-		ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32},
-		DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
+		ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32, memCom.ArrayInt16},
+		DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
 	}, nil, nil, hostMemoryManager, shardID, m.options)
 
 	shard.ArchiveStore = &ArchiveStore{CurrentVersion: &ArchiveStoreVersion{
@@ -262,24 +264,40 @@ var _ = ginkgo.Describe("archiving", func() {
 		Ω(tableShard.ArchiveStore.CurrentVersion.Batches).Should(HaveKey(int32(0)))
 		mergedBatch := tableShard.ArchiveStore.CurrentVersion.Batches[0]
 		Ω(mergedBatch.Size).Should(BeEquivalentTo(12))
-		Ω(mergedBatch.Columns).Should(HaveLen(3))
+		Ω(mergedBatch.Columns).Should(HaveLen(4))
 
 		timeColumn := mergedBatch.Columns[0]
 		Ω(timeColumn.GetLength()).Should(BeEquivalentTo(12))
 		Ω(timeColumn.(memCom.CVectorParty).GetMode()).Should(BeEquivalentTo(memCom.AllValuesPresent))
 
 		// Old version of archiving store should be purged.
-		for _, column := range archiveBatch0.Columns {
-			Ω(column.(*archiveVectorParty).values).Should(BeNil())
-			Ω(column.(*archiveVectorParty).nulls).Should(BeNil())
-			Ω(column.(*archiveVectorParty).counts).Should(BeNil())
+		for i, column := range archiveBatch0.Columns {
+			if i != 3 {
+				Ω(column.(*archiveVectorParty).values).Should(BeNil())
+				Ω(column.(*archiveVectorParty).nulls).Should(BeNil())
+				Ω(column.(*archiveVectorParty).counts).Should(BeNil())
+			} else {
+				Ω(column.(*list.ArchiveVectorParty).GetBytes()).Should(Equal(int64(0)))
+			}
 		}
 
 		// If a batch is partially read, it should not be purged
-		for _, column := range batch101.Columns {
-			Ω(column.(*cLiveVectorParty).GetMode()).ShouldNot(BeEquivalentTo(memCom.AllValuesDefault))
-			Ω(column.(*cLiveVectorParty).values).ShouldNot(BeNil())
+		for i, column := range batch101.Columns {
+			if i != 3 {
+				Ω(column.(*cLiveVectorParty).GetMode()).ShouldNot(BeEquivalentTo(memCom.AllValuesDefault))
+				Ω(column.(*cLiveVectorParty).values).ShouldNot(BeNil())
+			} else {
+				Ω(column.(*list.LiveVectorParty).GetBytes()).ShouldNot(Equal(int64(0)))
+			}
 		}
+
+		// array value validation
+		arrayColumn := mergedBatch.Columns[3]
+		Ω(arrayColumn.GetLength()).Should(BeEquivalentTo(12))
+		val, valid := arrayColumn.AsList().GetListValue(11)
+		Ω(valid).Should(BeTrue())
+		reader := memCom.NewArrayValueReader(memCom.ArrayInt16, val)
+		Ω(*(*uint16)(reader.Get(0))).Should(Equal(uint16(21)))
 
 		// MaxEventTimePerFile should be purged.
 		Ω(redologManager.MaxEventTimePerFile).ShouldNot(HaveKey(int64(1)))

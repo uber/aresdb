@@ -417,7 +417,8 @@ func (shard *TableShard) loadTableShardSnapshot(
 		} else {
 			// found the column in snapshot, read from snapshot file
 			vp = NewLiveVectorParty(batch.Capacity, dataTypes[colID], *defaultValues[colID], shard.HostMemoryManager)
-			serializer := NewVectorPartySnapshotSerializer(shard, colID, int(batchID), 0, 0, redoLogFile, offset)
+			serializer := memcom.NewVectorPartySnapshotSerializer(shard.HostMemoryManager, shard.diskStore, shard.Schema.Schema.Name, shard.ShardID,
+				colID, int(batchID), 0, 0, redoLogFile, offset)
 			if err := serializer.ReadVectorParty(vp); err != nil {
 				return 0, err
 			}

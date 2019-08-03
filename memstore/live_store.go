@@ -16,6 +16,7 @@ package memstore
 
 import (
 	"encoding/json"
+	"github.com/uber/aresdb/memstore/vectors"
 	"math"
 	"sync"
 	"time"
@@ -31,7 +32,7 @@ const BaseBatchID = int32(math.MinInt32)
 // LiveBatch represents a live batch.
 type LiveBatch struct {
 	// The common data structure holding column data.
-	Batch
+	common.Batch
 
 	// Capacity of the batch which is decided at the creation time.
 	Capacity int
@@ -224,7 +225,7 @@ func (s *LiveStore) appendBatch(batchID int32) *LiveBatch {
 	numColumns := len(valueTypeByColumn)
 
 	batch := &LiveBatch{
-		Batch: Batch{
+		Batch: common.Batch{
 			RWMutex: &sync.RWMutex{},
 			Columns: make([]common.VectorParty, numColumns),
 		},
@@ -421,7 +422,7 @@ func (b *LiveBatch) GetOrCreateVectorParty(columnID int, locked bool) common.Liv
 		defaultValue := *b.liveStore.tableSchema.DefaultValues[columnID]
 		b.liveStore.tableSchema.RUnlock()
 
-		bytes := CalculateVectorPartyBytes(dataType, b.Capacity, true, false)
+		bytes := vectors.CalculateVectorPartyBytes(dataType, b.Capacity, true, false)
 		b.liveStore.HostMemoryManager.ReportUnmanagedSpaceUsageChange(int64(bytes))
 		liveVP := NewLiveVectorParty(b.Capacity, dataType, defaultValue, b.liveStore.HostMemoryManager)
 		liveVP.Allocate(false)

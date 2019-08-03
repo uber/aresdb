@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memstore
+package vectors
 
 // #include <stdlib.h>
 // #include <string.h>
 
 import (
 	"github.com/uber/aresdb/cgoutils"
+	"github.com/uber/aresdb/memstore/common"
 	"math"
 	"unsafe"
 
 	"fmt"
-	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -31,7 +31,7 @@ import (
 type Vector struct {
 	// The data type of the value stored in the vector.
 	DataType common.DataType
-	cmpFunc  common.CompareFunc
+	CmpFunc  common.CompareFunc
 
 	// Max number of values that can be stored in the vector.
 	Size int
@@ -62,7 +62,7 @@ func NewVector(dataType common.DataType, size int) *Vector {
 
 	return &Vector{
 		DataType: dataType,
-		cmpFunc:  common.GetCompareFunc(dataType),
+		CmpFunc:  common.GetCompareFunc(dataType),
 		unitBits: unitBits,
 		Size:     size,
 		Bytes:    bytes,
@@ -89,6 +89,14 @@ func CalculateVectorPartyBytes(dataType common.DataType, size int, hasNulls bool
 	if common.IsGoType(dataType) {
 		// batchSize * size of golang pointer
 		return size * 8
+	}
+
+	if common.IsArrayType(dataType) {
+		// this only calculates the offset and caps for list live vector party, value vector is controlled inside vp
+		// list archive vector party can not use this either
+		offsets := CalculateVectorBytes(common.Uint32, 2 * size)
+		caps := CalculateVectorBytes(common.Uint32, size)
+		return offsets + caps
 	}
 
 	bytes := CalculateVectorBytes(dataType, size)
@@ -188,6 +196,16 @@ func (v *Vector) GetValue(index int) unsafe.Pointer {
 	return unsafe.Pointer(v.buffer + uintptr(v.unitBits/8*index))
 }
 
+// GetMinValue return the min value of the Vector Party
+func (v *Vector) GetMinValue() uint32 {
+	return v.minValue
+}
+
+// GetMaxValue return the max value of the Vector Party
+func (v *Vector) GetMaxValue() uint32 {
+	return v.maxValue
+}
+
 // LowerBound returns the index of the first element in vector[first, last) that is greater or equal
 // to the given value. The result is only valid if vector[first, last) is fully sorted in ascendant
 // order. If all values in the given range is less than the given value, LowerBound
@@ -200,7 +218,7 @@ func (v *Vector) LowerBound(first int, last int, value unsafe.Pointer) int {
 		if v.DataType == common.Bool {
 			cmpRes = common.CompareBool(v.GetBool(mid), *(*uint32)(value) != 0)
 		} else {
-			cmpRes = v.cmpFunc(v.GetValue(mid), value)
+			cmpRes = v.CmpFunc(v.GetValue(mid), value)
 		}
 
 		if cmpRes >= 0 {
@@ -224,7 +242,7 @@ func (v *Vector) UpperBound(first int, last int, value unsafe.Pointer) int {
 		if v.DataType == common.Bool {
 			cmpRes = common.CompareBool(v.GetBool(mid), *(*uint32)(value) != 0)
 		} else {
-			cmpRes = v.cmpFunc(v.GetValue(mid), value)
+			cmpRes = v.CmpFunc(v.GetValue(mid), value)
 		}
 
 		if cmpRes > 0 {

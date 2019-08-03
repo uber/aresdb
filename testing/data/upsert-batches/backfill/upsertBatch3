@@ -1,0 +1,20 @@
+columns:
+    - column_id: 0
+      data_type: Uint32
+    - column_id: 1
+      data_type: Uint32
+    - column_id: 2
+      data_type: Uint32
+    - column_id: 4
+      data_type: Uint32
+    - column_id: 5
+      data_type: Uint32
+    - column_id: 6
+      data_type: Int16[]
+rows:
+    - 5;3;5;5;3;53,54      # array column change, while keep the same size, so should be in-place update
+    - 6;3;6;6;3;61,62,63   # array column change, size increase, should be same as sort column change
+    - 7;3;7;7;3;71         # array column change, size decrease, should be same as sort column change
+    - 8;4;8;88;4;83,84     # array column change together with unsorted column change, should be in-place update
+    - 9;4;9;9;94;94,95,96  # array column change, size change together with sort column change
+    - 12;12;0;12;12;120,121 # new record

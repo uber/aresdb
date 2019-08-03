@@ -51,3 +51,15 @@ func MemSwap(dst unsafe.Pointer, src unsafe.Pointer, bytes int) {
 		*(*uint8)(MemAccess(src, i)) = tmp
 	}
 }
+
+// MemCmp performs memory comparison between two memory location start from offset
+// comparing bytes byte while skip offset byte
+func MemCmp(a, b unsafe.Pointer, offset, bytes int) int {
+	for i := offset; i < bytes; i++ {
+		v := *(*int8)(MemAccess(a, i)) - *(*int8)(MemAccess(b, i))
+		if v != 0 {
+			return int(v)
+		}
+	}
+	return 0
+}

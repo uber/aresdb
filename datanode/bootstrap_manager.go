@@ -22,7 +22,6 @@ package datanode
 
 import (
 	"github.com/uber/aresdb/cluster/topology"
-	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/utils"
@@ -36,8 +35,7 @@ import (
 type bootstrapManagerImpl struct {
 	sync.RWMutex
 
-	opts                        Options
-	log                         common.Logger
+	opts                        bootstrap.Options
 	origin                      string
 	peerSource                  client.PeerSource
 	bootstrapable               bootstrap.Bootstrapable
@@ -49,17 +47,20 @@ type bootstrapManagerImpl struct {
 }
 
 // NewBootstrapManager creates bootstrap manager
-func NewBootstrapManager(origin string, bootstrappable bootstrap.Bootstrapable, opts Options, topo topology.Topology) BootstrapManager {
-	peerSource, err := NewPeerSource(opts.InstrumentOptions().Logger(), topo, nil)
+func NewBootstrapManager(origin string,
+	bootstrappable bootstrap.Bootstrapable,
+	bootstrapOpts bootstrap.Options,
+	topo topology.Topology,
+) BootstrapManager {
+	peerSource, err := NewPeerSource(topo, nil)
 	if err != nil {
-		opts.InstrumentOptions().Logger().With("error", err.Error()).Fatal("failed to initalize peer source")
+		utils.GetLogger().With("error", err.Error()).Fatal("failed to initalize peer source")
 	}
 
 	return &bootstrapManagerImpl{
 		origin:        origin,
 		bootstrapable: bootstrappable,
-		opts:          opts,
-		log:           opts.InstrumentOptions().Logger(),
+		opts:          bootstrapOpts,
 		peerSource:    peerSource,
 		topo:          topo,
 	}
@@ -88,7 +89,7 @@ func (m *bootstrapManagerImpl) Bootstrap() error {
 		// reshard occurs and we need to bootstrap more shards.
 		m.hasPending = true
 		m.Unlock()
-		m.log.Info("bootstrap enqueued, datanode is in bootstrapping state")
+		utils.GetLogger().Info("bootstrap enqueued, datanode is in bootstrapping state")
 		return nil
 	default:
 		m.state = bootstrap.Bootstrapping
@@ -125,16 +126,16 @@ func (m *bootstrapManagerImpl) Bootstrap() error {
 func (m *bootstrapManagerImpl) bootstrap() error {
 	startDatanodeBootstrap := utils.Now()
 	topoStateSnapshot := newInitialTopologyState(m.topo)
-	err := m.bootstrapable.Bootstrap(m.peerSource, m.origin, m.topo, topoStateSnapshot, m.opts.BootstrapOptions())
+	err := m.bootstrapable.Bootstrap(m.peerSource, m.origin, m.topo, topoStateSnapshot, m.opts)
 	took := utils.Now().Sub(startDatanodeBootstrap)
 	if err != nil {
-		m.log.With("datanode", m.origin).
+		utils.GetLogger().With("datanode", m.origin).
 			With("duration", took).
 			With("error", err.Error()).
 			Info("bootstrap finished with err")
 		return err
 	}
-	m.log.With("datanode", m.origin).
+	utils.GetLogger().With("datanode", m.origin).
 		With("duration", took).
 		Info("bootstrap finished")
 	return nil
