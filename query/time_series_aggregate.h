@@ -193,6 +193,22 @@ typedef struct {
   uint32_t Length;
 } VectorPartySlice;
 
+// ListVectorPartySlice stores the slice of list vector relevant to the query.
+// It should be supplied for leaf nodes of the AST tree.
+typedef struct {
+  // Pointer points to memory allocated for this vp slice. We store offsets
+  // and values vector consecutively.
+  uint8_t *BasePtr;
+  // start for offsets vector
+  uint32_t OffsetsOffset;
+  // start of values vector
+  uint32_t ValuesOffset;
+
+  enum DataType DataType;
+
+  uint32_t Length;
+} ListVectorPartySlice;
+
 // ScratchSpaceVector is the output vector for non-leaf non-root nodes and
 // input vector for non-leaf nodes that have at least one non-leaf child.
 typedef struct {
@@ -245,6 +261,7 @@ typedef struct {
   union {
     ConstantVector Constant;
     VectorPartySlice VP;
+    ListVectorPartySlice ListVP;
     ScratchSpaceVector ScratchSpace;
     ForeignColumnVector ForeignVP;
   } Vector;
