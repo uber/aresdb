@@ -1545,19 +1545,13 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					ExprType: expr.Unsigned,
 				},
 				geoIntersection: &geoIntersection{
+					geoJoin:       true,
 					shapeTableID:  1,
 					shapeColumnID: 1,
 					pointColumnID: 1,
 					shapeUUIDs:    shapeUUIDs,
-					filterShape: &memCom.GeoShapeGo{
-						Polygons: [][]memCom.GeoPointGo{
-							{
-								{1, 1}, {1, -1}, {-1, -1}, {-1, 1}, {1, 1},
-							},
-						},
-					},
-					inOrOut:  false,
-					dimIndex: -1,
+					inOrOut:       false,
+					dimIndex:      -1,
 				},
 			},
 			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
@@ -1826,6 +1820,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					ExprType: expr.Unsigned,
 				},
 				geoIntersection: &geoIntersection{
+					geoJoin:       true,
 					shapeTableID:  1,
 					shapeColumnID: 1,
 					pointColumnID: 1,
@@ -1850,6 +1845,213 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					"00000192F23D460DBE60400C32EA0667": 1,
 					"00001A3F088047D79343894698F221AB": 1,
 					"0000334BB6B0420986175F20F3FBF90D": 1
+				}
+			}`,
+		))
+		qc.ReleaseHostResultsBuffers()
+	})
+
+	ginkgo.It("evaluateGeoIntersect filter should work", func() {
+		mockMemoryManager := new(memComMocks.HostMemoryManager)
+		mockMemoryManager.On("ReportUnmanagedSpaceUsageChange", mock.Anything).Return()
+
+		// prepare trip table
+		tripsSchema := &memCom.TableSchema{
+			Schema: metaCom.Table{
+				Name: "trips",
+			},
+			ColumnIDs:             map[string]int{"request_at": 0, "request_point": 1},
+			ValueTypeByColumn:     []memCom.DataType{memCom.Uint32, memCom.GeoPoint},
+			PrimaryKeyColumnTypes: []memCom.DataType{memCom.Uint32},
+			PrimaryKeyBytes:       4,
+		}
+		tripTimeLiveVP := memstore.NewLiveVectorParty(5, memCom.Uint32, memCom.NullDataValue, mockMemoryManager)
+		tripTimeLiveVP.Allocate(false)
+		pointLiveVP := memstore.NewLiveVectorParty(5, memCom.GeoPoint, memCom.NullDataValue, mockMemoryManager)
+		pointLiveVP.Allocate(false)
+
+		// 5 points (0,0),(3,2.5),(1.5, 3.5),(1.5,4.5),null
+		//            in   in 2    in 3       out      out
+		points := [4][2]float32{{0, 0}, {3, 2.5}, {1.5, 3.5}, {1.5, 4.5}}
+		isPointValid := [5]bool{true, true, true, true, false}
+		for i := 0; i < 5; i++ {
+			requestTime := uint32(0)
+			tripTimeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&requestTime)}, memCom.IgnoreCount)
+			if isPointValid[i] {
+				pointLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, OtherVal: unsafe.Pointer(&points[i])}, memCom.IgnoreCount)
+			} else {
+				pointLiveVP.SetDataValue(i, memCom.NullDataValue, memCom.IgnoreCount)
+			}
+		}
+
+		tripsTableShard := &memstore.TableShard{
+			Schema: tripsSchema,
+			ArchiveStore: &memstore.ArchiveStore{
+				CurrentVersion: memstore.NewArchiveStoreVersion(0, shard),
+			},
+			LiveStore: &memstore.LiveStore{
+				Batches: map[int32]*memstore.LiveBatch{
+					memstore.BaseBatchID: {
+						Batch: memCom.Batch{
+							RWMutex: &sync.RWMutex{},
+							Columns: []memCom.VectorParty{
+								tripTimeLiveVP,
+								pointLiveVP,
+							},
+						},
+					},
+				},
+				LastReadRecord: memCom.RecordID{BatchID: memstore.BaseBatchID, Index: 5},
+			},
+			HostMemoryManager: mockMemoryManager,
+		}
+
+		shape := memCom.GeoShapeGo{
+			Polygons: [][]memCom.GeoPointGo{
+				{
+					{1, 1}, {1, -1}, {-1, -1}, {-1, 1}, {1, 1},
+				},
+				{
+					{3, 3}, {2, 2}, {4, 2}, {3, 3},
+				},
+				{
+					{0, 6}, {3, 6}, {3, 3}, {0, 3}, {0, 6},
+				},
+				{
+					{1, 5}, {2, 5}, {2, 4}, {1, 4}, {1, 5},
+				},
+			},
+		}
+		shapeUUIDLiveVP := memstore.NewLiveVectorParty(3, memCom.UUID, memCom.NullDataValue, mockMemoryManager)
+		shapeUUIDLiveVP.Allocate(false)
+		shapeLiveVP := memstore.NewLiveVectorParty(3, memCom.GeoShape, memCom.NullDataValue, mockMemoryManager)
+		shapeLiveVP.Allocate(false)
+
+		mockMemStore := new(memMocks.MemStore)
+
+		mockMemStore.On("GetTableShard", "trips", 0).Run(func(args mock.Arguments) {
+			tripsTableShard.Users.Add(1)
+		}).Return(tripsTableShard, nil).Once()
+
+		mockMemStore.On("RLock").Return()
+		mockMemStore.On("RUnlock").Return()
+
+		qc := AQLQueryContext{
+			Query: &queryCom.AQLQuery{
+				Table: "trips",
+				Dimensions: []queryCom.Dimension{
+					{Expr: "request_at"},
+					{Expr: "_geoshape"},
+				},
+				Measures: []queryCom.Measure{
+					{Expr: "count(1)"},
+				},
+				Filters: []string{"in_polygon((1 1, 1 -1, -1 -1, -1 1, 1 1))"},
+				TimeFilter: queryCom.TimeFilter{
+					Column: "request_at",
+					From:   "0",
+					To:     "86400",
+				},
+			},
+			TableScanners: []*TableScanner{
+				{
+					Columns: []int{0, 1},
+					ColumnsByIDs: map[int]int{
+						0: 0,
+						1: 1,
+					},
+					ColumnUsages: map[int]columnUsage{
+						0: columnUsedByAllBatches,
+						1: columnUsedByAllBatches,
+					},
+					Schema:              tripsSchema,
+					ArchiveBatchIDStart: 0,
+					ArchiveBatchIDEnd:   1,
+					Shards:              []int{0},
+				},
+			},
+			OOPK: OOPKContext{
+				DimRowBytes:          7,
+				DimensionVectorIndex: []int{0, 1},
+				NumDimsPerDimWidth:   queryCom.DimCountsPerDimWidth{0, 0, 1, 0, 1},
+				TimeFilters: [2]expr.Expr{
+					&expr.BinaryExpr{
+						ExprType: expr.Boolean,
+						Op:       expr.GTE,
+						LHS: &expr.VarRef{
+							Val:      "request_at",
+							ExprType: expr.Unsigned,
+							TableID:  0,
+							ColumnID: 0,
+							DataType: memCom.Uint32,
+						},
+						RHS: &expr.NumberLiteral{
+							Int:      0,
+							Expr:     strconv.FormatInt(0, 10),
+							ExprType: expr.Unsigned,
+						},
+					},
+					&expr.BinaryExpr{
+						ExprType: expr.Boolean,
+						Op:       expr.LT,
+						LHS: &expr.VarRef{
+							Val:      "request_at",
+							ExprType: expr.Unsigned,
+							TableID:  0,
+							ColumnID: 0,
+							DataType: memCom.Uint32,
+						},
+						RHS: &expr.NumberLiteral{
+							Int:      86400,
+							Expr:     strconv.FormatInt(86400, 10),
+							ExprType: expr.Unsigned,
+						},
+					},
+				},
+				Dimensions: []expr.Expr{
+					&expr.VarRef{
+						Val:      "request_at",
+						ExprType: expr.Unsigned,
+						TableID:  0,
+						ColumnID: 0,
+						DataType: memCom.Uint32,
+					},
+					&expr.VarRef{
+						Val:      "_goeshape",
+						ExprType: expr.Unsigned,
+						DataType: memCom.Uint8,
+					},
+				},
+				AggregateType: 1,
+				MeasureBytes:  4,
+				Measure: &expr.NumberLiteral{
+					Val:      1,
+					Int:      1,
+					Expr:     "1",
+					ExprType: expr.Unsigned,
+				},
+				geoIntersection: &geoIntersection{
+					pointTableID:  0,
+					pointColumnID: 1,
+					filterShape:   &shape,
+					dimIndex:      1,
+					inOrOut:       true,
+				},
+			},
+			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
+			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
+		}
+
+		qc.ProcessQuery(mockMemStore)
+		Ω(qc.Error).Should(BeNil())
+		qc.Postprocess()
+		Ω(qc.Error).Should(BeNil())
+		bs, err := json.Marshal(qc.Results)
+		Ω(err).Should(BeNil())
+		Ω(bs).Should(MatchJSON(
+			`{
+				"0": {
+					"Polygon((1.0000+1.0000,-1.0000+1.0000,-1.0000+-1.0000,1.0000+-1.0000,1.0000+1.0000),(3.0000+3.0000,2.0000+2.0000,2.0000+4.0000,3.0000+3.0000),(6.0000+0.0000,6.0000+3.0000,3.0000+3.0000,3.0000+0.0000,6.0000+0.0000),(5.0000+1.0000,5.0000+2.0000,4.0000+2.0000,4.0000+1.0000,5.0000+1.0000))": 3
 				}
 			}`,
 		))

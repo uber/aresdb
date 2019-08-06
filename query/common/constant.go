@@ -22,3 +22,8 @@ var DataTypeToExprType = map[memCom.DataType]expr.Type{
 	memCom.GeoPoint:  expr.GeoPoint,
 	memCom.GeoShape:  expr.GeoShape,
 }
+
+const (
+	// GeoshapeVirtualDimension is used as dimension for ad-hoc geo intersection
+	GeoshapeVirtualDimension = "_geoshape"
+)

@@ -359,9 +359,7 @@ func (qc *AQLQueryContext) prepareForGeoIntersect(memStore memstore.MemStore) (s
 				}
 			}
 		}
-	}
-
-	if qc.OOPK.geoIntersection.filterShape != nil {
+	} else if qc.OOPK.geoIntersection.filterShape != nil {
 		shapesLats, shapesLongs, numPoints = getGeoShapeLatLongSlice(shapesLats, shapesLongs, *qc.OOPK.geoIntersection.filterShape)
 		if numPoints > 0 {
 			totalNumPoints += numPoints

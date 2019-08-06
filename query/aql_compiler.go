@@ -593,6 +593,13 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 		// Strip parenthesis from the input
 		return e.Expr
 	case *expr.VarRef:
+		// handle virtual dim
+		if common.GeoshapeVirtualDimension == e.Val {
+			e.ExprType = expr.Unsigned
+			e.DataType = memCom.Uint8
+			break
+		}
+
 		tableID, columnID, err := qc.resolveColumn(e.Val)
 		if err != nil {
 			qc.Error = err
@@ -990,14 +997,16 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 						err, "failed to parse geoshape from %s", rhsString.Val)
 					break
 				}
-				if qc.OOPK.geoIntersection == nil {
-					// not geo join
-					qc.OOPK.geoIntersection = &geoIntersection{
-						pointTableID:  lhsRef.TableID,
-						pointColumnID: lhsRef.ColumnID,
-					}
+				if qc.OOPK.geoIntersection != nil {
+					qc.Error = utils.StackError(
+						nil, "%s and geo join can not be in the same query", e.Name)
 				}
-				qc.OOPK.geoIntersection.filterShape = &shape
+				// not geo join
+				qc.OOPK.geoIntersection = &geoIntersection{
+					pointTableID:  lhsRef.TableID,
+					pointColumnID: lhsRef.ColumnID,
+					filterShape:   &shape,
+				}
 			} else {
 				qc.Error = utils.StackError(nil, "%s expect rhs to be geoshape, got %s", e.Name, e.Args[1])
 			}
@@ -1907,37 +1916,47 @@ func (qc *AQLQueryContext) processDimensions() {
 	}
 
 	if qc.OOPK.geoIntersection != nil {
-		gc := &geoTableUsageCollector{
-			geoIntersection: *qc.OOPK.geoIntersection,
-		}
-		// Check whether measure and dimensions are referencing any geo table columns.
-		expr.Walk(gc, qc.OOPK.Measure)
+		if qc.OOPK.geoIntersection.geoJoin {
+			gc := &geoTableUsageCollector{
+				geoIntersection: *qc.OOPK.geoIntersection,
+			}
+			// Check whether measure and dimensions are referencing any geo table columns.
+			expr.Walk(gc, qc.OOPK.Measure)
 
-		if gc.useGeoTable {
-			qc.Error = utils.StackError(nil,
-				"Geo table column is not allowed to be used in measure: %s", qc.OOPK.Measure.String())
-			return
-		}
-
-		foundGeoJoin := false
-		for i, dimExpr := range qc.OOPK.Dimensions {
-			geoDimExpr, err := qc.matchAndRewriteGeoDimension(dimExpr)
-			if err != nil {
-				qc.Error = err
+			if gc.useGeoTable {
+				qc.Error = utils.StackError(nil,
+					"Geo table column is not allowed to be used in measure: %s", qc.OOPK.Measure.String())
 				return
 			}
 
-			if geoDimExpr != nil {
-				if foundGeoJoin {
-					qc.Error = utils.StackError(nil,
-						"Only one geo dimension allowed: %s", dimExpr.String())
+			foundGeoJoin := false
+			for i, dimExpr := range qc.OOPK.Dimensions {
+				geoDimExpr, err := qc.matchAndRewriteGeoDimension(dimExpr)
+				if err != nil {
+					qc.Error = err
 					return
 				}
-				foundGeoJoin = true
-				qc.OOPK.Dimensions[i] = geoDimExpr
-				qc.OOPK.geoIntersection.dimIndex = i
+
+				if geoDimExpr != nil {
+					if foundGeoJoin {
+						qc.Error = utils.StackError(nil,
+							"Only one geo dimension allowed: %s", dimExpr.String())
+						return
+					}
+					foundGeoJoin = true
+					qc.OOPK.Dimensions[i] = geoDimExpr
+					qc.OOPK.geoIntersection.dimIndex = i
+				}
+			}
+		} else {
+			// collect geoshape virtual dimension for geo filter
+			for i, dimExpr := range qc.OOPK.Dimensions {
+				if vr, ok := dimExpr.(*expr.VarRef); ok && vr.Val == common.GeoshapeVirtualDimension {
+					qc.OOPK.geoIntersection.dimIndex = i
+				}
 			}
 		}
+
 	}
 
 	// Collect column usage from measure and dimensions

@@ -3075,6 +3075,8 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			Dimensions: []queryCom.Dimension{
 				{
 					Expr: "city_id",
+				}, {
+					Expr: "_geoshape",
 				},
 			},
 			Filters: []string{
@@ -3096,9 +3098,18 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.Error).Should(BeNil())
 		Ω(qc.OOPK.geoIntersection).ShouldNot(BeNil())
 		qc.processFilters()
+		qc.processDimensions()
 		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.Dimensions[1]).Should(Equal(queryCom.Dimension{
+			Expr: "_geoshape",
+			ExprParsed: &expr.VarRef{
+				Val:      "_geoshape",
+				ExprType: expr.Unsigned,
+				DataType: memCom.Uint8,
+			},
+		}))
 		Ω(*qc.OOPK.geoIntersection).Should(
-			Equal(geoIntersection{shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, filterShape: &memCom.GeoShapeGo{
+			Equal(geoIntersection{pointColumnID: 2, dimIndex: 1, shapeLatLongs: nullDevicePointer, shapeIndexs: nullDevicePointer, filterShape: &memCom.GeoShapeGo{
 				Polygons: [][]memCom.GeoPointGo{
 					{{10, 30}, {20, 10}, {40, 20}, {40, 40}, {10, 30}},
 					{{10, 35}, {20, 10}, {40, 15}, {45, 45}, {10, 35}},
