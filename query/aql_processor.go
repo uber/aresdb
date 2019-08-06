@@ -323,37 +323,51 @@ func getGeoShapeLatLongSlice(shapesLats, shapesLongs []float32, gs memCom.GeoSha
 }
 
 func (qc *AQLQueryContext) prepareForGeoIntersect(memStore memstore.MemStore) (shapeExists bool) {
-	tableScanner := qc.TableScanners[qc.OOPK.geoIntersection.shapeTableID]
-	shapeColumnID := qc.OOPK.geoIntersection.shapeColumnID
-	tableName := tableScanner.Schema.Schema.Name
-	// geo table is not sharded
-	shard, err := memStore.GetTableShard(tableName, 0)
-	if err != nil {
-		qc.Error = utils.StackError(err, "Failed to get shard for table %s, shard: %d", tableName, 0)
-		return
-	}
-	defer shard.Users.Done()
+	var (
+		shapesLats, shapesLongs   []float32
+		numPoints, totalNumPoints int
+		numPointsPerShape         []int32
+	)
+	qc.OOPK.geoIntersection.validShapeUUIDs = []string{}
+	if qc.OOPK.geoIntersection.geoJoin {
+		tableScanner := qc.TableScanners[qc.OOPK.geoIntersection.shapeTableID]
+		shapeColumnID := qc.OOPK.geoIntersection.shapeColumnID
+		tableName := tableScanner.Schema.Schema.Name
+		// geo table is not sharded
+		shard, err := memStore.GetTableShard(tableName, 0)
+		if err != nil {
+			qc.Error = utils.StackError(err, "Failed to get shard for table %s, shard: %d", tableName, 0)
+			return
+		}
+		defer shard.Users.Done()
 
-	numPointsPerShape := make([]int32, 0, len(qc.OOPK.geoIntersection.shapeUUIDs))
-	qc.OOPK.geoIntersection.validShapeUUIDs = make([]string, 0, len(qc.OOPK.geoIntersection.shapeUUIDs))
-	var shapesLats, shapesLongs []float32
-	var numPoints, totalNumPoints int
-	for _, uuid := range qc.OOPK.geoIntersection.shapeUUIDs {
-		recordID, found := shard.LiveStore.LookupKey([]string{uuid})
-		if found {
-			batch := shard.LiveStore.GetBatchForRead(recordID.BatchID)
-			if batch != nil {
-				shapeValue := batch.GetDataValue(int(recordID.Index), shapeColumnID)
-				// compiler should have verified the geo column GeoShape type
-				shapesLats, shapesLongs, numPoints = getGeoShapeLatLongSlice(shapesLats, shapesLongs, *(shapeValue.GoVal.(*memCom.GeoShapeGo)))
-				if numPoints > 0 {
-					totalNumPoints += numPoints
-					numPointsPerShape = append(numPointsPerShape, int32(numPoints))
-					qc.OOPK.geoIntersection.validShapeUUIDs = append(qc.OOPK.geoIntersection.validShapeUUIDs, uuid)
-					shapeExists = true
+		for _, uuid := range qc.OOPK.geoIntersection.shapeUUIDs {
+			recordID, found := shard.LiveStore.LookupKey([]string{uuid})
+			if found {
+				batch := shard.LiveStore.GetBatchForRead(recordID.BatchID)
+				if batch != nil {
+					shapeValue := batch.GetDataValue(int(recordID.Index), shapeColumnID)
+					// compiler should have verified the geo column GeoShape type
+					shapesLats, shapesLongs, numPoints = getGeoShapeLatLongSlice(shapesLats, shapesLongs, *(shapeValue.GoVal.(*memCom.GeoShapeGo)))
+					if numPoints > 0 {
+						totalNumPoints += numPoints
+						numPointsPerShape = append(numPointsPerShape, int32(numPoints))
+						qc.OOPK.geoIntersection.validShapeUUIDs = append(qc.OOPK.geoIntersection.validShapeUUIDs, uuid)
+						shapeExists = true
+					}
+					batch.RUnlock()
 				}
-				batch.RUnlock()
 			}
+		}
+	}
+
+	if qc.OOPK.geoIntersection.filterShape != nil {
+		shapesLats, shapesLongs, numPoints = getGeoShapeLatLongSlice(shapesLats, shapesLongs, *qc.OOPK.geoIntersection.filterShape)
+		if numPoints > 0 {
+			totalNumPoints += numPoints
+			numPointsPerShape = append(numPointsPerShape, int32(numPoints))
+			qc.OOPK.geoIntersection.validShapeUUIDs = append(qc.OOPK.geoIntersection.validShapeUUIDs, memCom.DataValue{Valid: true, GoVal: qc.OOPK.geoIntersection.filterShape}.ConvertToHumanReadable(memCom.GeoShape).(string))
+			shapeExists = true
 		}
 	}
 

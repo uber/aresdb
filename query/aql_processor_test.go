@@ -1549,8 +1549,15 @@ var _ = ginkgo.Describe("aql_processor", func() {
 					shapeColumnID: 1,
 					pointColumnID: 1,
 					shapeUUIDs:    shapeUUIDs,
-					inOrOut:       false,
-					dimIndex:      -1,
+					filterShape: &memCom.GeoShapeGo{
+						Polygons: [][]memCom.GeoPointGo{
+							{
+								{1, 1}, {1, -1}, {-1, -1}, {-1, 1}, {1, 1},
+							},
+						},
+					},
+					inOrOut:  false,
+					dimIndex: -1,
 				},
 			},
 			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},

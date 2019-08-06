@@ -240,6 +240,7 @@ func (qc *AQLQueryContext) matchGeoJoin(joinTableID int, mainTableSchema *memCom
 	}
 
 	qc.OOPK.geoIntersection = &geoIntersection{
+		geoJoin:       true,
 		shapeTableID:  shape.TableID,
 		shapeColumnID: shape.ColumnID,
 		pointTableID:  point.TableID,
@@ -967,6 +968,40 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			}
 
 			e.ExprType = expr.Boolean
+		case expr.PointInPolygonCallName:
+			if len(e.Args) != 2 {
+				qc.Error = utils.StackError(
+					nil, "expect 2 arguments for %s, but got %s", e.Name, e.String())
+				break
+			}
+			lhsRef, isVarRef := e.Args[0].(*expr.VarRef)
+			if !isVarRef || (lhsRef.DataType != memCom.GeoShape && lhsRef.DataType != memCom.GeoPoint) {
+				qc.Error = utils.StackError(
+					nil, "expect argument to be a valid geo point column for %s, but got %s of type %s",
+					e.Name, e.Args[0].String(), memCom.DataTypeName[lhsRef.DataType])
+				break
+			}
+
+			rhsString, isStringLiteral := e.Args[1].(*expr.StringLiteral)
+			if isStringLiteral {
+				shape, err := memCom.GeoShapeFromString(rhsString.Val)
+				if err != nil {
+					qc.Error = utils.StackError(
+						err, "failed to parse geoshape from %s", rhsString.Val)
+					break
+				}
+				if qc.OOPK.geoIntersection == nil {
+					// not geo join
+					qc.OOPK.geoIntersection = &geoIntersection{
+						pointTableID:  lhsRef.TableID,
+						pointColumnID: lhsRef.ColumnID,
+					}
+				}
+				qc.OOPK.geoIntersection.filterShape = &shape
+			} else {
+				qc.Error = utils.StackError(nil, "%s expect rhs to be geoshape, got %s", e.Name, e.Args[1])
+			}
+
 		case expr.HexCallName:
 			if len(e.Args) != 1 {
 				qc.Error = utils.StackError(
@@ -1443,7 +1478,7 @@ func (qc *AQLQueryContext) processFilters() {
 		expr.Walk(&foreignTableColumnDetector, filter)
 		if foreignTableColumnDetector.hasForeignTableColumn {
 			var isGeoFilter bool
-			if qc.OOPK.geoIntersection != nil {
+			if qc.OOPK.geoIntersection != nil && qc.OOPK.geoIntersection.geoJoin {
 				geoTableID := qc.OOPK.geoIntersection.shapeTableID
 				joinSchema := qc.TableSchemaByName[qc.Query.Joins[geoTableID-1].Table]
 				isGeoFilter = qc.matchGeoFilter(filter, geoTableID, joinSchema, geoFilterFound)
@@ -1462,7 +1497,7 @@ func (qc *AQLQueryContext) processFilters() {
 		}
 	}
 
-	if qc.OOPK.geoIntersection != nil && !geoFilterFound {
+	if qc.OOPK.geoIntersection != nil && qc.OOPK.geoIntersection.geoJoin && !geoFilterFound {
 		qc.Error = utils.StackError(nil, "Exact one geo filter is needed if geo intersection"+
 			" is used during join")
 		return

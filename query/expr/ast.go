@@ -60,6 +60,7 @@ const (
 	DayOfWeekCallName           = "dayofweek"
 	FromUnixTimeCallName        = "from_unixtime"
 	GeographyIntersectsCallName = "geography_intersects"
+	PointInPolygonCallName     = "in_polygon"
 	HexCallName                 = "hex"
 	// hll aggregation function applies to hll columns
 	HllCallName = "hll"
