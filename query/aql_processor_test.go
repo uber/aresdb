@@ -17,6 +17,7 @@ package query
 import (
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/cluster/topology"
+	"io/ioutil"
 	"unsafe"
 
 	"encoding/binary"
@@ -2151,6 +2152,101 @@ var _ = ginkgo.Describe("aql_processor", func() {
           		["40", "1", "NULL"]
 			]
 		  }`))
+
+		bc := qc.OOPK.currentBatch
+		// Check whether pointers are properly cleaned up.
+		Ω(len(qc.OOPK.foreignTables)).Should(BeZero())
+		Ω(qc.cudaStreams[0]).Should(BeZero())
+		Ω(qc.cudaStreams[1]).Should(BeZero())
+
+		Ω(bc.dimensionVectorD[0]).Should(BeZero())
+		Ω(bc.dimensionVectorD[1]).Should(BeZero())
+
+		Ω(bc.dimIndexVectorD[0]).Should(BeZero())
+		Ω(bc.dimIndexVectorD[1]).Should(BeZero())
+
+		Ω(bc.hashVectorD[0]).Should(BeZero())
+		Ω(bc.hashVectorD[1]).Should(BeZero())
+
+		Ω(bc.measureVectorD[0]).Should(BeZero())
+		Ω(bc.measureVectorD[1]).Should(BeZero())
+
+		Ω(bc.resultSize).Should(BeZero())
+		Ω(bc.resultCapacity).Should(BeZero())
+
+		Ω(len(bc.columns)).Should(BeZero())
+
+		Ω(bc.indexVectorD).Should(BeZero())
+		Ω(bc.predicateVectorD).Should(BeZero())
+
+		Ω(bc.size).Should(BeZero())
+
+		Ω(len(bc.foreignTableRecordIDsD)).Should(BeZero())
+		Ω(len(bc.exprStackD)).Should(BeZero())
+
+		Ω(qc.OOPK.measureVectorH).Should(BeZero())
+		Ω(qc.OOPK.dimensionVectorH).Should(BeZero())
+
+		Ω(qc.OOPK.hllVectorD).Should(BeZero())
+		Ω(qc.OOPK.hllDimRegIDCountD).Should(BeZero())
+	})
+
+	ginkgo.It("ProcessQuery for non-aggregation query eagerly should work", func() {
+		shard.ArchiveStore.CurrentVersion.Batches[0] = archiveBatch1
+		qc := &AQLQueryContext{}
+		q := &queryCom.AQLQuery{
+			Table: table,
+			Dimensions: []queryCom.Dimension{
+				{Expr: "c0"},
+				{Expr: "c1"},
+				{Expr: "c2"},
+			},
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			TimeFilter: queryCom.TimeFilter{
+				Column: "c0",
+				From:   "1970-01-01",
+				To:     "1970-01-02",
+			},
+			Limit: 20,
+		}
+		qc.Query = q
+		w := httptest.NewRecorder()
+		qc.ResponseWriter = w
+
+		qc.Compile(memStore, topology.NewStaticShardOwner([]int{0}))
+		Ω(qc.Error).Should(BeNil())
+		qc.calculateMemoryRequirement(memStore)
+		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
+			shard.Users.Add(1)
+		}).Return(shard, nil).Once()
+		qc.ProcessQuery(memStore)
+		Ω(qc.Error).Should(BeNil())
+
+		qc.Postprocess()
+		qc.ReleaseHostResultsBuffers()
+		bs, err := ioutil.ReadAll(w.Body)
+		Ω(err).Should(BeNil())
+		bs = append(bs, []byte("]}]}")...)
+
+		Ω(bs).Should(MatchJSON(` {"results":[{
+			"headers": ["c0", "c1", "c2"],
+			"matrixData": [
+				["100", "0", "1"],
+          		["110", "1", "NULL" ],
+          		["120", "NULL", "1.2"],
+          		["130", "0", "1.3"],
+          		["100", "0", "NULL"],
+          		["110", "1", "1.1"],
+          		["120", "0", "1.2"],
+          		["0", "NULL", "NULL"],
+          		["10", "NULL", "1.1"],
+          		["20", "NULL", "1.2"],
+          		["30", "0", "1.3"],
+          		["40", "1", "NULL"]
+			]
+		  }]}`))
 
 		bc := qc.OOPK.currentBatch
 		// Check whether pointers are properly cleaned up.
