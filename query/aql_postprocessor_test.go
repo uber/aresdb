@@ -493,9 +493,9 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 
 		ctx.initResultFlushContext()
 		ctx.flushResultBuffer()
-		Ω(w.Body.String()).Should(Equal(`["3.2"],`))
+		Ω(w.Body.String()).Should(Equal(`["3.2"]`))
+		Ω(ctx.resultFlushContext.rowsFlushed).Should(Equal(1))
 
-		ctx.OOPK.done = true
 		ctx.flushResultBuffer()
 		Ω(w.Body.String()).Should(Equal(`["3.2"],["3.2"]`))
 	})

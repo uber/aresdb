@@ -134,11 +134,18 @@ func (qc *AQLQueryContext) flushResultBuffer() {
 
 		if qc.IsNonAggregationQuery {
 			if qc.ResponseWriter != nil {
+				nullStr := queryCom.NULLString
+				for i, dimVal := range dimValues {
+					if dimVal == nil {
+						dimValues[i] = &nullStr
+					}
+				}
 				valuesBytes, _ := json.Marshal(dimValues)
-				qc.ResponseWriter.Write(valuesBytes)
-				if !(qc.OOPK.done && i == oopkContext.ResultSize-1) {
+				if qc.resultFlushContext.rowsFlushed > 0 {
 					qc.ResponseWriter.Write(bytesComma)
 				}
+				qc.ResponseWriter.Write(valuesBytes)
+				qc.resultFlushContext.rowsFlushed++
 			} else {
 				qc.Results.Append(dimValues)
 			}

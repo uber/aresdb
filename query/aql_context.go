@@ -311,6 +311,8 @@ type resultFlushContext struct {
 	dimensionValueCache []map[queryCom.TimeDimensionMeta]map[int64]string
 	dimensionDataTypes  []memCom.DataType
 	reverseDicts        map[int][]string
+	// for eager flush non-agg query result
+	rowsFlushed int
 }
 
 // GeoIntersection is the struct to storing geo intersection related fields.
