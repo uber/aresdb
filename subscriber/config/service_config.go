@@ -107,7 +107,7 @@ type HeartBeatConfig struct {
 type EtcdConfig struct {
 	sync.Mutex
 
-	EtcdConfig *etcd.Configuration `yaml:",inline"`
+	EtcdConfig etcd.Configuration `yaml:",inline"`
 }
 
 type EtcdClusterConfig struct {
