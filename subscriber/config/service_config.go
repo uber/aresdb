@@ -48,6 +48,15 @@ var (
 			NewServiceConfig,
 		),
 	)
+
+	sinkModeStr = map[string]SinkMode{
+		"undefined": Sink_Undefined,
+		"aresDB":    Sink_AresDB,
+		"kafka":     Sink_Kafka,
+	}
+
+	// EtcdCfgEvent is used to detect etcd cluster changes
+	EtcdCfgEvent = make(chan int, 1)
 )
 
 // Params defines the base objects for a service.
@@ -114,12 +123,6 @@ const (
 	Sink_AresDB
 	Sink_Kafka
 )
-
-var sinkModeStr = map[string]SinkMode{
-	"undefined": Sink_Undefined,
-	"aresDB":    Sink_AresDB,
-	"kafka":     Sink_Kafka,
-}
 
 // SinkConfig wraps sink configurations
 type SinkConfig struct {

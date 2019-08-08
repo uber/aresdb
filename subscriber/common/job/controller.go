@@ -36,15 +36,12 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	// Module configures Drivers and Controller.
-	Module = fx.Options(
-		fx.Provide(
-			NewController,
-		),
-		fx.Invoke(StartController),
-	)
-	EtcdCfgEvent = make(chan int, 1)
+// Module configures Drivers and Controller.
+var Module = fx.Options(
+	fx.Provide(
+		NewController,
+	),
+	fx.Invoke(StartController),
 )
 
 // Params defines the base objects for jobConfigs.
@@ -532,7 +529,7 @@ func (c *Controller) startEtcdHBService(params Params) {
 func (c *Controller) RestartEtcdHBService(params Params) {
 	for {
 		select {
-		case <-EtcdCfgEvent:
+		case <-config.EtcdCfgEvent:
 			// TODO: unadevertises old heartbeat and closes etcd client should be added once M3 provides
 			c.startEtcdHBService(params)
 		default:
