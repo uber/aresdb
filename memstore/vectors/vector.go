@@ -94,7 +94,7 @@ func CalculateVectorPartyBytes(dataType common.DataType, size int, hasNulls bool
 	if common.IsArrayType(dataType) {
 		// this only calculates the offset and caps for list live vector party, value vector is controlled inside vp
 		// list archive vector party can not use this either
-		offsets := CalculateVectorBytes(common.Uint32, 2 * size)
+		offsets := CalculateVectorBytes(common.Uint32, 2*size)
 		caps := CalculateVectorBytes(common.Uint32, size)
 		return offsets + caps
 	}

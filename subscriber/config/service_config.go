@@ -17,6 +17,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/m3db/m3/src/cluster/client/etcd"
@@ -81,7 +82,7 @@ type ServiceConfig struct {
 	ActiveJobs         []string              `yaml:"-"`
 	ControllerConfig   *ControllerConfig     `yaml:"controller"`
 	ZooKeeperConfig    ZooKeeperConfig       `yaml:"zookeeper"`
-	EtcdConfig         *etcd.Configuration   `yaml:"etcd"`
+	EtcdConfig         EtcdConfig            `yaml:"etcd"`
 	HeartbeatConfig    *HeartBeatConfig      `yaml:"heartbeat"`
 }
 
@@ -91,6 +92,13 @@ type HeartBeatConfig struct {
 	Timeout       int  `yaml:"timeout"`
 	Interval      int  `yaml:"interval"`
 	CheckInterval int  `yaml:"checkInterval"`
+}
+
+type EtcdConfig struct {
+	sync.Mutex
+
+	EtcdConfig *etcd.Configuration `yaml:",inline"`
+	UNS        string              `yaml:"uns"`
 }
 
 // SinkMode defines the subscriber sink mode
