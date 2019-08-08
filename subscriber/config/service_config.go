@@ -83,6 +83,7 @@ type ServiceConfig struct {
 	ControllerConfig   *ControllerConfig     `yaml:"controller"`
 	ZooKeeperConfig    ZooKeeperConfig       `yaml:"zookeeper"`
 	EtcdConfig         EtcdConfig            `yaml:"etcd"`
+	EtcdClustersConfig []EtcdClusterConfig   `yaml:"etcd.etcdClusters"`
 	HeartbeatConfig    *HeartBeatConfig      `yaml:"heartbeat"`
 }
 
@@ -98,7 +99,11 @@ type EtcdConfig struct {
 	sync.Mutex
 
 	EtcdConfig *etcd.Configuration `yaml:",inline"`
-	UNS        string              `yaml:"uns"`
+}
+
+type EtcdClusterConfig struct {
+	EtcdCluster etcd.ClusterConfig `yaml:",inline"`
+	UNS         string             `yaml:"uns"`
 }
 
 // SinkMode defines the subscriber sink mode

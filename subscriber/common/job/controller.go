@@ -146,17 +146,7 @@ func NewController(params Params) *Controller {
 		params.ServiceConfig.Logger.Info("aresDB Controller is enabled")
 
 		if params.ServiceConfig.HeartbeatConfig != nil && params.ServiceConfig.HeartbeatConfig.Enabled {
-			params.ServiceConfig.Logger.Info("heartbeat config",
-				zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))
-			params.ServiceConfig.EtcdConfig.Lock()
-			controller.etcdServices, err = connectEtcdServices(params)
-			if err != nil {
-				params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
-			}
-			if registerHeartBeatService(params, controller.etcdServices) != nil {
-				params.ServiceConfig.Logger.Panic("Failed to registerHeartBeatService", zap.Error(err))
-			}
-			params.ServiceConfig.EtcdConfig.Unlock()
+			controller.startEtcdHBService(params)
 			go controller.RestartEtcdHBService(params)
 		} else {
 			controller.zkClient = createZKClient(params)
@@ -523,22 +513,28 @@ func (c *Controller) startDriver(
 	return true
 }
 
+func (c *Controller) startEtcdHBService(params Params) {
+	var err error
+	params.ServiceConfig.Logger.Info("heartbeat config",
+		zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))
+	params.ServiceConfig.EtcdConfig.Lock()
+	c.etcdServices, err = connectEtcdServices(params)
+	if err != nil {
+		params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
+	}
+	if registerHeartBeatService(params, c.etcdServices) != nil {
+		params.ServiceConfig.Logger.Panic("Failed to registerHeartBeatService", zap.Error(err))
+	}
+	params.ServiceConfig.EtcdConfig.Unlock()
+}
+
 // RestartEtcdHBService registers heartbeat again if etcd cluster changes are detected
 func (c *Controller) RestartEtcdHBService(params Params) {
-	var err error
 	for {
 		select {
 		case <-EtcdCfgEvent:
 			// TODO: unadevertises old heartbeat and closes etcd client should be added once M3 provides
-			params.ServiceConfig.EtcdConfig.Lock()
-			c.etcdServices, err = connectEtcdServices(params)
-			if err != nil {
-				params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
-			}
-			if registerHeartBeatService(params, c.etcdServices) != nil {
-				params.ServiceConfig.Logger.Panic("Failed to registerHeartBeatService", zap.Error(err))
-			}
-			params.ServiceConfig.EtcdConfig.Unlock()
+			c.startEtcdHBService(params)
 		default:
 		}
 	}
