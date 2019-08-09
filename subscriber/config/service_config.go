@@ -107,7 +107,7 @@ type HeartBeatConfig struct {
 type EtcdConfig struct {
 	sync.Mutex
 
-	EtcdConfig *etcd.Configuration `yaml:"etcd"`
+	EtcdConfig etcd.Configuration `yaml:"etcd"`
 }
 
 type EtcdClusterConfig struct {
@@ -197,11 +197,14 @@ func NewServiceConfig(p Params) (Result, error) {
 	}
 
 	raw = p.Config.Get("etcd")
-	if err := raw.Populate(serviceConfig.EtcdConfig.EtcdConfig); err != nil {
+	if err := raw.Populate(&serviceConfig.EtcdConfig.EtcdConfig); err != nil {
 		return Result{
 			ServiceConfig: serviceConfig,
 		}, err
 	}
+	// etcd key format: prefix/${env}/namespace/service/instanceId
+	etcdConfig := &serviceConfig.EtcdConfig.EtcdConfig
+	etcdConfig.Env = fmt.Sprintf("%s/%s", etcdConfig.Env, ActiveJobNameSpace)
 
 	raw = p.Config.Get("etcd.etcdClusters")
 	if err := raw.Populate(&serviceConfig.EtcdClustersConfig); err != nil {

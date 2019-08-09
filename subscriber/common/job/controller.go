@@ -173,11 +173,7 @@ func connectEtcdServices(params Params) (services.Services, error) {
 		SetLogger(params.ServiceConfig.Logger).
 		SetMetricsScope(params.ServiceConfig.Scope)
 
-	// etcd key format: prefix/${env}/namespace/service/instanceId
-	etcdConfig := params.ServiceConfig.EtcdConfig.EtcdConfig
-	etcdConfig.Env = fmt.Sprintf("%s/%s",
-		params.ServiceConfig.EtcdConfig.EtcdConfig.Env, config.ActiveJobNameSpace)
-
+	etcdConfig := &params.ServiceConfig.EtcdConfig.EtcdConfig
 	// create a config service client to access to the etcd cluster services.
 	csClient, err := etcdConfig.NewClient(iopts)
 	if err != nil {
