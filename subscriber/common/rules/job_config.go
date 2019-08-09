@@ -131,14 +131,16 @@ func NewAssignmentFromController(from *models.IngestionAssignment) (*Assignment,
 		assignment.Jobs = append(assignment.Jobs, jobConfig)
 	}
 
-	for instanceName, instance := range from.Instances {
-		sinkConfig := config.SinkConfig{
-			SinkModeStr: "aresDB",
-			AresDBConnectorConfig: client.ConnectorConfig{
-				Address: instance.Address,
-			},
+	if config.SinkIsAresDB {
+		for instanceName, instance := range from.Instances {
+			sinkConfig := config.SinkConfig{
+				SinkModeStr: "aresDB",
+				AresDBConnectorConfig: client.ConnectorConfig{
+					Address: instance.Address,
+				},
+			}
+			assignment.AresClusters[instanceName] = sinkConfig
 		}
-		assignment.AresClusters[instanceName] = sinkConfig
 	}
 
 	return assignment, nil
