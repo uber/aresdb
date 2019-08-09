@@ -107,7 +107,7 @@ type HeartBeatConfig struct {
 type EtcdConfig struct {
 	sync.Mutex
 
-	EtcdConfig *etcd.Configuration `yaml:"etcd"`
+	EtcdConfig *etcd.Configuration `yaml:",inline"`
 }
 
 type EtcdClusterConfig struct {
@@ -197,7 +197,7 @@ func NewServiceConfig(p Params) (Result, error) {
 	}
 
 	raw = p.Config.Get("etcd")
-	if err := raw.Populate(&serviceConfig.EtcdConfig.EtcdConfig); err != nil {
+	if err := raw.Populate(serviceConfig.EtcdConfig.EtcdConfig); err != nil {
 		return Result{
 			ServiceConfig: serviceConfig,
 		}, err

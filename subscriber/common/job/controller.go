@@ -174,7 +174,7 @@ func connectEtcdServices(params Params) (services.Services, error) {
 		SetMetricsScope(params.ServiceConfig.Scope)
 
 	// etcd key format: prefix/${env}/namespace/service/instanceId
-	etcdConfig := &params.ServiceConfig.EtcdConfig.EtcdConfig
+	etcdConfig := params.ServiceConfig.EtcdConfig.EtcdConfig
 	etcdConfig.Env = fmt.Sprintf("%s/%s",
 		params.ServiceConfig.EtcdConfig.EtcdConfig.Env, config.ActiveJobNameSpace)
 
