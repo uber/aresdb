@@ -532,6 +532,7 @@ func (c *Controller) RestartEtcdHBService(params Params) {
 		select {
 		case <-config.EtcdCfgEvent:
 			// TODO: unadevertises old heartbeat and closes etcd client should be added once M3 provides
+			c.serviceConfig.Logger.Info("RestartEtcdHBService")
 			c.startEtcdHBService(params)
 		default:
 		}
