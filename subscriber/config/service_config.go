@@ -195,6 +195,14 @@ func NewServiceConfig(p Params) (Result, error) {
 			ServiceConfig: serviceConfig,
 		}, err
 	}
+
+	raw = p.Config.Get("etcd.etcdClusters")
+	if err := raw.Populate(&serviceConfig.EtcdClustersConfig); err != nil {
+		return Result{
+			ServiceConfig: serviceConfig,
+		}, err
+	}
+
 	serviceConfig.Environment = p.Environment
 	serviceConfig.Logger = p.Logger
 	serviceConfig.Scope = p.Scope.Tagged(map[string]string{
