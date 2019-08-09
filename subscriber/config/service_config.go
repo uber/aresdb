@@ -91,7 +91,7 @@ type ServiceConfig struct {
 	ActiveJobs         []string              `yaml:"-"`
 	ControllerConfig   *ControllerConfig     `yaml:"controller"`
 	ZooKeeperConfig    ZooKeeperConfig       `yaml:"zookeeper"`
-	EtcdConfig         EtcdConfig            `yaml:"etcd"`
+	EtcdConfig         EtcdConfig            `yaml:"-"`
 	EtcdClustersConfig []EtcdClusterConfig   `yaml:"etcd.etcdClusters"`
 	HeartbeatConfig    *HeartBeatConfig      `yaml:"heartbeat"`
 }
@@ -107,7 +107,7 @@ type HeartBeatConfig struct {
 type EtcdConfig struct {
 	sync.Mutex
 
-	EtcdConfig etcd.Configuration `yaml:",inline"`
+	EtcdConfig *etcd.Configuration `yaml:"etcd"`
 }
 
 type EtcdClusterConfig struct {
@@ -191,6 +191,13 @@ func NewServiceConfig(p Params) (Result, error) {
 	serviceConfig := ServiceConfig{}
 
 	if err := raw.Populate(&serviceConfig); err != nil {
+		return Result{
+			ServiceConfig: serviceConfig,
+		}, err
+	}
+
+	raw = p.Config.Get("etcd")
+	if err := raw.Populate(&serviceConfig.EtcdConfig.EtcdConfig); err != nil {
 		return Result{
 			ServiceConfig: serviceConfig,
 		}, err
