@@ -158,8 +158,10 @@ func (kp *KafkaPublisher) buildKafkaMessage(msgs []*sarama.ProducerMessage, rows
 	bytes, numRows, err := kp.UpsertBatchBuilder.PrepareUpsertBatch(tableName, columnNames, updateModes, rows)
 	if err != nil {
 		kp.Scope.Counter("errors.upsertBatchBuild").Inc(1)
-		utils.StackError(err, "Failed to prepare rows in table %s, columns: %+v",
-			tableName, columnNames)
+		kp.ServiceConfig.Logger.Error("Failed to prepare rows",
+			zap.String("table", tableName),
+			zap.Any("columns", columnNames),
+			zap.Error(err))
 	}
 
 	msg := sarama.ProducerMessage{

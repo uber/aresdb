@@ -16,14 +16,14 @@ package sink
 
 import (
 	"fmt"
-	"strings"
-	"unsafe"
-
 	"github.com/uber/aresdb/client"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/utils"
+	"go.uber.org/zap"
 	"math"
+	"strings"
+	"unsafe"
 )
 
 // Sink is abstraction for interactions with downstream storage layer
@@ -71,7 +71,9 @@ func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfi
 		// convert primaryKey to byte array
 		pk, err := getPrimaryKeyBytes(row, destination, jobConfig, jobConfig.GetPrimaryKeyBytes())
 		if err != nil {
-			utils.StackError(err, "Failed to convert primaryKey to byte array for row: %v", row)
+			zap.NewNop().Error("Failed to shard",
+				zap.String("table", jobConfig.Name),
+				zap.Error(utils.StackError(err, "Failed to convert primaryKey to byte array for row: %v", row)))
 			rowsIgnored++
 			continue
 		}
