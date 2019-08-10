@@ -20,7 +20,6 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/utils"
-	"go.uber.org/zap"
 	"math"
 	"strings"
 	"unsafe"
@@ -71,9 +70,8 @@ func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfi
 		// convert primaryKey to byte array
 		pk, err := getPrimaryKeyBytes(row, destination, jobConfig, jobConfig.GetPrimaryKeyBytes())
 		if err != nil {
-			zap.NewNop().Error("Failed to shard",
-				zap.String("table", jobConfig.Name),
-				zap.Error(utils.StackError(err, "Failed to convert primaryKey to byte array for row: %v", row)))
+			fmt.Printf("Failed to shard table: %s, err: %v\n", jobConfig.Name,
+				utils.StackError(err, "Failed to convert primaryKey to byte array for row: %v", row))
 			rowsIgnored++
 			continue
 		}
