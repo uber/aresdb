@@ -71,8 +71,6 @@ func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfi
 		// convert primaryKey to byte array
 		pk, err := getPrimaryKeyBytes(row, destination, jobConfig, jobConfig.GetPrimaryKeyBytes())
 		if err != nil {
-			fmt.Printf("Failed to shard table: %s, err: %v\n", jobConfig.Name,
-				utils.StackError(err, "Failed to convert primaryKey to byte array for row: %v", row))
 			rowsIgnored++
 			continue
 		}
