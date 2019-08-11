@@ -124,16 +124,95 @@ func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rule
 	return key, err
 }
 
-// GetDataValue returns the DataValue for the given column value.
+// getDataValue returns the DataValue for the given column value.
 func getDataValue(col interface{}, columnIDInSchema int, jobConfig *rules.JobConfig) (memCom.DataValue, error) {
-	var dataStr string
-	var ok bool
-	if dataStr, ok = col.(string); !ok {
-		return memCom.DataValue{}, fmt.Errorf("Failed to convert %v to string", col)
+	dataType := memCom.DataTypeFromString(jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].Type)
+	if dataStr, ok := col.(string); ok {
+		return memCom.ValueFromString(dataStr, dataType)
 	}
 
-	dataType := memCom.DataTypeFromString(jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].Type)
-	dataVal, err := memCom.ValueFromString(dataStr, dataType)
+	val := memCom.DataValue{
+		DataType: dataType,
+	}
 
-	return dataVal, err
+	var ok bool
+	switch dataType {
+	case memCom.Bool:
+		var b bool
+		val.IsBool = true
+		if b, ok = col.(bool); !ok {
+			return val, fmt.Errorf("Invalid bool value, col:%d, val:%v",
+				columnIDInSchema, col)
+		}
+		val.Valid = true
+		val.BoolVal = b
+	case memCom.Int8:
+		var i8 int8
+		if i8, ok = col.(int8); !ok {
+			return val, fmt.Errorf("Invalid int8 value, col:%d, val:%v",
+				columnIDInSchema, col)
+		}
+		val.Valid = true
+		val.OtherVal = unsafe.Pointer(&i8)
+	case memCom.Uint8, memCom.SmallEnum:
+		var ui8 uint8
+		if ui8, ok = col.(uint8); !ok {
+			return val, fmt.Errorf("Invalid uint8 value, col:%d, val:%v",
+				columnIDInSchema, col)
+		}
+		val.Valid = true
+		val.OtherVal = unsafe.Pointer(&ui8)
+	case memCom.Int16:
+		var i16 int16
+		if i16, ok = col.(int16); !ok {
+			return val, fmt.Errorf("Invalid int16 value, col:%d, val:%v",
+				columnIDInSchema, col)
+		}
+		val.Valid = true
+		val.OtherVal = unsafe.Pointer(&i16)
+	case memCom.Uint16, memCom.BigEnum:
+		var ui16 uint16
+		if ui16, ok = col.(uint16); !ok {
+			return val, fmt.Errorf("Invalid uint16 value, col:%d, val:%v",
+				columnIDInSchema, col)
+		}
+		val.Valid = true
+		val.OtherVal = unsafe.Pointer(&ui16)
+	case memCom.Int32:
+		var i32 int32
+		if i32, ok = col.(int32); !ok {
+			return val, fmt.Errorf("Invalid int32 value, col:%d, val:%v",
+				columnIDInSchema, col)
+		}
+		val.Valid = true
+		val.OtherVal = unsafe.Pointer(&i32)
+	case memCom.Uint32:
+		var ui32 uint32
+		if ui32, ok = col.(uint32); !ok {
+			return val, fmt.Errorf("Invalid uint32 value, col:%d, val:%v",
+				columnIDInSchema, col)
+		}
+		val.Valid = true
+		val.OtherVal = unsafe.Pointer(&ui32)
+	case memCom.Int64:
+		var i64 int64
+		if i64, ok = col.(int64); !ok {
+			return val, fmt.Errorf("Invalid int64 value, col:%d, val:%v",
+				columnIDInSchema, col)
+		}
+		val.Valid = true
+		val.OtherVal = unsafe.Pointer(&i64)
+	case memCom.Float32:
+		var f32 float32
+		if f32, ok = col.(float32); !ok {
+			return val, fmt.Errorf("Invalid float32 value, col:%d, val:%v",
+				columnIDInSchema, col)
+		}
+		val.Valid = true
+		val.OtherVal = unsafe.Pointer(&f32)
+	default:
+		return val, fmt.Errorf("Invalid data type, col:%d, val:%v, type",
+			columnIDInSchema, col, dataType)
+	}
+	return val, nil
 }
