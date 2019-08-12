@@ -26,6 +26,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/uber/aresdb/api/common"
+	mutatorCom "github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
@@ -35,7 +36,9 @@ import (
 
 // DebugHandler handles debug operations.
 type DebugHandler struct {
+	namespace  string
 	shardOwner topology.ShardOwner
+	enumReader mutatorCom.EnumReader
 	memStore   memstore.MemStore
 	// For getting cutoff of a shard.
 	metaStore          metaCom.MetaStore
@@ -44,13 +47,18 @@ type DebugHandler struct {
 }
 
 // NewDebugHandler returns a new DebugHandler.
-func NewDebugHandler(memStore memstore.MemStore,
+func NewDebugHandler(
+	namespace string,
+	memStore memstore.MemStore,
 	metaStore metaCom.MetaStore,
 	queryHandler *QueryHandler,
 	healthCheckHandler *HealthCheckHandler,
 	shardOwner topology.ShardOwner,
+	enumReader mutatorCom.EnumReader,
 ) *DebugHandler {
 	return &DebugHandler{
+		namespace:          namespace,
+		enumReader:         enumReader,
 		shardOwner:         shardOwner,
 		memStore:           memStore,
 		metaStore:          metaStore,
@@ -220,12 +228,22 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 		response.Body.NumRows, response.Body.Vectors = readRows(liveBatch.Columns, request.StartRow, request.NumRows)
 	}
 
-	// translate enums
 	schema.RLock()
 	for columnID, column := range schema.Schema.Columns {
 		if !column.Deleted && column.IsEnumColumn() && columnID < len(response.Body.Vectors) {
 			vector := &response.Body.Vectors[columnID]
-			err = translateEnums(vector, schema.EnumDicts[column.Name].ReverseDict)
+			var enumCases []string
+			if handler.enumReader != nil {
+				// 1. use centralized enum reader
+				enumCases, err = handler.enumReader.GetEnumCases(handler.namespace, schema.Schema.Name, column.Name)
+				if err != nil {
+					return
+				}
+			} else {
+				// 2. use local in memory enum dict
+				enumCases = schema.EnumDicts[column.Name].ReverseDict
+			}
+			err = translateEnums(vector, enumCases)
 		}
 	}
 	schema.RUnlock()
@@ -264,8 +282,8 @@ func translateEnums(vector *memCom.SlicedVector, enumCases []string) error {
 			}
 
 			// it is possible when enum change has not arrived in memory yet,
-			// treat it as empty string temporarily.
-			vector.Values[index] = ""
+			// display raw enum value in such case
+			vector.Values[index] = value
 			if id < len(enumCases) {
 				vector.Values[index] = enumCases[id]
 			}

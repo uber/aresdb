@@ -150,7 +150,7 @@ func (m *memStoreImpl) handleTableSchemaChange(tableSchemaChangeEvents <-chan *m
 
 func (m *memStoreImpl) applyTableSchema(newTable *metaCom.Table) {
 	tableName := newTable.Name
-	newEnumColumns := []string{}
+	var newEnumColumns []string
 	// default start watching from first enumCase
 	startEnumID := 0
 	defer func() {
@@ -199,8 +199,8 @@ func (m *memStoreImpl) applyTableSchema(newTable *metaCom.Table) {
 	tableSchema.SetTable(newTable)
 
 	for columnID, column := range newTable.Columns {
-		tableSchema.SetDefaultValue(columnID)
 		if column.Deleted {
+			tableSchema.SetDefaultValue(columnID)
 			if columnID < len(oldColumns) && !oldColumns[columnID].Deleted { // new deletions only
 				delete(tableSchema.EnumDicts, column.Name)
 				columnsToDelete = append(columnsToDelete, columnID)
@@ -219,6 +219,8 @@ func (m *memStoreImpl) applyTableSchema(newTable *metaCom.Table) {
 					newEnumColumns = append(newEnumColumns, column.Name)
 				}
 			}
+			// always set default value after enum map creation
+			tableSchema.SetDefaultValue(columnID)
 			var oldPreloadingDays int
 			newPreloadingDays := column.Config.PreloadingDays
 			// preloading will be triggered if

@@ -281,10 +281,17 @@ func (m *tableSchemaMutator) UpdateTable(namespace string, table metaCom.Table, 
 func preCreateEnumNodes(txn *kvstore.Transaction, namespace string, table *metaCom.Table, startColumnID int, endColumnID int) {
 	for columnID := startColumnID; columnID < endColumnID; columnID++ {
 		if table.Columns[columnID].IsEnumColumn() {
+			var firstEnumCases []string
+			if table.Columns[columnID].DefaultValue != nil {
+				defaultValue := *table.Columns[columnID].DefaultValue
+				// default value be first enum case
+				firstEnumCases = append(firstEnumCases, defaultValue)
+			}
+
 			// enum node list
 			txn.AddKeyValue(utils.EnumNodeListKey(namespace, table.Name, table.Incarnation, columnID), kv.UninitializedVersion, &pb.EnumNodeList{NumEnumNodes: 1}).
 				// first node for enum column
-				AddKeyValue(utils.EnumNodeKey(namespace, table.Name, table.Incarnation, columnID, 0), kv.UninitializedVersion, &pb.EnumCases{Cases: []string{}})
+				AddKeyValue(utils.EnumNodeKey(namespace, table.Name, table.Incarnation, columnID, 0), kv.UninitializedVersion, &pb.EnumCases{Cases: firstEnumCases})
 		}
 	}
 }
