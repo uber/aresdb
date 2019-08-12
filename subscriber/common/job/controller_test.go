@@ -318,7 +318,7 @@ var _ = Describe("controller", func() {
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
 
-		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
+		params.ServiceConfig.EtcdConfig.EtcdConfig = etcd.Configuration{
 			Zone:    "local",
 			Env:     "test",
 			Service: "ares-subscriber",
@@ -351,7 +351,7 @@ var _ = Describe("controller", func() {
 			DecoderInitFunc:  message.NewDefaultDecoder,
 		}
 
-		params.ServiceConfig.EtcdConfig = &etcd.Configuration{
+		params.ServiceConfig.EtcdConfig.EtcdConfig = etcd.Configuration{
 			Zone:    "local",
 			Env:     "test",
 			Service: "",
