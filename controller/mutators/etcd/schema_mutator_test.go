@@ -72,6 +72,21 @@ func TestSchemaMutator(t *testing.T) {
 	}
 	testTable2.Config.BatchSize = 100
 
+	defaultValue := "default"
+	testTable3 := metaCom.Table{
+		Version: 0,
+		Name:    "test3",
+		Columns: []metaCom.Column{
+			{
+				Name: "col1",
+				Type: "SmallEnum",
+				DefaultValue: &defaultValue,
+			},
+		},
+		Config:            metastore.DefaultTableConfig,
+		PrimaryKeyColumns: []int{0},
+	}
+
 	testTableInvalid := metaCom.Table{
 		Version: 0,
 		Name:    "test1",
@@ -89,7 +104,7 @@ func TestSchemaMutator(t *testing.T) {
 		_, err := store.Set(utils.SchemaListKey("ns1"), &pb.EntityList{})
 		assert.NoError(t, err)
 
-		schemaMutator := tableSchemaMutator{
+		schemaMutator := &tableSchemaMutator{
 			txnStore: store,
 			logger:   zap.NewExample().Sugar(),
 		}
@@ -135,6 +150,14 @@ func TestSchemaMutator(t *testing.T) {
 		tbs, err = schemaMutator.ListTables("ns1")
 		assert.NoError(t, err)
 		assert.Empty(t, tbs)
+
+		err = schemaMutator.CreateTable("ns1", &testTable3, false)
+
+		enumMutator := NewEnumMutator(store, schemaMutator)
+		enumCases, err := enumMutator.GetEnumCases("ns1", testTable3.Name, testTable3.Columns[0].Name)
+		assert.NoError(t, err)
+		assert.Equal(t, enumCases, []string{defaultValue})
+
 	})
 
 	t.Run("reuse table should success", func(t *testing.T) {
