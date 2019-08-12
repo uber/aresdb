@@ -499,4 +499,96 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		ctx.flushResultBuffer()
 		Ω(w.Body.String()).Should(Equal(`["3.2"],["3.2"]`))
 	})
+
+	ginkgo.It("works with enum on data only mode agg", func() {
+		ctx := &AQLQueryContext{
+			Query: &queryCom.AQLQuery{
+				Dimensions: []queryCom.Dimension{
+					{Expr: ""},
+					{Expr: ""},
+				},
+			},
+			DataOnly: true,
+		}
+		oopkContext := OOPKContext{
+			Dimensions: []expr.Expr{
+				&expr.VarRef{
+					ExprType:        expr.Unsigned,
+					DataType:        memCom.BigEnum,
+					EnumReverseDict: []string{"zero", "one", "two"},
+				},
+				&expr.NumberLiteral{
+					ExprType: expr.Signed,
+				},
+			},
+			Measure: &expr.NumberLiteral{
+				ExprType: expr.Float,
+			},
+			MeasureBytes:       4,
+			DimRowBytes:        8,
+			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 0},
+			DimensionVectorIndex: []int{
+				1,
+				0,
+			},
+			ResultSize:       2,
+			dimensionVectorH: unsafe.Pointer(&[]uint8{12, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 1, 0, 1, 1}[0]),
+			measureVectorH:   unsafe.Pointer(&[]float32{3.2, 6.4}[0]),
+		}
+
+		ctx.OOPK = oopkContext
+		ctx.initResultFlushContext()
+		ctx.Postprocess()
+		Ω(ctx.Results).Should(Equal(queryCom.AQLQueryResult{
+			"2": map[string]interface{}{
+				"12":   float64(float32(3.2)),
+				"NULL": float64(float32(6.4)),
+			},
+		}))
+	})
+
+	ginkgo.It("works with enum on data only mode non agg", func() {
+		w := httptest.NewRecorder()
+		ctx := &AQLQueryContext{
+			Query: &queryCom.AQLQuery{
+				Dimensions: []queryCom.Dimension{
+					{Expr: "someField"},
+					{Expr: "someField"},
+				},
+			},
+			IsNonAggregationQuery: true,
+			ResponseWriter:        w,
+			DataOnly:              true,
+		}
+		oopkContext := OOPKContext{
+			Dimensions: []expr.Expr{
+				&expr.VarRef{
+					ExprType:        expr.Unsigned,
+					DataType:        memCom.BigEnum,
+					EnumReverseDict: []string{"zero", "one", "two"},
+				},
+				&expr.NumberLiteral{
+					ExprType: expr.Signed,
+				},
+			},
+			DimRowBytes:        8,
+			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 0},
+			DimensionVectorIndex: []int{
+				1,
+				0,
+			},
+			ResultSize:       2,
+			dimensionVectorH: unsafe.Pointer(&[]uint8{12, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 1, 0, 1, 1}[0]),
+		}
+
+		ctx.OOPK = oopkContext
+
+		ctx.initResultFlushContext()
+		ctx.flushResultBuffer()
+		Ω(w.Body.String()).Should(Equal(`["2","12"],["2","NULL"]`))
+		Ω(ctx.resultFlushContext.rowsFlushed).Should(Equal(2))
+
+		ctx.flushResultBuffer()
+		Ω(w.Body.String()).Should(Equal(`["2","12"],["2","NULL"],["2","12"],["2","NULL"]`))
+	})
 })

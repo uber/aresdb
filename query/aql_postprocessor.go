@@ -113,18 +113,11 @@ func (qc *AQLQueryContext) flushResultBuffer() {
 				}
 			}
 
-			enumDict := dpc.reverseDicts[dimIndex]
-
-			// TODO: enable this logic when broker is ready to translate enums
-			// whether to translate enum:
-			// 1. for non agg query
-			//    1a. if local enum still exists, translate
-			//    1b. if no local enum, won't translate
-			// 2. agg query: skip translate if query is from broker (DataOnly == true)
-			//enumDict := []string{}
-			//if !qc.DataOnly || qc.IsNonAggregationQuery {
-			//	enumDict = dpc.reverseDicts[dimIndex]
-			//}
+			// don't translate enum if it's for distributed mode (DataOnly == true)
+			var enumDict []string
+			if !qc.DataOnly {
+				enumDict = dpc.reverseDicts[dimIndex]
+			}
 
 			dimValues[dimIndex] = queryCom.ReadDimension(
 				valuePtr, nullPtr, i, dpc.dimensionDataTypes[dimIndex], enumDict,
