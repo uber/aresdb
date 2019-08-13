@@ -482,7 +482,7 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		}
 		res, err := plan.translateEnum(result)
 		Ω(err).Should(BeNil())
-		Ω(res).Should(Equal(common2.AQLQueryResult{
+		Ω(res).Should(Equal(map[string]interface{}{
 			"foo": map[string]interface{}{
 				"d1.0": map[string]interface{}{
 					"d2.0": map[string]interface{}{
