@@ -478,4 +478,82 @@ var _ = ginkgo.Describe("data value", func() {
 		Ω(dv.ConvertToHumanReadable(ArrayGeoPoint)).Should(Equal("[\"Point(180.0000,90.0000)\",null,\"Point(178.0000,88.0000)\"]"))
 
 	})
+
+	ginkgo.It("test GetDataValue", func() {
+		// test bool val
+		_, err := GetDataValue(true, 1, "Bool")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(1, 1, "Bool")
+		Ω(err).ShouldNot(BeNil())
+
+		// int8 out of range
+		_, err = GetDataValue(int8(127), 1, "Int8")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(int(127), 1, "Int8")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(true, 1, "Int8")
+		Ω(err).ShouldNot(BeNil())
+
+		// uint8
+		_, err = GetDataValue(uint8(255), 1, "Uint8")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(int(255), 1, "Uint8")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(true, 1, "Uint8")
+		Ω(err).ShouldNot(BeNil())
+
+		// int16
+		_, err = GetDataValue(int16(32767), 1, "Int16")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(int(32767), 1, "Int16")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(true, 1, "Int16")
+		Ω(err).ShouldNot(BeNil())
+
+		// uint16
+		_, err = GetDataValue(uint16(18446744073709551615), 1, "Uint16")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(int(18446744073709551615), 1, "Uint16")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(true, 1, "Uint16")
+		Ω(err).ShouldNot(BeNil())
+
+		// int32
+		_, err = GetDataValue(int32(2147483647), 1, "Int32")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(int(2147483647), 1, "Int32")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(true, 1, "Int32")
+		Ω(err).ShouldNot(BeNil())
+
+		// uint32
+		_, err = GetDataValue(uint32(4294967295), 1, "Uint32")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(int(4294967295), 1, "Uint32")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(true, 1, "Uint32")
+		Ω(err).ShouldNot(BeNil())
+
+		// int64
+		_, err = GetDataValue(int64(9223372036854775807), 1, "Int64")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(int(9223372036854775807), 1, "Int64")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(true, 1, "Int64")
+		Ω(err).ShouldNot(BeNil())
+
+		// float32
+		_, err = GetDataValue(float32(123.1), 1, "Float32")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(float64(132.2), 1, "Float32")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(true, 1, "Float32")
+		Ω(err).ShouldNot(BeNil())
+
+		// uuid
+		_, err = GetDataValue("0843540808080808", 1, "UUID")
+		Ω(err).Should(BeNil())
+		_, err = GetDataValue(true, 1, "UUID")
+		Ω(err).ShouldNot(BeNil())
+	})
 })

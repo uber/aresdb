@@ -15,13 +15,11 @@
 package sink
 
 import (
-	"fmt"
 	"github.com/uber/aresdb/client"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/utils"
 	"math"
-	"reflect"
 	"strings"
 	"unsafe"
 )
@@ -105,7 +103,7 @@ func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rule
 			}
 			strBytes = append(strBytes, []byte(str)...)
 		} else {
-			primaryKeyValues[i], err = getDataValue(row[columnID], columnIDInSchema, jobConfig)
+			primaryKeyValues[i], err = memCom.GetDataValue(row[columnID], columnIDInSchema, jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].Type)
 			if err != nil {
 				return key, utils.StackError(err, "Failed to read primary key at row %d, col %d",
 					row, columnID)
@@ -121,138 +119,4 @@ func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rule
 		key = append(key, strBytes...)
 	}
 	return key, err
-}
-
-// getDataValue returns the DataValue for the given column value.
-func getDataValue(col interface{}, columnIDInSchema int, jobConfig *rules.JobConfig) (memCom.DataValue, error) {
-
-	dataType := memCom.DataTypeFromString(jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].Type)
-	if dataStr, ok := col.(string); ok {
-		return memCom.ValueFromString(dataStr, dataType)
-	}
-
-	val := memCom.DataValue{
-		DataType: dataType,
-	}
-
-	var ok bool
-	switch dataType {
-	case memCom.Bool:
-		var b bool
-		val.IsBool = true
-		if b, ok = col.(bool); !ok {
-			return val, fmt.Errorf("Invalid bool value, col:%d, val:%v, type:%s",
-				columnIDInSchema, col, reflect.TypeOf(col))
-		}
-		val.Valid = true
-		val.BoolVal = b
-	case memCom.Int8:
-		var i8 int8
-		if i8, ok = col.(int8); !ok {
-			t := reflect.TypeOf(i8)
-			if reflect.TypeOf(col).ConvertibleTo(t) {
-				i8 = int8(reflect.ValueOf(col).Convert(t).Int())
-			} else {
-				return val, fmt.Errorf("Invalid int8 value, col:%d, val:%v, type:%s",
-					columnIDInSchema, col, reflect.TypeOf(col))
-			}
-		}
-		val.Valid = true
-		val.OtherVal = unsafe.Pointer(&i8)
-	case memCom.Uint8, memCom.SmallEnum:
-		var ui8 uint8
-		if ui8, ok = col.(uint8); !ok {
-			t := reflect.TypeOf(ui8)
-			if reflect.TypeOf(col).ConvertibleTo(t) {
-				ui8 = uint8(reflect.ValueOf(col).Convert(t).Uint())
-			} else {
-				return val, fmt.Errorf("Invalid uint8 value, col:%d, val:%v, type:%s",
-					columnIDInSchema, col, reflect.TypeOf(col))
-			}
-		}
-		val.Valid = true
-		val.OtherVal = unsafe.Pointer(&ui8)
-	case memCom.Int16:
-		var i16 int16
-		if i16, ok = col.(int16); !ok {
-			t := reflect.TypeOf(i16)
-			if reflect.TypeOf(col).ConvertibleTo(t) {
-				i16 = int16(reflect.ValueOf(col).Convert(t).Int())
-			} else {
-				return val, fmt.Errorf("Invalid int16 value, col:%d, val:%v, type:%s",
-					columnIDInSchema, col, reflect.TypeOf(col))
-			}
-		}
-		val.Valid = true
-		val.OtherVal = unsafe.Pointer(&i16)
-	case memCom.Uint16, memCom.BigEnum:
-		var ui16 uint16
-		if ui16, ok = col.(uint16); !ok {
-			t := reflect.TypeOf(ui16)
-			if reflect.TypeOf(col).ConvertibleTo(t) {
-				ui16 = uint16(reflect.ValueOf(col).Convert(t).Uint())
-			} else {
-				return val, fmt.Errorf("Invalid uint16 value, col:%d, val:%v, type:%s",
-					columnIDInSchema, col, reflect.TypeOf(col))
-			}
-		}
-		val.Valid = true
-		val.OtherVal = unsafe.Pointer(&ui16)
-	case memCom.Int32:
-		var i32 int32
-		if i32, ok = col.(int32); !ok {
-			t := reflect.TypeOf(i32)
-			if reflect.TypeOf(col).ConvertibleTo(t) {
-				i32 = int32(reflect.ValueOf(col).Convert(t).Int())
-			} else {
-				return val, fmt.Errorf("Invalid int32 value, col:%d, val:%v, type:%s",
-					columnIDInSchema, col, reflect.TypeOf(col))
-			}
-		}
-		val.Valid = true
-		val.OtherVal = unsafe.Pointer(&i32)
-	case memCom.Uint32:
-		var ui32 uint32
-		if ui32, ok = col.(uint32); !ok {
-			t := reflect.TypeOf(ui32)
-			if reflect.TypeOf(col).ConvertibleTo(t) {
-				ui32 = uint32(reflect.ValueOf(col).Convert(t).Uint())
-			} else {
-				return val, fmt.Errorf("Invalid uint32 value, col:%d, val:%v, type:%s",
-					columnIDInSchema, col, reflect.TypeOf(col))
-			}
-		}
-		val.Valid = true
-		val.OtherVal = unsafe.Pointer(&ui32)
-	case memCom.Int64:
-		var i64 int64
-		if i64, ok = col.(int64); !ok {
-			t := reflect.TypeOf(i64)
-			if reflect.TypeOf(col).ConvertibleTo(t) {
-				i64 = int64(reflect.ValueOf(col).Convert(t).Int())
-			} else {
-				return val, fmt.Errorf("Invalid int64 value, col:%d, val:%v, type:%s",
-					columnIDInSchema, col, reflect.TypeOf(col))
-			}
-		}
-		val.Valid = true
-		val.OtherVal = unsafe.Pointer(&i64)
-	case memCom.Float32:
-		var f32 float32
-		if f32, ok = col.(float32); !ok {
-			t := reflect.TypeOf(f32)
-			if reflect.TypeOf(col).ConvertibleTo(t) {
-				f32 = float32(reflect.ValueOf(col).Convert(t).Float())
-			} else {
-				return val, fmt.Errorf("Invalid float32 value, col:%d, val:%v, type:%s",
-					columnIDInSchema, col, reflect.TypeOf(col))
-			}
-		}
-		val.Valid = true
-		val.OtherVal = unsafe.Pointer(&f32)
-	default:
-		return val, fmt.Errorf("Invalid data type, col:%d, val:%v, type:%d",
-			columnIDInSchema, col, dataType)
-	}
-	return val, nil
 }

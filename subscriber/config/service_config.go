@@ -51,7 +51,7 @@ var (
 
 	// SinkIsAresDB is a flag. It is true if sink is aresDB
 	SinkIsAresDB = false
-	sinkModeStr = map[string]SinkMode{
+	sinkModeStr  = map[string]SinkMode{
 		"undefined": Sink_Undefined,
 		"aresDB":    Sink_AresDB,
 		"kafka":     Sink_Kafka,
