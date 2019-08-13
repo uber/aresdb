@@ -22,7 +22,7 @@ import (
 	"time"
 
 	memCom "github.com/uber/aresdb/memstore/common"
-	metaCom "github.com/uber/aresdb/metaStore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 )
 
 // Backfill is the process of merging records with event time older than cutoff with
@@ -343,7 +343,7 @@ type backfillContext struct {
 	columnDeletions   []bool
 	sortColumns       []int
 	primaryKeyColumns []int
-	defaultValues     []*common.DataValue
+	defaultValues     []*memCom.DataValue
 
 	// keep track of which columns have been forked already.
 	columnsForked []bool
@@ -351,7 +351,7 @@ type backfillContext struct {
 	// keep track of which row in base batch has been deleted and added to backfill store.
 	baseRowDeleted []int
 
-	dataTypes []common.DataType
+	dataTypes []memCom.DataType
 
 	// columns need to be purged under two cases:
 	// 	1. old columns are forked for updating in place.
@@ -368,7 +368,7 @@ type backfillContext struct {
 	okForEarlyUnpin bool
 }
 
-func newBackfillStore(tableSchema *memCom.TableSchema, hostMemoryManager common.HostMemoryManager, initBuckets int) *LiveStore {
+func newBackfillStore(tableSchema *memCom.TableSchema, hostMemoryManager memCom.HostMemoryManager, initBuckets int) *LiveStore {
 	ls := &LiveStore{
 		BatchSize:       tableSchema.Schema.Config.BackfillStoreBatchSize,
 		Batches:         make(map[int32]*LiveBatch),
@@ -383,8 +383,8 @@ func newBackfillStore(tableSchema *memCom.TableSchema, hostMemoryManager common.
 }
 
 func newBackfillContext(baseBatch *ArchiveBatch, patch *backfillPatch, tableSchema *memCom.TableSchema, columnDeletions []bool,
-	sortColumns []int, primaryKeyColumns []int, dataTypes []common.DataType, defaultValues []*common.DataValue,
-	hostMemoryManager common.HostMemoryManager) backfillContext {
+	sortColumns []int, primaryKeyColumns []int, dataTypes []memCom.DataType, defaultValues []*memCom.DataValue,
+	hostMemoryManager memCom.HostMemoryManager) backfillContext {
 	initBuckets := (baseBatch.Size + len(patch.recordIDs)) / memCom.BucketSize
 	// allocate more space for insertion.
 	initBuckets += initBuckets / 8
@@ -567,8 +567,8 @@ func (ctx *backfillContext) merge(reporter BackfillJobDetailReporter, jobKey str
 
 // getChangedPatchRow get the upsert batch row as a slice of pointer of data value format to be consistent with changed
 // base row. Note an upsert batch row may not have values for all columns so some of the data value may be nil.
-func (ctx *backfillContext) getChangedPatchRow(patchRecordID memCom.RecordID, upsertBatch *memCom.UpsertBatch) ([]*common.DataValue, error) {
-	changedRow := make([]*common.DataValue, len(ctx.new.Columns))
+func (ctx *backfillContext) getChangedPatchRow(patchRecordID memCom.RecordID, upsertBatch *memCom.UpsertBatch) ([]*memCom.DataValue, error) {
+	changedRow := make([]*memCom.DataValue, len(ctx.new.Columns))
 	for col := 0; col < upsertBatch.NumColumns; col++ {
 		columnID, err := upsertBatch.GetColumnID(col)
 		if err != nil {
@@ -596,16 +596,16 @@ func (ctx *backfillContext) getChangedPatchRow(patchRecordID memCom.RecordID, up
 // row in base batch and apply patch value to it.
 // for array columns, only when array size change will trigger the base batch change, value change while size not change will be covered in
 // the unsorted column change
-func (ctx *backfillContext) getChangedBaseRow(baseRecordID memCom.RecordID, changedPatchRow []*common.DataValue) []*common.DataValue {
-	var changedBaseRow []*common.DataValue
+func (ctx *backfillContext) getChangedBaseRow(baseRecordID memCom.RecordID, changedPatchRow []*memCom.DataValue) []*memCom.DataValue {
+	var changedBaseRow []*memCom.DataValue
 	for columnID, patchValue := range changedPatchRow {
 		// loop through sorted columns and array columns
 		if patchValue != nil && (utils.IndexOfInt(ctx.sortColumns, columnID) >= 0 || ctx.new.Columns[columnID].IsList()) {
 			baseDataValue := ctx.new.Columns[columnID].GetDataValueByRow(int(baseRecordID.Index))
 			// there's change in sorted column or size change in array column
-			if (ctx.new.Columns[columnID].IsList() && common.ArrayLengthCompare(&baseDataValue, patchValue) != 0) ||
+			if (ctx.new.Columns[columnID].IsList() && memCom.ArrayLengthCompare(&baseDataValue, patchValue) != 0) ||
 				(!ctx.new.Columns[columnID].IsList() && baseDataValue.Compare(*patchValue) != 0) {
-				changedBaseRow = make([]*common.DataValue, len(ctx.new.Columns))
+				changedBaseRow = make([]*memCom.DataValue, len(ctx.new.Columns))
 				// Mark deletion for this row.
 				ctx.baseRowDeleted = append(ctx.baseRowDeleted, int(baseRecordID.Index))
 				// Copy the whole row in base batch to changed row and apply the change.
@@ -631,7 +631,7 @@ func (ctx *backfillContext) getChangedBaseRow(baseRecordID memCom.RecordID, chan
 
 // writePatchValueForUnsortColumn writes the patch value to forked columns if value changes.
 // this function return false if no column update happens
-func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID memCom.RecordID, changedPatchRow []*common.DataValue) (updated bool) {
+func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID memCom.RecordID, changedPatchRow []*memCom.DataValue) (updated bool) {
 	for columnID, patchValue := range changedPatchRow {
 		if patchValue != nil && utils.IndexOfInt(ctx.sortColumns, columnID) < 0 {
 			baseDataValue := ctx.new.Columns[columnID].GetDataValueByRow(int(baseRecordID.Index))
@@ -665,7 +665,7 @@ func (ctx *backfillContext) writePatchValueForUnsortedColumn(baseRecordID memCom
 }
 
 // applyChangedRowToLiveStore applies changes in changedRow to temp live store.
-func (ctx backfillContext) applyChangedRowToLiveStore(recordID memCom.RecordID, changedRow []*common.DataValue) {
+func (ctx backfillContext) applyChangedRowToLiveStore(recordID memCom.RecordID, changedRow []*memCom.DataValue) {
 	backfillBatch := ctx.backfillStore.GetBatchForWrite(recordID.BatchID)
 	defer backfillBatch.Unlock()
 	for columnID, changedDataValue := range changedRow {
