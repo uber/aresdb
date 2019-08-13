@@ -143,15 +143,8 @@ func NewController(params Params) *Controller {
 		params.ServiceConfig.Logger.Info("aresDB Controller is enabled")
 
 		if params.ServiceConfig.HeartbeatConfig != nil && params.ServiceConfig.HeartbeatConfig.Enabled {
-			params.ServiceConfig.Logger.Info("heartbeat config",
-				zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))
-			controller.etcdServices, err = connectEtcdServices(params)
-			if err != nil {
-				params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
-			}
-			if registerHeartBeatService(params, controller.etcdServices) != nil {
-				params.ServiceConfig.Logger.Panic("Failed to registerHeartBeatService", zap.Error(err))
-			}
+			controller.startEtcdHBService(params)
+			go controller.RestartEtcdHBService(params)
 		} else {
 			controller.zkClient = createZKClient(params)
 			err = controller.zkClient.Start()
@@ -180,12 +173,9 @@ func connectEtcdServices(params Params) (services.Services, error) {
 		SetLogger(params.ServiceConfig.Logger).
 		SetMetricsScope(params.ServiceConfig.Scope)
 
-	// etcd key format: prefix/${env}/namespace/service/instanceId
-	params.ServiceConfig.EtcdConfig.Env = fmt.Sprintf("%s/%s",
-		params.ServiceConfig.EtcdConfig.Env, config.ActiveJobNameSpace)
-
+	etcdConfig := &params.ServiceConfig.EtcdConfig.EtcdConfig
 	// create a config service client to access to the etcd cluster services.
-	csClient, err := params.ServiceConfig.EtcdConfig.NewClient(iopts)
+	csClient, err := etcdConfig.NewClient(iopts)
 	if err != nil {
 		params.ServiceConfig.Logger.Error("Failed to NewClient for etcd",
 			zap.Error(err))
@@ -204,9 +194,9 @@ func connectEtcdServices(params Params) (services.Services, error) {
 
 func registerHeartBeatService(params Params, servicesClient services.Services) error {
 	sid := services.NewServiceID().
-		SetEnvironment(params.ServiceConfig.EtcdConfig.Env).
-		SetZone(params.ServiceConfig.EtcdConfig.Zone).
-		SetName(params.ServiceConfig.EtcdConfig.Service)
+		SetEnvironment(params.ServiceConfig.EtcdConfig.EtcdConfig.Env).
+		SetZone(params.ServiceConfig.EtcdConfig.EtcdConfig.Zone).
+		SetName(params.ServiceConfig.EtcdConfig.EtcdConfig.Service)
 
 	err := servicesClient.SetMetadata(sid, services.NewMetadata().
 		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
@@ -515,6 +505,33 @@ func (c *Controller) startDriver(
 	aresClusterDrivers[aresCluster] = driver
 
 	return true
+}
+
+func (c *Controller) startEtcdHBService(params Params) {
+	var err error
+	params.ServiceConfig.Logger.Info("heartbeat config",
+		zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))
+	params.ServiceConfig.EtcdConfig.Lock()
+	c.etcdServices, err = connectEtcdServices(params)
+	if err != nil {
+		params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
+	}
+	if registerHeartBeatService(params, c.etcdServices) != nil {
+		params.ServiceConfig.Logger.Panic("Failed to registerHeartBeatService", zap.Error(err))
+	}
+	params.ServiceConfig.EtcdConfig.Unlock()
+}
+
+// RestartEtcdHBService registers heartbeat again if etcd cluster changes are detected
+func (c *Controller) RestartEtcdHBService(params Params) {
+	for {
+		select {
+		case <-config.EtcdCfgEvent:
+			// TODO: unadevertises old heartbeat and closes etcd client should be added once M3 provides
+			c.serviceConfig.Logger.Info("RestartEtcdHBService")
+			c.startEtcdHBService(params)
+		}
+	}
 }
 
 // StartController starts periodically sync up with aresDB controller

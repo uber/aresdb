@@ -228,7 +228,7 @@ func (cf *CachedSchemaHandler) PrepareEnumCases(tableName, columnName string, en
 			"ColumnID", columnID,
 			"newEnumCasesSet", newEnumCases,
 			"caseInsensitive", caseInsensitive,
-		).Error("Finding new enum cases during ingestion but enum auto expansion is disabled")
+		).Warn("Finding new enum cases during ingestion but enum auto expansion is disabled")
 		cf.metricScope.Tagged(
 			map[string]string{
 				"TableName": tableName,

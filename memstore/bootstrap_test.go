@@ -160,7 +160,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 							PreloadingDays: 1,
 						}},
 					},
-			})
+				})
 			for columnID, column := range tableSchema.Schema.Columns {
 				if !column.Deleted {
 					tableSchema.SetDefaultValue(columnID)

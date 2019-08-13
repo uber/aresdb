@@ -15,15 +15,13 @@
 package sink
 
 import (
-	"fmt"
-	"strings"
-	"unsafe"
-
 	"github.com/uber/aresdb/client"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/utils"
 	"math"
+	"strings"
+	"unsafe"
 )
 
 // Sink is abstraction for interactions with downstream storage layer
@@ -71,7 +69,6 @@ func Shard(rows []client.Row, destination Destination, jobConfig *rules.JobConfi
 		// convert primaryKey to byte array
 		pk, err := getPrimaryKeyBytes(row, destination, jobConfig, jobConfig.GetPrimaryKeyBytes())
 		if err != nil {
-			utils.StackError(err, "Failed to convert primaryKey to byte array for row: %v", row)
 			rowsIgnored++
 			continue
 		}
@@ -106,7 +103,7 @@ func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rule
 			}
 			strBytes = append(strBytes, []byte(str)...)
 		} else {
-			primaryKeyValues[i], err = getDataValue(row[columnID], columnIDInSchema, jobConfig)
+			primaryKeyValues[i], err = memCom.GetDataValue(row[columnID], columnIDInSchema, jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].Type)
 			if err != nil {
 				return key, utils.StackError(err, "Failed to read primary key at row %d, col %d",
 					row, columnID)
@@ -122,18 +119,4 @@ func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rule
 		key = append(key, strBytes...)
 	}
 	return key, err
-}
-
-// GetDataValue returns the DataValue for the given column value.
-func getDataValue(col interface{}, columnIDInSchema int, jobConfig *rules.JobConfig) (memCom.DataValue, error) {
-	var dataStr string
-	var ok bool
-	if dataStr, ok = col.(string); !ok {
-		return memCom.DataValue{}, fmt.Errorf("Failed to convert %v to string", col)
-	}
-
-	dataType := memCom.DataTypeFromString(jobConfig.AresTableConfig.Table.Columns[columnIDInSchema].Type)
-	dataVal, err := memCom.ValueFromString(dataStr, dataType)
-
-	return dataVal, err
 }

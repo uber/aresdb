@@ -17,6 +17,7 @@ package common
 import (
 	"sync"
 )
+
 // Pinnable implements a vector party that support pin and release operations.
 type Pinnable struct {
 	// Used in archive batches to allow requesters to wait until the vector party

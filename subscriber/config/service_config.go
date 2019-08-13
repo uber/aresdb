@@ -17,6 +17,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/m3db/m3/src/cluster/client/etcd"
@@ -47,6 +48,17 @@ var (
 			NewServiceConfig,
 		),
 	)
+
+	// SinkIsAresDB is a flag. It is true if sink is aresDB
+	SinkIsAresDB = false
+	sinkModeStr  = map[string]SinkMode{
+		"undefined": Sink_Undefined,
+		"aresDB":    Sink_AresDB,
+		"kafka":     Sink_Kafka,
+	}
+
+	// EtcdCfgEvent is used to detect etcd cluster changes
+	EtcdCfgEvent = make(chan int, 1)
 )
 
 // Params defines the base objects for a service.
@@ -81,7 +93,8 @@ type ServiceConfig struct {
 	ActiveJobs         []string              `yaml:"-"`
 	ControllerConfig   *ControllerConfig     `yaml:"controller"`
 	ZooKeeperConfig    ZooKeeperConfig       `yaml:"zookeeper"`
-	EtcdConfig         *etcd.Configuration   `yaml:"etcd"`
+	EtcdConfig         EtcdConfig            `yaml:"etcd"`
+	EtcdClustersConfig []EtcdClusterConfig   `yaml:"etcd.etcdClusters"`
 	HeartbeatConfig    *HeartBeatConfig      `yaml:"heartbeat"`
 }
 
@@ -93,6 +106,17 @@ type HeartBeatConfig struct {
 	CheckInterval int  `yaml:"checkInterval"`
 }
 
+type EtcdConfig struct {
+	*sync.Mutex
+
+	EtcdConfig etcd.Configuration `yaml:",inline"`
+}
+
+type EtcdClusterConfig struct {
+	EtcdCluster etcd.ClusterConfig `yaml:",inline"`
+	UNS         string             `yaml:"uns"`
+}
+
 // SinkMode defines the subscriber sink mode
 type SinkMode int
 
@@ -101,12 +125,6 @@ const (
 	Sink_AresDB
 	Sink_Kafka
 )
-
-var sinkModeStr = map[string]SinkMode{
-	"undefined": Sink_Undefined,
-	"aresDB":    Sink_AresDB,
-	"kafka":     Sink_Kafka,
-}
 
 // SinkConfig wraps sink configurations
 type SinkConfig struct {
@@ -179,6 +197,19 @@ func NewServiceConfig(p Params) (Result, error) {
 			ServiceConfig: serviceConfig,
 		}, err
 	}
+
+	raw = p.Config.Get("etcd.etcdClusters")
+	if err := raw.Populate(&serviceConfig.EtcdClustersConfig); err != nil {
+		return Result{
+			ServiceConfig: serviceConfig,
+		}, err
+	}
+
+	// etcd key format: prefix/${env}/namespace/service/instanceId
+	etcdConfig := &serviceConfig.EtcdConfig
+	etcdConfig.Mutex = &sync.Mutex{}
+	etcdConfig.EtcdConfig.Env = fmt.Sprintf("%s/%s", etcdConfig.EtcdConfig.Env, ActiveJobNameSpace)
+
 	serviceConfig.Environment = p.Environment
 	serviceConfig.Logger = p.Logger
 	serviceConfig.Scope = p.Scope.Tagged(map[string]string{
