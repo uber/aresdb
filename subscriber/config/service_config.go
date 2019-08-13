@@ -107,7 +107,7 @@ type HeartBeatConfig struct {
 }
 
 type EtcdConfig struct {
-	sync.Mutex
+	*sync.Mutex
 
 	EtcdConfig etcd.Configuration `yaml:",inline"`
 }
@@ -206,8 +206,9 @@ func NewServiceConfig(p Params) (Result, error) {
 	}
 
 	// etcd key format: prefix/${env}/namespace/service/instanceId
-	etcdConfig := &serviceConfig.EtcdConfig.EtcdConfig
-	etcdConfig.Env = fmt.Sprintf("%s/%s", etcdConfig.Env, ActiveJobNameSpace)
+	etcdConfig := &serviceConfig.EtcdConfig
+	etcdConfig.Mutex = &sync.Mutex{}
+	etcdConfig.EtcdConfig.Env = fmt.Sprintf("%s/%s", etcdConfig.EtcdConfig.Env, ActiveJobNameSpace)
 
 	serviceConfig.Environment = p.Environment
 	serviceConfig.Logger = p.Logger
