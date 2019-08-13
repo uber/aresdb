@@ -53,7 +53,9 @@ func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobC
 	serviceConfig.Logger.Info("Kafka borkers address", zap.Any("brokers", addresses))
 
 	cfg := sarama.NewConfig()
-	cfg.Producer.Partitioner = sarama.NewManualPartitioner
+	if jobConfig.AresTableConfig.Table.IsFactTable {
+		cfg.Producer.Partitioner = sarama.NewManualPartitioner
+	}
 	cfg.Producer.RequiredAcks = sarama.WaitForAll // Wait for all in-sync replicas to ack the message
 	if sinkCfg.KafkaProducerConfig.RetryMax > 0 {
 		cfg.Producer.Retry.Max = sinkCfg.KafkaProducerConfig.RetryMax
@@ -124,11 +126,11 @@ func (kp *KafkaPublisher) Save(destination Destination, rows []client.Row) error
 	msgs := make([]*sarama.ProducerMessage, 0, len(shards))
 	if shards == nil {
 		// case1: no sharding --  publish rows to random kafka partition
-		kp.buildKafkaMessage(msgs, &rowsIgnored, destination.Table, -1, destination.ColumnNames, rows, destination.AresUpdateModes...)
+		kp.buildKafkaMessage(&msgs, &rowsIgnored, destination.Table, -1, destination.ColumnNames, rows, destination.AresUpdateModes...)
 	} else {
 		// case2: sharding -- publish rows to specified partition
 		for shardID, rowsInShard := range shards {
-			kp.buildKafkaMessage(msgs, &rowsIgnored, destination.Table, int32(shardID), destination.ColumnNames, rowsInShard, destination.AresUpdateModes...)
+			kp.buildKafkaMessage(&msgs, &rowsIgnored, destination.Table, int32(shardID), destination.ColumnNames, rowsInShard, destination.AresUpdateModes...)
 		}
 	}
 
@@ -154,7 +156,7 @@ func (kp *KafkaPublisher) Cluster() string {
 	return kp.ClusterName
 }
 
-func (kp *KafkaPublisher) buildKafkaMessage(msgs []*sarama.ProducerMessage, rowsIgnored *int, tableName string, shardID int32, columnNames []string, rows []client.Row,
+func (kp *KafkaPublisher) buildKafkaMessage(msgs *[]*sarama.ProducerMessage, rowsIgnored *int, tableName string, shardID int32, columnNames []string, rows []client.Row,
 	updateModes ...memCom.ColumnUpdateMode) {
 	bytes, numRows, err := kp.UpsertBatchBuilder.PrepareUpsertBatch(tableName, columnNames, updateModes, rows)
 	if err != nil {
@@ -165,16 +167,19 @@ func (kp *KafkaPublisher) buildKafkaMessage(msgs []*sarama.ProducerMessage, rows
 			zap.Error(err))
 	}
 
-	msg := sarama.ProducerMessage{
-		Topic: fmt.Sprintf("%s-%s", kp.Cluster(), tableName),
-		Value: sarama.ByteEncoder(bytes),
+	if len(bytes) > 0 {
+		msg := sarama.ProducerMessage{
+			Topic: fmt.Sprintf("ares-redolog-%s-%s", kp.Cluster(), tableName),
+			Value: sarama.ByteEncoder(bytes),
+		}
+
+		if shardID >= 0 {
+			msg.Partition = shardID
+		}
+
+		*msgs = append(*msgs, &msg)
 	}
 
-	if shardID >= 0 {
-		msg.Partition = shardID
-	}
-
-	msgs = append(msgs, &msg)
 	*rowsIgnored = *rowsIgnored + (len(rows) - numRows)
 	return
 }
