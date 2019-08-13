@@ -121,7 +121,7 @@ var _ = Describe("Sink", func() {
 		shardMap2 := make(map[uint32]struct{})
 
 		for _, keyVal := range keyVals {
-			val, err := getDataValue(keyVal, 1, jobConfig)
+			val, err := memCom.GetDataValue(keyVal, 1, jobConfig.AresTableConfig.Table.Columns[1].Type)
 			Ω(err).Should(BeNil())
 			Ω(val.DataType).Should(Equal(memCom.UUID))
 			Ω(val.ConvertToHumanReadable(memCom.UUID).(string)).Should(Equal(keyVal))
