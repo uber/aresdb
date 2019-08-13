@@ -50,6 +50,9 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		qc := QueryContext{
 			AQLQuery:              &q,
 			IsNonAggregationQuery: true,
+			DimensionEnumReverseDicts: map[int][]string{
+				0: {"foo", "bar"},
+			},
 		}
 		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockMap := topoMock.Map{}
@@ -88,7 +91,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		Ω(plan.nodes).Should(HaveLen(len(mockHosts)))
 		Ω(plan.headers).Should(Equal([]string{"field1", "field2"}))
 
-		bs := []byte(`["foo","1"],["bar","2"]`)
+		bs := []byte(`["0","1"],["1","2"]`)
 		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockHosts))
 
 		Ω(plan.nodes[0].qc.AQLQuery.Shards).Should(HaveLen(2))
