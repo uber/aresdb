@@ -53,6 +53,7 @@ func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobC
 	serviceConfig.Logger.Info("Kafka borkers address", zap.Any("brokers", addresses))
 
 	cfg := sarama.NewConfig()
+	cfg.Producer.Partitioner = sarama.NewManualPartitioner
 	cfg.Producer.RequiredAcks = sarama.WaitForAll // Wait for all in-sync replicas to ack the message
 	if sinkCfg.KafkaProducerConfig.RetryMax > 0 {
 		cfg.Producer.Retry.Max = sinkCfg.KafkaProducerConfig.RetryMax
