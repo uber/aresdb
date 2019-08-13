@@ -16,6 +16,7 @@ package datanode
 
 import (
 	"fmt"
+	"github.com/uber/aresdb/common"
 	"net/http"
 	"net/http/pprof"
 	"path/filepath"
@@ -36,7 +37,7 @@ import (
 	"github.com/uber/aresdb/api"
 	"github.com/uber/aresdb/cluster/shard"
 	"github.com/uber/aresdb/cluster/topology"
-	"github.com/uber/aresdb/common"
+	mutatorsCom "github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/datanode/generated/proto/rpc"
 	"github.com/uber/aresdb/diskstore"
@@ -60,10 +61,11 @@ type dataNode struct {
 	shardSet        shard.ShardSet
 	clusterServices services.Services
 
-	topo      topology.Topology
-	metaStore metaCom.MetaStore
-	memStore  memstore.MemStore
-	diskStore diskstore.DiskStore
+	topo       topology.Topology
+	enumReader mutatorsCom.EnumReader
+	metaStore  metaCom.MetaStore
+	memStore   memstore.MemStore
+	diskStore  diskstore.DiskStore
 
 	opts     Options
 	logger   common.Logger
@@ -100,6 +102,7 @@ type datanodeMetrics struct {
 func NewDataNode(
 	hostID string,
 	topo topology.Topology,
+	enumReader mutatorsCom.EnumReader,
 	opts Options) (DataNode, error) {
 
 	iOpts := opts.InstrumentOptions()
@@ -134,6 +137,7 @@ func NewDataNode(
 	d := &dataNode{
 		hostID:               hostID,
 		topo:                 topo,
+		enumReader:			  enumReader,
 		metaStore:            metaStore,
 		memStore:             memStore,
 		diskStore:            diskStore,
@@ -697,7 +701,7 @@ func (d *dataNode) newHandlers() datanodeHandlers {
 		debugStaticHandler: http.StripPrefix("/static/", utils.NoCache(http.FileServer(http.Dir("./api/ui/debug/")))),
 		swaggerHandler:     http.StripPrefix("/swagger/", http.FileServer(http.Dir("./api/ui/swagger/"))),
 		healthCheckHandler: healthCheckHandler,
-		debugHandler:       api.NewDebugHandler(d.memStore, d.metaStore, d.handlers.queryHandler, healthCheckHandler, d),
+		debugHandler:       api.NewDebugHandler(d.opts.ServerConfig().Cluster.Namespace, d.memStore, d.metaStore, d.handlers.queryHandler, healthCheckHandler, d, d.enumReader),
 	}
 }
 

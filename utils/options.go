@@ -25,7 +25,7 @@ const (
 
 // Options represents the options for instrumentation.
 type Options interface {
-	// ZapLogger returns the zap logger
+	// Logger returns the logger
 	Logger() common.Logger
 
 	// MetricsScope returns the metrics scope.

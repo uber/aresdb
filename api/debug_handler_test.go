@@ -232,7 +232,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 			})
 
 		healthCheckHandler := NewHealthCheckHandler()
-		debugHandler = NewDebugHandler(memStore, mockMetaStore, queryHandler, healthCheckHandler, topology.NewStaticShardOwner([]int{0}))
+		debugHandler = NewDebugHandler("", memStore, mockMetaStore, queryHandler, healthCheckHandler, topology.NewStaticShardOwner([]int{0}), nil)
 		testRouter := mux.NewRouter()
 		debugHandler.Register(testRouter.PathPrefix("/debug").Subrouter())
 		testServer = httptest.NewUnstartedServer(testRouter)

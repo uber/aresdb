@@ -65,12 +65,17 @@ type IngestionAssignmentMutator interface {
 	GetHash(namespace, subscriber string) (string, error)
 }
 
-// EnumMutator defines EnumMutator interface
-type EnumMutator interface {
-	// ExtendEnumCases try to extend new enum cases to given column
-	ExtendEnumCases(namespace, table, column string, enumCases []string) ([]int, error)
+// EnumReader reads enum cases
+type EnumReader interface {
 	// GetEnumCases get all enum cases for the given table column
 	GetEnumCases(namespace, table, column string) ([]string, error)
+}
+
+// EnumMutator defines EnumMutator interface
+type EnumMutator interface {
+	EnumReader
+	// ExtendEnumCases try to extend new enum cases to given column
+	ExtendEnumCases(namespace, table, column string, enumCases []string) ([]int, error)
 }
 
 // MembershipMutator defines membership rw operations

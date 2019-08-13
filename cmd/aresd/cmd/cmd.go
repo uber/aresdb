@@ -27,6 +27,7 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/common"
 	controllerCli "github.com/uber/aresdb/controller/client"
+	"github.com/uber/aresdb/controller/mutators/etcd"
 	"github.com/uber/aresdb/datanode"
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/diskstore"
@@ -35,6 +36,7 @@ import (
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
+	"go.uber.org/zap"
 	"net/http"
 	"net/http/pprof"
 	"path/filepath"
@@ -136,7 +138,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	// fetch schema from controller and start periodical job
 	if cfg.Cluster.Enable {
 		if cfg.Cluster.Namespace == "" {
-			logger.Fatal("Missing cluster name")
+			logger.Fatal("Missing namespace")
 		}
 		controllerClientCfg := cfg.Cluster.Controller
 		if controllerClientCfg == nil {
@@ -189,7 +191,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 
 	// Start HTTP server for debugging.
 	go func() {
-		debugHandler := api.NewDebugHandler(memStore, metaStore, queryHandler, healthCheckHandler, staticShardOwner)
+		debugHandler := api.NewDebugHandler(cfg.Cluster.Namespace, memStore, metaStore, queryHandler, healthCheckHandler, staticShardOwner, nil)
 
 		debugStaticHandler := http.StripPrefix("/static/", utils.NoCache(
 			http.FileServer(http.Dir("./api/ui/debug/"))))
@@ -259,8 +261,15 @@ func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tall
 	etcdCfg.Service = utils.DataNodeServiceName(cfg.Cluster.Namespace)
 	configServiceCli, err := etcdCfg.NewClient(instrument.NewOptions())
 	if err != nil {
-		logger.Fatal("Failed to create etcd client,", err)
+		logger.With("error", err.Error()).Fatal("failed to create etcd client", err)
 	}
+
+	txnStore, err := configServiceCli.Txn()
+	if err != nil {
+		logger.With("error", err.Error()).Fatal("failed to create txn store")
+	}
+
+	enumReader := etcd.NewEnumMutator(txnStore, etcd.NewTableSchemaMutator(txnStore, zap.NewExample().Sugar()))
 
 	dynamicOptions := topology.NewDynamicOptions().
 		SetConfigServiceClient(configServiceCli).
@@ -274,7 +283,7 @@ func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tall
 		logger.Fatal("Failed to initialize dynamic topology,", err)
 	}
 
-	dataNode, err := datanode.NewDataNode(cfg.Cluster.InstanceID, topo, opts)
+	dataNode, err := datanode.NewDataNode(cfg.Cluster.InstanceID, topo, enumReader, opts)
 	if err != nil {
 		logger.Fatal("Failed to create datanode,", err)
 	}

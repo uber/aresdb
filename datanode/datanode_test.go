@@ -1,6 +1,7 @@
 package datanode
 
 import (
+	"github.com/uber/aresdb/controller/mutators/mocks"
 	"os"
 
 	"github.com/m3db/m3/src/cluster/client/etcd"
@@ -36,7 +37,13 @@ var _ = ginkgo.Describe("datanode", func() {
 		}))
 		staticTopology, _ := topology.NewStaticInitializer(staticMapOption).Init()
 
-		dataNode, err := NewDataNode("instance0", staticTopology, NewOptions().
+		enumReader := &mocks.EnumReader{}
+
+		dataNode, err := NewDataNode(
+			"instance0",
+			staticTopology,
+			enumReader,
+			NewOptions().
 			SetServerConfig(common.AresServerConfig{
 				Port:            9374,
 				DebugPort:       43202,
