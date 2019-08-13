@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 	"sync"
@@ -52,7 +51,7 @@ func (b *BrokerSchemaMutator) ListTables() (tables []string, err error) {
 func (b *BrokerSchemaMutator) GetTable(name string) (table *common.Table, err error) {
 	tableSchema, ok := b.tables[name]
 	if !ok {
-		err = metastore.ErrTableDoesNotExist
+		err = common.ErrTableDoesNotExist
 		return
 	}
 	table = &tableSchema.Schema

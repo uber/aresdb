@@ -276,7 +276,8 @@ func (h *hostMemoryManager) GetArchiveMemoryUsageByTableShard() (map[string]map[
 	for tableName, batchInfoByColumn := range h.batchInfosByColumn {
 		tableSchema, err := h.memStore.GetSchema(tableName)
 		if err != nil {
-			return managedMemoryUsage, err
+			// ignore deleted table
+			continue
 		}
 		for columnID, batchInfo := range batchInfoByColumn {
 			tableSchema.RLock()

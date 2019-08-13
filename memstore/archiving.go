@@ -17,7 +17,8 @@ package memstore
 import (
 	"sort"
 
-	"github.com/uber/aresdb/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -32,7 +33,7 @@ import (
 //    ongoing archiving completes).
 type liveStoreSnapshot struct {
 	// Stores the structure as [RandomBatchIndex][ColumnID].
-	batches [][]common.VectorParty
+	batches [][]memCom.VectorParty
 	// For purging live batch later.
 	batchIDs              []int32
 	numRecordsInLastBatch int
@@ -42,13 +43,13 @@ type liveStoreSnapshot struct {
 func (s *LiveStore) snapshot() (ss liveStoreSnapshot) {
 	batchIDs, numRecordsInLastBatch := s.GetBatchIDs()
 	ss.batchIDs = batchIDs
-	ss.batches = make([][]common.VectorParty, len(batchIDs))
+	ss.batches = make([][]memCom.VectorParty, len(batchIDs))
 	ss.numRecordsInLastBatch = numRecordsInLastBatch
 	for i, batchID := range batchIDs {
 		batch := s.GetBatchForRead(batchID)
 		// Live batches are purged by archiving so all batches returned here
 		// should be valid.
-		ss.batches[i] = make([]common.VectorParty, len(batch.Columns))
+		ss.batches[i] = make([]memCom.VectorParty, len(batch.Columns))
 		copy(ss.batches[i], batch.Columns)
 		batch.RUnlock()
 	}
@@ -60,7 +61,7 @@ func (s *LiveStore) snapshot() (ss liveStoreSnapshot) {
 // The records will be sorted according to the sortColumns.
 type archivingPatch struct {
 	// RecordID.BatchID here refers to the RandomBatchIndex in the snapshot.
-	recordIDs   []common.RecordID
+	recordIDs   []memCom.RecordID
 	sortColumns []int
 	// Readonly. We won't change it during sorting archiving patch and merging
 	// with archive batch.
@@ -88,7 +89,7 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 	for batchIdx, batch := range ss.batches {
 		timeColumn := batch[0]
 		numRecords := timeColumn.GetLength()
-		minValue, _ := timeColumn.(common.LiveVectorParty).GetMinMaxValue()
+		minValue, _ := timeColumn.(memCom.LiveVectorParty).GetMinMaxValue()
 		if batchIdx == len(ss.batches)-1 {
 			numRecords = ss.numRecordsInLastBatch
 		}
@@ -111,7 +112,7 @@ func (ss liveStoreSnapshot) createArchivingPatches(
 								patchByDay[day] = patch
 							}
 							patch.recordIDs = append(patch.recordIDs,
-								common.RecordID{BatchID: int32(batchIdx), Index: uint32(recordIdx)})
+								memCom.RecordID{BatchID: int32(batchIdx), Index: uint32(recordIdx)})
 							numRecordsArchived++
 						} else {
 							numRecordsIgnored++
@@ -156,7 +157,7 @@ func (s *LiveStore) getBatchIDsToPurge(cutoff uint32) []int32 {
 
 		timeColumn := batch.Columns[0]
 		if timeColumn != nil {
-			if _, maxValue := timeColumn.(common.LiveVectorParty).GetMinMaxValue(); maxValue < cutoff {
+			if _, maxValue := timeColumn.(memCom.LiveVectorParty).GetMinMaxValue(); maxValue < cutoff {
 				if !allowMissingEventTime || timeColumn.GetNonDefaultValueCount() == batch.Capacity || batch.MaxArrivalTime < cutoff {
 					batchIDs = append(batchIDs, batchID)
 				}
@@ -191,17 +192,17 @@ func (ap archivingPatch) Less(i, j int) bool {
 }
 
 // GetDataValue reads value from underlying columns after sorted.
-func (ap *archivingPatch) GetDataValue(row, columnID int) common.DataValue {
+func (ap *archivingPatch) GetDataValue(row, columnID int) memCom.DataValue {
 	recordID := ap.recordIDs[row]
 	batch := ap.data.batches[recordID.BatchID]
 
 	if columnID >= len(batch) {
-		return common.NullDataValue
+		return memCom.NullDataValue
 	}
 
 	vp := batch[columnID]
 	if vp == nil {
-		return common.NullDataValue
+		return memCom.NullDataValue
 	}
 
 	return vp.GetDataValue(int(recordID.Index))
@@ -209,7 +210,7 @@ func (ap *archivingPatch) GetDataValue(row, columnID int) common.DataValue {
 
 // GetDataValue reads value from underlying columns after sorted. If it's missing, it will return
 // passed value instead.
-func (ap *archivingPatch) GetDataValueWithDefault(row, columnID int, defaultValue common.DataValue) common.DataValue {
+func (ap *archivingPatch) GetDataValueWithDefault(row, columnID int, defaultValue memCom.DataValue) memCom.DataValue {
 	recordID := ap.recordIDs[row]
 	batch := ap.data.batches[recordID.BatchID]
 
@@ -250,7 +251,7 @@ func (ap *archivingPatch) GetCount(row, columnID int) int {
 func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporter ArchiveJobDetailReporter) error {
 	archivingTimer := utils.GetReporter(table, shardID).GetTimer(utils.ArchivingTimingTotal)
 	start := utils.Now()
-	jobKey := getIdentifier(table, shardID, common.ArchivingJobType)
+	jobKey := getIdentifier(table, shardID, memCom.ArchivingJobType)
 	// Emit duration metrics and report back to scheduler.
 	defer func() {
 		duration := utils.Now().Sub(start)
@@ -291,6 +292,10 @@ func (m *memStoreImpl) Archive(table string, shardID int, cutoff uint32, reporte
 	// Create a new archive store version and switch to it.
 	patchByDay, oldVersion, unmanagedMemoryBytes, err := shard.createNewArchiveStoreVersion(cutoff, reporter, jobKey)
 	if err != nil {
+		if err == metaCom.ErrTableDoesNotExist {
+			utils.GetLogger().With("table", table, "shard", shardID).Warn("failed to create archive store version for non-exist table")
+			return nil
+		}
 		return err
 	}
 
@@ -405,7 +410,7 @@ func (shard *TableShard) createNewArchiveStoreVersion(cutoff uint32, reporter Ar
 
 		baseBatch := shard.ArchiveStore.CurrentVersion.RequestBatch(day)
 
-		var requestedVPs []common.ArchiveVectorParty
+		var requestedVPs []memCom.ArchiveVectorParty
 		// We need to load all columns into memory for archiving.
 		for columnID := 0; columnID < numColumns; columnID++ {
 			requestedVP := baseBatch.RequestVectorParty(columnID)

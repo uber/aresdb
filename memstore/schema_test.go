@@ -22,7 +22,6 @@ import (
 	"github.com/uber/aresdb/common"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
-	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/metastore/mocks"
 	"github.com/uber/aresdb/redolog"
@@ -330,7 +329,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 
 		// failed with table no exist error
 		mockMetastore.On("ListTables").Return([]string{testTable.Name}, nil).Once()
-		mockMetastore.On("GetTable", testTable.Name).Return(nil, metastore.ErrTableDoesNotExist).Once()
+		mockMetastore.On("GetTable", testTable.Name).Return(nil, metaCom.ErrTableDoesNotExist).Once()
 		doneChan = make(chan struct{})
 		mockMetastore.On("WatchTableListEvents").Return(recvTableListEvents, doneChan, nil).Once()
 		doneChan = make(chan struct{})
@@ -348,7 +347,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		// failed with column does not exist error
 		mockMetastore.On("ListTables").Return([]string{"testTable"}, nil).Once()
 		mockMetastore.On("GetTable", testTable.Name).Return(&testTable, nil).Once()
-		mockMetastore.On("GetEnumDict", testTable.Name, testColumn2.Name).Return(nil, metastore.ErrColumnDoesNotExist).Once()
+		mockMetastore.On("GetEnumDict", testTable.Name, testColumn2.Name).Return(nil, metaCom.ErrColumnDoesNotExist).Once()
 		mockMetastore.On("GetEnumDict", testTable.Name, testColumn3.Name).Return(testColumn3EnumCases, nil).Once()
 		doneChan = make(chan struct{})
 		mockMetastore.On("WatchTableListEvents").Return(recvTableListEvents, doneChan, nil).Once()

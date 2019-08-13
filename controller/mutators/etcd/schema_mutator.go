@@ -63,7 +63,7 @@ func (m *tableSchemaMutator) GetTable(namespace, name string) (table *metaCom.Ta
 	}
 
 	if schemaProto.Tomstoned {
-		return nil, metastore.ErrTableDoesNotExist
+		return nil, metaCom.ErrTableDoesNotExist
 	}
 
 	table = &metaCom.Table{}
@@ -109,7 +109,7 @@ func (m *tableSchemaMutator) CreateTable(namespace string, table *metaCom.Table,
 
 	tableListProto, incarnation, exist := addEntity(tableListProto, table.Name)
 	if exist {
-		return metastore.ErrTableAlreadyExist
+		return metaCom.ErrTableAlreadyExist
 	}
 	table.Incarnation = incarnation
 
@@ -145,7 +145,7 @@ func (m *tableSchemaMutator) DeleteTable(namespace, name string) error {
 
 	tableListProto, found := deleteEntity(tableListProto, name)
 	if !found {
-		return metastore.ErrTableDoesNotExist
+		return metaCom.ErrTableDoesNotExist
 	}
 
 	// found table
@@ -155,7 +155,7 @@ func (m *tableSchemaMutator) DeleteTable(namespace, name string) error {
 	}
 
 	if schemaProto.Tomstoned {
-		return metastore.ErrTableDoesNotExist
+		return metaCom.ErrTableDoesNotExist
 	}
 	schemaProto.Tomstoned = true
 
@@ -226,7 +226,7 @@ func (m *tableSchemaMutator) UpdateTable(namespace string, table metaCom.Table, 
 		return err
 	}
 	if schemaProto.Tomstoned {
-		return metastore.ErrTableDoesNotExist
+		return metaCom.ErrTableDoesNotExist
 	}
 
 	var oldTable metaCom.Table
@@ -296,7 +296,7 @@ func (m *tableSchemaMutator) GetHash(namespace string) (hash string, err error) 
 func (m *tableSchemaMutator) readSchema(namespace string, name string) (schemaProto pb.EntityConfig, version int, err error) {
 	version, err = readValue(m.txnStore, utils.SchemaKey(namespace, name), &schemaProto)
 	if common.IsNonExist(err) {
-		err = metastore.ErrTableDoesNotExist
+		err = metaCom.ErrTableDoesNotExist
 	}
 	return
 }

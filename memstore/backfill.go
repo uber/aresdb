@@ -18,11 +18,11 @@ import (
 	"github.com/uber/aresdb/memstore/vectors"
 	"sort"
 
-	"github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/utils"
 	"time"
 
 	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metaStore/common"
 )
 
 // Backfill is the process of merging records with event time older than cutoff with
@@ -74,6 +74,10 @@ func (m *memStoreImpl) Backfill(table string, shardID int, reporter BackfillJobD
 
 	if err = shard.createNewArchiveStoreVersionForBackfill(
 		backfillPatches, reporter, jobKey); err != nil {
+		if err == metaCom.ErrTableDoesNotExist {
+			utils.GetLogger().With("table", table, "shard", shardID).Warn("failed to create archive store version for non-exist table")
+			return nil
+		}
 		return err
 	}
 

@@ -108,7 +108,7 @@ func (handler *SchemaHandler) GetTable(w http.ResponseWriter, r *http.Request) {
 
 	table, err := handler.metaStore.GetTable(getTableRequest.TableName)
 	if err != nil {
-		if err.Error() == metastore.ErrTableDoesNotExist.Error() {
+		if err.Error() == metaCom.ErrTableDoesNotExist.Error() {
 			common.RespondBytesWithCode(w, http.StatusNotFound, []byte(err.Error()))
 			return
 		}
