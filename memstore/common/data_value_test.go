@@ -511,9 +511,9 @@ var _ = ginkgo.Describe("data value", func() {
 		Ω(err).ShouldNot(BeNil())
 
 		// uint16
-		_, err = GetDataValue(uint16(18446744073709551615), 1, "Uint16")
+		_, err = GetDataValue(uint16(65535), 1, "Uint16")
 		Ω(err).Should(BeNil())
-		_, err = GetDataValue(int(18446744073709551615), 1, "Uint16")
+		_, err = GetDataValue(int(65535), 1, "Uint16")
 		Ω(err).Should(BeNil())
 		_, err = GetDataValue(true, 1, "Uint16")
 		Ω(err).ShouldNot(BeNil())
