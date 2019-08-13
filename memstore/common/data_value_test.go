@@ -551,7 +551,7 @@ var _ = ginkgo.Describe("data value", func() {
 		Ω(err).ShouldNot(BeNil())
 
 		// uuid
-		_, err = GetDataValue("0843540808080808", 1, "UUID")
+		_, err = GetDataValue("3ac6f11d-ba72-4527-970a-da4237145797", 1, "UUID")
 		Ω(err).Should(BeNil())
 		_, err = GetDataValue(true, 1, "UUID")
 		Ω(err).ShouldNot(BeNil())
