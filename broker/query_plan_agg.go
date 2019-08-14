@@ -27,6 +27,7 @@ import (
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -235,21 +236,72 @@ func NewAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTopolo
 
 func (ap *AggQueryPlan) postProcess(results queryCom.AQLQueryResult, execErr error, w http.ResponseWriter) (err error) {
 	var data []byte
-	// for now post process for HLL binary only
-	// TODO: move post processing logic for non-agg and other agg queries here
 	if ap.qc.ReturnHLLBinary {
 		w.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
 		data, err = ap.postProcessHLLBinary(results, execErr)
 	} else {
-		data, err = json.Marshal(results)
+		if execErr != nil {
+			err = execErr
+			return
+		}
+		var rewritten interface{}
+		rewritten, err = ap.translateEnum(results)
+		if err != nil {
+			return
+		}
+		data, err = json.Marshal(rewritten)
 	}
 
 	if err != nil {
 		return
 	}
-
 	_, err = w.Write([]byte(data))
 	return
+}
+
+func (ap *AggQueryPlan) translateEnum(results queryCom.AQLQueryResult) (rewritten interface{}, err error) {
+	return traverseRecursive(0, map[string]interface{}(results), ap.qc.DimensionEnumReverseDicts)
+}
+
+// helper function that traverse AQLQueryResult, translate enum rank to value
+func traverseRecursive(dimIndex int, curr interface{}, dimReverseDict map[int][]string) (rewritten interface{}, err error) {
+	if len(dimReverseDict) == 0 {
+		return curr, nil
+	}
+
+	if v, ok := curr.(map[string]interface{}); ok {
+		for ck, child := range v {
+			rc, err := traverseRecursive(dimIndex+1, child, dimReverseDict)
+			if err != nil {
+				return nil, err
+			}
+			v[ck] = rc
+		}
+	}
+
+	// visit curr and translate
+	if reverseDict, exists := dimReverseDict[dimIndex]; exists {
+		v, ok := curr.(map[string]interface{})
+		if !ok {
+			return nil, utils.StackError(nil, "failed to translate enum at %dth dimension", dimIndex)
+		}
+
+		newRes := make(map[string]interface{})
+		for k, val := range v {
+			enumRank, err := strconv.Atoi(k)
+			if err != nil {
+				return nil, err
+			}
+			if enumRank >= len(reverseDict) || enumRank < 0 {
+				return nil, utils.StackError(nil, "invalid enum rank %d, enums were %s", enumRank, reverseDict)
+			}
+			enumVal := reverseDict[enumRank]
+			newRes[enumVal] = val
+		}
+		return newRes, nil
+	}
+
+	return curr, nil
 }
 
 // convert HLL to binary format

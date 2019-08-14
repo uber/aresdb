@@ -22,6 +22,7 @@ import (
 	dataCli "github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/utils"
 	"net/http"
+	"strconv"
 )
 
 // StreamingScanNode implements StreamingPlanNode
@@ -85,9 +86,9 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTop
 	}
 
 	plan = &NonAggQueryPlan{
+		qc:         qc,
 		headers:    headers,
 		resultChan: make(chan streamingScanNoderesult),
-		limit:      qc.AQLQuery.Limit,
 	}
 
 	var assignment map[topology.Host][]uint32
@@ -125,11 +126,10 @@ type streamingScanNoderesult struct {
 
 // NonAggQueryPlan implements QueryPlan
 type NonAggQueryPlan struct {
+	qc         *QueryContext
 	resultChan chan streamingScanNoderesult
 	headers    []string
 	nodes      []*StreamingScanNode
-	// number of rows needed
-	limit int
 	// number of rows flushed
 	flushed int
 }
@@ -191,14 +191,20 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 		}
 
 		// write rows
-		if nqp.limit < 0 {
-			// when no limit, flush data directly
+		if nqp.qc.AQLQuery.Limit < 0 && len(nqp.qc.DimensionEnumReverseDicts) == 0 {
+			// no limit, nor need to translate enums, flush data directly
+			utils.GetLogger().Debug("flushing without deserializing")
 			if processedFirtBatch {
 				w.Write([]byte(`,`))
 			}
 			w.Write(res.data)
 		} else {
-			// with limit, we have to deserialize
+			// we have to deserialize
+			if len(res.data) == 0 {
+				utils.GetLogger().Debug("skipping on empty response")
+				continue
+			}
+
 			serDeStart := utils.Now()
 
 			res.data = append([]byte("["), res.data[:]...)
@@ -210,29 +216,50 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 				return
 			}
 
-			if len(resultData) <= nqp.getRowsWanted() {
-				if processedFirtBatch {
-					w.Write([]byte(`,`))
+			// translate enum
+			for _, row := range resultData {
+				for i, col := range row {
+					if enumReverseDict, exists := nqp.qc.DimensionEnumReverseDicts[i]; exists {
+						if s, ok := col.(string); ok {
+							var enumRank int
+							enumRank, err = strconv.Atoi(s)
+							if err != nil {
+								return utils.StackError(err, "failed to translate enum at col %d of row %s", i, row)
+							}
+							if enumRank < 0 || enumRank >= len(enumReverseDict) {
+								return utils.StackError(err, "failed to translate enum at col %d of row %s", i, row)
+							}
+							row[i] = enumReverseDict[enumRank]
+						} else {
+							return utils.StackError(nil, "failed to translate enum at col %d of row %s", i, row)
+						}
+					}
+
 				}
-				w.Write(res.data[1 : len(res.data)-1])
-				nqp.flushed += len(resultData)
-				utils.GetLogger().With("nrows", len(resultData)).Debug("flushed batch")
+			}
+
+			var dataToFlush [][]interface{}
+			if nqp.qc.AQLQuery.Limit < 0 {
+				dataToFlush = resultData
 			} else {
 				rowsToFlush := nqp.getRowsWanted()
-				dataToFlush := resultData[:rowsToFlush]
-				var bs []byte
-				bs, err = json.Marshal(dataToFlush)
-				if err != nil {
-					return
+				if rowsToFlush > len(resultData) {
+					rowsToFlush = len(resultData)
 				}
-				if processedFirtBatch {
-					w.Write([]byte(`,`))
-				}
-				// strip brackets
-				w.Write(bs[1 : len(bs)-1])
-				nqp.flushed += rowsToFlush
-				utils.GetLogger().With("nrows", rowsToFlush).Debug("flushed rows")
+				dataToFlush = resultData[:rowsToFlush]
 			}
+			var bs []byte
+			bs, err = json.Marshal(dataToFlush)
+			if err != nil {
+				return
+			}
+			if processedFirtBatch {
+				w.Write([]byte(`,`))
+			}
+			// strip brackets
+			w.Write(bs[1 : len(bs)-1])
+			nqp.flushed += len(dataToFlush)
+			utils.GetLogger().With("nrows", len(dataToFlush)).Debug("flushed rows")
 			utils.GetRootReporter().GetTimer(utils.TimeSerDeDataNodeResponse).Record(utils.Now().Sub(serDeStart))
 		}
 		processedFirtBatch = true
@@ -243,5 +270,5 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 }
 
 func (nqp *NonAggQueryPlan) getRowsWanted() int {
-	return nqp.limit - nqp.flushed
+	return nqp.qc.AQLQuery.Limit - nqp.flushed
 }

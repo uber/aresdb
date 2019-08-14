@@ -460,4 +460,36 @@ var _ = ginkgo.Describe("agg query plan", func() {
 				},
 			}}))
 	})
+
+	ginkgo.It("translate enums should work", func() {
+		plan := AggQueryPlan{
+			qc: &QueryContext{
+				DimensionEnumReverseDicts: map[int][]string{
+					0: {"foo", "bar"},
+					3: {"baz", "boy"},
+				},
+			},
+		}
+
+		result := common2.AQLQueryResult{
+			"0": map[string]interface{}{
+				"d1.0": map[string]interface{}{
+					"d2.0": map[string]interface{}{
+						"1": "1.2",
+					},
+				},
+			},
+		}
+		res, err := plan.translateEnum(result)
+		Ω(err).Should(BeNil())
+		Ω(res).Should(Equal(map[string]interface{}{
+			"foo": map[string]interface{}{
+				"d1.0": map[string]interface{}{
+					"d2.0": map[string]interface{}{
+						"boy": "1.2",
+					},
+				},
+			},
+		}))
+	})
 })
