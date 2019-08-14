@@ -91,7 +91,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		Ω(plan.nodes).Should(HaveLen(len(mockHosts)))
 		Ω(plan.headers).Should(Equal([]string{"field1", "field2"}))
 
-		bs := []byte(`["0","1"],["1","2"]`)
+		bs := []byte(`["0","1"],["NULL","2"]`)
 		mockDatanodeCli.On("QueryRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(bs, nil).Times(len(mockHosts))
 
 		Ω(plan.nodes[0].qc.AQLQuery.Shards).Should(HaveLen(2))
@@ -100,7 +100,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		err = plan.Execute(context.TODO(), w)
 		Ω(err).Should(BeNil())
 
-		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"],["bar","2"],["foo","1"],["bar","2"]]}`))
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["NULL","2"],["foo","1"],["NULL","2"],["foo","1"],["NULL","2"]]}`))
 
 		// test limit no enough data
 		qc.AQLQuery.Limit = 3
@@ -113,7 +113,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		mockTopo.On("MarkHostHealthy", mock.Anything).Return(nil).Times(3)
 		err = plan.Execute(context.TODO(), w)
 		Ω(err).Should(BeNil())
-		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"]]}`))
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["NULL","2"]]}`))
 
 		// test limit with enough data 1
 		qc.AQLQuery.Limit = 3
@@ -126,7 +126,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		mockTopo.On("MarkHostHealthy", mock.Anything).Return(nil).Times(3)
 		err = plan.Execute(context.TODO(), w)
 		Ω(err).Should(BeNil())
-		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["NULL","2"],["foo","1"]]}`))
 
 		// test limit with enough data 2
 		w = httptest.NewRecorder()
@@ -138,7 +138,7 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		mockTopo.On("MarkHostHealthy", mock.Anything).Return(nil).Times(3)
 		err = plan.Execute(context.TODO(), w)
 		Ω(err).Should(BeNil())
-		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["bar","2"],["foo","1"]]}`))
+		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["NULL","2"],["foo","1"]]}`))
 	})
 
 	ginkgo.It("should mark host unhealthy on connection error", func() {

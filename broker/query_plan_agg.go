@@ -288,6 +288,10 @@ func traverseRecursive(dimIndex int, curr interface{}, dimReverseDict map[int][]
 
 		newRes := make(map[string]interface{})
 		for k, val := range v {
+			if queryCom.NULLString == k {
+				newRes[k] = val
+				continue
+			}
 			enumRank, err := strconv.Atoi(k)
 			if err != nil {
 				return nil, err

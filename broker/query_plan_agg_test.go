@@ -475,7 +475,8 @@ var _ = ginkgo.Describe("agg query plan", func() {
 			"0": map[string]interface{}{
 				"d1.0": map[string]interface{}{
 					"d2.0": map[string]interface{}{
-						"1": "1.2",
+						"1":    "1.2",
+						"NULL": "2.1",
 					},
 				},
 			},
@@ -486,7 +487,8 @@ var _ = ginkgo.Describe("agg query plan", func() {
 			"foo": map[string]interface{}{
 				"d1.0": map[string]interface{}{
 					"d2.0": map[string]interface{}{
-						"boy": "1.2",
+						"boy":  "1.2",
+						"NULL": "2.1",
 					},
 				},
 			},

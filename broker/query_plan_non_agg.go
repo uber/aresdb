@@ -20,6 +20,7 @@ import (
 	"github.com/uber/aresdb/broker/util"
 	"github.com/uber/aresdb/cluster/topology"
 	dataCli "github.com/uber/aresdb/datanode/client"
+	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 	"strconv"
@@ -221,6 +222,9 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 				for i, col := range row {
 					if enumReverseDict, exists := nqp.qc.DimensionEnumReverseDicts[i]; exists {
 						if s, ok := col.(string); ok {
+							if common.NULLString == s {
+								continue
+							}
 							var enumRank int
 							enumRank, err = strconv.Atoi(s)
 							if err != nil {
