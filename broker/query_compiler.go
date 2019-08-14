@@ -53,9 +53,9 @@ type QueryContext struct {
 // NewQueryContext creates new query context
 func NewQueryContext(aql *common.AQLQuery, returnHLLBinary bool, w http.ResponseWriter) *QueryContext {
 	ctx := QueryContext{
-		AQLQuery:        aql,
-		ReturnHLLBinary: returnHLLBinary,
-		Writer:          w,
+		AQLQuery:                  aql,
+		ReturnHLLBinary:           returnHLLBinary,
+		Writer:                    w,
 		DimensionEnumReverseDicts: make(map[int][]string),
 	}
 	return &ctx
