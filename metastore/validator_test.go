@@ -40,7 +40,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrMissingTimeColumn))
+		Ω(err).Should(Equal(common.ErrMissingTimeColumn))
 	})
 
 	ginkgo.It("should return err for missing pk", func() {
@@ -57,7 +57,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrMissingPrimaryKey))
+		Ω(err).Should(Equal(common.ErrMissingPrimaryKey))
 	})
 
 	ginkgo.It("should return err for dup column name", func() {
@@ -77,7 +77,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrDuplicatedColumnName))
+		Ω(err).Should(Equal(common.ErrDuplicatedColumnName))
 	})
 
 	ginkgo.It("should return err for dup column", func() {
@@ -95,7 +95,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrDuplicatedColumn))
+		Ω(err).Should(Equal(common.ErrDuplicatedColumn))
 	})
 
 	ginkgo.It("should return err for dup column", func() {
@@ -115,7 +115,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrDuplicatedColumn))
+		Ω(err).Should(Equal(common.ErrDuplicatedColumn))
 	})
 
 	ginkgo.It("should return err for too few columns", func() {
@@ -127,7 +127,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(table)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrAllColumnsInvalid))
+		Ω(err).Should(Equal(common.ErrAllColumnsInvalid))
 	})
 
 	ginkgo.It("should be happy with valid updates", func() {
@@ -216,7 +216,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
+		Ω(err).Should(Equal(common.ErrSchemaUpdateNotAllowed))
 	})
 
 	ginkgo.It("should fail for table type change", func() {
@@ -251,7 +251,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
+		Ω(err).Should(Equal(common.ErrSchemaUpdateNotAllowed))
 	})
 
 	ginkgo.It("should fail for number of columns reduction", func() {
@@ -287,7 +287,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrInsufficientColumnCount))
+		Ω(err).Should(Equal(common.ErrInsufficientColumnCount))
 	})
 
 	ginkgo.It("should fail for modification on deleted column", func() {
@@ -328,7 +328,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrReusingColumnIDNotAllowed))
+		Ω(err).Should(Equal(common.ErrReusingColumnIDNotAllowed))
 	})
 
 	ginkgo.It("should fail for modification on immutable column fields", func() {
@@ -368,7 +368,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
+		Ω(err).Should(Equal(common.ErrSchemaUpdateNotAllowed))
 
 		// modify hll config not allowed
 		oldTable = common.Table{
@@ -409,7 +409,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err = validator.Validate()
-		Ω(err).Should(Equal(ErrSchemaUpdateNotAllowed))
+		Ω(err).Should(Equal(common.ErrSchemaUpdateNotAllowed))
 	})
 
 	ginkgo.It("should fail for changing pk cloumns", func() {
@@ -445,7 +445,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrChangePrimaryKeyColumn))
+		Ω(err).Should(Equal(common.ErrChangePrimaryKeyColumn))
 	})
 
 	ginkgo.It("should fail for changing sort columns", func() {
@@ -498,7 +498,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrIllegalChangeSortColumn))
+		Ω(err).Should(Equal(common.ErrIllegalChangeSortColumn))
 
 		// changing existing sort columns is not allowed
 		oldTable.ArchivingSortColumns = []int{1}
@@ -506,7 +506,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err = validator.Validate()
-		Ω(err).Should(Equal(ErrIllegalChangeSortColumn))
+		Ω(err).Should(Equal(common.ErrIllegalChangeSortColumn))
 	})
 
 	ginkgo.It("ValidateDefaultValue should work", func() {
@@ -569,7 +569,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator := NewTableSchameValidator()
 		validator.SetNewTable(newTable)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrTimeColumnDoesNotAllowDefault))
+		Ω(err).Should(Equal(common.ErrTimeColumnDoesNotAllowDefault))
 	})
 
 	ginkgo.It("should fail when disallow missing event time", func() {
@@ -623,7 +623,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator.SetNewTable(newTable)
 		validator.SetOldTable(oldTable)
 		err := validator.Validate()
-		Ω(err).Should(Equal(ErrDisallowMissingEventTime))
+		Ω(err).Should(Equal(common.ErrDisallowMissingEventTime))
 
 		oldTable = common.Table{
 			Name: "testTable",
@@ -724,7 +724,7 @@ var _ = ginkgo.Describe("Validator", func() {
 		validator = NewTableSchameValidator()
 		validator.SetNewTable(table2)
 		err = validator.Validate()
-		Ω(err).Should(Equal(ErrTimeColumnDoesNotAllowHLLConfig))
+		Ω(err).Should(Equal(common.ErrTimeColumnDoesNotAllowHLLConfig))
 	})
 
 	ginkgo.It("should fail when table config is invalid", func() {

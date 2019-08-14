@@ -96,7 +96,7 @@ var _ = ginkgo.Describe("SchemaHandler", func() {
 
 	ginkgo.It("GetTable should work", func() {
 		testMetaStore.On("GetTable", "testTable").Return(&testTable, nil)
-		testMetaStore.On("GetTable", "unknown").Return(nil, metastore.ErrTableDoesNotExist)
+		testMetaStore.On("GetTable", "unknown").Return(nil, metaCom.ErrTableDoesNotExist)
 		resp, err := http.Get(fmt.Sprintf("http://%s/schema/tables/%s", hostPort, "testTable"))
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 		Ω(err).Should(BeNil())

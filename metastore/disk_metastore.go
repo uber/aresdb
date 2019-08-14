@@ -184,7 +184,7 @@ func (dm *diskMetaStore) UpdateArchivingCutoff(tableName string, shard int, cuto
 	}
 
 	if !schema.IsFactTable {
-		return ErrNotFactTable
+		return common.ErrNotFactTable
 	}
 
 	file := dm.getShardVersionFilePath(tableName, shard)
@@ -205,7 +205,7 @@ func (dm *diskMetaStore) UpdateSnapshotProgress(tableName string, shard int, red
 	}
 
 	if schema.IsFactTable {
-		return ErrNotDimensionTable
+		return common.ErrNotDimensionTable
 	}
 
 	file := dm.getSnapshotRedoLogVersionAndOffsetFilePath(tableName, shard)
@@ -228,7 +228,7 @@ func (dm *diskMetaStore) UpdateBackfillProgress(table string, shard int, redoFil
 	}
 
 	if !schema.IsFactTable {
-		return ErrNotFactTable
+		return common.ErrNotFactTable
 	}
 
 	file := dm.getRedoLogVersionAndOffsetFilePath(table, shard)
@@ -356,7 +356,7 @@ func (dm *diskMetaStore) WatchTableListEvents() (events <-chan []string, done ch
 	dm.Lock()
 	defer dm.Unlock()
 	if dm.tableListWatcher != nil {
-		return nil, nil, ErrWatcherAlreadyExist
+		return nil, nil, common.ErrWatcherAlreadyExist
 	}
 
 	watcherChan, doneChan := make(chan []string), make(chan struct{})
@@ -371,7 +371,7 @@ func (dm *diskMetaStore) WatchTableSchemaEvents() (events <-chan *common.Table, 
 	dm.Lock()
 	defer dm.Unlock()
 	if dm.tableSchemaWatcher != nil {
-		return nil, nil, ErrWatcherAlreadyExist
+		return nil, nil, common.ErrWatcherAlreadyExist
 	}
 
 	watcherChan, doneChan := make(chan *common.Table), make(chan struct{})
@@ -398,7 +398,7 @@ func (dm *diskMetaStore) WatchEnumDictEvents(table, column string, startCase int
 	}
 
 	if _, exist := dm.enumDictWatchers[table][column]; exist {
-		return nil, nil, ErrWatcherAlreadyExist
+		return nil, nil, common.ErrWatcherAlreadyExist
 	}
 
 	existingEnumCases, err := dm.readEnumFile(table, column)
@@ -428,7 +428,7 @@ func (dm *diskMetaStore) WatchShardOwnershipEvents() (events <-chan common.Shard
 	dm.Lock()
 	defer dm.Unlock()
 	if dm.shardOwnershipWatcher != nil {
-		return nil, nil, ErrWatcherAlreadyExist
+		return nil, nil, common.ErrWatcherAlreadyExist
 	}
 
 	watcherChan, doneChan := make(chan common.ShardOwnership), make(chan struct{})
@@ -459,7 +459,7 @@ func (dm *diskMetaStore) CreateTable(table *common.Table) (err error) {
 	}
 
 	if utils.IndexOfStr(existingTables, table.Name) >= 0 {
-		return ErrTableAlreadyExist
+		return common.ErrTableAlreadyExist
 	}
 
 	validator := NewTableSchameValidator()
@@ -581,7 +581,7 @@ func (dm *diskMetaStore) DeleteTable(tableName string) (err error) {
 
 	index := utils.IndexOfStr(existingTables, tableName)
 	if index < 0 {
-		return ErrTableDoesNotExist
+		return common.ErrTableDoesNotExist
 	}
 
 	if err = dm.removeTable(tableName); err != nil {
@@ -1041,7 +1041,7 @@ func (dm *diskMetaStore) updateColumn(table *common.Table, columnName string, co
 			return dm.writeSchemaFile(table)
 		}
 	}
-	return ErrColumnDoesNotExist
+	return common.ErrColumnDoesNotExist
 }
 
 func (dm *diskMetaStore) removeColumn(table *common.Table, columnName string) error {
@@ -1055,11 +1055,11 @@ func (dm *diskMetaStore) removeColumn(table *common.Table, columnName string) er
 
 			// trying to delete timestamp column from fact table
 			if table.IsFactTable && id == 0 {
-				return ErrDeleteTimeColumn
+				return common.ErrDeleteTimeColumn
 			}
 
 			if utils.IndexOfInt(table.PrimaryKeyColumns, id) >= 0 {
-				return ErrDeletePrimaryKeyColumn
+				return common.ErrDeletePrimaryKeyColumn
 			}
 
 			column.Deleted = true
@@ -1075,7 +1075,7 @@ func (dm *diskMetaStore) removeColumn(table *common.Table, columnName string) er
 			return nil
 		}
 	}
-	return ErrColumnDoesNotExist
+	return common.ErrColumnDoesNotExist
 }
 
 func (dm *diskMetaStore) getTableDirPath(tableName string) string {
@@ -1404,7 +1404,7 @@ func (dm *diskMetaStore) removeEnumColumn(tableName, columnName string) {
 func (dm *diskMetaStore) tableExists(tableName string) error {
 	_, err := dm.Stat(dm.getSchemaFilePath(tableName))
 	if os.IsNotExist(err) {
-		return ErrTableDoesNotExist
+		return common.ErrTableDoesNotExist
 	} else if err != nil {
 		return utils.StackError(err, "Failed to read directory, table: %s", tableName)
 	}
@@ -1432,13 +1432,13 @@ func (dm *diskMetaStore) enumColumnExists(tableName string, columnName string) e
 			}
 
 			if !column.IsEnumColumn() {
-				return ErrNotEnumColumn
+				return common.ErrNotEnumColumn
 			}
 
 			return nil
 		}
 	}
-	return ErrColumnDoesNotExist
+	return common.ErrColumnDoesNotExist
 }
 
 // NewDiskMetaStore creates a new disk based metastore

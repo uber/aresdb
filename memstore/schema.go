@@ -16,7 +16,6 @@ package memstore
 
 import (
 	memCom "github.com/uber/aresdb/memstore/common"
-	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 )
@@ -68,7 +67,7 @@ func (m *memStoreImpl) FetchSchema() error {
 func (m *memStoreImpl) fetchTable(tableName string) error {
 	table, err := m.metaStore.GetTable(tableName)
 	if err != nil {
-		if err != metastore.ErrTableDoesNotExist {
+		if err != metaCom.ErrTableDoesNotExist {
 			return utils.StackError(err, "Failed to get table schema for table %s from meta", tableName)
 		}
 	} else {
@@ -78,7 +77,7 @@ func (m *memStoreImpl) fetchTable(tableName string) error {
 				if column.IsEnumColumn() {
 					enumCases, err := m.metaStore.GetEnumDict(tableName, column.Name)
 					if err != nil {
-						if err != metastore.ErrTableDoesNotExist && err != metastore.ErrColumnDoesNotExist {
+						if err != metaCom.ErrTableDoesNotExist && err != metaCom.ErrColumnDoesNotExist {
 							return utils.StackError(err, "Failed to fetch enum cases for table: %s, column: %s", tableName, column.Name)
 						}
 					} else {
@@ -99,7 +98,7 @@ func (m *memStoreImpl) fetchTable(tableName string) error {
 func (m *memStoreImpl) watchEnumCases(tableName, columnName string, startCase int) error {
 	enumDictChangeEvents, done, err := m.metaStore.WatchEnumDictEvents(tableName, columnName, startCase)
 	if err != nil {
-		if err != metastore.ErrTableDoesNotExist && err != metastore.ErrColumnDoesNotExist {
+		if err != metaCom.ErrTableDoesNotExist && err != metaCom.ErrColumnDoesNotExist {
 			return utils.StackError(err, "Failed to watch enum case events")
 		}
 	} else {

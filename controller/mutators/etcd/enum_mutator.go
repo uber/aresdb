@@ -15,6 +15,7 @@ package etcd
 
 import (
 	"github.com/uber/aresdb/cluster/kvstore"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"path"
 	"strconv"
 	"sync"
@@ -23,7 +24,6 @@ import (
 	"github.com/uber/aresdb/controller/mutators/common"
 
 	"github.com/m3db/m3/src/cluster/kv"
-	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 )
 
@@ -67,7 +67,7 @@ func (e *enumMutator) ExtendEnumCases(namespace, tableName, columnName string, e
 		}
 	}
 	if columnID < 0 {
-		return nil, metastore.ErrColumnDoesNotExist
+		return nil, metaCom.ErrColumnDoesNotExist
 	}
 
 	e.RLock()
@@ -257,7 +257,7 @@ func (e *enumMutator) GetEnumCases(namespace, tableName, columnName string) ([]s
 		}
 	}
 	if columnID < 0 {
-		return nil, metastore.ErrColumnDoesNotExist
+		return nil, metaCom.ErrColumnDoesNotExist
 	}
 
 	cacheKey := getCacheKey(namespace, tableName, schema.Incarnation, columnID)

@@ -252,7 +252,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		Ω(err).Should(BeNil())
 		Ω(*table).Should(Equal(testTableA))
 		_, err = diskMetaStore.GetTable("unknown")
-		Ω(err).Should(Equal(ErrTableDoesNotExist))
+		Ω(err).Should(Equal(common.ErrTableDoesNotExist))
 	})
 
 	ginkgo.It("GetEnumDict", func() {
@@ -425,7 +425,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	ginkgo.It("CreateTable", func() {
 		diskMetaStore := createDiskMetastore("base")
 		err := diskMetaStore.CreateTable(&testTableA)
-		Ω(err).Should(Equal(ErrTableAlreadyExist))
+		Ω(err).Should(Equal(common.ErrTableAlreadyExist))
 
 		// should work without watchers
 		err = diskMetaStore.CreateTable(&testTableC)
@@ -460,7 +460,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	ginkgo.It("DeleteTable", func() {
 		diskMetaStore := createDiskMetastore("base")
 		err := diskMetaStore.DeleteTable(testTableC.Name)
-		Ω(err).Should(Equal(ErrTableDoesNotExist))
+		Ω(err).Should(Equal(common.ErrTableDoesNotExist))
 
 		// should work without watchers
 		err = diskMetaStore.DeleteTable(testTableB.Name)
@@ -482,10 +482,10 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	ginkgo.It("AddColumn", func() {
 		diskMetaStore := createDiskMetastore("base")
 		err := diskMetaStore.AddColumn("unknown", testColumn1, true)
-		Ω(err).Should(Equal(ErrTableDoesNotExist))
+		Ω(err).Should(Equal(common.ErrTableDoesNotExist))
 
 		err = diskMetaStore.AddColumn(testTableA.Name, testColumn1, true)
-		Ω(err).Should(Equal(ErrDuplicatedColumnName))
+		Ω(err).Should(Equal(common.ErrDuplicatedColumnName))
 
 		err = diskMetaStore.AddColumn(testTableA.Name, testColumn2, true)
 		Ω(err).Should(BeNil())
@@ -524,13 +524,13 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	ginkgo.It("DeleteColumn", func() {
 		diskMetaStore := createDiskMetastore("base")
 		err := diskMetaStore.DeleteColumn("unknown", testColumn1.Name)
-		Ω(err).Should(Equal(ErrTableDoesNotExist))
+		Ω(err).Should(Equal(common.ErrTableDoesNotExist))
 
 		err = diskMetaStore.DeleteColumn(testTableA.Name, "unknown")
-		Ω(err).Should(Equal(ErrColumnDoesNotExist))
+		Ω(err).Should(Equal(common.ErrColumnDoesNotExist))
 
 		err = diskMetaStore.DeleteColumn(testTableA.Name, testColumn0.Name)
-		Ω(err).Should(Equal(ErrDeleteTimeColumn))
+		Ω(err).Should(Equal(common.ErrDeleteTimeColumn))
 
 		events, done, err := diskMetaStore.WatchTableSchemaEvents()
 		Ω(err).Should(BeNil())
@@ -560,13 +560,13 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	ginkgo.It("UpdateColumn", func() {
 		diskMetaStore := createDiskMetastore("base")
 		err := diskMetaStore.UpdateColumn("unknown", testColumn1.Name, testColumnConfig1)
-		Ω(err).Should(Equal(ErrTableDoesNotExist))
+		Ω(err).Should(Equal(common.ErrTableDoesNotExist))
 
 		err = diskMetaStore.UpdateColumn(testTableA.Name, "unknown", testColumnConfig1)
-		Ω(err).Should(Equal(ErrColumnDoesNotExist))
+		Ω(err).Should(Equal(common.ErrColumnDoesNotExist))
 
 		err = diskMetaStore.UpdateColumn(testTableA.Name, testColumn5.Name, testColumnConfig1)
-		Ω(err).Should(Equal(ErrColumnDoesNotExist))
+		Ω(err).Should(Equal(common.ErrColumnDoesNotExist))
 
 		events, done, err := diskMetaStore.WatchTableSchemaEvents()
 		Ω(err).Should(BeNil())
