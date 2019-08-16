@@ -88,6 +88,11 @@ func newKafkaRedoLogManager(namespace, table, suffix string, shard int, consumer
 	}
 }
 
+// IsAppendEnabled returns whether appending is enabled
+func (k *kafkaRedoLogManager) IsAppendEnabled() bool {
+	return false
+}
+
 // AppendToRedoLog to record upsertbatch info as redolog
 func (k *kafkaRedoLogManager) AppendToRedoLog(upsertBatch *common.UpsertBatch) (int64, uint32) {
 	panic("WriteUpsertBatch to kafka redolog manager is disabled")
