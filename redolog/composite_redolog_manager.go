@@ -87,6 +87,11 @@ func (s *compositeRedoLogManager) WaitForRecoveryDone() {
 	s.fileRedoLogManager.WaitForRecoveryDone()
 }
 
+// IsAppendEnabled returns whether appending is enabled
+func (s *compositeRedoLogManager) IsAppendEnabled() bool {
+	return true
+}
+
 // AppendToRedoLog append upsert batch into redolog file or commit offset
 func (s *compositeRedoLogManager) AppendToRedoLog(upsertBatch *common.UpsertBatch) (int64, uint32) {
 	return s.fileRedoLogManager.AppendToRedoLog(upsertBatch)
