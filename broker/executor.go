@@ -22,6 +22,11 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"net/http"
+	"time"
+)
+
+const (
+	executorTimeoutSeconds = 30
 )
 
 // NewQueryExecutor creates a new QueryExecutor
@@ -41,7 +46,9 @@ type queryExecutorImpl struct {
 }
 
 func (qe *queryExecutorImpl) Execute(ctx context.Context, requestID string, aql *queryCom.AQLQuery, returnHLLBinary bool, w http.ResponseWriter) (err error) {
-	// TODO: add timeout
+	var cancelFn context.CancelFunc
+	ctx, cancelFn = context.WithTimeout(ctx, time.Duration(executorTimeoutSeconds)*time.Second)
+	defer cancelFn()
 
 	// compile
 	qc := NewQueryContext(aql, returnHLLBinary, w)
