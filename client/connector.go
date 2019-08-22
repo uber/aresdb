@@ -52,6 +52,8 @@ type Connector interface {
 	// updateModes are optional, if ignored for all columns, no need to set
 	// if set, then all columns needs to be set
 	Insert(tableName string, columnNames []string, rows []Row, updateModes ...memCom.ColumnUpdateMode) (int, error)
+	// Close the connection
+	Close()
 }
 
 // UpsertBatchBuilder is an interface of upsertBatch on client side
@@ -185,6 +187,13 @@ func (c *connector) Insert(tableName string, columnNames []string, rows []Row, u
 	}
 
 	return numRows, nil
+}
+
+// Close the connection
+func (c *connector) Close() {
+	c.httpClient.CloseIdleConnections()
+	c.schemaHandler = nil
+	c.upsertBatchBuilder = nil
 }
 
 // computeHLLValue populate hyperloglog value

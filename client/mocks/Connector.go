@@ -46,3 +46,8 @@ func (_m *Connector) Insert(tableName string, columnNames []string, rows []clien
 
 	return r0, r1
 }
+
+// Close the connection
+func (_m *Connector) Close() {
+	_m.Close()
+}
