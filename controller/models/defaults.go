@@ -16,7 +16,7 @@ const (
 	FailureHandlerType                       = "retry"
 	FailureHandlerInitRetryIntervalInSeconds = 60
 	FailureHandlerMultiplier                 = 1
-	FailureHandlerMaxRetryMinutes            = 10
+	FailureHandlerMaxRetryMinutes            = 15
 )
 
 var (

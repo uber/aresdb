@@ -191,7 +191,6 @@ func (c *connector) Insert(tableName string, columnNames []string, rows []Row, u
 
 // Close the connection
 func (c *connector) Close() {
-	c.httpClient.CloseIdleConnections()
 	c.schemaHandler = nil
 	c.upsertBatchBuilder = nil
 }
