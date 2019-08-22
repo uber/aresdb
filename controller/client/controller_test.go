@@ -128,7 +128,7 @@ var _ = ginkgo.Describe("Controller", func() {
                "config":{  
                   "initRetryIntervalInSeconds":60,
                   "multiplier":1,
-                  "maxRetryMinutes":525600
+                  "maxRetryMinutes":15
                }
             }
          }
