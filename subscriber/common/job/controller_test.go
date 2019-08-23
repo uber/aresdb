@@ -253,7 +253,7 @@ var _ = Describe("controller", func() {
                "config":{  
                   "initRetryIntervalInSeconds":60,
                   "multiplier":1,
-                  "maxRetryMinutes":525600
+                  "maxRetryMinutes":15
                }
             }
          }

@@ -77,7 +77,7 @@ func TestJobMutator(t *testing.T) {
 				Config: models.FailureHandlerConfig{
 					InitRetryIntervalInSeconds: 60,
 					Multiplier:                 1,
-					MaxRetryMinutes:            525600,
+					MaxRetryMinutes:            15,
 				},
 			},
 		},
