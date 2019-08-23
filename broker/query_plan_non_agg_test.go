@@ -27,6 +27,7 @@ import (
 	"github.com/uber/aresdb/datanode/client"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
 	"github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"net/http/httptest"
 )
@@ -197,5 +198,31 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 
 		err = plan.Execute(context.TODO(), w)
 		Ω(err.Error()).Should(ContainSubstring("Datanode query client failed to connect"))
+	})
+
+	ginkgo.It("cancel query on context cancel", func() {
+		ctx, cf := context.WithCancel(context.Background())
+		cf()
+
+		q := common.AQLQuery{
+			Measures: []common.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
+		}
+
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
+		mockHost1 := topoMock.Host{}
+		mockTopo.On("MarkHostHealthy", &mockHost1).Return(nil).Once()
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
+		myResult := common.AQLQueryResult{"foo": 1}
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
+
+		sn := StreamingScanNode{
+			qc:             QueryContext{AQLQuery: &q},
+			dataNodeClient: &mockDatanodeCli,
+			host:           &mockHost1,
+			topo:           &mockTopo,
+		}
+
+		_, err := sn.Execute(ctx)
+		Ω(err.Error()).Should(ContainSubstring("context timeout"))
 	})
 })
