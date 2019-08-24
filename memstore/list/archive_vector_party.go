@@ -379,6 +379,44 @@ func (vp *ArchiveVectorParty) SliceIndex(lowerBoundRow, upperBoundRow int) (
 	return lowerBoundRow, upperBoundRow
 }
 
+// GetHostVectorPartySlice implements GetHostVectorPartySlice in TransferableVectorParty
+func (vp *ArchiveVectorParty) GetHostVectorPartySlice(startIndex, length int) common.HostVectorPartySlice {
+	offsetStart := unsafe.Pointer(uintptr(vp.offsets.Buffer()) + uintptr(startIndex * 8))
+
+	baseAddr := uintptr(vp.values.Buffer())
+	var valueStart uint32
+	valueBytes := vp.values.Bytes
+	for i:= startIndex; i<(startIndex + length) && i < vp.length; i++ {
+		// find first entry which has non-zero length array value, which will have valid offset
+		// if not found, then will start from baseAddr
+		offset, length := vp.GetOffsetLength(i)
+		if length > 0 {
+			valueStart = offset
+			break
+		}
+	}
+
+	if startIndex + length < vp.length {
+		for i:= startIndex + length; i < vp.length; i++ {
+			// find first entry which has non-zero length array value, which will have valid offset
+			// if not found, then will be the end of value buffer
+			offset, length := vp.GetOffsetLength(i)
+			if length > 0 {
+				valueBytes = int(offset)
+				break
+			}
+		}
+	}
+
+	return common.HostVectorPartySlice{
+		Values:     unsafe.Pointer(baseAddr + uintptr(valueStart)),
+		ValueBytes: valueBytes,
+		Length:     length,
+		Offsets:    offsetStart,
+		ValueType:  vp.dataType,
+	}
+}
+
 // Dump is for testing purpose
 func (vp *ArchiveVectorParty) Dump(file *os.File) {
 	fmt.Fprintf(file, "\nArray ArchiveVectorParty, type: %s, length: %d, value: \n", common.DataTypeName[vp.dataType], vp.GetLength())

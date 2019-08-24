@@ -98,6 +98,18 @@ struct common_type<GeoPointT, GeoPointT> {
   typedef GeoPointT type;
 };
 
+// This is used to retrieve iterator value type
+// for non-array data type, will use common type,
+// likely will change later to support different types between left/right
+// for array data type, will use it's own data type
+template <typename A, typename B>
+struct input_iterator_value_type {
+  typedef typename std::conditional<
+      !std::is_pointer<A>::value && !std::is_pointer<B>::value,
+      typename common_type<A, B>::type,
+      A>::type type;
+};
+
 // get_identity_value returns the identity value for the aggregation function.
 // Identity value is a special type of element of a set with respect to a
 // binary operation on that set, which leaves other elements unchanged when

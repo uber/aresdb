@@ -159,6 +159,26 @@ allocate_column(uint32_t *counts,
   return ptr;
 }
 
+inline uint8_t *
+allocate_array_column(uint32_t* offsetLength, uint8_t* values, int length, int valueBytes) {
+  uint8_t * ptr;
+  int offsetLengthBytes = length * 8;
+  int totalBytes = offsetLengthBytes + valueBytes;
+
+#ifdef RUN_ON_DEVICE
+  ares::deviceMalloc(reinterpret_cast<void **>(&ptr), totalBytes);
+  cudaMemcpy(ptr, offsetLength, offsetLengthBytes, cudaMemcpyHostToDevice);
+  CheckCUDAError("cudaMemcpy offsetLength");
+  cudaMemcpy(ptr + offsetLengthBytes, values, valueBytes, cudaMemcpyHostToDevice);
+  CheckCUDAError("cudaMemcpy values");
+#else
+  ptr = reinterpret_cast<uint8_t *>(malloc(totalBytes));
+  memcpy(ptr, offsetLength, offsetLengthBytes);
+  memcpy(ptr + offsetLengthBytes, values, valueBytes);
+#endif
+  return ptr;
+}
+
 template<typename V, typename CmpFunc>
 inline bool equal(V *resBegin, V *resEnd, V *expectedBegin, CmpFunc f) {
 #ifdef RUN_ON_DEVICE

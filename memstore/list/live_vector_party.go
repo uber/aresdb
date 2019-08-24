@@ -396,6 +396,17 @@ func (vp *LiveVectorParty) Dump(file *os.File) {
 	}
 }
 
+// GetHostVectorPartySlice implements GetHostVectorPartySlice in TransferableVectorParty
+func (vp *LiveVectorParty) GetHostVectorPartySlice(startIndex, length int) common.HostVectorPartySlice {
+	return common.HostVectorPartySlice{
+		Values:     unsafe.Pointer(vp.memoryPool.GetNativeMemoryAllocator().GetBaseAddr()),
+		ValueBytes: int(vp.memoryPool.GetNativeMemoryAllocator().GetTotalBytes()),
+		Length:     length,
+		Offsets:    vp.offsets.Buffer(),
+		ValueType:  vp.dataType,
+	}
+}
+
 // SetLength is only for testing purpose, do NOT use this function in real code
 func (vp *LiveVectorParty) SetLength(length int) {
 	vp.length = length

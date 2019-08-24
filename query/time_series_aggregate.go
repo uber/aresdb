@@ -202,10 +202,29 @@ func makeVectorPartySlice(column deviceVectorPartySlice) C.VectorPartySlice {
 	return vpSlice
 }
 
+func makeArrayVectorPartySlice(column deviceVectorPartySlice) C.ArrayVectorPartySlice {
+	var vpSlice C.ArrayVectorPartySlice
+	vpSlice.OffsetLength = (*C.uint8_t)(column.basePtr)
+	vpSlice.Value = (*C.uint8_t)(column.values)
+	vpSlice.Length = (C.uint32_t)(column.length)
+	vpSlice.DataType = DataTypeToCDataType[column.valueType]
+	return vpSlice
+}
+
 func makeVectorPartySliceInput(column deviceVectorPartySlice) C.InputVector {
+	if memCom.IsArrayType(column.valueType) {
+		return makeArrayVectorPartySliceInput(column)
+	}
 	var vector C.InputVector
 	*(*C.VectorPartySlice)(unsafe.Pointer(&vector.Vector)) = makeVectorPartySlice(column)
 	vector.Type = C.VectorPartyInput
+	return vector
+}
+
+func makeArrayVectorPartySliceInput(column deviceVectorPartySlice) C.InputVector {
+	var vector C.InputVector
+	*(*C.ArrayVectorPartySlice)(unsafe.Pointer(&vector.Vector)) = makeArrayVectorPartySlice(column)
+	vector.Type = C.ArrayVectorPartyInput
 	return vector
 }
 

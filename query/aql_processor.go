@@ -1321,6 +1321,24 @@ func (qc *AQLQueryContext) runBatchExecutor(e BatchExecutor, isLastBatch bool) {
 
 // copyHostToDevice copy vector party slice to device vector party slice
 func copyHostToDevice(vps memCom.HostVectorPartySlice, deviceVPSlice deviceVectorPartySlice, stream unsafe.Pointer, device int) (bytesCopied, numTransfers int) {
+	if memCom.IsArrayType(vps.ValueType) {
+		// for array data type
+		// copy offset-length
+		cgoutils.AsyncCopyHostToDevice(
+			deviceVPSlice.basePtr.getPointer(), vps.Offsets, vps.Length * 8,
+			stream, device)
+		bytesCopied += vps.Length * 8
+		numTransfers++
+
+		// copy value
+		cgoutils.AsyncCopyHostToDevice(
+			deviceVPSlice.values.getPointer(), vps.Values, vps.ValueBytes,
+			stream, device)
+		bytesCopied += vps.ValueBytes
+		numTransfers++
+
+		return
+	}
 	if vps.ValueBytes > 0 {
 		cgoutils.AsyncCopyHostToDevice(
 			deviceVPSlice.values.getPointer(), vps.Values, vps.ValueBytes,
@@ -1346,6 +1364,22 @@ func copyHostToDevice(vps memCom.HostVectorPartySlice, deviceVPSlice deviceVecto
 }
 
 func hostToDeviceColumn(hostColumn memCom.HostVectorPartySlice, device int) deviceVectorPartySlice {
+	if memCom.IsArrayType(hostColumn.ValueType) {
+		deviceColumn := deviceVectorPartySlice{
+			length:          hostColumn.Length,
+			valueType:       hostColumn.ValueType,
+			defaultValue:    hostColumn.DefaultValue,
+
+		}
+		totalColumnBytes := hostColumn.ValueBytes + hostColumn.Length * 8
+
+		if totalColumnBytes > 0 {
+			deviceColumn.basePtr = deviceAllocate(totalColumnBytes, device)
+			deviceColumn.values = deviceColumn.basePtr.offset(hostColumn.Length * 8)
+		}
+		return deviceColumn
+	}
+	// fnon-array type
 	deviceColumn := deviceVectorPartySlice{
 		length:          hostColumn.Length,
 		valueType:       hostColumn.ValueType,

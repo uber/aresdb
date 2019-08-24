@@ -772,7 +772,7 @@ func CalculateListElementBytes(dataType DataType, length int) int {
 }
 
 func CalculateListNilOffset(dataType DataType, length int) int {
-	return (DataTypeBits(dataType)*length + 7) / 8
+	return 4 + (DataTypeBits(dataType)*length + 7) / 8
 }
 
 // GetDataValue returns the DataValue for the given column value.

@@ -728,7 +728,7 @@ TEST(BinaryFunctorTest, CheckBinaryFunctor) {
 
   // Test BitwiseAndFunctor
   thrust::transform(begin1, begin1 + 5, begin2, outputBegin,
-                    BinaryFunctor<int, int>(BitwiseAnd));
+                    BinaryFunctor<int, int, int>(BitwiseAnd));
 
   int expectedValues[5] = {0, 0x00, 0x0F, 0x00, 0x00};
   bool expectedNulls[5] = {false, true, true, true, true};
@@ -771,7 +771,7 @@ TEST(BinaryPredicateFunctorTest, CheckBinaryTranformFunctor) {
 
   // Test BitwiseAndFunctor
   thrust::transform(begin1, begin1 + 5, begin2, &outputValues[0],
-                    BinaryPredicateFunctor<bool, int>(And));
+                    BinaryPredicateFunctor<bool, int, int>(And));
 
   bool expectedValues[5] = {0, 1, 1, 0, 1};
   EXPECT_TRUE(
