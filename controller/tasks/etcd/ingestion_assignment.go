@@ -178,12 +178,12 @@ func (ia *ingestionAssignmentTask) startIngestionAssignment(hostName string) {
 			select {
 			case <-ia.leaderElection.C():
 				if !ia.isLeader() {
-					ia.logger.With("host", hostName).Infof("host is no longer the leader")
+					ia.logger.With("host", hostName).Fatalf("host is no longer the leader")
 					break loop
 				}
 			case <-tickerChan:
 				if !ia.isLeader() {
-					ia.logger.With("host", hostName).Infof("host is no longer the leader")
+					ia.logger.With("host", hostName).Fatalf("host is no longer the leader")
 					break loop
 				}
 				ia.tryRecalculateAllNamespaces()
