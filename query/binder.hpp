@@ -371,15 +371,21 @@ class InputVectorBinderBase {
         case Bool:
           BIND_ARRAY_COLUMN_INPUT(bool)
         case Int8:
+          BIND_ARRAY_COLUMN_INPUT(int8_t)
         case Int16:
+          BIND_ARRAY_COLUMN_INPUT(int16_t)
         case Int32:
           BIND_ARRAY_COLUMN_INPUT(int32_t)
         case Uint8:
+          BIND_ARRAY_COLUMN_INPUT(uint8_t)
         case Uint16:
+          BIND_ARRAY_COLUMN_INPUT(uint16_t)
         case Uint32:
           BIND_ARRAY_COLUMN_INPUT(uint32_t)
         case Float32:
           BIND_ARRAY_COLUMN_INPUT(float_t)
+        case Int64:
+          BIND_ARRAY_COLUMN_INPUT(int64_t)
         default:
           throw std::invalid_argument(
               "Unsupported data type for ArrayVectorPartyInput: " +
