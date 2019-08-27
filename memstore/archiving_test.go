@@ -135,8 +135,8 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardMap[shardID].LiveStore.RedoLogManager.UpdateMaxEventTime(1, 1)
 
 		// make purge to pass
-		shardMap[shardID].LiveStore.BackfillManager = NewBackfillManager(table, shardID, metaCom.TableConfig{
-			BackfillMaxBufferSize:    1 << 32,
+		shardMap[shardID].LiveStore.BackfillManager = NewBackfillManager(table, shardID, BackfillConfig{
+			MaxBufferSize:            1 << 32,
 			BackfillThresholdInBytes: 1 << 21,
 		})
 		shardMap[shardID].LiveStore.BackfillManager.LastRedoFile = 2
