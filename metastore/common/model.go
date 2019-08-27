@@ -110,7 +110,7 @@ type TableConfig struct {
 
 	// Records with timestamp older than now - RecordRetentionInDays will be skipped
 	// during ingestion and backfill. 0 means unlimited days.
-	RecordRetentionInDays int `json:"recordRetentionInDays,omitempty" validate:"min=1"`
+	RecordRetentionInDays int `json:"recordRetentionInDays,omitempty" validate:"min=0"`
 
 	// Dimension table specific configs
 
