@@ -1168,4 +1168,135 @@ TEST(CalculateHLLHashTest, CheckUUIDT) {
                             std::begin(expectedNulls)));
 }
 
+TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
+  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
+  uint32_t values[72] = {2, 1, 2, 0xc0,
+                         1, 1, 0x80, 0,
+                         3, 1, 2, 3, 0xe0, 0,
+                         1, 1, 0x80, 0};
+
+  int expectedVals[6] = {2, 1, 3, 0, 0, 1};
+
+  uint8_t *basePtr = allocate_array_column((uint8_t *)(&offsetLength[0]),
+                                (uint8_t *)(&values[0]), 6, 72*4);
+
+  ArrayVectorPartyIterator<uint32_t> begin =
+            make_array_column_iterator<uint32_t>(basePtr, 6);
+
+  typedef thrust::zip_iterator<thrust::tuple<Uint32Iter,
+                                             BoolIter> > OutputZipIterator;
+
+  uint32_t outputValues[6];
+  thrust::fill(std::begin(outputValues), std::end(outputValues), 0);
+  bool outputNulls[6];
+  thrust::fill(std::begin(outputNulls), std::end(outputNulls), false);
+  OutputZipIterator outputBegin(
+      thrust::make_tuple(std::begin(outputValues),
+                         std::begin(outputNulls)));
+
+  thrust::transform(begin, begin + 6, outputBegin,
+                    UnaryFunctor<uint32_t, uint32_t*>(ArrayLength));
+
+  for (int i=0; i<6; i++) {
+      printf("i: %d, val: %d\n", i, outputValues[i]);
+  }
+
+  EXPECT_TRUE(
+      thrust::equal(std::begin(outputValues), std::end(outputValues),
+                    std::begin(expectedVals)));
+  release(basePtr);
+}
+
+TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
+  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
+  uint32_t values[72] = {2, 1, 2, 0xc0,
+                         1, 1, 0x80, 0,
+                         3, 1, 2, 3, 0xe0, 0,
+                         1, 1, 0x80, 0};
+
+  bool expectedValues[6] = {true, false, true, false, false, false};
+
+  uint8_t *basePtr = allocate_array_column((uint8_t *)(&offsetLength[0]),
+                                (uint8_t *)(&values[0]), 6, 72*4);
+
+  ArrayVectorPartyIterator<uint32_t> begin =
+            make_array_column_iterator<uint32_t>(basePtr, 6);
+
+  typedef thrust::zip_iterator<thrust::tuple<BoolIter,
+                                             BoolIter> > OutputZipIterator;
+  typedef thrust::zip_iterator<thrust::tuple<Uint32Iter,
+                                             BoolIter> > ConstInputIterator;
+
+  uint32_t constValue[6] = {2, 2, 2, 2, 2, 2};
+  bool constNulls[6];
+  thrust::fill(std::begin(constNulls), std::end(constNulls), true);
+  ConstInputIterator begin2(
+      thrust::make_tuple(std::begin(constValue),
+                         std::begin(constNulls)));
+  bool outputValues[6];
+  thrust::fill(std::begin(outputValues), std::end(outputValues), false);
+  bool outputNulls[6];
+  thrust::fill(std::begin(outputNulls), std::end(outputNulls), false);
+  OutputZipIterator outputBegin(
+      thrust::make_tuple(std::begin(outputValues),
+                         std::begin(outputNulls)));
+
+  // Test BitwiseAndFunctor
+  thrust::transform(begin, begin + 6, begin2, outputBegin,
+                    BinaryFunctor<bool, uint32_t*, uint32_t>(ArrayContains));
+
+  EXPECT_TRUE(
+      thrust::equal(std::begin(outputValues), std::end(outputValues),
+                    std::begin(expectedValues)));
+  release(basePtr);
+}
+
+TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
+  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
+  uint32_t values[72] = {2, 1, 2, 0xc0,
+                         1, 1, 0x80, 0,
+                         3, 1, 2, 3, 0xe0, 0,
+                         1, 1, 0x80, 0};
+
+  uint32_t expectedValues[6] = {2, 0, 2, 0, 0, 0};
+  bool expectedNulls[6] = {true, false, true, false, false, false};
+
+  uint8_t *basePtr = allocate_array_column((uint8_t *)(&offsetLength[0]),
+                                (uint8_t *)(&values[0]), 6, 72*4);
+
+  ArrayVectorPartyIterator<uint32_t> begin =
+            make_array_column_iterator<uint32_t>(basePtr, 6);
+
+  typedef thrust::zip_iterator<thrust::tuple<Uint32Iter,
+                                             BoolIter> > OutputZipIterator;
+  typedef thrust::zip_iterator<thrust::tuple<IntIter,
+                                             BoolIter> > ConstInputIterator;
+
+  int constValue[6] = {1, 1, 1, 1, 1, 1};
+  bool constNulls[6];
+  thrust::fill(std::begin(constNulls), std::end(constNulls), true);
+  ConstInputIterator begin2(
+      thrust::make_tuple(std::begin(constValue),
+                         std::begin(constNulls)));
+  uint32_t outputValues[6];
+  thrust::fill(std::begin(outputValues), std::end(outputValues), 0);
+  bool outputNulls[6];
+  thrust::fill(std::begin(outputNulls), std::end(outputNulls), false);
+  OutputZipIterator outputBegin(
+      thrust::make_tuple(std::begin(outputValues),
+                         std::begin(outputNulls)));
+
+  // Test BitwiseAndFunctor
+  thrust::transform(begin, begin + 6, begin2, outputBegin,
+                    BinaryFunctor<uint32_t, uint32_t*, int>(ArrayElementAt));
+
+  EXPECT_TRUE(
+      thrust::equal(std::begin(outputValues), std::end(outputValues),
+                    std::begin(expectedValues)));
+  EXPECT_TRUE(
+      thrust::equal(std::begin(outputNulls), std::end(outputNulls),
+                    std::begin(expectedNulls)));
+  release(basePtr);
+}
+
 }  // namespace ares

@@ -361,11 +361,10 @@ class InputVectorBinderBase {
       // Array type can only bind to first argument for BinaryTransformer
       ArrayVectorPartySlice inputVP = input.Vector.ArrayVP;
       uint8_t *basePtr = inputVP.OffsetLength;
-      uint8_t *valuePtr  = inputVP.Value;
       uint32_t length = inputVP.Length;
 
       #define BIND_ARRAY_COLUMN_INPUT(dataType) \
-        return nextBinder.bind(make_array_column_iterator<dataType>(basePtr, valuePtr, length));
+        return nextBinder.bind(make_array_column_iterator<dataType>(basePtr, length));
 
       switch (inputVP.DataType) {
         case Bool:

@@ -160,7 +160,7 @@ allocate_column(uint32_t *counts,
 }
 
 inline uint8_t *
-allocate_array_column(uint32_t* offsetLength, uint8_t* values, int length, int valueBytes) {
+allocate_array_column(uint8_t* offsetLength, uint8_t* values, int length, int valueBytes) {
   uint8_t * ptr;
   int offsetLengthBytes = length * 8;
   int totalBytes = offsetLengthBytes + valueBytes;

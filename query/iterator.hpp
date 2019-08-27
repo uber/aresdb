@@ -398,11 +398,10 @@ class ArrayVectorPartyIterator
   __host__ __device__
   ArrayVectorPartyIterator(
       uint8_t *basePtr,
-      uint8_t *valuePtr,
       uint32_t length)
       : super_t(reinterpret_cast<uint64_t *>(basePtr)),
         basePtr(basePtr),
-        valuePtr(valuePtr),
+        valuePtr(basePtr + 8 * length),
         length(length) {
   }
 
@@ -413,9 +412,9 @@ class ArrayVectorPartyIterator
 
   __host__ __device__
   typename super_t::reference dereference() const {
-    uint64_t v = *this->base_reference();
-    uint32_t offset = v >> 32;
-    uint32_t length = v & 0xFFFFFFFF;
+    uint32_t offset = *((uint32_t*)this->base_reference());
+    uint32_t length = *((uint32_t*)this->base_reference()+1);
+    int n = (int)(this->base_reference() - reinterpret_cast<uint64_t *>(basePtr));
 
     if (length == 0) {
         return thrust::make_tuple(reinterpret_cast<Value*>(NULL), true);
@@ -445,8 +444,8 @@ class ArrayVectorPartyIterator
 // Helper function for creating ArrayVectorPartyIterator
 template<typename Value>
 inline ArrayVectorPartyIterator<Value> make_array_column_iterator(
-    uint8_t* basePtr, uint8_t* valuePtr, uint32_t length) {
-  return ArrayVectorPartyIterator<Value>(basePtr, valuePtr, length);
+    uint8_t* basePtr, uint32_t length) {
+  return ArrayVectorPartyIterator<Value>(basePtr, length);
 }
 
 // SimpleIterator combines interators in 4 different cases:

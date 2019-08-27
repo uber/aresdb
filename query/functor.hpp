@@ -469,10 +469,10 @@ struct ArrayLengthFunctor<I, uint32_t> {
    __host__ __device__
    result_type operator()(argument_type arrVal) const {
      auto valid = thrust::get<1>(arrVal);
+     uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
      if (!valid) {
        return thrust::make_tuple<uint32_t, bool>(0, false);
      }
-     uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
      if (lenP == NULL) {
        return thrust::make_tuple<uint32_t, bool>(0, true);
      }
@@ -504,12 +504,13 @@ struct ArrayElementAtFunctor<O, I, int,
   __host__ __device__
   result_type operator()(argument_type_1 arrVal, argument_type_2 indexT) const {
     auto valid = thrust::get<1>(arrVal);
+    uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
+
     if (!valid) {
       O v;
       return thrust::make_tuple<O, bool>(v, false);
     }
     int index = thrust::get<0>(indexT);
-    uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
     if (lenP == NULL || (index >= 0 && *lenP <= index) || (index < 0 && *lenP < -index)) {
       O v;
       return thrust::make_tuple<O, bool>(v, false);
@@ -547,10 +548,11 @@ struct ArrayContainsFunctor<bool, I1, I2,
   __host__ __device__
   result_type operator() (argument_type_1 arrVal, argument_type_2 constVal) const {
     auto valid = thrust::get<1>(arrVal);
+    uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
+
     if (!valid) {
        return thrust::make_tuple<bool, bool>(false, false);
     }
-    uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
     if (lenP == NULL) {
        return thrust::make_tuple<bool, bool>(false, true);
     }

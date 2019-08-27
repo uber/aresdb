@@ -299,30 +299,34 @@ TEST(VectorPartyIteratorTest, CheckFloatIterator) {
   release(indexVector);
 }
 
-/* TODO
 // Test for ArrayVectorPartyIterator
 TEST(ArrayVectorPartyIteratorTest, CheckIntArrayIterator) {
-  uint32_t indexVectorH[5];
-  thrust::sequence(std::begin(indexVectorH), std::end(indexVectorH));
-  uint32_t *indexVector = allocate(&indexVectorH[0], 6);
-
   uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
-  uint32_t values[72] = {2, 1, 2, 0xc0, 1, 1, 0x80, 0, 3, 1, 2, 3, 0xe0, 0, 1, 1, 0x80, 0};
+  uint32_t values[72] = {2, 1, 2, 0xc0,
+                         1, 1, 0x80, 0,
+                         3, 1, 2, 3, 0xe0, 0,
+                         1, 1, 0x80, 0};
 
-  uint8_t *basePtr = allocate_array_column(offsetLength, values, 6, 72*4);
+  uint8_t *basePtr = allocate_array_column((uint8_t *)(&offsetLength[0]),
+                                (uint8_t *)(&values[0]), 6, 72*4);
+  uint8_t *valuePtr = basePtr + 48;
 
-  ArrayColumnIterator<int32_t> begin = make_array_column_iterator<int32_t>(indexVector, basePtr, basePtr + 48, 6);
+  ArrayVectorPartyIterator<uint32_t> begin =
+            make_array_column_iterator<uint32_t>(basePtr, 6);
+  ArrayVectorPartyIterator<uint32_t> end = begin + 6;
 
-  ArrayColumnIterator<int32_t> end = begin + 6;
-  int32_t expectedInt32Values[5] = {-1000000000, -10000, 0, 10000, 1000000000};
+  uint32_t* expectedInt64Values[6] = {(uint32_t*)valuePtr,
+                                      (uint32_t*)(valuePtr + 16),
+                                      (uint32_t*)(valuePtr + 32),
+                                      (uint32_t*)0, (uint32_t*)0,
+                                      (uint32_t*)(valuePtr+56)};
   EXPECT_TRUE(
       compare_value(begin, end,
-                    std::begin(expectedInt32Values)));
+                    std::begin(expectedInt64Values)));
 
   release(basePtr);
-  release(indexVector);
 }
-*/
+
 // cppcheck-suppress *
 TEST(CompressedColumnTest, CheckCountPointer) {
   uint32_t indexVectorH[5];
