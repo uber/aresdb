@@ -130,6 +130,11 @@ func (r *FileRedoLogManager) openFileForWrite(upsertBatchSize uint32) {
 	r.CurrentRedoLogSize = 4
 }
 
+// IsAppendEnabled returns whether appending is enabled
+func (r *FileRedoLogManager) IsAppendEnabled() bool {
+	return true
+}
+
 // AppendToRedoLog saves an upsert batch into disk before applying it. Any errors from diskStore
 // will trigger system panic.
 func (r *FileRedoLogManager) AppendToRedoLog(upsertBatch *common.UpsertBatch) (int64, uint32) {

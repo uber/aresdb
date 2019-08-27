@@ -61,7 +61,9 @@ func NewAresDatabase(
 }
 
 // Shutdown will clean up resources that needs to be cleaned up
-func (db *AresDatabase) Shutdown() {}
+func (db *AresDatabase) Shutdown() {
+	db.Connector.Close()
+}
 
 // Save saves a batch of row objects into a destination
 func (db *AresDatabase) Save(destination Destination, rows []client.Row) error {

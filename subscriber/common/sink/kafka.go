@@ -112,6 +112,7 @@ func NewKafkaPublisher(serviceConfig config.ServiceConfig, jobConfig *rules.JobC
 // Shutdown will clean up resources that needs to be cleaned up
 func (kp *KafkaPublisher) Shutdown() {
 	kp.SyncProducer.Close()
+	kp.UpsertBatchBuilder = nil
 }
 
 // Save saves a batch of row objects into a destination

@@ -33,6 +33,8 @@ type NextUpsertFunc func() *NextUpsertBatchInfo
 
 // RedologManager defines rodelog manager interface
 type RedologManager interface {
+	// IsAppendEnabled returns whether appending is enabled
+	IsAppendEnabled() bool
 	// Iterator will return a next function to iterate through all coming upsert batches
 	Iterator() (NextUpsertFunc, error)
 	// Block call to wait for recovery finish

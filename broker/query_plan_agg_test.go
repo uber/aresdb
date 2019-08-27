@@ -494,4 +494,30 @@ var _ = ginkgo.Describe("agg query plan", func() {
 			},
 		}))
 	})
+
+	ginkgo.It("cancel query on context cancel", func() {
+		ctx, cf := context.WithCancel(context.Background())
+		cf()
+
+		q := common2.AQLQuery{
+			Measures: []common2.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
+		}
+
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
+		mockHost1 := topoMock.Host{}
+		mockTopo.On("MarkHostHealthy", &mockHost1).Return(nil).Once()
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
+		myResult := common2.AQLQueryResult{"foo": 1}
+		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
+
+		sn := BlockingScanNode{
+			qc:             QueryContext{AQLQuery: &q},
+			dataNodeClient: &mockDatanodeCli,
+			host:           &mockHost1,
+			topo:           &mockTopo,
+		}
+
+		_, err := sn.Execute(ctx)
+		Ω(err.Error()).Should(ContainSubstring("context timeout"))
+	})
 })

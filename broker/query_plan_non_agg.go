@@ -35,6 +35,7 @@ type StreamingScanNode struct {
 }
 
 func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error) {
+	done := ctx.Done()
 
 	hostHealthy := true
 	defer func() {
@@ -49,11 +50,14 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 		}
 	}()
 	for trial := 1; trial <= rpcRetries; trial++ {
-
 		var fetchErr error
-
 		utils.GetLogger().With("host", ssn.host, "query", ssn.qc.AQLQuery).Debug("sending query to datanode")
-		bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.qc.RequestID, ssn.host, *ssn.qc.AQLQuery)
+		select {
+		case <-done:
+			err = utils.StackError(nil, "context timeout")
+		default:
+			bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.qc.RequestID, ssn.host, *ssn.qc.AQLQuery)
+		}
 		if fetchErr != nil {
 			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(

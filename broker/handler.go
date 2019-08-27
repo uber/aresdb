@@ -80,7 +80,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.exec.Execute(context.TODO(), handler.getReqestID(), aql, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
+	err = handler.exec.Execute(context.Background(), handler.getReqestID(), aql, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
 	if err != nil {
 		apiCom.RespondWithError(w, err)
 		return
