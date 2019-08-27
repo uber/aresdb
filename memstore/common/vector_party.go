@@ -65,6 +65,9 @@ type HostVectorPartySlice struct {
 	// used only for Array type to point to offset/length buffer
 	// offset byte count = 8 * length
 	Offsets unsafe.Pointer
+	// ValueOffsetAdjust is value pointer adjustment for array archive vector party due to
+	// slice operation, because the offsetLength is still using the original offset value before slice operation
+	ValueOffsetAdjust int
 }
 
 // ValueCountsUpdateMode represents the way we update value counts when we are writing values to

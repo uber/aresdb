@@ -238,8 +238,8 @@ typedef struct {
 typedef struct {
   // OffsetLength pointer point to memory of offset-length vector
   uint8_t *OffsetLength;
-  // Value pointer point to memory of real array values
-  uint8_t *Value;
+  // value offset adjustment
+  uint32_t valueOffsetAdj;
   enum DataType DataType;
   uint32_t Length;
 } ArrayVectorPartySlice;

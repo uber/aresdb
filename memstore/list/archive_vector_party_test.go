@@ -249,4 +249,22 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		vp2.WaitForDiskLoad()
 		Ω(vp2.Equals(vp1)).Should(BeTrue())
 	})
+	/*
+		ginkgo.It("GetHostVectorPartySlice should work for Array Archive VP", func() {
+			vp := createArchiveVP().(*ArchiveVectorParty)
+			expectedHostSlice := common.HostVectorPartySlice{
+				Values:            vp.values.Buffer(),
+				Length:            vp.length,
+				ValueType:         vp.dataType,
+				Offsets:           vp.offsets.Buffer(),
+				ValueOffsetAdjust: 0,
+			}
+			hostSlice := vp.GetHostVectorPartySlice(0, vp.length)
+			Ω(hostSlice).Should(Equal(expectedHostSlice))
+
+			hostSlice = vp.GetHostVectorPartySlice(1, vp.length-2)
+			fmt.Printf("slice: %v\n", hostSlice)
+			// Ω(hostSlice).Should(Equal(expectedHostSlice))
+		})
+	*/
 })

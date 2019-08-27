@@ -398,10 +398,11 @@ class ArrayVectorPartyIterator
   __host__ __device__
   ArrayVectorPartyIterator(
       uint8_t *basePtr,
+      uint32_t valueOffsetAdj,
       uint32_t length)
       : super_t(reinterpret_cast<uint64_t *>(basePtr)),
         basePtr(basePtr),
-        valuePtr(basePtr + 8 * length),
+        valuePtr(basePtr + 8 * length - valueOffsetAdj),
         length(length) {
   }
 
@@ -444,8 +445,8 @@ class ArrayVectorPartyIterator
 // Helper function for creating ArrayVectorPartyIterator
 template<typename Value>
 inline ArrayVectorPartyIterator<Value> make_array_column_iterator(
-    uint8_t* basePtr, uint32_t length) {
-  return ArrayVectorPartyIterator<Value>(basePtr, length);
+    uint8_t* basePtr, int valueOffsetAdj, uint32_t length) {
+  return ArrayVectorPartyIterator<Value>(basePtr, valueOffsetAdj, length);
 }
 
 // SimpleIterator combines interators in 4 different cases:

@@ -137,6 +137,8 @@ type deviceVectorPartySlice struct {
 	valueStartIndex int
 	nullStartIndex  int
 	countStartIndex int
+	// valueOffsetAdjust is the value pointer adjustment for array archive VP
+	valueOffsetAdjust int
 }
 
 // oopkBatchContext stores context for the current batch being processed by

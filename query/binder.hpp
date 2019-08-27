@@ -362,9 +362,10 @@ class InputVectorBinderBase {
       ArrayVectorPartySlice inputVP = input.Vector.ArrayVP;
       uint8_t *basePtr = inputVP.OffsetLength;
       uint32_t length = inputVP.Length;
+      int valueOffsetAdj = inputVP.valueOffsetAdj;
 
       #define BIND_ARRAY_COLUMN_INPUT(dataType) \
-        return nextBinder.bind(make_array_column_iterator<dataType>(basePtr, length));
+        return nextBinder.bind(make_array_column_iterator<dataType>(basePtr, valueOffsetAdj, length));
 
       switch (inputVP.DataType) {
         case Bool:

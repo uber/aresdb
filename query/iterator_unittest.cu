@@ -312,7 +312,7 @@ TEST(ArrayVectorPartyIteratorTest, CheckIntArrayIterator) {
   uint8_t *valuePtr = basePtr + 48;
 
   ArrayVectorPartyIterator<uint32_t> begin =
-            make_array_column_iterator<uint32_t>(basePtr, 6);
+            make_array_column_iterator<uint32_t>(basePtr, 0, 6);
   ArrayVectorPartyIterator<uint32_t> end = begin + 6;
 
   uint32_t* expectedInt64Values[6] = {(uint32_t*)valuePtr,

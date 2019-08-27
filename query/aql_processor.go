@@ -1376,6 +1376,7 @@ func hostToDeviceColumn(hostColumn memCom.HostVectorPartySlice, device int) devi
 		if totalColumnBytes > 0 {
 			deviceColumn.basePtr = deviceAllocate(totalColumnBytes, device)
 			deviceColumn.values = deviceColumn.basePtr.offset(hostColumn.Length * 8)
+			deviceColumn.valueOffsetAdjust = hostColumn.ValueOffsetAdjust
 		}
 		return deviceColumn
 	}

@@ -1170,10 +1170,10 @@ TEST(CalculateHLLHashTest, CheckUUIDT) {
 
 TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
   uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
-  uint32_t values[72] = {2, 1, 2, 0xc0,
-                         1, 1, 0x80, 0,
-                         3, 1, 2, 3, 0xe0, 0,
-                         1, 1, 0x80, 0};
+  uint32_t values[72] = {2, 1, 2, 0x03,
+                         1, 1, 0x01, 0,
+                         3, 1, 2, 3, 0x07, 0,
+                         1, 1, 0x01, 0};
 
   int expectedVals[6] = {2, 1, 3, 0, 0, 1};
 
@@ -1181,7 +1181,7 @@ TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
                                 (uint8_t *)(&values[0]), 6, 72*4);
 
   ArrayVectorPartyIterator<uint32_t> begin =
-            make_array_column_iterator<uint32_t>(basePtr, 6);
+            make_array_column_iterator<uint32_t>(basePtr, 0, 6);
 
   typedef thrust::zip_iterator<thrust::tuple<Uint32Iter,
                                              BoolIter> > OutputZipIterator;
@@ -1197,10 +1197,6 @@ TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
   thrust::transform(begin, begin + 6, outputBegin,
                     UnaryFunctor<uint32_t, uint32_t*>(ArrayLength));
 
-  for (int i=0; i<6; i++) {
-      printf("i: %d, val: %d\n", i, outputValues[i]);
-  }
-
   EXPECT_TRUE(
       thrust::equal(std::begin(outputValues), std::end(outputValues),
                     std::begin(expectedVals)));
@@ -1209,10 +1205,10 @@ TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
 
 TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
   uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
-  uint32_t values[72] = {2, 1, 2, 0xc0,
-                         1, 1, 0x80, 0,
-                         3, 1, 2, 3, 0xe0, 0,
-                         1, 1, 0x80, 0};
+  uint32_t values[72] = {2, 1, 2, 0x03,
+                         1, 1, 0x01, 0,
+                         3, 1, 2, 3, 0x07, 0,
+                         1, 1, 0x01, 0};
 
   bool expectedValues[6] = {true, false, true, false, false, false};
 
@@ -1220,7 +1216,7 @@ TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
                                 (uint8_t *)(&values[0]), 6, 72*4);
 
   ArrayVectorPartyIterator<uint32_t> begin =
-            make_array_column_iterator<uint32_t>(basePtr, 6);
+            make_array_column_iterator<uint32_t>(basePtr, 0, 6);
 
   typedef thrust::zip_iterator<thrust::tuple<BoolIter,
                                              BoolIter> > OutputZipIterator;
@@ -1253,10 +1249,10 @@ TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
 
 TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
   uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
-  uint32_t values[72] = {2, 1, 2, 0xc0,
-                         1, 1, 0x80, 0,
-                         3, 1, 2, 3, 0xe0, 0,
-                         1, 1, 0x80, 0};
+  uint32_t values[72] = {2, 1, 2, 0x03,
+                         1, 1, 0x01, 0,
+                         3, 1, 2, 3, 0x07, 0,
+                         1, 1, 0x01, 0};
 
   uint32_t expectedValues[6] = {2, 0, 2, 0, 0, 0};
   bool expectedNulls[6] = {true, false, true, false, false, false};
@@ -1265,7 +1261,7 @@ TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
                                 (uint8_t *)(&values[0]), 6, 72*4);
 
   ArrayVectorPartyIterator<uint32_t> begin =
-            make_array_column_iterator<uint32_t>(basePtr, 6);
+            make_array_column_iterator<uint32_t>(basePtr, 0, 6);
 
   typedef thrust::zip_iterator<thrust::tuple<Uint32Iter,
                                              BoolIter> > OutputZipIterator;

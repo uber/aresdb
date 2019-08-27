@@ -398,6 +398,7 @@ func (vp *LiveVectorParty) Dump(file *os.File) {
 
 // GetHostVectorPartySlice implements GetHostVectorPartySlice in TransferableVectorParty
 func (vp *LiveVectorParty) GetHostVectorPartySlice(startIndex, length int) common.HostVectorPartySlice {
+	// LiveVectorParty will always use startIndex = 0, length is whole VP, so startIndex is ignored here
 	return common.HostVectorPartySlice{
 		Values:     unsafe.Pointer(vp.memoryPool.GetNativeMemoryAllocator().GetBaseAddr()),
 		ValueBytes: int(vp.memoryPool.GetNativeMemoryAllocator().GetTotalBytes()),
