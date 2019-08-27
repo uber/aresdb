@@ -94,6 +94,7 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTop
 		qc:         qc,
 		headers:    headers,
 		resultChan: make(chan streamingScanNoderesult),
+		doneChan:   make(chan struct{}),
 	}
 
 	var assignment map[topology.Host][]uint32
@@ -133,6 +134,7 @@ type streamingScanNoderesult struct {
 type NonAggQueryPlan struct {
 	qc         *QueryContext
 	resultChan chan streamingScanNoderesult
+	doneChan   chan struct{}
 	headers    []string
 	nodes      []*StreamingScanNode
 	// number of rows flushed
@@ -163,9 +165,15 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 			var bs []byte
 			bs, err = n.Execute(ctx)
 			utils.GetLogger().With("dataSize", len(bs), "error", err).Debug("sending result to result channel")
-			nqp.resultChan <- streamingScanNoderesult{
-				data: bs,
-				err:  err,
+			select {
+			case <-nqp.doneChan:
+				utils.GetLogger().Debug("cancel pushing to result channel")
+				return
+			default:
+				nqp.resultChan <- streamingScanNoderesult{
+					data: bs,
+					err:  err,
+				}
 			}
 		}(node)
 	}
@@ -177,6 +185,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 	for i := 0; i < len(nqp.nodes); i++ {
 		if nqp.getRowsWanted() == 0 {
 			utils.GetLogger().Debug("got enough rows, exiting")
+			nqp.doneChan <- struct{}{}
 			break
 		}
 		res := <-nqp.resultChan
