@@ -24,6 +24,7 @@ import (
 	commMock "github.com/uber/aresdb/memstore/common/mocks"
 	testingUtils "github.com/uber/aresdb/testing"
 	"sync"
+	"unsafe"
 )
 
 func createArchiveVP() common.ArchiveVectorParty {
@@ -249,22 +250,31 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		vp2.WaitForDiskLoad()
 		Ω(vp2.Equals(vp1)).Should(BeTrue())
 	})
-	/*
-		ginkgo.It("GetHostVectorPartySlice should work for Array Archive VP", func() {
-			vp := createArchiveVP().(*ArchiveVectorParty)
-			expectedHostSlice := common.HostVectorPartySlice{
-				Values:            vp.values.Buffer(),
-				Length:            vp.length,
-				ValueType:         vp.dataType,
-				Offsets:           vp.offsets.Buffer(),
-				ValueOffsetAdjust: 0,
-			}
-			hostSlice := vp.GetHostVectorPartySlice(0, vp.length)
-			Ω(hostSlice).Should(Equal(expectedHostSlice))
 
-			hostSlice = vp.GetHostVectorPartySlice(1, vp.length-2)
-			fmt.Printf("slice: %v\n", hostSlice)
-			// Ω(hostSlice).Should(Equal(expectedHostSlice))
-		})
-	*/
+	ginkgo.It("GetHostVectorPartySlice should work for Array Archive VP", func() {
+		vp := createArchiveVP().(*ArchiveVectorParty)
+		expectedHostSlice := common.HostVectorPartySlice{
+			Values:            vp.values.Buffer(),
+			Length:            vp.length,
+			ValueType:         vp.dataType,
+			ValueBytes:        128,
+			Offsets:           vp.offsets.Buffer(),
+			ValueOffsetAdjust: 0,
+		}
+		hostSlice := vp.GetHostVectorPartySlice(0, vp.length)
+		Ω(hostSlice).Should(Equal(expectedHostSlice))
+
+		newValue := uintptr(vp.values.Buffer()) + 24
+		newOffset := uintptr(vp.offsets.Buffer()) + 8
+		expectedHostSlice = common.HostVectorPartySlice{
+			Values:            unsafe.Pointer(newValue) ,
+			Length:            2,
+			ValueType:         vp.dataType,
+			ValueBytes:        24,
+			Offsets:           unsafe.Pointer(newOffset),
+			ValueOffsetAdjust: 24,
+		}
+		hostSlice = vp.GetHostVectorPartySlice(1, vp.length-2)
+		Ω(hostSlice).Should(Equal(expectedHostSlice))
+	})
 })

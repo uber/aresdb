@@ -15,7 +15,6 @@
 package list
 
 import (
-	"code.uber.internal/data/ares/go-build/.tmp/.go/goroot/src/math"
 	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/diskstore"
@@ -23,6 +22,7 @@ import (
 	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
+	"math"
 	"os"
 	"sync"
 	"unsafe"
