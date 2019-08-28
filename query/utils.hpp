@@ -25,6 +25,7 @@
 #include <type_traits>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <utility>
 #include "query/time_series_aggregate.h"
 #ifdef USE_RMM

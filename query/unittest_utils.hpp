@@ -160,7 +160,8 @@ allocate_column(uint32_t *counts,
 }
 
 inline uint8_t *
-allocate_array_column(uint8_t* offsetLength, uint8_t* values, int length, int valueBytes) {
+allocate_array_column(uint8_t* offsetLength, uint8_t* values,
+        int length, int valueBytes) {
   uint8_t * ptr;
   int offsetLengthBytes = length * 8;
   int totalBytes = offsetLengthBytes + valueBytes;
@@ -169,7 +170,8 @@ allocate_array_column(uint8_t* offsetLength, uint8_t* values, int length, int va
   ares::deviceMalloc(reinterpret_cast<void **>(&ptr), totalBytes);
   cudaMemcpy(ptr, offsetLength, offsetLengthBytes, cudaMemcpyHostToDevice);
   CheckCUDAError("cudaMemcpy offsetLength");
-  cudaMemcpy(ptr + offsetLengthBytes, values, valueBytes, cudaMemcpyHostToDevice);
+  cudaMemcpy(ptr + offsetLengthBytes, values,
+        valueBytes, cudaMemcpyHostToDevice);
   CheckCUDAError("cudaMemcpy values");
 #else
   ptr = reinterpret_cast<uint8_t *>(malloc(totalBytes));

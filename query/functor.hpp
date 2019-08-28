@@ -453,12 +453,12 @@ struct ArrayLengthFunctor {
   typedef typename thrust::tuple<I, bool> argument_type;
   typedef typename thrust::tuple<O, bool> result_type;
 
-   __host__ __device__
-   result_type operator()(argument_type arrVal) const {
-     // should never come here
-     O o;
-     return thrust::make_tuple<O, bool>(o, false);
-   }
+  __host__ __device__
+  result_type operator()(argument_type arrVal) const {
+    // should never come here
+    O o;
+    return thrust::make_tuple<O, bool>(o, false);
+  }
 };
 
 template <typename I>
@@ -466,18 +466,18 @@ struct ArrayLengthFunctor<I, uint32_t> {
   typedef typename thrust::tuple<I, bool> argument_type;
   typedef typename thrust::tuple<uint32_t, bool> result_type;
 
-   __host__ __device__
-   result_type operator()(argument_type arrVal) const {
-     auto valid = thrust::get<1>(arrVal);
-     if (!valid) {
-       return thrust::make_tuple<uint32_t, bool>(0, false);
-     }
-     uint32_t *valP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
-     if (valP == NULL) {
-       return thrust::make_tuple<uint32_t, bool>(0, true);
-     }
-     return thrust::make_tuple<uint32_t, bool>(*valP, true);
-   }
+  __host__ __device__
+  result_type operator()(argument_type arrVal) const {
+    auto valid = thrust::get<1>(arrVal);
+    if (!valid) {
+      return thrust::make_tuple<uint32_t, bool>(0, false);
+    }
+    uint32_t *valP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
+    if (valP == NULL) {
+      return thrust::make_tuple<uint32_t, bool>(0, true);
+    }
+    return thrust::make_tuple<uint32_t, bool>(*valP, true);
+  }
 };
 
 // functor to get index-th element from array value
@@ -487,16 +487,17 @@ struct ArrayElementAtFunctor {
   typedef typename thrust::tuple<I2, bool> argument_type_2;
   typedef typename thrust::tuple<O, bool> result_type;
 
-   __host__ __device__
-   result_type operator()(argument_type_1 arg1, argument_type_2 arg2) const {
-     O o;
-     return thrust::make_tuple<O, bool>(o, false);
-   }
+  __host__ __device__
+  result_type operator()(argument_type_1 arg1, argument_type_2 arg2) const {
+    O o;
+    return thrust::make_tuple<O, bool>(o, false);
+  }
 };
 
 template <typename O, typename I>
 struct ArrayElementAtFunctor<O, I, int,
-        typename std::enable_if<std::is_same<typename std::remove_pointer<I>::type, O>::value>::type> {
+    typename std::enable_if<
+        std::is_same<typename std::remove_pointer<I>::type, O>::value>::type> {
   typedef typename thrust::tuple<I, bool> argument_type_1;
   typedef typename thrust::tuple<int, bool> argument_type_2;
   typedef typename thrust::tuple<O, bool> result_type;
@@ -510,12 +511,14 @@ struct ArrayElementAtFunctor<O, I, int,
     }
     uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
     int index = thrust::get<0>(indexT);
-    if (lenP == NULL || (index >= 0 && *lenP <= index) || (index < 0 && *lenP < -index)) {
+    if (lenP == NULL || (index >= 0 && *lenP <= index) ||
+       (index < 0 && *lenP < -index)) {
       O v;
       return thrust::make_tuple<O, bool>(v, false);
     }
-    auto valP = reinterpret_cast<I>(reinterpret_cast<uint8_t*>(thrust::get<0>(arrVal)) + 4);
-    int len = int(*lenP);
+    auto valP = reinterpret_cast<I>(
+        reinterpret_cast<uint8_t*>(thrust::get<0>(arrVal)) + 4);
+    int len = static_cast<int>(*lenP);
     if (index < 0) {
       index = len + index;
     }
@@ -523,8 +526,9 @@ struct ArrayElementAtFunctor<O, I, int,
         O v;
         return thrust::make_tuple<O, bool>(v, false);
     }
-    uint8_t * elemValidP = reinterpret_cast<uint8_t*>(valP) + (sizeof(O)*8*len + 7) / 8 + index / 8;
-    bool elemValid = (*elemValidP & (0x1<<(index%8))) != 0x0;
+    uint8_t * elemValidP = reinterpret_cast<uint8_t*>(valP) +
+        (sizeof(O)*8*len + 7) / 8 + index / 8;
+    bool elemValid = (*elemValidP & (0x1 << (index%8))) != 0x0;
     if (elemValid) {
         return thrust::make_tuple<O, bool>(*(valP + index), true);
     } else {
@@ -542,7 +546,8 @@ struct ArrayContainsFunctor {
   typedef typename thrust::tuple<O, bool> result_type;
 
   __host__ __device__
-  result_type operator() (argument_type_1 arrVal, argument_type_2 constVal) const {
+  result_type operator() (argument_type_1 arrVal,
+                          argument_type_2 constVal) const {
     O o;
     return thrust::make_tuple<O, bool>(o, false);
   }
@@ -550,13 +555,15 @@ struct ArrayContainsFunctor {
 
 template <typename I1, typename I2>
 struct ArrayContainsFunctor<bool, I1, I2,
-        typename std::enable_if<std::is_same<typename std::remove_pointer<I1>::type, I2>::value>::type> {
+    typename std::enable_if<
+    std::is_same<typename std::remove_pointer<I1>::type, I2>::value>::type> {
   typedef typename thrust::tuple<I1, bool> argument_type_1;
   typedef typename thrust::tuple<I2, bool> argument_type_2;
   typedef typename thrust::tuple<bool, bool> result_type;
 
   __host__ __device__
-  result_type operator() (argument_type_1 arrVal, argument_type_2 constVal) const {
+  result_type operator() (argument_type_1 arrVal,
+                          argument_type_2 constVal) const {
     auto valid = thrust::get<1>(arrVal);
     if (!valid) {
        return thrust::make_tuple<bool, bool>(false, false);
@@ -565,15 +572,17 @@ struct ArrayContainsFunctor<bool, I1, I2,
     if (lenP == NULL) {
        return thrust::make_tuple<bool, bool>(false, true);
     }
-    auto valP = reinterpret_cast<I1>(reinterpret_cast<uint8_t*>(thrust::get<0>(arrVal)) + 4);
-    int len = int(*lenP);
+    auto valP = reinterpret_cast<I1>(
+        reinterpret_cast<uint8_t*>(thrust::get<0>(arrVal)) + 4);
+    int len = static_cast<int>(*lenP);
     if (len <= 0) {
         return thrust::make_tuple<bool, bool>(false, true);
     }
     I2 val = thrust::get<0>(constVal);
-    uint8_t * validStartP = reinterpret_cast<uint8_t*>(valP) + (sizeof(I2)*8*len + 7) / 8;
-    for (int i=0; i<len; i++) {
-      bool elemValid = (*(validStartP + i / 8) & (0x1<<(i%8))) != 0x0;
+    uint8_t * validStartP = reinterpret_cast<uint8_t*>(valP) +
+                            (sizeof(I2)*8*len + 7) / 8;
+    for (int i = 0; i < len; i++) {
+      bool elemValid = (*(validStartP + i / 8) & (0x1 << (i%8))) != 0x0;
       if (elemValid && val == *(valP + i)) {
         return thrust::make_tuple<bool, bool>(true, true);
       }
@@ -624,7 +633,8 @@ struct UnaryFunctor {
 
 // Unary functor to support Array type transformation
 template<typename O, typename I>
-struct UnaryFunctor<O, I, typename std::enable_if<std::is_pointer<I>::value>::type> {
+struct UnaryFunctor<O, I,
+    typename std::enable_if<std::is_pointer<I>::value>::type> {
   typedef thrust::tuple<I, bool> argument_type;
   typedef thrust::tuple<O, bool> result_type;
   typedef typename std::remove_pointer<I>::type value_type;
@@ -637,7 +647,7 @@ struct UnaryFunctor<O, I, typename std::enable_if<std::is_pointer<I>::value>::ty
 
   __host__ __device__
   result_type operator()(const argument_type t) const {
-    switch(functorType) {
+    switch (functorType) {
       case ArrayLength: return ArrayLengthFunctor<I, O>()(t);
       default:
         O o;
@@ -648,7 +658,8 @@ struct UnaryFunctor<O, I, typename std::enable_if<std::is_pointer<I>::value>::ty
 
 // disable unary transformation from any type to UUIDT
 template <typename I>
-struct UnaryFunctor<UUIDT, I, typename std::enable_if<!std::is_pointer<I>::value>::type> {
+struct UnaryFunctor<UUIDT, I,
+    typename std::enable_if<!std::is_pointer<I>::value>::type> {
   typedef thrust::tuple<I, bool> argument_type;
   typedef thrust::tuple<UUIDT, bool> result_type;
 
@@ -768,7 +779,8 @@ template <typename I>
 struct UnaryFunctor<
     GeoPointT,
     I,
-    typename std::enable_if<!std::is_same<I, GeoPointT>::value && !std::is_pointer<I>::value>::type
+    typename std::enable_if<!std::is_same<I,
+        GeoPointT>::value && !std::is_pointer<I>::value>::type
   > {
   typedef thrust::tuple<I, bool> argument_type;
   typedef thrust::tuple<GeoPointT, bool> result_type;
@@ -846,7 +858,8 @@ struct BinaryFunctor {
 template <typename O, typename I1, typename I2>
 struct BinaryFunctor<O, I1, I2,
         typename std::enable_if<std::is_same<I1, I2>::value &&
-            !std::is_same<I1, float_t>::value && !std::is_same<I1, GeoPointT>::value>::type > {
+            !std::is_same<I1, float_t>::value &&
+            !std::is_same<I1, GeoPointT>::value>::type > {
   typedef thrust::tuple<I1, bool> argument_type_1;
   typedef thrust::tuple<I2, bool> argument_type_2;
 
@@ -859,7 +872,8 @@ struct BinaryFunctor<O, I1, I2,
   BinaryFunctorType functorType;
 
   __host__ __device__
-  result_type operator()(const argument_type_1 t1, const argument_type_2 t2) const {
+  result_type operator()(const argument_type_1 t1,
+        const argument_type_2 t2) const {
     switch (functorType) {
       case And:return AndFunctor()(t1, t2);
       case Or:return OrFunctor()(t1, t2);
@@ -888,7 +902,8 @@ struct BinaryFunctor<O, I1, I2,
 
 // binary functor to support array type transformation
 template <typename O, typename I1, typename I2>
-struct BinaryFunctor<O, I1, I2, typename std::enable_if<std::is_pointer<I1>::value>::type> {
+struct BinaryFunctor<O, I1, I2,
+    typename std::enable_if<std::is_pointer<I1>::value>::type> {
   typedef thrust::tuple<I1, bool> argument_type_1;
   typedef thrust::tuple<I2, bool> argument_type_2;
 
@@ -900,7 +915,8 @@ struct BinaryFunctor<O, I1, I2, typename std::enable_if<std::is_pointer<I1>::val
   BinaryFunctorType functorType;
 
   __host__ __device__
-  result_type operator()(const argument_type_1 t1, const argument_type_2 t2) const {
+  result_type operator()(const argument_type_1 t1,
+        const argument_type_2 t2) const {
     switch (functorType) {
       case ArrayContains: return ArrayContainsFunctor<O, I1, I2>()(t1, t2);
       case ArrayElementAt: return ArrayElementAtFunctor<O, I1, I2>()(t1, t2);
@@ -933,7 +949,8 @@ struct BinaryFunctor<UUIDT, I, I> {
 // generation.
 template <typename O>
 struct BinaryFunctor<
-    O, float_t, float_t, typename std::enable_if<!std::is_same<O, UUIDT>::value>::type> {
+    O, float_t, float_t,
+        typename std::enable_if<!std::is_same<O, UUIDT>::value>::type> {
   typedef thrust::tuple<float_t, bool> argument_type_1;
   typedef thrust::tuple<float_t, bool> argument_type_2;
   typedef thrust::tuple<O, bool> result_type;
@@ -945,7 +962,8 @@ struct BinaryFunctor<
   BinaryFunctorType functorType;
 
   __host__ __device__
-  result_type operator()(const argument_type_1 t1, const argument_type_2 t2) const {
+  result_type operator()(const argument_type_1 t1,
+        const argument_type_2 t2) const {
     switch (functorType) {
       case And:return AndFunctor()(t1, t2);
       case Or:return OrFunctor()(t1, t2);

@@ -365,7 +365,8 @@ class InputVectorBinderBase {
       int valueOffsetAdj = inputVP.ValueOffsetAdj;
 
       #define BIND_ARRAY_COLUMN_INPUT(dataType) \
-        return nextBinder.bind(make_array_column_iterator<dataType>(basePtr, valueOffsetAdj, length));
+        return nextBinder.bind(make_array_column_iterator<dataType>( \
+            basePtr, valueOffsetAdj, length));
 
       switch (inputVP.DataType) {
         case Bool:
@@ -430,7 +431,8 @@ class InputVectorBinderBase {
   // Array type only support UnaryTransform or first argument in BinaryTransform
   template <typename ArrayColumnIterator>
   typename std::enable_if<
-      std::is_pointer<typename ArrayColumnIterator::value_type::head_type>::value,
+      std::is_pointer<
+          typename ArrayColumnIterator::value_type::head_type>::value,
       int>::type
   bind(ArrayColumnIterator arrayColumnIter) {
     InputVectorBinderBase<Context, NumVectors, NumUnboundIterators - 1>
@@ -453,7 +455,7 @@ class InputVectorBinderBase {
     }
     throw std::invalid_argument(
         "Unsupported data type " + std::to_string(__LINE__)
-            + "when value type of first input iterator is ArrayVectorParty Iterator");
+            + "when value type of first input iterator is ArrayVP Iterator");
   }
 };
 

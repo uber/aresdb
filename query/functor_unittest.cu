@@ -1177,8 +1177,9 @@ TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
 
   int expectedVals[6] = {2, 1, 3, 0, 0, 1};
 
-  uint8_t *basePtr = allocate_array_column((uint8_t *)(&offsetLength[0]),
-                                (uint8_t *)(&values[0]), 6, 72*4);
+  uint8_t *basePtr = allocate_array_column(
+        reinterpret_cast<uint8_t *>(&offsetLength[0]),
+        reinterpret_cast<uint8_t *>(&values[0]), 6, 72*4);
 
   ArrayVectorPartyIterator<uint32_t> begin =
             make_array_column_iterator<uint32_t>(basePtr, 0, 6);
@@ -1212,8 +1213,9 @@ TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
 
   bool expectedValues[6] = {true, false, true, false, false, false};
 
-  uint8_t *basePtr = allocate_array_column((uint8_t *)(&offsetLength[0]),
-                                (uint8_t *)(&values[0]), 6, 72*4);
+  uint8_t *basePtr = allocate_array_column(
+        reinterpret_cast<uint8_t *>(&offsetLength[0]),
+        reinterpret_cast<uint8_t *>(&values[0]), 6, 72*4);
 
   ArrayVectorPartyIterator<uint32_t> begin =
             make_array_column_iterator<uint32_t>(basePtr, 0, 6);
@@ -1257,8 +1259,9 @@ TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
   uint32_t expectedValues[6] = {2, 0, 2, 0, 0, 0};
   bool expectedNulls[6] = {true, false, true, false, false, false};
 
-  uint8_t *basePtr = allocate_array_column((uint8_t *)(&offsetLength[0]),
-                                (uint8_t *)(&values[0]), 6, 72*4);
+  uint8_t *basePtr = allocate_array_column(
+        reinterpret_cast<uint8_t *>(&offsetLength[0]),
+        reinterpret_cast<uint8_t *>(&values[0]), 6, 72*4);
 
   ArrayVectorPartyIterator<uint32_t> begin =
             make_array_column_iterator<uint32_t>(basePtr, 0, 6);

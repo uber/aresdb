@@ -380,8 +380,10 @@ ColumnIterator<Value> make_column_iterator(
 template<typename Value>
 class ArrayVectorPartyIterator
     : public thrust::iterator_adaptor<
-          ArrayVectorPartyIterator<Value>, uint64_t*, thrust::tuple<Value*, bool>,
-          thrust::use_default, thrust::use_default, thrust::tuple<Value*, bool>,
+          ArrayVectorPartyIterator<Value>, uint64_t*,
+          thrust::tuple<Value*, bool>,
+          thrust::use_default, thrust::use_default,
+          thrust::tuple<Value*, bool>,
           thrust::use_default> {
  public:
   friend class thrust::iterator_core_access;
@@ -413,16 +415,18 @@ class ArrayVectorPartyIterator
 
   __host__ __device__
   typename super_t::reference dereference() const {
-    uint32_t offset = *((uint32_t*)this->base_reference());
-    uint32_t length = *((uint32_t*)this->base_reference()+1);
-    int n = (int)(this->base_reference() - reinterpret_cast<uint64_t *>(basePtr));
+    uint32_t offset = *(reinterpret_cast<uint32_t *>(this->base_reference()));
+    uint32_t length = *(reinterpret_cast<uint32_t *>(this->base_reference())+1);
+    int n = static_cast<int>(this->base_reference() -
+            reinterpret_cast<uint64_t *>(basePtr));
 
     if (length == 0) {
         return thrust::make_tuple(reinterpret_cast<Value*>(NULL), true);
     } else if (length == UINT32_MAX) {
         return thrust::make_tuple(reinterpret_cast<Value*>(NULL), false);
     } else {
-        return thrust::make_tuple(reinterpret_cast<Value*>(valuePtr + offset), true);
+        return thrust::make_tuple(
+                reinterpret_cast<Value*>(valuePtr + offset), true);
     }
   }
 

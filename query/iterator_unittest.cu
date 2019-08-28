@@ -307,19 +307,22 @@ TEST(ArrayVectorPartyIteratorTest, CheckIntArrayIterator) {
                          3, 1, 2, 3, 0xe0, 0,
                          1, 1, 0x80, 0};
 
-  uint8_t *basePtr = allocate_array_column((uint8_t *)(&offsetLength[0]),
-                                (uint8_t *)(&values[0]), 6, 72*4);
+  uint8_t *basePtr = allocate_array_column(
+        reinterpret_cast<uint8_t *>(&offsetLength[0]),
+        reinterpret_cast<uint8_t *>(&values[0]), 6, 72*4);
   uint8_t *valuePtr = basePtr + 48;
 
   ArrayVectorPartyIterator<uint32_t> begin =
             make_array_column_iterator<uint32_t>(basePtr, 0, 6);
   ArrayVectorPartyIterator<uint32_t> end = begin + 6;
 
-  uint32_t* expectedInt64Values[6] = {(uint32_t*)valuePtr,
-                                      (uint32_t*)(valuePtr + 16),
-                                      (uint32_t*)(valuePtr + 32),
-                                      (uint32_t*)0, (uint32_t*)0,
-                                      (uint32_t*)(valuePtr+56)};
+  uint32_t* expectedInt64Values[6] = {
+        reinterpret_cast<uint32_t *>valuePtr,
+        reinterpret_cast<uint32_t *>(valuePtr + 16),
+        reinterpret_cast<uint32_t *>(valuePtr + 32),
+        reinterpret_cast<uint32_t *>0,
+        reinterpret_cast<uint32_t *>0,
+        reinterpret_cast<uint32_t *>(valuePtr+56)};
   EXPECT_TRUE(
       compare_value(begin, end,
                     std::begin(expectedInt64Values)));

@@ -267,7 +267,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		newValue := uintptr(vp.values.Buffer()) + 24
 		newOffset := uintptr(vp.offsets.Buffer()) + 8
 		expectedHostSlice = common.HostVectorPartySlice{
-			Values:            unsafe.Pointer(newValue) ,
+			Values:            unsafe.Pointer(newValue),
 			Length:            2,
 			ValueType:         vp.dataType,
 			ValueBytes:        24,
