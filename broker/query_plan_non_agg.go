@@ -184,7 +184,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 	for i := 0; i < len(nqp.nodes); i++ {
 		if nqp.getRowsWanted() == 0 {
 			utils.GetLogger().Debug("got enough rows, exiting")
-			nqp.doneChan <- struct{}{}
+			close(nqp.doneChan)
 			break
 		}
 		res := <-nqp.resultChan
