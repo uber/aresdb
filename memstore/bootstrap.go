@@ -18,6 +18,7 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -300,20 +301,20 @@ func (shard *TableShard) fetchDataFromPeer(
 
 					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).
 						GetChildTimer(map[string]string{
-							"batch":  string(batchMeta.GetBatchID()),
-							"column": string(vpMeta.GetColumnID()),
+							"batch":  strconv.Itoa(int(batchMeta.GetBatchID())),
+							"column": strconv.Itoa(int(vpMeta.GetColumnID())),
 						}, utils.RawVPFetchTime).Record(duration)
 
 					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).GetChildCounter(
 						map[string]string{
-							"batch":  string(batchMeta.GetBatchID()),
-							"column": string(vpMeta.GetColumnID()),
+							"batch":  strconv.Itoa(int(batchMeta.GetBatchID())),
+							"column": strconv.Itoa(int(vpMeta.GetColumnID())),
 						}, utils.RawVPBytesFetched).Inc(int64(bytesFetched))
 
 					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).
 						GetChildGauge(map[string]string{
-							"batch":  string(batchMeta.GetBatchID()),
-							"column": string(vpMeta.GetColumnID()),
+							"batch":  strconv.Itoa(int(batchMeta.GetBatchID())),
+							"column": strconv.Itoa(int(vpMeta.GetColumnID())),
 						}, utils.RawVPFetchBytesPerSec).Update(float64(bytesFetched) / duration.Seconds())
 
 					shard.BootstrapDetails.MarkVPFinished(batchMeta.GetBatchID(), vpMeta.GetColumnID())
