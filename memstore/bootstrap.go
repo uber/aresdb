@@ -516,6 +516,7 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 	if err != nil {
 		return 0, nil, utils.StackError(err, "failed to start session")
 	}
+	sessionID = session.ID
 
 	stream, err := client.KeepAlive(context.Background())
 	if err != nil {
@@ -529,7 +530,7 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 			select {
 			case <-ticker.C:
 				err = xretry.NewRetrier(xretry.NewOptions()).Attempt(func() error {
-					return stream.Send(session)
+					return stream.Send(&rpc.Session{ID: sessionID, NodeID: origin})
 				})
 				if err != nil {
 					utils.GetLogger().
@@ -566,7 +567,7 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 				utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Error("server closed keep alive session")
 				return
 			} else if err != nil {
-				utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Error("received error from keep alive session")
+				utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID, "error", err.Error()).Error("received error from keep alive session")
 				return
 			}
 			if resp.Ttl > 0 {
@@ -575,7 +576,7 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 		}
 	}(stream)
 
-	return session.ID, func() {
+	return sessionID, func() {
 		close(done)
 	}, nil
 }
