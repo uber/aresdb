@@ -317,11 +317,11 @@ TEST(ArrayVectorPartyIteratorTest, CheckIntArrayIterator) {
   ArrayVectorPartyIterator<uint32_t> end = begin + 6;
 
   uint32_t* expectedInt64Values[6] = {
-        reinterpret_cast<uint32_t *>valuePtr,
+        reinterpret_cast<uint32_t *>(valuePtr),
         reinterpret_cast<uint32_t *>(valuePtr + 16),
         reinterpret_cast<uint32_t *>(valuePtr + 32),
-        reinterpret_cast<uint32_t *>0,
-        reinterpret_cast<uint32_t *>0,
+        reinterpret_cast<uint32_t *>(0),
+        reinterpret_cast<uint32_t *>(0),
         reinterpret_cast<uint32_t *>(valuePtr+56)};
   EXPECT_TRUE(
       compare_value(begin, end,
