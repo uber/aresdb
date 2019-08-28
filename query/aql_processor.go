@@ -264,6 +264,8 @@ func (qc *AQLQueryContext) Release() {
 //  1. clean up the device buffer for storing results.
 //  2. clean up the cuda streams
 func (qc *AQLQueryContext) cleanUpDeviceStatus() {
+	// clean up again to be safe
+	qc.OOPK.currentBatch.cleanupBeforeAggregation()
 	// clean up foreign table memory after query
 	for _, foreignTable := range qc.OOPK.foreignTables {
 		qc.cleanUpForeignTable(foreignTable)
