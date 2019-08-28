@@ -169,11 +169,10 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 			case <-nqp.doneChan:
 				utils.GetLogger().Debug("cancel pushing to result channel")
 				return
-			default:
-				nqp.resultChan <- streamingScanNoderesult{
-					data: bs,
-					err:  err,
-				}
+			case nqp.resultChan <- streamingScanNoderesult{
+				data: bs,
+				err:  err,
+			}:
 			}
 		}(node)
 	}
