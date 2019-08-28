@@ -529,7 +529,11 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 			select {
 			case <-ticker.C:
 				err = xretry.NewRetrier(xretry.NewOptions()).Attempt(func() error {
-					return stream.Send(session)
+					keepLiveRequest := &rpc.Session{
+						ID: session.ID,
+						NodeID: origin,
+					}
+					return stream.Send(keepLiveRequest)
 				})
 				if err != nil {
 					utils.GetLogger().
