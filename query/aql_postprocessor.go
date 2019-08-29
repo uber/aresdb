@@ -216,6 +216,13 @@ func (qc *AQLQueryContext) ReleaseHostResultsBuffers() {
 	qc.OOPK.geoIntersection = nil
 }
 
+func (qc *AQLQueryContext) ResultsRowsFlushed() int {
+	if qc.IsNonAggregationQuery {
+		return qc.resultFlushContext.rowsFlushed
+	}
+	return qc.OOPK.ResultSize
+}
+
 func readMeasure(measureRow unsafe.Pointer, ast expr.Expr, measureBytes int) *float64 {
 	// TODO: consider converting non-zero identity values to nil.
 	var result float64

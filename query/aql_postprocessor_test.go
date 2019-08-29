@@ -591,4 +591,20 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		ctx.flushResultBuffer()
 		Ω(w.Body.String()).Should(Equal(`["2","12"],["2","NULL"],["2","12"],["2","NULL"]`))
 	})
+
+	ginkgo.It("ResultsRowsFlushed should work", func() {
+		qc := AQLQueryContext{
+			IsNonAggregationQuery: true,
+			resultFlushContext: resultFlushContext{
+				rowsFlushed: 100,
+			},
+			OOPK: OOPKContext{
+				ResultSize: 10,
+			},
+		}
+		Ω(qc.ResultsRowsFlushed()).Should(Equal(100))
+
+		qc.IsNonAggregationQuery = false
+		Ω(qc.ResultsRowsFlushed()).Should(Equal(10))
+	})
 })
