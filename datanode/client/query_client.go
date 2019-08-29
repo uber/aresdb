@@ -95,6 +95,13 @@ func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, requestID strin
 
 func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, requestID string, host topology.Host, query queryCom.AQLQuery, hll bool) (bs []byte, err error) {
 	var u *url.URL
+	if err = ctx.Err(); err != nil {
+		return
+	}
+	if host == nil {
+		err = utils.StackError(nil, "host is nil")
+		return
+	}
 	u, err = url.Parse(host.Address())
 	if err != nil {
 		return
@@ -131,6 +138,7 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, requestID strin
 		defer res.Body.Close()
 	}
 	if err != nil {
+		utils.GetLogger().With("err", err).Error("error connecting to datanode")
 		err = ErrFailedToConnect
 		return
 	}

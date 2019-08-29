@@ -46,7 +46,10 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 			markErr = ssn.topo.MarkHostUnhealthy(ssn.host)
 		}
 		if markErr != nil {
-			utils.GetLogger().With("host", ssn.host, "healthy", hostHealthy).Error("failed to mark host healthiness")
+			utils.GetLogger().With(
+				"host", ssn.host,
+				"healthy", hostHealthy,
+				"err", markErr).Error("failed to mark host healthiness")
 		}
 	}()
 	for trial := 1; trial <= rpcRetries; trial++ {
@@ -54,8 +57,13 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 		utils.GetLogger().With("host", ssn.host, "query", ssn.qc.AQLQuery).Debug("sending query to datanode")
 		select {
 		case <-done:
-			err = utils.StackError(nil, "context timeout")
+			err = utils.StackError(nil, "Streaming node execution canceled")
+			return
 		default:
+			if ctx.Err() != nil {
+				// context cancelled or expired, no need to query
+				return nil, nil
+			}
 			bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.qc.RequestID, ssn.host, *ssn.qc.AQLQuery)
 		}
 		if fetchErr != nil {
@@ -66,10 +74,12 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 				"query", ssn.qc.AQLQuery,
 				"requestID", ssn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
-			if fetchErr == dataCli.ErrFailedToConnect {
+			err = utils.StackError(fetchErr, "fetch from datanode failed")
+			// check ctx.Err() in case context expired during client call
+			if fetchErr == dataCli.ErrFailedToConnect && ctx.Err() == nil {
 				hostHealthy = false
 			}
-			err = utils.StackError(fetchErr, "fetch from datanode failed")
+			// retry
 			continue
 		}
 		utils.GetLogger().With(

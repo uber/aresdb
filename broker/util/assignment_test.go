@@ -17,6 +17,7 @@ package util
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 	shardMock "github.com/uber/aresdb/cluster/shard/mocks"
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
@@ -29,7 +30,7 @@ var _ = ginkgo.Describe("broker util", func() {
 		mockShardSet := shardMock.ShardSet{}
 		mockTopo.On("Get").Return(&mockMap)
 		mockMap.On("ShardSet").Return(&mockShardSet)
-		mockShardIds := []uint32{0, 1, 2, 3, 4, 5}
+		mockShardIds := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
 		mockShardSet.On("AllIDs").Return(mockShardIds)
 		mockHost1 := &topoMock.Host{}
 		mockHost2 := &topoMock.Host{}
@@ -40,20 +41,37 @@ var _ = ginkgo.Describe("broker util", func() {
 			mockHost3,
 		}
 		mockMap.On("Hosts").Return(mockHosts)
-		//host1: 0,1,2,3
-		//host2: 4,5,0,1
-		//host3: 2,3,4,5
+		//host1: 0,1,2,3,6
+		//host2: 4,5,0,1,7
+		//host3: 2,3,4,5,6
 		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{mockHost1, mockHost2}, nil)
 		mockMap.On("RouteShard", uint32(1)).Return([]topology.Host{mockHost1, mockHost2}, nil)
 		mockMap.On("RouteShard", uint32(2)).Return([]topology.Host{mockHost1, mockHost3}, nil)
 		mockMap.On("RouteShard", uint32(3)).Return([]topology.Host{mockHost1, mockHost3}, nil)
 		mockMap.On("RouteShard", uint32(4)).Return([]topology.Host{mockHost2, mockHost3}, nil)
 		mockMap.On("RouteShard", uint32(5)).Return([]topology.Host{mockHost2, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(6)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(7)).Return([]topology.Host{mockHost2}, nil)
 
 		res, err := CalculateShardAssignment(&mockTopo)
 		Ω(err).Should(BeNil())
-		Ω(res[mockHost1]).Should(HaveLen(2))
-		Ω(res[mockHost2]).Should(HaveLen(2))
+		Ω(res[mockHost1]).Should(HaveLen(3))
+		Ω(res[mockHost2]).Should(HaveLen(3))
 		Ω(res[mockHost3]).Should(HaveLen(2))
+	})
+
+	ginkgo.It("should work no available host", func() {
+		mockTopo := topoMock.Topology{}
+		mockMap := topoMock.Map{}
+		mockShardSet := shardMock.ShardSet{}
+		mockTopo.On("Get").Return(&mockMap)
+		mockMap.On("ShardSet").Return(&mockShardSet)
+		mockShardIds := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
+		mockShardSet.On("AllIDs").Return(mockShardIds)
+		mockMap.On("Hosts").Return([]topology.Host{})
+		mockMap.On("RouteShard", mock.Anything).Return([]topology.Host{}, nil)
+
+		_, err := CalculateShardAssignment(&mockTopo)
+		Ω(err.Error()).Should(ContainSubstring("failed to assign host for shard"))
 	})
 })
