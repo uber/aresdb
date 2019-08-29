@@ -201,6 +201,10 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 			w.Write([]byte(`}`))
 		}
 
+		utils.GetRootReporter().GetChildCounter(map[string]string{
+			"table": aqlQuery.Table,
+		}, utils.QueryRowsReturned).Inc(int64(qc.ResultsRowsFlushed()))
+
 	} else {
 		requestResponseWriter = getReponseWriter(returnHLL, len(aqlRequest.Body.Queries))
 
@@ -282,7 +286,7 @@ func handleQuery(memStore memstore.MemStore, shardOwner topology.ShardOwner, dev
 		// Report
 		utils.GetRootReporter().GetChildCounter(map[string]string{
 			"table": aqlQuery.Table,
-		}, utils.QueryRowsReturned).Inc(int64(qc.OOPK.ResultSize))
+		}, utils.QueryRowsReturned).Inc(int64(qc.ResultsRowsFlushed()))
 	}
 	return
 }
