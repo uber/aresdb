@@ -62,28 +62,31 @@ var UnaryExprTypeToCFunctorType = map[expr.Token]C.enum_UnaryFunctorType{
 	expr.GET_MONTH_OF_YEAR:   C.GetMonthOfYear,
 	expr.GET_QUARTER_OF_YEAR: C.GetQuarterOfYear,
 	expr.GET_HLL_VALUE:       C.GetHLLValue,
+	expr.ARRAY_LENGTH:        C.ArrayLength,
 }
 
 // BinaryExprTypeToCFunctorType maps from binary operator to C BinaryFunctorType
 var BinaryExprTypeToCFunctorType = map[expr.Token]C.enum_BinaryFunctorType{
-	expr.AND:         C.And,
-	expr.OR:          C.Or,
-	expr.EQ:          C.Equal,
-	expr.NEQ:         C.NotEqual,
-	expr.LT:          C.LessThan,
-	expr.LTE:         C.LessThanOrEqual,
-	expr.GT:          C.GreaterThan,
-	expr.GTE:         C.GreaterThanOrEqual,
-	expr.ADD:         C.Plus,
-	expr.SUB:         C.Minus,
-	expr.MUL:         C.Multiply,
-	expr.DIV:         C.Divide,
-	expr.MOD:         C.Mod,
-	expr.BITWISE_AND: C.BitwiseAnd,
-	expr.BITWISE_OR:  C.BitwiseOr,
-	expr.BITWISE_XOR: C.BitwiseXor,
-	expr.FLOOR:       C.Floor,
-	expr.CONVERT_TZ:  C.Plus,
+	expr.AND:              C.And,
+	expr.OR:               C.Or,
+	expr.EQ:               C.Equal,
+	expr.NEQ:              C.NotEqual,
+	expr.LT:               C.LessThan,
+	expr.LTE:              C.LessThanOrEqual,
+	expr.GT:               C.GreaterThan,
+	expr.GTE:              C.GreaterThanOrEqual,
+	expr.ADD:              C.Plus,
+	expr.SUB:              C.Minus,
+	expr.MUL:              C.Multiply,
+	expr.DIV:              C.Divide,
+	expr.MOD:              C.Mod,
+	expr.BITWISE_AND:      C.BitwiseAnd,
+	expr.BITWISE_OR:       C.BitwiseOr,
+	expr.BITWISE_XOR:      C.BitwiseXor,
+	expr.FLOOR:            C.Floor,
+	expr.CONVERT_TZ:       C.Plus,
+	expr.ARRAY_CONTAINS:   C.ArrayContains,
+	expr.ARRAY_ELEMENT_AT: C.ArrayElementAt,
 	// TODO: expr.BITWISE_LEFT_SHIFT ?
 	// TODO: expr.BITWISE_RIGHT_SHIFT ?
 }
@@ -207,7 +210,7 @@ func makeArrayVectorPartySlice(column deviceVectorPartySlice) C.ArrayVectorParty
 	vpSlice.OffsetLength = (*C.uint8_t)(column.basePtr.getPointer())
 	vpSlice.ValueOffsetAdj = (C.uint32_t)(column.valueOffsetAdjust)
 	vpSlice.Length = (C.uint32_t)(column.length)
-	vpSlice.DataType = DataTypeToCDataType[column.valueType]
+	vpSlice.DataType = DataTypeToCDataType[memCom.GetElementDataType(column.valueType)]
 	return vpSlice
 }
 
