@@ -168,7 +168,7 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 		utils.GetLogger().With("host", sn.host, "query", sn.qc.AQLQuery).Debug("sending query to datanode")
 		select {
 		case <-done:
-			err = utils.StackError(nil, "context timeout")
+			err = utils.StackError(nil, "BlockingScanNode execution canceled")
 			return
 		default:
 			if ctx.Err() != nil {

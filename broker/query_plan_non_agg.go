@@ -57,7 +57,7 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 		utils.GetLogger().With("host", ssn.host, "query", ssn.qc.AQLQuery).Debug("sending query to datanode")
 		select {
 		case <-done:
-			err = utils.StackError(nil, "Streaming node execution canceled")
+			err = utils.StackError(nil, "StreamingScanNode execution canceled")
 			return
 		default:
 			if ctx.Err() != nil {

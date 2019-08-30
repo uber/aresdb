@@ -518,6 +518,6 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		}
 
 		_, err := sn.Execute(ctx)
-		Ω(err.Error()).Should(ContainSubstring("context timeout"))
+		Ω(err.Error()).Should(ContainSubstring("BlockingScanNode execution canceled"))
 	})
 })

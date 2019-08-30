@@ -223,6 +223,6 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		}
 
 		_, err := sn.Execute(ctx)
-		Ω(err.Error()).Should(ContainSubstring("context timeout"))
+		Ω(err.Error()).Should(ContainSubstring("StreamingScanNode execution canceled"))
 	})
 })
