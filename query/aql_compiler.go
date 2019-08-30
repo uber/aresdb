@@ -268,17 +268,13 @@ func isGeoJoin(j common.Join) bool {
 
 // list of join conditions enforced for now
 // 1. equi-join only
-// 2. many-to-one join only
-// 3. foreign table must be a dimension table
-// 4. one foreign table primary key columns only
-// 5. foreign table primary key can have only one column
-// 6. every foreign table must be joined directly to the main table, i.e. no bridges?
-// 7. up to 8 foreign tables
+// 2. foreign table must have only 1 batch (dimension table or in-mem virtual table)
+// 3. for many to one join:
+// 		one foreign table primary key columns only
+//      foreign table primary key can have only one column
+// 4. every foreign table must be joined directly to the main table, i.e. no bridges?
+// 5. up to 8 foreign tables (plus limit on many to many join table size imposed later in the process)
 func (qc *AQLQueryContext) matchEqualJoin(joinTableID int, joinSchema *memCom.TableSchema, conditions []expr.Expr) {
-	if len(conditions) != 1 {
-		qc.Error = utils.StackError(nil, "%d join conditions expected, got %d", 1, len(conditions))
-		return
-	}
 
 	// foreign table must be a dimension table
 	if joinSchema.Schema.IsFactTable {
@@ -286,8 +282,34 @@ func (qc *AQLQueryContext) matchEqualJoin(joinTableID int, joinSchema *memCom.Ta
 		return
 	}
 
+	// default to use many to one join
+	candidateJoinType := joinTypeManyToOne
+
+	err := validateJoinConditions(joinSchema, conditions, candidateJoinType)
+	if err != nil {
+		candidateJoinType = joinTypeManyToMany
+	}
+	// down grade to many to many join and try again
+	err = validateJoinConditions(joinSchema, conditions, candidateJoinType)
+	if err != nil {
+		qc.Error = err
+		return
+	}
+
+	qc.OOPK.foreignTables[joinTableID].joinType = candidateJoinType
+	qc.OOPK.foreignTables[joinTableID].remoteJoinColumn = left
+	// set column usage for join column in main table
+	// no need to set usage for remote join column in foreign table since
+	// we only use primary key of foreign table to join
+	expr.Walk(columnUsageCollector{
+		tableScanners: qc.TableScanners,
+		usages:        columnUsedByAllBatches,
+	}, left)
+}
+
+func validateJoinConditions(joinSchema *memCom.TableSchema, conds []expr.Expr, joinType joinType) error {
 	// one foreign table primary key columns only
-	if len(joinSchema.Schema.PrimaryKeyColumns) > 1 {
+	if joinType == joinTypeManyToOne && len(joinSchema.Schema.PrimaryKeyColumns) > 1 {
 		qc.Error = utils.StackError(nil, "composite key not supported")
 		return
 	}
@@ -331,15 +353,6 @@ func (qc *AQLQueryContext) matchEqualJoin(joinTableID int, joinSchema *memCom.Ta
 		qc.Error = utils.StackError(nil, "join column is not primary key of foreign table")
 		return
 	}
-
-	qc.OOPK.foreignTables[joinTableID].remoteJoinColumn = left
-	// set column usage for join column in main table
-	// no need to set usage for remote join column in foreign table since
-	// we only use primary key of foreign table to join
-	expr.Walk(columnUsageCollector{
-		tableScanners: qc.TableScanners,
-		usages:        columnUsedByAllBatches,
-	}, left)
 }
 
 func (qc *AQLQueryContext) parseExprs() {

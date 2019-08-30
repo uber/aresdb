@@ -24,6 +24,8 @@ import (
 
 // BatchExecutor is batch executor interface for both Non-aggregation query and Aggregation query
 type BatchExecutor interface {
+	// prepare work before execution
+	preExec(lastBatch bool, start time.Time)
 	// filter operation
 	filter()
 	// join operation
@@ -32,8 +34,6 @@ type BatchExecutor interface {
 	project()
 	// reduce to sort and aggregate result
 	reduce()
-	// prepare work before execution
-	preExec(lastBatch bool, start time.Time)
 	// post execution after execution
 	postExec(start time.Time)
 }
@@ -47,6 +47,9 @@ func NewDummyBatchExecutor() BatchExecutor {
 	return &DummyBatchExecutorImpl{}
 }
 
+func (e *DummyBatchExecutorImpl) preExec(lastBatch bool, start time.Time) {
+}
+
 func (e *DummyBatchExecutorImpl) filter() {
 }
 
@@ -57,9 +60,6 @@ func (e *DummyBatchExecutorImpl) project() {
 }
 
 func (e *DummyBatchExecutorImpl) reduce() {
-}
-
-func (e *DummyBatchExecutorImpl) preExec(lastBatch bool, start time.Time) {
 }
 
 func (e *DummyBatchExecutorImpl) postExec(start time.Time) {
@@ -99,7 +99,17 @@ func NewBatchExecutor(qc *AQLQueryContext, batchID int32, customFilterFunc custo
 	}
 }
 
+func (e *BatchExecutorImpl) preExec(isLastBatch bool, start time.Time) {
+	e.isLastBatch = isLastBatch
+	// initialize index vector.
+	if !e.qc.OOPK.currentBatch.indexVectorD.isNull() {
+		initIndexVector(e.qc.OOPK.currentBatch.indexVectorD.getPointer(), 0, e.qc.OOPK.currentBatch.size, e.stream, e.qc.Device)
+	}
+	e.qc.reportTimingForCurrentBatch(e.stream, &start, initIndexVectorTiming)
+}
+
 // filter
+// 1. process main table filters by evaluating each filter expr and update the shared predicateVectorD
 func (e *BatchExecutorImpl) filter() {
 	// process main table common filter
 	e.qc.doProfile(func() {
@@ -113,6 +123,15 @@ func (e *BatchExecutorImpl) filter() {
 }
 
 // join
+// 1. for many to one join foreign tables:
+//  	1) gather record IDs for each foreign table, by performing HashLookup
+//  	2) evaluate each filter from foreign tables, update shared predicateVectorD
+// 2. for many to many join foreign tables:
+//		1) join predicate eval
+//		2) output offsets
+//		3) output index gen
+//		4) copy transformed dim
+// 3. perform geo_intersection if applicable
 func (e *BatchExecutorImpl) join() {
 	e.qc.doProfile(func() {
 		// join foreign tables
@@ -127,7 +146,7 @@ func (e *BatchExecutorImpl) join() {
 				// takes up 8 bytes
 				e.qc.OOPK.currentBatch.foreignTableRecordIDsD = append(e.qc.OOPK.currentBatch.foreignTableRecordIDsD, deviceAllocate(8*e.qc.OOPK.currentBatch.size, e.qc.Device))
 				mainTableJoinColumnIndex := e.qc.TableScanners[0].ColumnsByIDs[foreignTable.remoteJoinColumn.ColumnID]
-				// perform hash lookup
+				// perform hash lookup, updates foreignTableRecordIDsD
 				e.qc.OOPK.currentBatch.prepareForeignRecordIDs(mainTableJoinColumnIndex, joinTableID, *foreignTable, e.stream, e.qc.Device)
 			}
 		}
@@ -251,15 +270,6 @@ func (e *BatchExecutorImpl) reduce() {
 		}, "reduce", e.stream)
 	}
 	cgoutils.WaitForCudaStream(e.stream, e.qc.Device)
-}
-
-func (e *BatchExecutorImpl) preExec(isLastBatch bool, start time.Time) {
-	e.isLastBatch = isLastBatch
-	// initialize index vector.
-	if !e.qc.OOPK.currentBatch.indexVectorD.isNull() {
-		initIndexVector(e.qc.OOPK.currentBatch.indexVectorD.getPointer(), 0, e.qc.OOPK.currentBatch.size, e.stream, e.qc.Device)
-	}
-	e.qc.reportTimingForCurrentBatch(e.stream, &start, initIndexVectorTiming)
 }
 
 func (e *BatchExecutorImpl) postExec(start time.Time) {

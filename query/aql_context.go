@@ -51,6 +51,13 @@ const (
 	columnUsedHighSentinel
 )
 
+type joinType int
+
+const (
+	joinTypeManyToOne joinType = 1 << iota
+	joinTypeManyToMany
+)
+
 var columnUsageNames = map[columnUsage]string{
 	columnUsedByAllBatches:        "allBatches",
 	columnUsedByLiveBatches:       "liveBatches",
@@ -118,6 +125,14 @@ type foreignTable struct {
 	// primary key data at host.
 	hostPrimaryKeyData  memCom.PrimaryKeyData
 	devicePrimaryKeyPtr devicePointer
+
+	joinType            joinType
+
+	// fields for many to many joins
+	// the single foreign table batch after filtering
+	batch                deviceVectorPartySlice
+	// dimension vector that includes only foreign table dims
+	dimensionVectorD     devicePointer
 }
 
 // deviceVectorPartySlice stores pointers to data for a column in device memory.
