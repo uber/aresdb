@@ -50,6 +50,9 @@
     0,
     1
   ],
+  "config": {
+    "recordRetentionInDays": 10000
+  },
   "isFactTable": true,
   "archivingSortColumns": [
     3,
