@@ -21,6 +21,7 @@ import (
 	pb "github.com/uber/aresdb/datanode/generated/proto/rpc"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 	"net"
@@ -64,12 +65,17 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 		pb.RegisterPeerDataNodeServer(testServer, peerServer)
 		listener = bufconn.Listen(bufSize)
 
+		utils.SetCurrentTime(time.Unix(1560049867, 0))
+
 		go func() {
 			testServer.Serve(listener)
 		}()
 	})
 
 	ginkgo.AfterEach(func() {
+
+		utils.SetClockImplementation(time.Now)
+
 		testServer.Stop()
 		listener.Close()
 	})
