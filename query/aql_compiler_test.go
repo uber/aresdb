@@ -1520,7 +1520,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		Ω(qc.OOPK.DimRowBytes).Should(Equal(15))
 	})
 
-	ginkgo.It("processJoinConditions", func() {
+	ginkgo.It("processJoinConditions many to one", func() {
 		tripsSchema := &memCom.TableSchema{
 			ColumnIDs: map[string]int{
 				"request_at": 0,
@@ -1565,7 +1565,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				Name:        "api_cities",
 				IsFactTable: false,
 				Columns: []metaCom.Column{
-					{Name: "id", Type: metaCom.Uint32},
+					{Name: "id", Type: metaCom.Uint16},
 				},
 				PrimaryKeyColumns: []int{0},
 			},
@@ -1730,6 +1730,93 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.resolveTypes()
 		qc.processJoinConditions()
 		Ω(qc.Error).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("processJoinConditions many to many", func() {
+		tripsSchema := &memCom.TableSchema{
+			ColumnIDs: map[string]int{
+				"request_at": 0,
+				"city_id":    1,
+				"city_name":  2,
+			},
+			Schema: metaCom.Table{
+				Name:        "trips",
+				IsFactTable: true,
+				Columns: []metaCom.Column{
+					{Name: "request_at", Type: metaCom.Uint32},
+					{Name: "city_id", Type: metaCom.Uint16},
+					{Name: "city_name", Type: metaCom.Uint16},
+				},
+			},
+			ValueTypeByColumn: []memCom.DataType{
+				memCom.Uint32,
+				memCom.Uint16,
+				memCom.Uint16,
+			},
+		}
+
+		apiCitySchema := &memCom.TableSchema{
+			ColumnIDs: map[string]int{
+				"id":   0,
+				"name": 1,
+			},
+			Schema: metaCom.Table{
+				Name:        "api_cities",
+				IsFactTable: false,
+				Columns: []metaCom.Column{
+					{Name: "id", Type: metaCom.Uint16},
+					// name is not unique key, but happened to be int as well :)
+					{Name: "name", Type: metaCom.Uint16},
+				},
+				PrimaryKeyColumns: []int{0},
+			},
+			ValueTypeByColumn: []memCom.DataType{
+				memCom.Uint32,
+				memCom.Uint16,
+			},
+		}
+
+		qc := &AQLQueryContext{}
+		goodQuery := &queryCom.AQLQuery{
+			Table: "trips",
+			Measures: []queryCom.Measure{
+				{Expr: "count()"},
+			},
+			Joins: []queryCom.Join{
+				{
+					Table: "api_cities",
+					Alias: "",
+					Conditions: []string{
+						"trips.city_name = api_cities.name",
+					},
+				},
+			},
+		}
+		qc.Query = goodQuery
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+
+		qc = &AQLQueryContext{
+			Query: goodQuery,
+			TableSchemaByName: map[string]*memCom.TableSchema{
+				"trips":      tripsSchema,
+				"api_cities": apiCitySchema,
+			},
+			TableIDByAlias: map[string]int{
+				"trips":      0,
+				"api_cities": 1,
+			},
+			TableScanners: []*TableScanner{
+				{Schema: tripsSchema, ColumnUsages: make(map[int]columnUsage)},
+				{Schema: apiCitySchema, ColumnUsages: make(map[int]columnUsage)},
+			},
+		}
+		qc.resolveTypes()
+		qc.processJoinConditions()
+		Ω(qc.Error).Should(BeNil())
+
+		Ω(qc.TableScanners[0].ColumnUsages[2]).Should(Equal(columnUsedByAllBatches))
+		Ω(qc.TableScanners[1].ColumnUsages[1]).Should(Equal(columnUsedByAllBatches))
 	})
 
 	ginkgo.It("processes foreign table related filters", func() {
@@ -2936,9 +3023,9 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc = parsedQC
 		qc.Query = query
 		qc.resolveTypes()
-		qc.processJoinConditions()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("numeric operations not supported for column over 4 bytes length"))
+		qc.processJoinConditions()
 
 		// only hex function is supported on UUID type, but got count.
 		qc = AQLQueryContext{}
