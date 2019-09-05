@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 	"net"
 	"time"
+	"github.com/uber/aresdb/utils"
 )
 
 const bufSize = 1024 * 1024
@@ -59,6 +60,11 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 	}
 
 	ginkgo.BeforeEach(func() {
+		testCreateTime := int64(1564646400)
+		duration := -time.Since(time.Unix(testCreateTime, 0))
+		utils.SetClockImplementation(func() time.Time {
+			return time.Now().Add(duration)
+		})
 		// setup server
 		utils.SetCurrentTime(time.Unix(18056 * 86400, 0))
 		testServer = grpc.NewServer()
@@ -75,6 +81,7 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 		utils.ResetClockImplementation()
 		testServer.Stop()
 		listener.Close()
+		utils.ResetClockImplementation()
 	})
 
 	ginkgo.It("start session test", func() {
