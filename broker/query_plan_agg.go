@@ -168,9 +168,13 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 		utils.GetLogger().With("host", sn.host, "query", sn.qc.AQLQuery).Debug("sending query to datanode")
 		select {
 		case <-done:
-			err = utils.StackError(nil, "context timeout")
+			err = utils.StackError(nil, "BlockingScanNode execution canceled")
 			return
 		default:
+			if ctx.Err() != nil {
+				// context cancelled or expired, cancel node execution
+				return nil, nil
+			}
 			result, fetchErr = sn.dataNodeClient.Query(ctx, sn.qc.RequestID, sn.host, *sn.qc.AQLQuery, isHll)
 		}
 
@@ -182,10 +186,12 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 				"query", sn.qc.AQLQuery,
 				"requestID", sn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
-			if fetchErr == dataCli.ErrFailedToConnect {
+			err = utils.StackError(fetchErr, "fetch from datanode failed")
+			// check ctx.Err() in case context expired during client call
+			if fetchErr == dataCli.ErrFailedToConnect && ctx.Err() == nil {
 				hostHealthy = false
 			}
-			err = utils.StackError(fetchErr, "fetch from datanode failed")
+			// retry
 			continue
 		}
 		utils.GetLogger().With(

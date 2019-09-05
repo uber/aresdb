@@ -63,4 +63,52 @@ var _ = ginkgo.Describe("health tracking dynamic topology", func() {
 		Ω(topo.Get().HostsLen()).Should(Equal(3))
 
 	})
+
+	ginkgo.It("concurrent test", func() {
+		shardSet := newTestShardSet([]uint32{0, 1, 2})
+		host1 := NewHost("1", "foo")
+		host2 := NewHost("2", "foo")
+		host3 := NewHost("3", "foo")
+		hostShardSets := []HostShardSet{
+			NewHostShardSet(host1, shardSet),
+			NewHostShardSet(host2, shardSet),
+			NewHostShardSet(host3, shardSet),
+		}
+
+		stopo := NewStaticTopology(NewStaticOptions().SetShardSet(shardSet).SetReplicas(2).SetHostShardSets(hostShardSets))
+
+		timeIncrementer := &utils.TimeIncrementer{IncBySecond: 0}
+		utils.SetClockImplementation(timeIncrementer.Now)
+
+		topo := &healthTrackingDynamicTopoImpl{
+			dynamicTopology:  stopo,
+			hostsHealthiness: make(map[Host]*healthiness),
+		}
+
+		markFunc := func(h bool) {
+			for i:=0; i<10; i++ {
+				if h {
+					topo.MarkHostHealthy(host2)
+				} else {
+					topo.MarkHostUnhealthy(host2)
+				}
+			}
+		}
+
+		accessFun := func(){
+			for i:=0; i<10; i++ {
+				m := topo.Get()
+				hosts := m.Hosts()
+				for _, host := range hosts {
+					Ω(host).ShouldNot(BeNil())
+				}
+			}
+		}
+
+		go markFunc(true)
+		go markFunc(false)
+		go accessFun()
+		go accessFun()
+		go accessFun()
+	})
 })

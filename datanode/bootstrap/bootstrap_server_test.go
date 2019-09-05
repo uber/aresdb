@@ -71,6 +71,8 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 		pb.RegisterPeerDataNodeServer(testServer, peerServer)
 		listener = bufconn.Listen(bufSize)
 
+		utils.SetCurrentTime(time.Unix(1560049867, 0))
+
 		go func() {
 			testServer.Serve(listener)
 		}()
