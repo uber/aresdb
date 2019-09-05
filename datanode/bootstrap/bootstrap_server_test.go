@@ -41,7 +41,7 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 
 	req := pb.StartSessionRequest{
 		Shard: uint32(shardID),
-		Ttl:   5 * 60,
+		Ttl:   int64(5 * time.Minute),
 	}
 
 	var testServer *grpc.Server
@@ -141,7 +141,7 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 			err = keepAliveClient.Send(&pb.Session{ID: session.ID, NodeID: nodeID})
 			resp, err := keepAliveClient.Recv()
 			Ω(err).Should(BeNil())
-			Ω(resp.Ttl).Should(Equal(int64(300)))
+			Ω(resp.Ttl).Should(Equal(int64(5 * time.Minute)))
 			time.Sleep(time.Millisecond * 10)
 		}
 		err = keepAliveClient.CloseSend()
