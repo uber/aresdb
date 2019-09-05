@@ -335,7 +335,8 @@ var _ = ginkgo.Describe("json marshaller", func() {
             },
             "archivingCutoff": 0
           }
-        }
+        },
+		"BootstrapState": 0
       }`,
 		))
 	})

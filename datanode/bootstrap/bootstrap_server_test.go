@@ -21,6 +21,7 @@ import (
 	pb "github.com/uber/aresdb/datanode/generated/proto/rpc"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 	"net"
@@ -59,6 +60,7 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 
 	ginkgo.BeforeEach(func() {
 		// setup server
+		utils.SetCurrentTime(time.Unix(18056 * 86400, 0))
 		testServer = grpc.NewServer()
 		peerServer = NewPeerDataNodeServer(metaStore, diskStore)
 		pb.RegisterPeerDataNodeServer(testServer, peerServer)
@@ -70,6 +72,7 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 	})
 
 	ginkgo.AfterEach(func() {
+		utils.ResetClockImplementation()
 		testServer.Stop()
 		listener.Close()
 	})

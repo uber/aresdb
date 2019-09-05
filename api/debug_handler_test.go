@@ -593,6 +593,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
     "primaryKeyBytes": 0,
     "primaryKeyColumnTypes": []
   },
+  "BootstrapState": 0,
   "bootstrapDetails": {
 	"source": "",
 	"startedAt": 0,
