@@ -335,13 +335,13 @@ func initIndexVector(vector unsafe.Pointer, start, size int, stream unsafe.Point
 	C.InitIndexVector((*C.uint32_t)(vector), (C.uint32_t)(start), (C.int)(size), stream, (C.int)(device))
 }
 
-// filterAction assumes many to 1 join, and does the following:
+// filterAction assumes many to one join, and does the following:
 // 1. get reference of foreignTableRecordIDs prepared by previous "join" step
 // 2. get reference of input pointers (already on device)
 // 3. call filter functors kernel which
 //    1) zip index and recordIDs from foreign tables
 //    2) evaluate exprs to a boolean predicate vector
-//    3) remove_if the zipped vector from 1) by predicate vector from 2)
+//    3) remove_if on the zipped vector from 1) by predicate vector from 2)
 func (bc *oopkBatchContext) filterAction(functorType uint32, stream unsafe.Pointer, device int, inputs []C.InputVector, exp expr.Expr) {
 	numForeignTables := len(bc.foreignTableRecordIDsD)
 	// If current batch size is already 0, short circuit to avoid issuing a noop cuda call.

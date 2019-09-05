@@ -127,10 +127,10 @@ func (e *BatchExecutorImpl) filter() {
 //  	1) gather record IDs for each foreign table, by performing HashLookup
 //  	2) evaluate each filter from foreign tables, update shared predicateVectorD
 // 2. for many to many join foreign tables:
-//		1) join predicate eval
-//		2) output offsets
-//		3) output index gen
-//		4) copy transformed dim
+//		1) join predicate eval (TODO)
+//		2) output offsets (TODO)
+//		3) output index gen (TODO)
+//		4) copy transformed dims (TODO)
 // 3. perform geo_intersection if applicable
 func (e *BatchExecutorImpl) join() {
 	e.qc.doProfile(func() {

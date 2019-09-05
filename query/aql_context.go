@@ -115,6 +115,10 @@ type TableScanner struct {
 
 // foreignTables stores foreignTables data
 type foreignTable struct {
+	joinType joinType
+
+	// fields for many to one joins
+
 	// batches[batchIndex][columnIndex]
 	// batchIndex = batchID - BaseBatchID
 	// columnIndex corresponds to columnIndex in TableScanner columns order
@@ -126,13 +130,12 @@ type foreignTable struct {
 	hostPrimaryKeyData  memCom.PrimaryKeyData
 	devicePrimaryKeyPtr devicePointer
 
-	joinType            joinType
-
 	// fields for many to many joins
+
 	// the single foreign table batch after filtering
-	batch                deviceVectorPartySlice
+	batch deviceVectorPartySlice
 	// dimension vector that includes only foreign table dims
-	dimensionVectorD     devicePointer
+	dimensionVectorD devicePointer
 }
 
 // deviceVectorPartySlice stores pointers to data for a column in device memory.

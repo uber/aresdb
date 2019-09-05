@@ -390,10 +390,10 @@ func (qc *AQLQueryContext) prepareForGeoIntersect(memStore memstore.MemStore) (s
 // 1. transfer all batches in foreign table to device, store pointer
 // 2. for many to one FTs:
 // 		1) transfer FT pk to device, store pk pointer of both device and host side
-// 3. for many to many:
+// 3. for many to many FTs:
 //      1) evaluate filters on FT, reduce to 1 batch, store pointer,
-//      reject query if batch size too big after filtering
-//		2) evaluate foreign table dimensions
+//      reject query if batch size too big after filtering (TODO)
+//		2) evaluate foreign table dimensions (TODO)
 func (qc *AQLQueryContext) prepareForeignTable(memStore memstore.MemStore, joinTableID int, join queryCom.Join) {
 	ft := qc.OOPK.foreignTables[joinTableID]
 	if ft == nil {
