@@ -172,16 +172,13 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 			return
 		default:
 			if ctx.Err() != nil {
-				// context cancelled or expired, no need to query
+				// context cancelled or expired, cancel node execution
 				return nil, nil
 			}
 			result, fetchErr = sn.dataNodeClient.Query(ctx, sn.qc.RequestID, sn.host, *sn.qc.AQLQuery, isHll)
 		}
 
 		if fetchErr != nil {
-			if fetchErr == context.Canceled || fetchErr == context.DeadlineExceeded {
-				break
-			}
 			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(
 				"error", fetchErr,
