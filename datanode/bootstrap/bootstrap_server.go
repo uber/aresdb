@@ -92,7 +92,7 @@ func (p *PeerDataNodeServerImpl) AcquireToken(tableName string, shardID uint32) 
 	// lazy clean the obsolete orphan sessions
 	now := utils.Now()
 	for sid, session := range p.sessions {
-		if now.After(session.lastLiveTime.Add(time.Second * time.Duration(session.ttl))) {
+		if now.After(session.lastLiveTime.Add(time.Duration(session.ttl))) {
 			p.cleanSession(sid, false)
 		}
 	}
