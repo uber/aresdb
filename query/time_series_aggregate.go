@@ -207,7 +207,7 @@ func makeVectorPartySlice(column deviceVectorPartySlice) C.VectorPartySlice {
 
 func makeArrayVectorPartySlice(column deviceVectorPartySlice) C.ArrayVectorPartySlice {
 	var vpSlice C.ArrayVectorPartySlice
-	vpSlice.OffsetLength = (*C.uint8_t)(column.basePtr.getPointer())
+	vpSlice.OffsetLengthVector = (*C.uint8_t)(column.basePtr.getPointer())
 	vpSlice.ValueOffsetAdj = (C.uint32_t)(column.valueOffsetAdjust)
 	vpSlice.Length = (C.uint32_t)(column.length)
 	vpSlice.DataType = DataTypeToCDataType[memCom.GetElementDataType(column.valueType)]

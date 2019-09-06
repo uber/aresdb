@@ -360,7 +360,7 @@ class InputVectorBinderBase {
     } else if (input.Type == ArrayVectorPartyInput) {
       // Array type can only bind to first argument for BinaryTransformer
       ArrayVectorPartySlice inputVP = input.Vector.ArrayVP;
-      uint8_t *basePtr = inputVP.OffsetLength;
+      uint8_t *basePtr = inputVP.OffsetLengthVector;
       uint32_t length = inputVP.Length;
       int valueOffsetAdj = inputVP.ValueOffsetAdj;
 

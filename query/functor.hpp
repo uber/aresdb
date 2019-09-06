@@ -473,7 +473,7 @@ struct ArrayLengthFunctor<I, uint32_t> {
       return thrust::make_tuple<uint32_t, bool>(0, false);
     }
     uint32_t *valP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
-    if (valP == NULL) {
+    if (valP == nullptr) {
       return thrust::make_tuple<uint32_t, bool>(0, true);
     }
     return thrust::make_tuple<uint32_t, bool>(*valP, true);
@@ -494,13 +494,16 @@ struct ArrayElementAtFunctor {
   }
 };
 
+// specialized ArrayElementAtFunctor which the 2nd paramenter is int32_t
+// for position index, the Input and Output may have different data type
+// as the aql compiler will convert NumberLitereral to uint32_t or float_t
+// for output data type
 template <typename O, typename I>
-struct ArrayElementAtFunctor<O, I, int,
-    typename std::enable_if<
-        std::is_same<typename std::remove_pointer<I>::type, O>::value>::type> {
+struct ArrayElementAtFunctor<O, I, int32_t> {
   typedef typename thrust::tuple<I, bool> argument_type_1;
-  typedef typename thrust::tuple<int, bool> argument_type_2;
+  typedef typename thrust::tuple<int32_t, bool> argument_type_2;
   typedef typename thrust::tuple<O, bool> result_type;
+  typedef typename std::remove_pointer<I>::type input_type;
 
   __host__ __device__
   result_type operator()(argument_type_1 arrVal, argument_type_2 indexT) const {
@@ -510,8 +513,8 @@ struct ArrayElementAtFunctor<O, I, int,
       return thrust::make_tuple<O, bool>(v, false);
     }
     uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
-    int index = thrust::get<0>(indexT);
-    if (lenP == NULL || (index >= 0 && *lenP <= index) ||
+    int index = (int)thrust::get<0>(indexT);
+    if (lenP == nullptr || (index >= 0 && *lenP <= index) ||
        (index < 0 && *lenP < -index)) {
       O v;
       return thrust::make_tuple<O, bool>(v, false);
@@ -527,14 +530,14 @@ struct ArrayElementAtFunctor<O, I, int,
         return thrust::make_tuple<O, bool>(v, false);
     }
     uint8_t * elemValidP = reinterpret_cast<uint8_t*>(valP) +
-        (sizeof(O)*8*len + 7) / 8 + index / 8;
+        (sizeof(input_type)*8*len + 7) / 8 + index / 8;
     bool elemValid = (*elemValidP & (0x1 << (index%8))) != 0x0;
     if (elemValid) {
-        return thrust::make_tuple<O, bool>(*(valP + index), true);
-    } else {
-        O v;
-        return thrust::make_tuple<O, bool>(v, false);
+        return thrust::make_tuple<O, bool>(
+            static_cast<O>(*(valP + index)), true);
     }
+    O v;
+    return thrust::make_tuple<O, bool>(v, false);
   }
 };
 
@@ -553,13 +556,16 @@ struct ArrayContainsFunctor {
   }
 };
 
+// specialized ArrayContainsFunctor while the return type is boolean
+// the Input and Output type may not always be the same
+// the aql compiler will convert NumberLitereral to uint32_t or float_t
+// for 2nd argument
 template <typename I1, typename I2>
-struct ArrayContainsFunctor<bool, I1, I2,
-    typename std::enable_if<
-    std::is_same<typename std::remove_pointer<I1>::type, I2>::value>::type> {
+struct ArrayContainsFunctor<bool, I1, I2> {
   typedef typename thrust::tuple<I1, bool> argument_type_1;
   typedef typename thrust::tuple<I2, bool> argument_type_2;
   typedef typename thrust::tuple<bool, bool> result_type;
+  typedef typename std::remove_pointer<I1>::type input_type;
 
   __host__ __device__
   result_type operator() (argument_type_1 arrVal,
@@ -569,7 +575,7 @@ struct ArrayContainsFunctor<bool, I1, I2,
        return thrust::make_tuple<bool, bool>(false, false);
     }
     uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
-    if (lenP == NULL) {
+    if (lenP == nullptr) {
        return thrust::make_tuple<bool, bool>(false, true);
     }
     auto valP = reinterpret_cast<I1>(
@@ -578,9 +584,9 @@ struct ArrayContainsFunctor<bool, I1, I2,
     if (len <= 0) {
         return thrust::make_tuple<bool, bool>(false, true);
     }
-    I2 val = thrust::get<0>(constVal);
+    input_type val = static_cast<input_type>(thrust::get<0>(constVal));
     uint8_t * validStartP = reinterpret_cast<uint8_t*>(valP) +
-                            (sizeof(I2)*8*len + 7) / 8;
+                            (sizeof(input_type)*8*len + 7) / 8;
     for (int i = 0; i < len; i++) {
       bool elemValid = (*(validStartP + i / 8) & (0x1 << (i%8))) != 0x0;
       if (elemValid && val == *(valP + i)) {

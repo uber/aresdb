@@ -237,7 +237,7 @@ typedef struct {
 // ArrayVectorPartySlice stores the slice of Array column
 typedef struct {
   // OffsetLength pointer point to memory of offset-length vector
-  uint8_t *OffsetLength;
+  uint8_t *OffsetLengthVector;
   // value offset adjustment
   uint32_t ValueOffsetAdj;
   enum DataType DataType;

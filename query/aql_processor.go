@@ -1325,7 +1325,7 @@ func copyHostToDevice(vps memCom.HostVectorPartySlice, deviceVPSlice deviceVecto
 		// for array data type
 		// copy offset-length
 		cgoutils.AsyncCopyHostToDevice(
-			deviceVPSlice.basePtr.getPointer(), vps.Offsets, vps.Length*8,
+			deviceVPSlice.offsets.getPointer(), vps.Offsets, vps.Length*8,
 			stream, device)
 		bytesCopied += vps.Length * 8
 		numTransfers++
@@ -1370,11 +1370,13 @@ func hostToDeviceColumn(hostColumn memCom.HostVectorPartySlice, device int) devi
 			valueType:    hostColumn.ValueType,
 			defaultValue: hostColumn.DefaultValue,
 		}
-		totalColumnBytes := hostColumn.ValueBytes + hostColumn.Length*8
+		OffsetBytes := hostColumn.Length*8
+		totalColumnBytes := hostColumn.ValueBytes + OffsetBytes
 
 		if totalColumnBytes > 0 {
 			deviceColumn.basePtr = deviceAllocate(totalColumnBytes, device)
-			deviceColumn.values = deviceColumn.basePtr.offset(hostColumn.Length * 8)
+			deviceColumn.offsets = deviceColumn.basePtr
+			deviceColumn.values = deviceColumn.basePtr.offset(OffsetBytes)
 			deviceColumn.valueOffsetAdjust = hostColumn.ValueOffsetAdjust
 		}
 		return deviceColumn

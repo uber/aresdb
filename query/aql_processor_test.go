@@ -2370,18 +2370,4 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		qc.initializeNonAggResponse()
 		Ω(w.Body.String()).Should(Equal(``))
 	})
-
-	ginkgo.It("Copy array to device should work", func() {
-		ctx := oopkBatchContext{}
-		defer ctx.cleanupBeforeAggregation()
-		var stream unsafe.Pointer
-		testFactory := list.GetFactory()
-		vp, err := readDeviceVPSlice(testFactory, "list/live_vp_uint32", stream, ctx.device)
-		Ω(err).Should(BeNil())
-		Ω(vp.length).Should(Equal(4))
-		// use AfterEach to clean device memory
-		ctx.columns = []deviceVectorPartySlice{
-			vp,
-		}
-	})
 })

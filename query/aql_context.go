@@ -137,6 +137,9 @@ type deviceVectorPartySlice struct {
 	valueStartIndex int
 	nullStartIndex  int
 	countStartIndex int
+	// offsets is used for array type vector party, which is same as basePtr
+	// while point to the start of offset/length
+	offsets devicePointer
 	// valueOffsetAdjust is the value pointer adjustment for array archive VP
 	valueOffsetAdjust int
 }
