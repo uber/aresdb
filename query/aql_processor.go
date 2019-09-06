@@ -1370,7 +1370,7 @@ func hostToDeviceColumn(hostColumn memCom.HostVectorPartySlice, device int) devi
 			valueType:    hostColumn.ValueType,
 			defaultValue: hostColumn.DefaultValue,
 		}
-		OffsetBytes := hostColumn.Length*8
+		OffsetBytes := hostColumn.Length * 8
 		totalColumnBytes := hostColumn.ValueBytes + OffsetBytes
 
 		if totalColumnBytes > 0 {

@@ -513,7 +513,7 @@ struct ArrayElementAtFunctor<O, I, int32_t> {
       return thrust::make_tuple<O, bool>(v, false);
     }
     uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
-    int index = (int)thrust::get<0>(indexT);
+    int index = static_cast<int>(thrust::get<0>(indexT));
     if (lenP == nullptr || (index >= 0 && *lenP <= index) ||
        (index < 0 && *lenP < -index)) {
       O v;
