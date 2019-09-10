@@ -45,13 +45,28 @@ import (
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"net/http/httptest"
+	"github.com/uber/aresdb/memstore/list"
+	"errors"
 )
 
 // readDeviceVPSlice reads a vector party from file and also translate it to device vp format:
 // counts, nulls and values will be stored in a continuous memory space.
-func readDeviceVPSlice(factory memstore.TestFactoryT, name string, stream unsafe.Pointer,
+func readDeviceVPSlice(f interface{}, name string, stream unsafe.Pointer,
 	device int) (deviceVectorPartySlice, error) {
-	sourceArchiveVP, err := factory.ReadArchiveVectorParty(name, &sync.RWMutex{})
+	var sourceArchiveVP memCom.ArchiveVectorParty
+	var err error
+	switch f.(type) {
+	case memstore.TestFactoryT:
+		factory := f.(memstore.TestFactoryT)
+		sourceArchiveVP, err = factory.ReadArchiveVectorParty(name, &sync.RWMutex{})
+	case list.TestFactoryT:
+		factory := f.(list.TestFactoryT)
+		factory.RootPath = "../testing/data"
+		sourceArchiveVP, err = factory.ReadArchiveVectorParty(name, &sync.RWMutex{})
+	default:
+		err = errors.New("Unknown TestFactory")
+	}
+
 	if err != nil {
 		return deviceVectorPartySlice{}, err
 	}
@@ -60,6 +75,8 @@ func readDeviceVPSlice(factory memstore.TestFactoryT, name string, stream unsafe
 		0, sourceArchiveVP.GetLength())
 	deviceVPSlice := hostToDeviceColumn(hostVPSlice, device)
 	copyHostToDevice(hostVPSlice, deviceVPSlice, stream, device)
+	// clean host memory
+	sourceArchiveVP.SafeDestruct()
 	return deviceVPSlice, nil
 }
 
@@ -393,6 +410,17 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		inputVector := makeVectorPartySliceInput(column)
 		// uint32(0) corresponds to VectorPartySlice in C.enum_InputVectorType
 		Ω(inputVector.Type).Should(Equal(uint32(0)))
+	})
+
+	ginkgo.It("makeArrayVectorPartySliceInput", func() {
+		values := [64]byte{}
+		column := deviceVectorPartySlice{
+			basePtr:         devicePointer{pointer: unsafe.Pointer(&values[0])},
+			length:          10,
+			valueType:       memCom.ArrayInt16,
+		}
+		inputVector := makeVectorPartySliceInput(column)
+		Ω(inputVector.Type).Should(Equal(uint32(4)))
 	})
 
 	ginkgo.It("makeConstantInput", func() {

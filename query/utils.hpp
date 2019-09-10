@@ -25,6 +25,7 @@
 #include <type_traits>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <utility>
 #include "query/time_series_aggregate.h"
 #ifdef USE_RMM
@@ -96,6 +97,18 @@ struct common_type {
 template<>
 struct common_type<GeoPointT, GeoPointT> {
   typedef GeoPointT type;
+};
+
+// This is used to retrieve iterator value type
+// for non-array data type, will use common type,
+// likely will change later to support different types between left/right
+// for array data type, will use it's own data type
+template <typename A, typename B>
+struct input_iterator_value_type {
+  typedef typename std::conditional<
+      !std::is_pointer<A>::value && !std::is_pointer<B>::value,
+      typename common_type<A, B>::type,
+      A>::type type;
 };
 
 // get_identity_value returns the identity value for the aggregation function.

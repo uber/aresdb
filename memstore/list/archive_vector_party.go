@@ -22,6 +22,7 @@ import (
 	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
+	"math"
 	"os"
 	"sync"
 	"unsafe"
@@ -377,6 +378,50 @@ func (vp *ArchiveVectorParty) SliceByValue(lowerBoundRow, upperBoundRow int, val
 func (vp *ArchiveVectorParty) SliceIndex(lowerBoundRow, upperBoundRow int) (
 	startIndex, endIndex int) {
 	return lowerBoundRow, upperBoundRow
+}
+
+// GetHostVectorPartySlice implements GetHostVectorPartySlice in TransferableVectorParty
+func (vp *ArchiveVectorParty) GetHostVectorPartySlice(startIndex, length int) common.HostVectorPartySlice {
+	if startIndex+length > vp.length {
+		utils.GetLogger().Panic("Required length is over the size of ArrayArchiveVectorParty")
+	}
+
+	offsetStart := unsafe.Pointer(uintptr(vp.offsets.Buffer()) + uintptr(startIndex*8))
+
+	baseAddr := uintptr(vp.values.Buffer())
+	var valueStart int
+	valueBytes := vp.values.Bytes
+
+	for i := startIndex; i < (startIndex+length) && i < vp.length; i++ {
+		// find first entry which has non-zero length array value, which will have valid offset
+		// if not found, then will start from baseAddr
+		offset, count := vp.GetOffsetLength(i)
+		if count > 0 && count != math.MaxUint32 {
+			valueStart = int(offset)
+			break
+		}
+	}
+
+	if startIndex+length < vp.length {
+		for i := startIndex + length; i < vp.length; i++ {
+			// find first entry which has non-zero length array value, which will have valid offset
+			// if not found, then will be the end of value buffer
+			offset, count := vp.GetOffsetLength(i)
+			if count > 0 && count != math.MaxUint32 {
+				valueBytes = int(offset)
+				break
+			}
+		}
+	}
+
+	return common.HostVectorPartySlice{
+		Values:            unsafe.Pointer(baseAddr + uintptr(valueStart)),
+		ValueBytes:        valueBytes - valueStart,
+		ValueOffsetAdjust: valueStart,
+		Length:            length,
+		Offsets:           offsetStart,
+		ValueType:         vp.dataType,
+	}
 }
 
 // Dump is for testing purpose

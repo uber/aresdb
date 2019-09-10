@@ -202,10 +202,15 @@ int FilterContext<FunctorType>::executeRemoveIf(
     LHSIterator lhsIter,
     RHSIterator rhsIter,
     IndexZipIterator indexZipIterator) {
-  typedef typename common_type<
-      typename LHSIterator::value_type::head_type,
-      typename RHSIterator::value_type::head_type>::type InputValueType;
-  BinaryPredicateFunctor<bool, InputValueType> f(functorType);
+
+  typedef typename input_iterator_value_type<
+        typename LHSIterator::value_type::head_type,
+        typename RHSIterator::value_type::head_type>::type InputValueType1;
+  typedef typename input_iterator_value_type<
+        typename RHSIterator::value_type::head_type,
+        typename LHSIterator::value_type::head_type>::type InputValueType2;
+
+  BinaryPredicateFunctor<bool, InputValueType1, InputValueType2> f(functorType);
   RemoveFilter<typename IndexZipIterator::value_type, uint8_t> removeFilter(
       predicateVector);
 

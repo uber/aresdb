@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 	"net"
 	"time"
+	"github.com/uber/aresdb/utils"
 )
 
 const bufSize = 1024 * 1024

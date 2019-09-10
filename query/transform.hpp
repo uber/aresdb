@@ -67,17 +67,22 @@ class TransformContext {
   int run(uint32_t *indexVector,
           LHSIterator lhsIter,
           RHSIterator rhsIter) const {
-    typedef typename common_type<
+    typedef typename input_iterator_value_type<
         typename LHSIterator::value_type::head_type,
-        typename RHSIterator::value_type::head_type>::type InputValueType;
+        typename RHSIterator::value_type::head_type>::type InputValueType1;
+    typedef typename input_iterator_value_type<
+        typename RHSIterator::value_type::head_type,
+        typename LHSIterator::value_type::head_type>::type InputValueType2;
 
     typedef typename OutputIterator::value_type::head_type OutputValueType;
 
-    BinaryFunctor<OutputValueType, InputValueType> f(functorType);
+    BinaryFunctor<OutputValueType,
+        InputValueType1, InputValueType2> f(functorType);
 
     return thrust::transform(GET_EXECUTION_POLICY(cudaStream), lhsIter,
         lhsIter + indexVectorLength, rhsIter, outputIter, f) - outputIter;
   }
+
 
  protected:
   OutputIterator outputIter;

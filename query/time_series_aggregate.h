@@ -102,6 +102,7 @@ enum UnaryFunctorType {
   GetMonthOfYear,
   GetQuarterOfYear,
   GetHLLValue,
+  ArrayLength,
 };
 
 // All supported binary functor types.
@@ -123,6 +124,8 @@ enum BinaryFunctorType {
   BitwiseOr,
   BitwiseXor,
   Floor,
+  ArrayContains,
+  ArrayElementAt,
 };
 
 // RecordID
@@ -231,12 +234,23 @@ typedef struct {
   DefaultValue DefaultValue;
 } ForeignColumnVector;
 
+// ArrayVectorPartySlice stores the slice of Array column
+typedef struct {
+  // OffsetLength pointer point to memory of offset-length vector
+  uint8_t *OffsetLengthVector;
+  // value offset adjustment
+  uint32_t ValueOffsetAdj;
+  enum DataType DataType;
+  uint32_t Length;
+} ArrayVectorPartySlice;
+
 // All supported input vector type.
 enum InputVectorType {
   VectorPartyInput,
   ScratchSpaceInput,
   ConstantInput,
-  ForeignColumnInput
+  ForeignColumnInput,
+  ArrayVectorPartyInput
 };
 
 // InputVector is the vector used as input to transform and filter. Actual
@@ -247,6 +261,7 @@ typedef struct {
     VectorPartySlice VP;
     ScratchSpaceVector ScratchSpace;
     ForeignColumnVector ForeignVP;
+    ArrayVectorPartySlice ArrayVP;
   } Vector;
   enum InputVectorType Type;
 } InputVector;
