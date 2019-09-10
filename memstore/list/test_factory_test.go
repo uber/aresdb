@@ -61,7 +61,7 @@ var _ = ginkgo.Describe("test factory", func() {
 		cmpFunc := common.GetCompareFunc(common.Uint32)
 		var expectedVal uint32 = 1
 		Ω(cmpFunc(reader.Get(0), unsafe.Pointer(&expectedVal))).Should(BeZero())
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 
 		// row 1
 		// 1 null 3
@@ -71,13 +71,13 @@ var _ = ginkgo.Describe("test factory", func() {
 		Ω(reader.GetLength()).Should(Equal(3))
 		expectedVal = 1
 		Ω(cmpFunc(reader.Get(0), unsafe.Pointer(&expectedVal))).Should(BeZero())
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 
-		Ω(reader.IsValid(1)).Should(BeFalse())
+		Ω(reader.IsItemValid(1)).Should(BeFalse())
 
 		expectedVal = 3
 		Ω(cmpFunc(reader.Get(2), unsafe.Pointer(&expectedVal))).Should(BeZero())
-		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(reader.IsItemValid(2)).Should(BeTrue())
 
 		// row 2
 		val, valid = listVP.GetListValue(2)

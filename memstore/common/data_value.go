@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
+	"math"
 )
 
 // NullDataValue is a global data value that stands a null value where the newly added
@@ -31,6 +32,12 @@ var NullDataValue = DataValue{}
 
 // SizeOfGeoPoint is the size of GeoPointGo in memory
 const SizeOfGeoPoint = unsafe.Sizeof(GeoPointGo{})
+// ZeroLengthArrayFlag is the value to represent 0 length array value
+// used in offset part of OffsetLength vector
+// when length part is non-zero value, the offset is real offset in memory
+// when length is 0 and offset is 0, the array value is invalid (by default)
+// when length is 0 and offset is ZeroLengthArrayFlag, this is a 0 length array value
+const ZeroLengthArrayFlag = math.MaxUint32
 
 // CompareFunc represents compare function
 type CompareFunc func(a, b unsafe.Pointer) int
@@ -300,7 +307,7 @@ func (v1 DataValue) ConvertToHumanReadable(dataType DataType) interface{} {
 			arrVal := make([]interface{}, num)
 
 			for i := 0; i < int(num); i++ {
-				if reader.IsValid(i) {
+				if reader.IsItemValid(i) {
 					var dataValue DataValue
 					if reader.itemType == Bool {
 						dataValue = DataValue{
@@ -715,11 +722,18 @@ type ArrayValueReader struct {
 
 // NewArrayValueReader is to create ArrayValueReader to read from upsertbatch, which includes the item number
 func NewArrayValueReader(dataType DataType, value unsafe.Pointer) *ArrayValueReader {
-	length := *((*uint32)(value))
-	return &ArrayValueReader{
-		itemType: GetElementDataType(dataType),
-		value:    unsafe.Pointer(uintptr(value) + 4),
-		length:   int(length),
+	if value == nil || uintptr(value) == 0 {
+		return &ArrayValueReader{
+			itemType: GetElementDataType(dataType),
+			value:    nil,
+			length:   int(0),
+		}
+	} else {
+		return &ArrayValueReader{
+			itemType: GetElementDataType(dataType),
+			value:    unsafe.Pointer(uintptr(value) + 4),
+			length:   int(*((*uint32)(value))),
+		}
 	}
 }
 
@@ -750,8 +764,8 @@ func (reader *ArrayValueReader) Get(index int) unsafe.Pointer {
 	return unsafe.Pointer(uintptr(reader.value) + uintptr(index*DataTypeBytes(reader.itemType)))
 }
 
-// IsValid check if the item in index-th place is valid or not
-func (reader *ArrayValueReader) IsValid(index int) bool {
+// IsItemValid check if the item in index-th place is valid or not
+func (reader *ArrayValueReader) IsItemValid(index int) bool {
 	nilOffset := CalculateListNilOffset(reader.itemType, int(reader.length))
 	nilByte := *(*byte)(unsafe.Pointer(uintptr(reader.value) + uintptr(nilOffset) + uintptr(index/8)))
 	return nilByte&(0x1<<uint8(index%8)) != 0x0

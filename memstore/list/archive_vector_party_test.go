@@ -158,10 +158,10 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(val.Valid).Should(BeTrue())
 		reader := common.NewArrayValueReader(common.Uint32, val.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(11)))
-		Ω(reader.IsValid(1)).Should(BeFalse())
-		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeFalse())
+		Ω(reader.IsItemValid(2)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(13)))
 
 		// row 1
@@ -169,11 +169,11 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(val.Valid).Should(BeTrue())
 		reader = common.NewArrayValueReader(common.Uint32, val.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(21)))
-		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(22)))
-		Ω(reader.IsValid(2)).Should(BeFalse())
+		Ω(reader.IsItemValid(2)).Should(BeFalse())
 
 		// row 2
 		val = vp.GetDataValue(2)
@@ -184,11 +184,11 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(val.Valid).Should(BeTrue())
 		reader = common.NewArrayValueReader(common.Uint32, val.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(41)))
-		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(42)))
-		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(reader.IsItemValid(2)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(43)))
 
 		// save to buffer

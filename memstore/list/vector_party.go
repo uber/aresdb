@@ -38,19 +38,35 @@ type baseVectorParty struct {
 }
 
 // GetOffsetLength returns the <offset, length> pair at ith row.
-func (vp *baseVectorParty) GetOffsetLength(row int) (offset uint32, length uint32) {
+func (vp *baseVectorParty) GetOffsetLength(row int) (offset uint32, length uint32, valid bool) {
 	if vp.offsets == nil || row < 0 || row >= vp.length {
 		return
 	}
 	offset = *(*uint32)(vp.offsets.GetValue(2 * row))
 	length = *(*uint32)(vp.offsets.GetValue(2*row + 1))
+	if length == 0 && offset == 0 {
+		valid = false
+	} else {
+		valid = true
+	}
 	return
 }
 
 // SetOffsetLength update offset/length for nth fow
-func (vp *baseVectorParty) SetOffsetLength(row int, offset, length unsafe.Pointer) {
-	vp.offsets.SetValue(2*row, offset)
-	vp.offsets.SetValue(2*row+1, length)
+func (vp *baseVectorParty) SetOffsetLength(row int, offset, length unsafe.Pointer, valid bool) {
+	if valid {
+		vp.offsets.SetValue(2*row+1, length)
+		if *(*uint32)(length) == 0 {
+			zeroValueOffset := common.ZeroLengthArrayFlag
+			vp.offsets.SetValue(2*row, unsafe.Pointer(&zeroValueOffset))
+		} else {
+			vp.offsets.SetValue(2*row, offset)
+		}
+	} else {
+		var zero uint32 = 0
+		vp.offsets.SetValue(2*row, unsafe.Pointer(&zero))
+		vp.offsets.SetValue(2*row+1, unsafe.Pointer(&zero))
+	}
 }
 
 // GetElemCount return the number of element for value in n-th row
@@ -63,12 +79,8 @@ func (vp *baseVectorParty) GetElemCount(row int) uint32 {
 
 // GetValidity get validity of given offset.
 func (vp *baseVectorParty) GetValidity(row int) bool {
-	offset, length := vp.GetOffsetLength(row)
-	// we'll treat the 0 length of array as null to save space
-	if offset == 0 && length == 0 {
-		return false
-	}
-	return true
+	_, _, valid := vp.GetOffsetLength(row)
+	return valid
 }
 
 // IsList tells whether this vp is list vp. And user can later on cast it to proper interface.
