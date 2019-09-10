@@ -44,11 +44,7 @@ func (vp *baseVectorParty) GetOffsetLength(row int) (offset uint32, length uint3
 	}
 	offset = *(*uint32)(vp.offsets.GetValue(2 * row))
 	length = *(*uint32)(vp.offsets.GetValue(2*row + 1))
-	if length == 0 && offset == 0 {
-		valid = false
-	} else {
-		valid = true
-	}
+	valid = !(length == 0 && offset == 0)
 	return
 }
 

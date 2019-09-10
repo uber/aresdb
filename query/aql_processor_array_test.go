@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"sync"
 	"unsafe"
+	"fmt"
 )
 
 var _ = ginkgo.Describe("aql_processor for array", func() {
@@ -326,6 +327,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 		qc.ReleaseHostResultsBuffers()
 		bs, err := json.Marshal(qc.Results)
 		Ω(err).Should(BeNil())
+		fmt.Printf("result: %+v\n", qc.Results)
 		Ω(bs).Should(MatchJSON(` {
         "headers": [
           "c0",
@@ -346,7 +348,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
           [
             "120",
             "NULL",
-            "0"
+            "NULL"
           ],
           [
             "130",
@@ -371,7 +373,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
           [
             "120",
             "NULL",
-            "0"
+            "NULL"
           ],
           [
             "0",
@@ -396,7 +398,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
           [
             "40",
             "NULL",
-            "0"
+            "NULL"
           ]
         ]
       }`))
