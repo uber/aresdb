@@ -80,6 +80,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 					{Deleted: false, Name: "c1", Type: metaCom.Bool},
 					{Deleted: false, Name: "c2", Type: metaCom.Float32},
 					{Deleted: false, Name: "c3", Type: metaCom.ArrayInt16},
+					{Deleted: false, Name: "c4", Type: metaCom.ArrayUUID},
 				},
 			},
 			ColumnIDs: map[string]int{
@@ -87,9 +88,10 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 				"c1": 1,
 				"c2": 2,
 				"c3": 3,
+				"c4": 4,
 			},
-			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32, memCom.ArrayInt16},
-			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
+			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32, memCom.ArrayInt16, memCom.ArrayUUID},
+			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
 		}, metaStore, diskStore, hostMemoryManager, shardID, options)
 
 		archiveBatch0 = &memstore.ArchiveBatch{
@@ -159,12 +161,16 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 		defer ctx.cleanupBeforeAggregation()
 		var stream unsafe.Pointer
 		testFactory := list.GetFactory()
-		vp, err := readDeviceVPSlice(testFactory, "list/live_vp_uint32", stream, ctx.device)
+		vp1, err := readDeviceVPSlice(testFactory, "list/live_vp_uint32", stream, ctx.device)
 		Ω(err).Should(BeNil())
-		Ω(vp.length).Should(Equal(4))
+		Ω(vp1.length).Should(Equal(4))
+		vp2, err := readDeviceVPSlice(testFactory, "list/live_vp_uuid", stream, ctx.device)
+		Ω(err).Should(BeNil())
+		Ω(vp2.length).Should(Equal(5))
 		// use AfterEach to clean device memory
 		ctx.columns = []deviceVectorPartySlice{
-			vp,
+			vp1,
+			vp2,
 		}
 	})
 
@@ -184,6 +190,47 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 				To:     "1970-01-02",
 			},
 			Filters: []string{"element_at(c3, -1)=143"},
+		}
+		qc.Query = q
+
+		qc.Compile(memStore, topology.NewStaticShardOwner([]int{0}))
+		Ω(qc.Error).Should(BeNil())
+		qc.FindDeviceForQuery(memStore, -1, NewDeviceManager(common.QueryConfig{
+			DeviceMemoryUtilization: 1.0,
+			DeviceChoosingTimeout:   -1,
+		}), 100)
+		Ω(qc.Device).Should(Equal(0))
+		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
+			shard.Users.Add(1)
+		}).Return(shard, nil).Once()
+
+		qc.ProcessQuery(memStore)
+		Ω(qc.Error).Should(BeNil())
+		qc.Postprocess()
+		qc.ReleaseHostResultsBuffers()
+		bs, err := json.Marshal(qc.Results)
+		Ω(err).Should(BeNil())
+		Ω(bs).Should(MatchJSON(` {
+			"120": 2
+		  }`))
+	})
+
+	var _ = ginkgo.It("array element_at should work for uuid", func() {
+		qc := &AQLQueryContext{}
+		q := &queryCom.AQLQuery{
+			Table: table,
+			Dimensions: []queryCom.Dimension{
+				{Expr: "c0", TimeBucketizer: "m", TimeUnit: "second"},
+			},
+			Measures: []queryCom.Measure{
+				{Expr: "count(c1)"},
+			},
+			TimeFilter: queryCom.TimeFilter{
+				Column: "c0",
+				From:   "1970-01-01",
+				To:     "1970-01-02",
+			},
+			Filters: []string{"element_at(c4, -1)=143"},
 		}
 		qc.Query = q
 
