@@ -65,7 +65,7 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 			return time.Now().Add(duration)
 		})
 		// setup server
-		utils.SetCurrentTime(time.Unix(18056 * 86400, 0))
+		utils.SetCurrentTime(time.Unix(18056*86400, 0))
 		testServer = grpc.NewServer()
 		peerServer = NewPeerDataNodeServer(metaStore, diskStore)
 		pb.RegisterPeerDataNodeServer(testServer, peerServer)

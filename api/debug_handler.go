@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/datanode"
 	"net/http"
 	"sort"
 	"strconv"
@@ -44,6 +45,7 @@ type DebugHandler struct {
 	metaStore          metaCom.MetaStore
 	queryHandler       *QueryHandler
 	healthCheckHandler *HealthCheckHandler
+	bootstrapManager datanode.BootstrapManager
 }
 
 // NewDebugHandler returns a new DebugHandler.
@@ -55,6 +57,7 @@ func NewDebugHandler(
 	healthCheckHandler *HealthCheckHandler,
 	shardOwner topology.ShardOwner,
 	enumReader mutatorCom.EnumReader,
+	bootstrapManager datanode.BootstrapManager,
 ) *DebugHandler {
 	return &DebugHandler{
 		namespace:          namespace,
@@ -64,6 +67,7 @@ func NewDebugHandler(
 		metaStore:          metaStore,
 		queryHandler:       queryHandler,
 		healthCheckHandler: healthCheckHandler,
+		bootstrapManager: bootstrapManager,
 	}
 }
 
@@ -91,6 +95,7 @@ func (handler *DebugHandler) Register(router *mux.Router) {
 	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches/{offset}", handler.ReadUpsertBatch).
 		Methods(http.MethodGet)
 	router.HandleFunc("/{table}/{shard}/backfill-manager/upsertbatches/{offset}", handler.ReadBackfillQueueUpsertBatch).Methods(http.MethodGet)
+	router.HandleFunc("/bootstrap/retry", handler.BootstrapRetry).Methods(http.MethodPost)
 }
 
 // ShowShardSet shows the shard set owned by the server
@@ -724,4 +729,11 @@ func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w http.ResponseWriter,
 
 	common.RespondWithJSONObject(w, response)
 	return
+}
+
+// Bootstrap will turn on bootstrap based on the request.
+func (handler *DebugHandler) BootstrapRetry(w http.ResponseWriter, r *http.Request) {
+	go handler.bootstrapManager.Bootstrap()
+
+	common.RespondJSONObjectWithCode(w, http.StatusOK, "Bootstrap retry submitted")
 }
