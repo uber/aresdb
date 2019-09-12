@@ -729,12 +729,11 @@ func NewArrayValueReader(dataType DataType, value unsafe.Pointer) *ArrayValueRea
 			value:    nil,
 			length:   int(0),
 		}
-	} else {
-		return &ArrayValueReader{
-			itemType: GetElementDataType(dataType),
-			value:    unsafe.Pointer(uintptr(value) + 4),
-			length:   int(*((*uint32)(value))),
-		}
+	}
+	return &ArrayValueReader{
+		itemType: GetElementDataType(dataType),
+		value:    unsafe.Pointer(uintptr(value) + 4),
+		length:   int(*((*uint32)(value))),
 	}
 }
 
