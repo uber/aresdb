@@ -19,11 +19,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/uber/aresdb/utils"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
 	"unsafe"
-	"math"
 )
 
 // NullDataValue is a global data value that stands a null value where the newly added
@@ -32,6 +32,7 @@ var NullDataValue = DataValue{}
 
 // SizeOfGeoPoint is the size of GeoPointGo in memory
 const SizeOfGeoPoint = unsafe.Sizeof(GeoPointGo{})
+
 // ZeroLengthArrayFlag is the value to represent 0 length array value
 // used in offset part of OffsetLength vector
 // when length part is non-zero value, the offset is real offset in memory
