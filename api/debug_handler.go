@@ -733,7 +733,12 @@ func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w http.ResponseWriter,
 
 // Bootstrap will turn on bootstrap based on the request.
 func (handler *DebugHandler) BootstrapRetry(w http.ResponseWriter, r *http.Request) {
-	go handler.bootstrapManager.Bootstrap()
+	go func() {
+		err := handler.bootstrapManager.Bootstrap()
+		if err != nil {
+			utils.GetLogger().With("error", err.Error()).Error("error while bootstrapping")
+		}
+	}()
 
 	common.RespondJSONObjectWithCode(w, http.StatusOK, "Bootstrap retry submitted")
 }
