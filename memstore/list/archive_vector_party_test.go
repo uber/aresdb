@@ -277,4 +277,40 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		hostSlice = vp.GetHostVectorPartySlice(1, vp.length-2)
 		Ω(hostSlice).Should(Equal(expectedHostSlice))
 	})
+
+	ginkgo.It("Array archive vector party should work in special cases", func() {
+		// set data
+		vp := NewArchiveVectorParty(10, common.ArrayInt16, 1024, &sync.RWMutex{})
+		vp.Allocate(false)
+		val := common.DataValue{
+			DataType: common.ArrayInt16,
+			OtherVal: nil,
+			Valid: false,
+		}
+		vp.SetDataValue(0, val, common.IgnoreCount)
+
+		var data uint32
+		val = common.DataValue{
+			DataType: common.ArrayInt16,
+			OtherVal: unsafe.Pointer(&data),
+			Valid: true,
+		}
+		vp.SetDataValue(1, val, common.IgnoreCount)
+		// get data
+		val = vp.GetDataValue(0)
+		Ω(val.Valid).Should(BeFalse())
+
+		val = vp.GetDataValue(1)
+		Ω(val.Valid).Should(BeTrue())
+		Ω(uintptr(val.OtherVal)).Should(Equal(uintptr(0)))
+
+		// update same row with different length
+		data = 2
+		val = common.DataValue{
+			DataType: common.ArrayInt16,
+			OtherVal: unsafe.Pointer(&data),
+			Valid: true,
+		}
+		Ω(func() {vp.SetDataValue(1, val, common.IgnoreCount)}).Should(Panic())
+	})
 })
