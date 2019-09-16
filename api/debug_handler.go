@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/uber/aresdb/cluster/topology"
-	"github.com/uber/aresdb/datanode"
 	"net/http"
 	"sort"
 	"strconv"
@@ -45,7 +44,7 @@ type DebugHandler struct {
 	metaStore          metaCom.MetaStore
 	queryHandler       *QueryHandler
 	healthCheckHandler *HealthCheckHandler
-	bootstrapManager datanode.BootstrapManager
+	bootstrapRetryChan chan bool
 }
 
 // NewDebugHandler returns a new DebugHandler.
@@ -57,7 +56,6 @@ func NewDebugHandler(
 	healthCheckHandler *HealthCheckHandler,
 	shardOwner topology.ShardOwner,
 	enumReader mutatorCom.EnumReader,
-	bootstrapManager datanode.BootstrapManager,
 ) *DebugHandler {
 	return &DebugHandler{
 		namespace:          namespace,
@@ -67,7 +65,7 @@ func NewDebugHandler(
 		metaStore:          metaStore,
 		queryHandler:       queryHandler,
 		healthCheckHandler: healthCheckHandler,
-		bootstrapManager: bootstrapManager,
+		bootstrapRetryChan: make(chan bool),
 	}
 }
 
@@ -733,12 +731,11 @@ func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w http.ResponseWriter,
 
 // Bootstrap will turn on bootstrap based on the request.
 func (handler *DebugHandler) BootstrapRetry(w http.ResponseWriter, r *http.Request) {
-	go func() {
-		err := handler.bootstrapManager.Bootstrap()
-		if err != nil {
-			utils.GetLogger().With("error", err.Error()).Error("error while bootstrapping")
-		}
-	}()
+	handler.bootstrapRetryChan <- true
 
 	common.RespondJSONObjectWithCode(w, http.StatusOK, "Bootstrap retry submitted")
+}
+
+func (handler *DebugHandler) GetBootstrapRetryChan() chan bool {
+	return handler.bootstrapRetryChan
 }

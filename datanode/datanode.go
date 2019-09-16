@@ -268,6 +268,18 @@ func (d *dataNode) startDebugServer() {
 
 	d.opts.InstrumentOptions().Logger().Infof("Starting HTTP server on dbg-port %d", d.opts.ServerConfig().DebugPort)
 	d.opts.InstrumentOptions().Logger().Fatal(http.ListenAndServe(fmt.Sprintf(":%d", d.opts.ServerConfig().DebugPort), debugRouter))
+
+	for {
+		select {
+		case <- d.handlers.debugHandler.GetBootstrapRetryChan():
+			go func() {
+				err := d.bootstrapManager.Bootstrap()
+				if err != nil {
+					d.opts.InstrumentOptions().Logger().With("error", err.Error()).Error("error while retry bootstrapping")
+				}
+			}()
+		}
+	}
 }
 
 func (d *dataNode) startTableAdditionWatch() {

@@ -15,40 +15,35 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/aresdb/cluster/topology"
-	"github.com/uber/aresdb/datanode"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"time"
 	"github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
-	bootstrapMocks "github.com/uber/aresdb/datanode/bootstrap/mocks"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/utils"
-	utilsMocks "github.com/uber/aresdb/utils/mocks"
-	"path/filepath"
-	"strconv"
-	"bytes"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/mock"
-	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query"
 	"github.com/uber/aresdb/redolog"
+	"github.com/uber/aresdb/utils"
+	utilsMocks "github.com/uber/aresdb/utils/mocks"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strconv"
 	"sync"
+	"time"
 	"unsafe"
-	aresShard"github.com/uber/aresdb/cluster/shard"
-	m3Shard "github.com/m3db/m3/src/cluster/shard"
-	"github.com/uber/aresdb/datanode/bootstrap"
 )
 
 // convertToAPIError wraps up an error into APIError
@@ -230,36 +225,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 				DeviceChoosingTimeout:   5,
 			})
 
-		mockBootstrapble := &bootstrapMocks.Bootstrapable{}
-
-		host0 := topology.NewHost("instance0", "http://host0:9374")
-		host1 := topology.NewHost("instance1", "http://host1:9374")
-		staticMapOption := topology.NewStaticOptions().
-			SetReplicas(1).
-			SetHostShardSets([]topology.HostShardSet{
-				topology.NewHostShardSet(host0, aresShard.NewShardSet([]m3Shard.Shard{
-					m3Shard.NewShard(0),
-				})),
-				topology.NewHostShardSet(host1, aresShard.NewShardSet([]m3Shard.Shard{
-					m3Shard.NewShard(0),
-				})),
-			}).SetShardSet(aresShard.NewShardSet([]m3Shard.Shard{
-			m3Shard.NewShard(0),
-		}))
-		staticTopology, _ := topology.NewStaticInitializer(staticMapOption).Init()
-		opts := bootstrap.NewOptions()
-
-		mockBootstrapble.On("Bootstrap", mock.Anything, "host1", staticTopology, mock.Anything, opts).Return(nil)
-
-		bootstrapManager := datanode.NewBootstrapManager(
-			"host1",
-			mockBootstrapble,
-			opts,
-			staticTopology,
-		)
-
 		healthCheckHandler := NewHealthCheckHandler()
-		debugHandler = NewDebugHandler("", memStore, mockMetaStore, queryHandler, healthCheckHandler, topology.NewStaticShardOwner([]int{0}), nil, bootstrapManager)
+		debugHandler = NewDebugHandler("", memStore, mockMetaStore, queryHandler, healthCheckHandler, topology.NewStaticShardOwner([]int{0}), nil)
 		testRouter := mux.NewRouter()
 		debugHandler.Register(testRouter.PathPrefix("/debug").Subrouter())
 		testServer = httptest.NewUnstartedServer(testRouter)
