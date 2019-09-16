@@ -217,6 +217,8 @@ func (d *dataNode) Open() error {
 	go d.startAnalyzingShardAvailability()
 	// 9. start analyzing server readiness
 	go d.startAnalyzingServerReadiness()
+	// 10. start bootstrap retry watch
+	go d.startBootstrapRetryWatch()
 
 	return nil
 }
@@ -268,18 +270,6 @@ func (d *dataNode) startDebugServer() {
 
 	d.opts.InstrumentOptions().Logger().Infof("Starting HTTP server on dbg-port %d", d.opts.ServerConfig().DebugPort)
 	d.opts.InstrumentOptions().Logger().Fatal(http.ListenAndServe(fmt.Sprintf(":%d", d.opts.ServerConfig().DebugPort), debugRouter))
-
-	for {
-		select {
-		case <- d.handlers.debugHandler.GetBootstrapRetryChan():
-			go func() {
-				err := d.bootstrapManager.Bootstrap()
-				if err != nil {
-					d.opts.InstrumentOptions().Logger().With("error", err.Error()).Error("error while retry bootstrapping")
-				}
-			}()
-		}
-	}
 }
 
 func (d *dataNode) startTableAdditionWatch() {
@@ -728,4 +718,19 @@ func mixedHandler(grpcServer *grpc.Server, httpHandler http.Handler) http.Handle
 			httpHandler.ServeHTTP(w, r)
 		}
 	})
+}
+
+func (d *dataNode) startBootstrapRetryWatch() {
+	for {
+		select {
+		case <-d.handlers.debugHandler.GetBootstrapRetryChan():
+			go func() {
+				err := d.bootstrapManager.Bootstrap()
+				if err != nil {
+					d.opts.InstrumentOptions().Logger().With("error", err.Error()).Error("error while retry bootstrapping")
+				}
+			}()
+		default:
+		}
+	}
 }
