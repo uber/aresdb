@@ -31,7 +31,7 @@ type Options struct {
 // NewOptions create new options instance
 func NewOptions(bootstrapToken common.BootStrapToken, redoLogMaster *redolog.RedoLogManagerMaster, setters ...Option) Options {
 	opts := Options{
-		numShards: 1,
+		numShards:      1,
 		bootstrapToken: bootstrapToken,
 		redoLogMaster:  redoLogMaster,
 	}
@@ -47,4 +47,3 @@ func WithNumShards(numShards int) Option {
 		o.numShards = numShards
 	}
 }
-

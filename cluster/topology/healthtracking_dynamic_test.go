@@ -86,7 +86,7 @@ var _ = ginkgo.Describe("health tracking dynamic topology", func() {
 		}
 
 		markFunc := func(h bool) {
-			for i:=0; i<10; i++ {
+			for i := 0; i < 10; i++ {
 				if h {
 					topo.MarkHostHealthy(host2)
 				} else {
@@ -95,8 +95,8 @@ var _ = ginkgo.Describe("health tracking dynamic topology", func() {
 			}
 		}
 
-		accessFun := func(){
-			for i:=0; i<10; i++ {
+		accessFun := func() {
+			for i := 0; i < 10; i++ {
 				m := topo.Get()
 				hosts := m.Hosts()
 				for _, host := range hosts {

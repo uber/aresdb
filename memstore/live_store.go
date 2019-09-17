@@ -112,14 +112,14 @@ func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
 		utils.GetLogger().Fatal(err)
 	}
 	ls := &LiveStore{
-		BatchSize:         batchSize,
-		Batches:           make(map[int32]*LiveBatch),
-		tableSchema:       schema,
-		LastReadRecord:    common.RecordID{BatchID: BaseBatchID, Index: 0},
-		NextWriteRecord:   common.RecordID{BatchID: BaseBatchID, Index: 0},
-		PrimaryKey:        NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable,
+		BatchSize:       batchSize,
+		Batches:         make(map[int32]*LiveBatch),
+		tableSchema:     schema,
+		LastReadRecord:  common.RecordID{BatchID: BaseBatchID, Index: 0},
+		NextWriteRecord: common.RecordID{BatchID: BaseBatchID, Index: 0},
+		PrimaryKey: NewPrimaryKey(schema.PrimaryKeyBytes, schema.Schema.IsFactTable,
 			// initial primary key buckets should consider number of shards
-			schema.Schema.Config.InitialPrimaryKeyNumBuckets / shard.options.numShards,
+			schema.Schema.Config.InitialPrimaryKeyNumBuckets/shard.options.numShards,
 			shard.HostMemoryManager),
 		RedoLogManager:    redoLogManager,
 		HostMemoryManager: shard.HostMemoryManager,
@@ -128,7 +128,7 @@ func NewLiveStore(batchSize int, shard *TableShard) *LiveStore {
 	if schema.Schema.IsFactTable {
 		ls.BackfillManager = NewBackfillManager(schema.Schema.Name, shard.ShardID, BackfillConfig{
 			// MaxBufferSize should consider total number of shards
-			MaxBufferSize: tableCfg.BackfillMaxBufferSize / int64(shard.options.numShards),
+			MaxBufferSize:            tableCfg.BackfillMaxBufferSize / int64(shard.options.numShards),
 			BackfillThresholdInBytes: tableCfg.BackfillThresholdInBytes,
 		})
 		// reportBatch memory usage of backfill max buffer size.
