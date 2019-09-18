@@ -407,6 +407,15 @@ func ConvertToFloat64(value interface{}) (float64, bool) {
 	return float64(0), false
 }
 
+func UUIDFromString(str string) ([2]uint64, error) {
+	u, err := uuid.FromString(str)
+	if err != nil {
+		return [2]uint64{}, err
+	}
+	bytes := u.Bytes()
+	return *(*[2]uint64)(unsafe.Pointer(&bytes[0])), nil
+}
+
 // ConvertToUUID convert input into uuid type ([2]uint64) at best effort
 func ConvertToUUID(value interface{}) ([2]uint64, bool) {
 	switch v := value.(type) {
@@ -418,12 +427,11 @@ func ConvertToUUID(value interface{}) ([2]uint64, bool) {
 		}
 		return [2]uint64{}, false
 	case string:
-		u, err := uuid.FromString(string(v))
+		val, err := UUIDFromString(string(v))
 		if err != nil {
 			return [2]uint64{}, false
 		}
-		bytes := u.Bytes()
-		return *(*[2]uint64)(unsafe.Pointer(&bytes[0])), true
+		return val, true
 	}
 
 	return [2]uint64{}, false

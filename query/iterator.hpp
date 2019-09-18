@@ -565,7 +565,14 @@ inline typename ConstantIterator<UUIDT>::type make_constant_iterator(
   return thrust::make_constant_iterator(
       thrust::make_tuple<UUIDT, bool>(defaultValue, defaultNull));
 }
-
+/*
+template <>
+inline typename ConstantIterator<GeoPointT>::type make_constant_iterator(
+    GeoPointT defaultValue, bool defaultNull) {
+  return thrust::make_constant_iterator(
+      thrust::make_tuple<GeoPointT, bool>(defaultValue, defaultNull));
+}
+*/
 using GeoSimpleIterator = thrust::constant_iterator<thrust::tuple<GeoPointT,
                                                                   bool>>;
 

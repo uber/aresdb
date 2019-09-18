@@ -774,6 +774,14 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 						Val: val,
 					}
 				}
+			} else if rhs != nil && lhs.DataType == memCom.UUID {
+				if val, err := memCom.UUIDFromString(rhs.Val); err != nil {
+					qc.Error = err
+				} else {
+					e.RHS = &expr.UUIDLiteral{
+						Val: val,
+					}
+				}
 			}
 		case expr.IN:
 			return qc.expandINop(e)
@@ -1105,6 +1113,20 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 						break
 					} else {
 						literalExpr = &expr.GeopointLiteral{
+							Val: val,
+						}
+					}
+				case memCom.UUID:
+					strLiteral, ok := secondArg.(*expr.StringLiteral)
+					if !ok {
+						qc.Error = utils.StackError(nil, "array function %s needs uuid string literal", e.Name)
+						break
+					}
+					if val, err := memCom.UUIDFromString(strLiteral.Val); err != nil {
+						qc.Error = err
+						break
+					} else {
+						literalExpr = &expr.UUIDLiteral{
 							Val: val,
 						}
 					}

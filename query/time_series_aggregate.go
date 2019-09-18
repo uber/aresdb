@@ -244,6 +244,10 @@ func makeConstantInput(val interface{}, isValid bool) C.InputVector {
 		geopoint := val.(*expr.GeopointLiteral).Val
 		*(*C.GeoPointT)(unsafe.Pointer(&constVector.Value)) = *(*C.GeoPointT)(unsafe.Pointer(&geopoint[0]))
 		constVector.DataType = C.ConstGeoPoint
+	case *expr.UUIDLiteral:
+		uuidVal := val.(*expr.UUIDLiteral).Val
+		*(*C.UUIDT)(unsafe.Pointer(&constVector.Value)) = *(*C.UUIDT)(unsafe.Pointer(&uuidVal[0]))
+		constVector.DataType = C.ConstUUID
 	case *expr.NumberLiteral:
 		t := val.(*expr.NumberLiteral)
 		if t.Type() == expr.Float {

@@ -26,7 +26,6 @@ import (
 	"strings"
 
 	"sync"
-	"fmt"
 )
 
 // TestFactoryT creates memstore test objects from text file
@@ -173,7 +172,6 @@ func (t TestFactoryBase) readVectorPartyFromFile(path string, forLiveVP bool) (c
 		return nil, err
 	}
 
-	fmt.Printf("file content: %s\n", string(fileContent))
 	rvp := &RawVectorParty{}
 	if err = yaml.Unmarshal(fileContent, &rvp); err != nil {
 		return nil, err

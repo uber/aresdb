@@ -387,6 +387,10 @@ class InputVectorBinderBase {
           BIND_ARRAY_COLUMN_INPUT(float_t)
         case Int64:
           BIND_ARRAY_COLUMN_INPUT(int64_t)
+        case UUID:
+          BIND_ARRAY_COLUMN_INPUT(UUIDT)
+        case GeoPoint:
+          BIND_ARRAY_COLUMN_INPUT(GeoPointT)
         default:
           throw std::invalid_argument(
               "Unsupported data type for ArrayVectorPartyInput: " +
@@ -429,10 +433,15 @@ class InputVectorBinderBase {
   }
 
   // Array type only support UnaryTransform or first argument in BinaryTransform
+  // for non-uuid/non-geopoint type
   template <typename ArrayColumnIterator>
   typename std::enable_if<
       std::is_pointer<
-          typename ArrayColumnIterator::value_type::head_type>::value,
+          typename ArrayColumnIterator::value_type::head_type>::value &&
+      !std::is_same<typename ArrayColumnIterator::value_type::head_type,
+                             GeoPointT*>::value &&
+      !std::is_same<typename ArrayColumnIterator::value_type::head_type,
+                                   UUIDT*>::value,
       int>::type
   bind(ArrayColumnIterator arrayColumnIter) {
     InputVectorBinderBase<Context, NumVectors, NumUnboundIterators - 1>
@@ -451,6 +460,72 @@ class InputVectorBinderBase {
         BIND_ARRAY_CONSTANT_INPUT(constant.Value.IntVal, constant.IsValid)
       } else if (constant.DataType == ConstFloat) {
         BIND_ARRAY_CONSTANT_INPUT(constant.Value.FloatVal, constant.IsValid)
+      }
+    }
+    throw std::invalid_argument(
+        "Unsupported data type " + std::to_string(__LINE__)
+            + "when value type of first input iterator is ArrayVP Iterator");
+  }
+
+  // Array type only support UnaryTransform or first argument in BinaryTransform
+  // specialized for uuid
+  template <typename ArrayColumnIterator>
+  typename std::enable_if<
+      std::is_pointer<
+          typename ArrayColumnIterator::value_type::head_type>::value &&
+      std::is_same<typename ArrayColumnIterator::value_type::head_type,
+                             UUIDT*>::value,
+      int>::type
+  bind(ArrayColumnIterator arrayColumnIter) {
+    InputVectorBinderBase<Context, NumVectors, NumUnboundIterators - 1>
+        nextBinder(context, inputVectors, indexVector, baseCounts, startCount);
+
+    InputVector input = inputVectors[NumVectors - NumUnboundIterators];
+    if (input.Type == ConstantInput) {
+        #define BIND_ARRAY_CONSTANT_INPUT(defaultValue, isValid) \
+          return nextBinder.bind( \
+                arrayColumnIter, \
+                make_constant_iterator( \
+                    defaultValue, isValid));
+
+      ConstantVector constant = input.Vector.Constant;
+      if (constant.DataType == ConstInt) {
+        BIND_ARRAY_CONSTANT_INPUT(constant.Value.IntVal, constant.IsValid)
+      } else if (constant.DataType == ConstUUID) {
+        BIND_ARRAY_CONSTANT_INPUT(constant.Value.UUIDVal, constant.IsValid)
+      }
+    }
+    throw std::invalid_argument(
+        "Unsupported data type " + std::to_string(__LINE__)
+            + "when value type of first input iterator is ArrayVP Iterator");
+  }
+
+  // Array type only support UnaryTransform or first argument in BinaryTransform
+  // specialized for geopoint
+  template <typename ArrayColumnIterator>
+  typename std::enable_if<
+      std::is_pointer<
+          typename ArrayColumnIterator::value_type::head_type>::value &&
+      std::is_same<typename ArrayColumnIterator::value_type::head_type,
+                             GeoPointT*>::value,
+      int>::type
+  bind(ArrayColumnIterator arrayColumnIter) {
+    InputVectorBinderBase<Context, NumVectors, NumUnboundIterators - 1>
+        nextBinder(context, inputVectors, indexVector, baseCounts, startCount);
+
+    InputVector input = inputVectors[NumVectors - NumUnboundIterators];
+    if (input.Type == ConstantInput) {
+        #define BIND_ARRAY_CONSTANT_INPUT(defaultValue, isValid) \
+          return nextBinder.bind( \
+                arrayColumnIter, \
+                make_constant_iterator( \
+                    defaultValue, isValid));
+
+      ConstantVector constant = input.Vector.Constant;
+      if (constant.DataType == ConstInt) {
+        BIND_ARRAY_CONSTANT_INPUT(constant.Value.IntVal, constant.IsValid)
+      } else if (constant.DataType == ConstGeoPoint) {
+        BIND_ARRAY_CONSTANT_INPUT(constant.Value.GeoPointVal, constant.IsValid)
       }
     }
     throw std::invalid_argument(

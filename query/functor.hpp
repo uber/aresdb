@@ -556,6 +556,27 @@ struct ArrayContainsFunctor {
   }
 };
 
+// common primitive type equals comparison function
+template<typename T1, typename T2>
+__host__ __device__
+inline bool equals(const T1& o1, const T2& o2) {
+    return o1 == o2;
+}
+
+// specialized equals function for UUIDT
+template<>
+__host__ __device__
+inline bool equals<UUIDT, UUIDT>(const UUIDT& o1, const UUIDT& o2) {
+    return o1.p1 == o2.p1 && o1.p2 == o2.p2;
+}
+
+// specialized equals function for GeoPointT
+template<>
+__host__ __device__
+inline bool equals<GeoPointT, GeoPointT>(const GeoPointT& o1, const GeoPointT& o2) {
+    return o1.Lat == o2.Lat && o1.Long == o2.Long;
+}
+
 // specialized ArrayContainsFunctor while the return type is boolean
 // the Input and Output type may not always be the same
 // the aql compiler will convert NumberLitereral to uint32_t or float_t
@@ -589,7 +610,7 @@ struct ArrayContainsFunctor<bool, I1, I2> {
                             (sizeof(input_type)*8*len + 7) / 8;
     for (int i = 0; i < len; i++) {
       bool elemValid = (*(validStartP + i / 8) & (0x1 << (i%8))) != 0x0;
-      if (elemValid && val == *(valP + i)) {
+      if (elemValid && equals(val, *(valP + i))) {
         return thrust::make_tuple<bool, bool>(true, true);
       }
     }

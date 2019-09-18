@@ -230,7 +230,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 				From:   "1970-01-01",
 				To:     "1970-01-02",
 			},
-			Filters: []string{"element_at(c4, -1)=143"},
+			Filters: []string{"element_at(c4, -1)=\"14000000-0000-0000-0300-000000000000\""},
 		}
 		qc.Query = q
 

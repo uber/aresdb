@@ -83,6 +83,7 @@ enum ConstDataType {
   ConstInt,
   ConstFloat,
   ConstGeoPoint,
+  ConstUUID,
 };
 
 // All supported unary functor types.
@@ -211,6 +212,7 @@ typedef struct {
     int32_t IntVal;
     float FloatVal;
     GeoPointT GeoPointVal;
+    UUIDT UUIDVal;
   } Value;
   // Whether this values is valid.
   bool IsValid;

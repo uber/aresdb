@@ -53,6 +53,30 @@ class TransformContext {
     return cudaStream;
   }
 
+  template<typename LHSIterator, typename RHSIterator>
+  struct supported_combination {
+    static constexpr bool value =
+    ((std::is_same<typename LHSIterator::value_type::head_type, UUIDT*>::value &&
+        (std::is_same<typename RHSIterator::value_type::head_type, UUIDT>::value ||
+            std::is_same<typename RHSIterator::value_type::head_type, uint32_t>::value) &&
+        (std::is_same<typename OutputIterator::value_type::head_type, UUIDT>::value ||
+            std::is_same<typename OutputIterator::value_type::head_type, bool>::value ||
+            std::is_same<typename OutputIterator::value_type::head_type, uint32_t>::value)) ||
+    (std::is_same<typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
+        (std::is_same<typename RHSIterator::value_type::head_type, GeoPointT>::value ||
+            std::is_same<typename RHSIterator::value_type::head_type, uint32_t>::value) &&
+        (std::is_same<typename OutputIterator::value_type::head_type, bool>::value ||
+            std::is_same<typename OutputIterator::value_type::head_type, uint32_t>::value ||
+            std::is_same<typename OutputIterator::value_type::head_type, GeoPointT>::value)) ||
+    (!std::is_same<typename LHSIterator::value_type::head_type, UUIDT*>::value &&
+        !std::is_same<typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
+        !std::is_same<typename RHSIterator::value_type::head_type, UUIDT*>::value &&
+        !std::is_same<typename RHSIterator::value_type::head_type, GeoPointT*>::value &&
+        !std::is_same<typename OutputIterator::value_type::head_type, UUIDT>::value &&
+        !std::is_same<typename OutputIterator::value_type::head_type, GeoPointT>::value));
+  };
+
+  // unary transformation
   template<typename InputIterator>
   int run(uint32_t *indexVector, InputIterator inputIter) const {
     typedef typename InputIterator::value_type::head_type InputValueType;
@@ -63,8 +87,10 @@ class TransformContext {
         inputIter + indexVectorLength, outputIter, f) - outputIter;
   }
 
+  // valid combination for binary transformation
   template<typename LHSIterator, typename RHSIterator>
-  int run(uint32_t *indexVector,
+  typename std::enable_if<supported_combination<LHSIterator, RHSIterator>::value, int>::type
+  run(uint32_t *indexVector,
           LHSIterator lhsIter,
           RHSIterator rhsIter) const {
     typedef typename input_iterator_value_type<
@@ -83,6 +109,16 @@ class TransformContext {
         lhsIter + indexVectorLength, rhsIter, outputIter, f) - outputIter;
   }
 
+  // invalid combination
+  template<typename LHSIterator, typename RHSIterator>
+  typename std::enable_if<!supported_combination<LHSIterator, RHSIterator>::value, int>::type
+  run(uint32_t *indexVector,
+          LHSIterator lhsIter,
+          RHSIterator rhsIter) const {
+      throw std::invalid_argument(
+              "Unsupported data type combination" + std::to_string(__LINE__)
+                  + "in tansform context");
+  }
 
  protected:
   OutputIterator outputIter;
