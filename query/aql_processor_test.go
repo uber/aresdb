@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"errors"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -37,6 +38,7 @@ import (
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
+	"github.com/uber/aresdb/memstore/list"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	metaMocks "github.com/uber/aresdb/metastore/mocks"
@@ -45,8 +47,6 @@ import (
 	"github.com/uber/aresdb/redolog"
 	"github.com/uber/aresdb/utils"
 	"net/http/httptest"
-	"github.com/uber/aresdb/memstore/list"
-	"errors"
 )
 
 // readDeviceVPSlice reads a vector party from file and also translate it to device vp format:
@@ -415,9 +415,9 @@ var _ = ginkgo.Describe("aql_processor", func() {
 	ginkgo.It("makeArrayVectorPartySliceInput", func() {
 		values := [64]byte{}
 		column := deviceVectorPartySlice{
-			basePtr:         devicePointer{pointer: unsafe.Pointer(&values[0])},
-			length:          10,
-			valueType:       memCom.ArrayInt16,
+			basePtr:   devicePointer{pointer: unsafe.Pointer(&values[0])},
+			length:    10,
+			valueType: memCom.ArrayInt16,
 		}
 		inputVector := makeVectorPartySliceInput(column)
 		Ω(inputVector.Type).Should(Equal(uint32(4)))

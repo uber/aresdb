@@ -75,9 +75,9 @@ type BackfillConfig struct {
 // NewBackfillManager creates a new BackfillManager instance.
 func NewBackfillManager(tableName string, shard int, config BackfillConfig) *BackfillManager {
 	backfillManager := BackfillManager{
-		TableName:                tableName,
-		Shard:                    shard,
-		BackfillConfig: 		  config,
+		TableName:      tableName,
+		Shard:          shard,
+		BackfillConfig: config,
 	}
 	backfillManager.AppendCond = sync.NewCond(&backfillManager.RWMutex)
 	return &backfillManager

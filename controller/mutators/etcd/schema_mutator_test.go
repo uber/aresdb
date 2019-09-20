@@ -78,8 +78,8 @@ func TestSchemaMutator(t *testing.T) {
 		Name:    "test3",
 		Columns: []metaCom.Column{
 			{
-				Name: "col1",
-				Type: "SmallEnum",
+				Name:         "col1",
+				Type:         "SmallEnum",
 				DefaultValue: &defaultValue,
 			},
 		},
