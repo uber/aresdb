@@ -136,6 +136,10 @@ class InputVectorBinderBase {
           BIND_SCRATCH_SPACE_INPUT(uint32_t)
         case Float32:
           BIND_SCRATCH_SPACE_INPUT(float_t)
+        case UUID:
+          BIND_SCRATCH_SPACE_INPUT(UUIDT)
+        case GeoPoint:
+          BIND_SCRATCH_SPACE_INPUT(GeoPointT)
         default:
           throw std::invalid_argument(
               "Unsupported data type for ScratchSpaceInput");
@@ -280,6 +284,27 @@ class InputVectorBinderBase {
             + "when value type of first input iterator is GeoPoint");
   }
 
+  template<typename UUIDIterator>
+  int bindUUID(UUIDIterator uuidIter) {
+    InputVectorBinderBase<Context, NumVectors, NumUnboundIterators - 1>
+        nextBinder(context, inputVectors, indexVector, baseCounts, startCount);
+
+    InputVector input = inputVectors[NumVectors - NumUnboundIterators];
+    if (input.Type == ConstantInput) {
+      ConstantVector constant = input.Vector.Constant;
+      if (constant.DataType == ConstUUID) {
+        return nextBinder.bind(
+            uuidIter,
+            thrust::make_constant_iterator(
+                thrust::make_tuple<UUIDT, bool>(
+                    constant.Value.UUIDVal, constant.IsValid)));
+      }
+    }
+    throw std::invalid_argument(
+        "Unsupported data type " + std::to_string(__LINE__)
+            + "when value type of first input iterator is UUID");
+  }
+
  public:
   template<typename ...InputIterators>
   int bind(InputIterators... boundInputIterators) {
@@ -400,17 +425,6 @@ class InputVectorBinderBase {
     return bindGeneric();
   }
 
-  // UUID data type is only supported in UnaryTransform
-  template <typename UUIDIterator>
-  typename std::enable_if<
-      std::is_same<typename UUIDIterator::value_type::head_type, UUIDT>::value,
-      int>::type
-  bind(UUIDIterator uuidIter) {
-    throw std::invalid_argument(
-        "UUID data type is only supported in UnaryTransform" +
-        std::to_string(__LINE__));
-  }
-
   // Int64 data type is only supported in UnaryTransform
   template <typename Int64Iterator>
   typename std::enable_if<
@@ -430,6 +444,15 @@ class InputVectorBinderBase {
                    GeoPointT>::value, int>::type bind(
       GeoIterator geoIter) {
     return bindGeoPoint(geoIter);
+  }
+
+  // Special handling if the first input iter is a UUID iter.
+  template<typename UUIDIterator>
+  typename std::enable_if<
+      std::is_same<typename UUIDIterator::value_type::head_type,
+                   UUIDT>::value, int>::type bind(
+      UUIDIterator uuidIter) {
+    return bindUUID(uuidIter);
   }
 
   // Array type only support UnaryTransform or first argument in BinaryTransform
@@ -525,6 +548,8 @@ class InputVectorBinderBase {
       if (constant.DataType == ConstInt) {
         BIND_ARRAY_CONSTANT_INPUT(constant.Value.IntVal, constant.IsValid)
       } else if (constant.DataType == ConstGeoPoint) {
+        BIND_ARRAY_CONSTANT_INPUT(constant.Value.GeoPointVal, constant.IsValid)
+      } else if (constant.DataType == ConstUUID) {
         BIND_ARRAY_CONSTANT_INPUT(constant.Value.GeoPointVal, constant.IsValid)
       }
     }

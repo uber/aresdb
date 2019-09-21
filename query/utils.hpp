@@ -99,6 +99,37 @@ struct common_type<GeoPointT, GeoPointT> {
   typedef GeoPointT type;
 };
 
+// Special common_type for UUIDT
+template<>
+struct common_type<UUIDT, UUIDT> {
+  typedef UUIDT type;
+};
+
+template<typename LHSIterator, typename RHSIterator>
+struct supported_binary_combination {
+  static constexpr bool value =
+  ((std::is_same<typename LHSIterator::value_type::head_type, UUIDT*>::value &&
+    (std::is_same<typename RHSIterator::value_type::head_type, UUIDT>::value ||
+        std::is_same<typename RHSIterator::value_type::head_type, int32_t>::value ||
+        std::is_same<typename RHSIterator::value_type::head_type, int>::value)) ||
+  (std::is_same<typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
+    (std::is_same<typename RHSIterator::value_type::head_type, GeoPointT>::value ||
+        std::is_same<typename RHSIterator::value_type::head_type, int32_t>::value ||
+        std::is_same<typename RHSIterator::value_type::head_type, int>::value)) ||
+  (std::is_same<typename LHSIterator::value_type::head_type, GeoPointT>::value &&
+      std::is_same<typename RHSIterator::value_type::head_type, GeoPointT>::value) ||
+  (std::is_same<typename LHSIterator::value_type::head_type, UUIDT>::value &&
+      std::is_same<typename RHSIterator::value_type::head_type, UUIDT>::value) ||
+  (!std::is_same<typename LHSIterator::value_type::head_type, UUIDT*>::value &&
+    !std::is_same<typename LHSIterator::value_type::head_type, UUIDT>::value &&
+    !std::is_same<typename LHSIterator::value_type::head_type, GeoPointT>::value &&
+    !std::is_same<typename RHSIterator::value_type::head_type, UUIDT>::value &&
+    !std::is_same<typename RHSIterator::value_type::head_type, GeoPointT>::value &&
+    !std::is_same<typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
+    !std::is_same<typename RHSIterator::value_type::head_type, UUIDT*>::value &&
+    !std::is_same<typename RHSIterator::value_type::head_type, GeoPointT*>::value));
+};
+
 // This is used to retrieve iterator value type
 // for non-array data type, will use common type,
 // likely will change later to support different types between left/right
@@ -122,12 +153,12 @@ __host__ __device__ Value get_identity_value(AggregateFunction aggFunc) {
     case AGGR_SUM_UNSIGNED:
     case AGGR_SUM_SIGNED:
     case AGGR_SUM_FLOAT:return 0;
-    case AGGR_MIN_UNSIGNED:return UINT32_MAX;
-    case AGGR_MIN_SIGNED:return INT32_MAX;
-    case AGGR_MIN_FLOAT:return FLT_MAX;
+    case AGGR_MIN_UNSIGNED:return static_cast<Value>(UINT32_MAX);
+    case AGGR_MIN_SIGNED:return static_cast<Value>(INT32_MAX);
+    case AGGR_MIN_FLOAT:return static_cast<Value>(FLT_MAX);
     case AGGR_MAX_UNSIGNED:return 0;
-    case AGGR_MAX_SIGNED:return INT32_MIN;
-    case AGGR_MAX_FLOAT:return FLT_MIN;
+    case AGGR_MAX_SIGNED:return static_cast<Value>(INT32_MIN);
+    case AGGR_MAX_FLOAT:return static_cast<Value>(FLT_MIN);
     default:return 0;
   }
 }

@@ -766,7 +766,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 				e.RHS = expr.Cast(e.RHS, highestType)
 			}
 
-			if rhs != nil && lhs.DataType == memCom.GeoPoint {
+			if rhs != nil && e.LHS.Type() == expr.GeoPoint {
 				if val, err := memCom.GeoPointFromString(rhs.Val); err != nil {
 					qc.Error = err
 				} else {
@@ -774,7 +774,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 						Val: val,
 					}
 				}
-			} else if rhs != nil && lhs.DataType == memCom.UUID {
+			} else if rhs != nil && e.LHS.Type() == expr.UUID {
 				if val, err := memCom.UUIDFromString(rhs.Val); err != nil {
 					qc.Error = err
 				} else {

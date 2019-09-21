@@ -188,6 +188,7 @@ add_library(algorithm SHARED
         query/hll.cu
         query/concurrent_unordered_map.hpp
         query/iterator.hpp
+        query/iterator.cu
         query/memory.cu
         query/memory.hpp
         query/measure_transform.cu
