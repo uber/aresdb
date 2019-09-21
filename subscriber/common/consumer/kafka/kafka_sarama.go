@@ -167,7 +167,7 @@ func (c *KafkaConsumer) CommitUpTo(msg consumer.Message) error {
 		if concreteMsg.session != nil {
 			concreteMsg.session.MarkMessage(concreteMsg.ConsumerMessage, "")
 		} else {
-			fmt.Errorf("Session is nil, msg:%v", msg)
+			return fmt.Errorf("Session is nil, msg:%v", msg)
 		}
 	} else {
 		return fmt.Errorf("Failed to convert KafkaMessage, msg:%v", msg)

@@ -16,6 +16,7 @@ package job
 
 import (
 	"encoding/json"
+	"github.com/Shopify/sarama"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -23,8 +24,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -32,7 +31,7 @@ import (
 	"github.com/uber/aresdb/client/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	kafka2 "github.com/uber/aresdb/subscriber/common/consumer/kafka"
+	"github.com/uber/aresdb/subscriber/common/consumer/kafka"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/sink"
@@ -104,33 +103,24 @@ var _ = Describe("streaming_processor", func() {
 		JobConfig:     jobConfig,
 	}
 
-	topic := "topic"
-	msg := &kafka2.KafkaMessage{
-		Message: &kafka.Message{
-			TopicPartition: kafka.TopicPartition{
-				Topic:     &topic,
-				Partition: int32(0),
-				Offset:    0,
-			},
-			Value: []byte(`{"project": "ares-subscriber"}`),
-			Key:   []byte("key"),
+	msg := &kafka.KafkaMessage{
+		ConsumerMessage: &sarama.ConsumerMessage{
+			Topic:     "topic",
+			Partition: 0,
+			Offset:    0,
+			Value:     []byte(`{"project": "ares-subscriber"}`),
+			Key:       []byte("key"),
 		},
-		Consumer:    nil,
-		ClusterName: "kafka-cluster1",
 	}
 
-	errMsg := &kafka2.KafkaMessage{
-		Message: &kafka.Message{
-			TopicPartition: kafka.TopicPartition{
-				Topic:     &topic,
-				Partition: int32(0),
-				Offset:    0,
-			},
-			Value: []byte(`{project: ares-subscriber}`),
-			Key:   []byte("key"),
+	errMsg := &kafka.KafkaMessage{
+		ConsumerMessage: &sarama.ConsumerMessage{
+			Topic:     "topic",
+			Partition: 0,
+			Offset:    0,
+			Value:     []byte(`{project: ares-subscriber}`),
+			Key:       []byte("key"),
 		},
-		Consumer:    nil,
-		ClusterName: "kafka-cluster1",
 	}
 
 	var address string
@@ -236,7 +226,7 @@ var _ = Describe("streaming_processor", func() {
 		testServer.Close()
 	})
 	It("NewStreamingProcessor", func() {
-		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka2.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
@@ -248,7 +238,7 @@ var _ = Describe("streaming_processor", func() {
 		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
 			"dev01": sinkConfig,
 		}
-		p, err = NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka2.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err = NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).ShouldNot(BeNil())
 		Ω(p.(*StreamingProcessor).highLevelConsumer).ShouldNot(BeNil())
@@ -318,7 +308,7 @@ var _ = Describe("streaming_processor", func() {
 
 		go p.Run()
 		p.Restart()
-		p.(*StreamingProcessor).highLevelConsumer.(*kafka2.KafkaConsumer).Close()
+		p.(*StreamingProcessor).highLevelConsumer.(*kafka.KafkaConsumer).Close()
 
 		p.(*StreamingProcessor).reInitialize()
 		go p.Run()

@@ -45,10 +45,10 @@ type KafkaConfig struct {
 	FailureHandler      FailureHandler `json:"failureHandler,omitempty"`
 
 	// sarama config
-	KafkaBroker      string `json:"kafkaBroker" yaml:"kafkaBroker"`
-	SessionTimeoutMs  int    `json:"sessionTimeoutMs" yaml:"sessionTimeoutMs" default:"10000"`
-	ChannelBufferSize uint   `json:"channelBufferSize" yaml:"channelBufferSize" default:"256"`
-	ReblanceTimeoutSec int `json:"reblanceTimeoutSec" yaml:"reblanceTimeoutSec" default:"10"`
+	KafkaBroker        string `json:"kafkaBroker" yaml:"kafkaBroker"`
+	SessionTimeoutMs   int    `json:"sessionTimeoutMs" yaml:"sessionTimeoutMs" default:"10000"`
+	ChannelBufferSize  uint   `json:"channelBufferSize" yaml:"channelBufferSize" default:"256"`
+	ReblanceTimeoutSec int    `json:"reblanceTimeoutSec" yaml:"reblanceTimeoutSec" default:"10"`
 }
 
 // JobConfig is job's config
