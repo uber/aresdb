@@ -108,26 +108,46 @@ struct common_type<UUIDT, UUIDT> {
 template<typename LHSIterator, typename RHSIterator>
 struct supported_binary_combination {
   static constexpr bool value =
-  ((std::is_same<typename LHSIterator::value_type::head_type, UUIDT*>::value &&
-    (std::is_same<typename RHSIterator::value_type::head_type, UUIDT>::value ||
-        std::is_same<typename RHSIterator::value_type::head_type, int32_t>::value ||
-        std::is_same<typename RHSIterator::value_type::head_type, int>::value)) ||
-  (std::is_same<typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
-    (std::is_same<typename RHSIterator::value_type::head_type, GeoPointT>::value ||
-        std::is_same<typename RHSIterator::value_type::head_type, int32_t>::value ||
-        std::is_same<typename RHSIterator::value_type::head_type, int>::value)) ||
-  (std::is_same<typename LHSIterator::value_type::head_type, GeoPointT>::value &&
-      std::is_same<typename RHSIterator::value_type::head_type, GeoPointT>::value) ||
-  (std::is_same<typename LHSIterator::value_type::head_type, UUIDT>::value &&
-      std::is_same<typename RHSIterator::value_type::head_type, UUIDT>::value) ||
-  (!std::is_same<typename LHSIterator::value_type::head_type, UUIDT*>::value &&
-    !std::is_same<typename LHSIterator::value_type::head_type, UUIDT>::value &&
-    !std::is_same<typename LHSIterator::value_type::head_type, GeoPointT>::value &&
-    !std::is_same<typename RHSIterator::value_type::head_type, UUIDT>::value &&
-    !std::is_same<typename RHSIterator::value_type::head_type, GeoPointT>::value &&
-    !std::is_same<typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
-    !std::is_same<typename RHSIterator::value_type::head_type, UUIDT*>::value &&
-    !std::is_same<typename RHSIterator::value_type::head_type, GeoPointT*>::value));
+  ((std::is_same<
+    typename LHSIterator::value_type::head_type, UUIDT*>::value &&
+    (std::is_same<
+        typename RHSIterator::value_type::head_type, UUIDT>::value ||
+        std::is_same<
+          typename RHSIterator::value_type::head_type, int32_t>::value ||
+        std::is_same<
+          typename RHSIterator::value_type::head_type, int>::value)) ||
+  (std::is_same<
+    typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
+    (std::is_same<
+        typename RHSIterator::value_type::head_type, GeoPointT>::value ||
+        std::is_same<
+            typename RHSIterator::value_type::head_type, int32_t>::value ||
+        std::is_same<
+            typename RHSIterator::value_type::head_type, int>::value)) ||
+  (std::is_same<
+    typename LHSIterator::value_type::head_type, GeoPointT>::value &&
+      std::is_same<
+        typename RHSIterator::value_type::head_type, GeoPointT>::value) ||
+  (std::is_same<
+    typename LHSIterator::value_type::head_type, UUIDT>::value &&
+      std::is_same<
+        typename RHSIterator::value_type::head_type, UUIDT>::value) ||
+  (!std::is_same<
+    typename LHSIterator::value_type::head_type, UUIDT*>::value &&
+    !std::is_same<
+        typename LHSIterator::value_type::head_type, UUIDT>::value &&
+    !std::is_same<
+        typename LHSIterator::value_type::head_type, GeoPointT>::value &&
+    !std::is_same<
+        typename RHSIterator::value_type::head_type, UUIDT>::value &&
+    !std::is_same<
+        typename RHSIterator::value_type::head_type, GeoPointT>::value &&
+    !std::is_same<
+        typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
+    !std::is_same<
+        typename RHSIterator::value_type::head_type, UUIDT*>::value &&
+    !std::is_same<
+        typename RHSIterator::value_type::head_type, GeoPointT*>::value));
 };
 
 // This is used to retrieve iterator value type
