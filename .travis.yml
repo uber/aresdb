@@ -38,8 +38,8 @@ install:
   - .travis/install_golang_tools.sh
 script:
   - while sleep 5m; do echo "=====[ $SECONDS seconds, build still running... ]====="; done &
-  - make lint -j
-  - make travis
+  - make lint -j 4
+  - make travis -j 4
   - kill %1 
 after_success:
   # generate coverage output file
