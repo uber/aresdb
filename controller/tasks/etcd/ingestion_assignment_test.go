@@ -313,7 +313,7 @@ func TestIngestionAssignmentTask(t *testing.T) {
       "kafkaBroker": "",
       "sessionTimeoutMs": 0,
       "channelBufferSize": 0,
-      "reblanceTimeoutSec": 0,
+      "reblanceTimeoutSec": 0
     }
   }
 ]`
