@@ -1108,13 +1108,13 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 							nil, "array function %s argument type mismatch", e.Name)
 						break
 					}
-					if val, err := memCom.GeoPointFromString(strLiteral.Val); err != nil {
+					val, err := memCom.GeoPointFromString(strLiteral.Val)
+					if err != nil {
 						qc.Error = err
 						break
-					} else {
-						literalExpr = &expr.GeopointLiteral{
-							Val: val,
-						}
+					}
+					literalExpr = &expr.GeopointLiteral{
+						Val: val,
 					}
 				case memCom.UUID:
 					strLiteral, ok := secondArg.(*expr.StringLiteral)
@@ -1122,13 +1122,13 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 						qc.Error = utils.StackError(nil, "array function %s needs uuid string literal", e.Name)
 						break
 					}
-					if val, err := memCom.UUIDFromString(strLiteral.Val); err != nil {
+					val, err := memCom.UUIDFromString(strLiteral.Val);
+					if err != nil {
 						qc.Error = err
 						break
-					} else {
-						literalExpr = &expr.UUIDLiteral{
-							Val: val,
-						}
+					}
+					literalExpr = &expr.UUIDLiteral{
+						Val: val,
 					}
 				case memCom.Uint8, memCom.Uint16, memCom.Uint32, memCom.Int8, memCom.Int16, memCom.Int32:
 					ok := false
