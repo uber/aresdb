@@ -17,13 +17,6 @@ package job
 import (
 	"encoding/json"
 	"github.com/Shopify/sarama"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"regexp"
-	"strings"
-	"time"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -39,6 +32,13 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"regexp"
+	"strings"
+	"time"
 )
 
 var _ = Describe("streaming_processor", func() {

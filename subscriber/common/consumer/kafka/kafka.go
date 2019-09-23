@@ -68,6 +68,37 @@ func GetConsumerGroupName(deployment, jobName string, aresCluster string) string
 	return fmt.Sprintf("ares-subscriber_%s_%s_%s_streaming", deployment, jobName, aresCluster)
 }
 
+func getKafkaVersion(v string) sarama.KafkaVersion {
+	switch v {
+	case "V0_10_2_0":
+		return sarama.V0_10_2_0
+	case "V0_10_2_1":
+		return sarama.V0_10_2_1
+	case "V0_11_0_0":
+		return sarama.V0_11_0_0
+	case "V0_11_0_1":
+		return sarama.V0_11_0_1
+	case "V0_11_0_2":
+		return sarama.V0_11_0_2
+	case "V1_0_0_0":
+		return sarama.V1_0_0_0
+	case "V1_1_0_0":
+		return sarama.V1_1_0_0
+	case "V1_1_1_0":
+		return sarama.V1_1_1_0
+	case "V2_0_0_0":
+		return sarama.V2_0_0_0
+	case "V2_0_1_0":
+		return sarama.V2_0_1_0
+	case "V2_1_0_0":
+		return sarama.V2_1_0_0
+	case "V2_2_0_0":
+		return sarama.V2_2_0_0
+	default:
+		return sarama.V0_10_2_0
+	}
+}
+
 // NewKafkaConsumer creates kafka consumer
 func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceConfig) (consumer.Consumer, error) {
 	cfg := sarama.NewConfig()
@@ -83,6 +114,8 @@ func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceCo
 	if jobConfig.StreamingConfig.ReblanceTimeoutSec > 0 {
 		cfg.Consumer.Group.Rebalance.Timeout = time.Duration(jobConfig.StreamingConfig.ReblanceTimeoutSec) * time.Second
 	}
+	cfg.Version = getKafkaVersion(jobConfig.StreamingConfig.KafkaVersion)
+
 	serviceConfig.Logger.Info("Kafka consumer",
 		zap.String("job", jobConfig.Name),
 		zap.String("broker", jobConfig.StreamingConfig.KafkaBroker),
