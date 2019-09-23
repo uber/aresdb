@@ -311,9 +311,9 @@ func TestIngestionAssignmentTask(t *testing.T) {
         }
       },
       "kafkaBroker": "",
-      "maxPollIntervalMs": 0,
-      "sessionTimeoutNs": 0,
-      "channelBufferSize": 0
+      "sessionTimeoutMs": 0,
+      "channelBufferSize": 0,
+      "reblanceTimeoutSec": 0,
     }
   }
 ]`
