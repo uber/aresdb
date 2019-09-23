@@ -23,10 +23,10 @@ package expr
 import (
 	"bytes"
 	"fmt"
+	"github.com/gofrs/uuid"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"strconv"
 	"strings"
-	"github.com/gofrs/uuid"
 	"unsafe"
 )
 

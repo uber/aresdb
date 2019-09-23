@@ -22,12 +22,12 @@ import (
 	"strconv"
 	"unsafe"
 
+	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
-	"fmt"
 )
 
 // DataTypeToCDataType mapps from memstore data type to c data types
