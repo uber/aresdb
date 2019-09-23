@@ -30,6 +30,8 @@ import (
 )
 
 var _ = Describe("KafkaConsumer", func() {
+	var broker *sarama.MockBroker
+
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",
@@ -60,6 +62,31 @@ var _ = Describe("KafkaConsumer", func() {
 	} else {
 		jobConfigs["job1"]["dev01"].AresTableConfig.Cluster = "dev01"
 	}
+
+	BeforeEach(func() {
+		// kafka broker mock setup
+		broker = sarama.NewMockBroker(serviceConfig.Logger.Sugar(), 1)
+		jobConfigs["job1"]["dev01"].StreamingConfig.KafkaBroker = broker.Addr()
+
+		mockFetchResponse := sarama.NewMockFetchResponse(serviceConfig.Logger.Sugar(), 1)
+		for i := 0; i < 10; i++ {
+			mockFetchResponse.SetMessage("job1-topic", 0, int64(i+1234), sarama.StringEncoder("foo"))
+		}
+
+		broker.SetHandlerByMap(map[string]sarama.MockResponse{
+			"MetadataRequest": sarama.NewMockMetadataResponse(serviceConfig.Logger.Sugar()).
+				SetBroker(broker.Addr(), broker.BrokerID()).
+				SetLeader("job1-topic", 0, broker.BrokerID()),
+			"OffsetRequest": sarama.NewMockOffsetResponse(serviceConfig.Logger.Sugar()).
+				SetOffset("job1-topic", 0, sarama.OffsetOldest, 0).
+				SetOffset("job1-topic", 0, sarama.OffsetNewest, 2345),
+			"FetchRequest": mockFetchResponse,
+		})
+	})
+
+	AfterEach(func() {
+		broker.Close()
+	})
 
 	It("KafkaConsumer functions", func() {
 		kc, err := NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)

@@ -2,9 +2,9 @@
   "job": "job1",
   "streamConfig": {
     "kafkaBroker": "localhost:17791",
-    "ChannelBufferSize": 256,
-    "maxPollIntervalMs": 300000,
-    "sessionTimeoutNs": 10000,
+    "channelBufferSize": 256,
+    "sessionTimeoutMs": 10000,
+    "reblanceTimeoutSec": 10,
     "kafkaClusterName": "kafka-cluster1",
     "kafkaClusterFile": "clusters.yaml",
     "topic": "job1-topic",
