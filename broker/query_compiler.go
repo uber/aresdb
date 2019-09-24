@@ -61,6 +61,42 @@ func NewQueryContext(aql *common.AQLQuery, returnHLLBinary bool, w http.Response
 	return &ctx
 }
 
+// GetRewrittenQuery get the rewritten query after query parsing
+func (qc *QueryContext) GetRewrittenQuery() common.AQLQuery {
+	newQuery := *qc.AQLQuery
+	for i, measure := range newQuery.Measures {
+		measure.Expr = measure.ExprParsed.String()
+		newQuery.Measures[i] = measure
+	}
+
+	for i, join := range newQuery.Joins{
+		for j := range join.Conditions {
+			join.Conditions[j] = join.ConditionsParsed[j].String()
+		}
+		newQuery.Joins[i] = join
+	}
+
+	for i, dim := range newQuery.Dimensions {
+		dim.Expr = dim.ExprParsed.String()
+		newQuery.Dimensions[i] = dim
+	}
+
+	for i := range newQuery.Filters {
+		newQuery.Filters[i] = newQuery.FiltersParsed[i].String()
+	}
+
+	for i, measure := range newQuery.SupportingMeasures {
+		measure.Expr = measure.ExprParsed.String()
+		newQuery.SupportingMeasures[i] = measure
+	}
+
+	for i, dim := range newQuery.SupportingDimensions {
+		dim.Expr = dim.ExprParsed.String()
+		newQuery.SupportingDimensions[i] = dim
+	}
+	return newQuery
+}
+
 // Compile parses expressions into ast, load schema from schema reader, resolve types,
 // and collects meta data needed by post processing
 func (qc *QueryContext) Compile(tableSchemaReader memCom.TableSchemaReader) {

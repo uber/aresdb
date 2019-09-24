@@ -451,7 +451,7 @@ func buildSubPlan(agg common.AggType, qc QueryContext, assignments map[topology.
 	root := NewMergeNode(agg)
 	for host, shardIDs := range assignments {
 		// make deep copy
-		currQ := *qc.AQLQuery
+		currQ := qc.GetRewrittenQuery()
 		for _, shard := range shardIDs {
 			currQ.Shards = append(currQ.Shards, int(shard))
 		}

@@ -316,7 +316,12 @@ func (l *NumberLiteral) String() string {
 	if l.Expr != "" {
 		return l.Expr
 	}
-	return strconv.FormatFloat(l.Val, 'f', 3, 64)
+
+	if l.Type() == Float {
+		return strconv.FormatFloat(l.Val, 'f', 3, 64)
+	}
+
+	return strconv.FormatInt(int64(l.Int), 10)
 }
 
 // BooleanLiteral represents a boolean literal.
