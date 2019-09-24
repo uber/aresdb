@@ -49,8 +49,8 @@ func (vp *baseVectorParty) GetOffsetLength(row int) (offset uint32, length uint3
 }
 
 // SetOffsetLength update offset/length for nth fow
-func (vp *baseVectorParty) SetOffsetLength(row int, offset, length unsafe.Pointer, valid bool) {
-	if valid {
+func (vp *baseVectorParty) SetOffsetLength(row int, offset, length unsafe.Pointer) {
+	if offset != nil && length != nil {
 		vp.offsets.SetValue(2*row+1, length)
 		if *(*uint32)(length) == 0 {
 			zeroValueOffset := common.ZeroLengthArrayFlag

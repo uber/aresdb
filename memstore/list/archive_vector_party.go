@@ -114,9 +114,9 @@ func (vp *ArchiveVectorParty) Equals(other common.VectorParty) bool {
 func (vp *ArchiveVectorParty) getValue(row int) (val unsafe.Pointer, validity bool) {
 	offset, length, valid := vp.GetOffsetLength(row)
 	if !valid {
-		return unsafe.Pointer(uintptr(0)), false
+		return nil, false
 	} else if length == 0 {
-		return unsafe.Pointer(uintptr(0)), true
+		return nil, true
 	}
 	baseAddr := uintptr(vp.values.Buffer())
 	return unsafe.Pointer(baseAddr + uintptr(offset)), true
@@ -139,8 +139,7 @@ func (vp *ArchiveVectorParty) GetDataValueByRow(row int) common.DataValue {
 
 func (vp *ArchiveVectorParty) setValue(row int, val unsafe.Pointer, valid bool) {
 	if !valid {
-		var zero uint32
-		vp.SetOffsetLength(row, unsafe.Pointer(&zero), unsafe.Pointer(&zero), false)
+		vp.SetOffsetLength(row, nil, nil)
 		if row >= vp.lengthFilled {
 			vp.lengthFilled++
 		}
@@ -165,7 +164,7 @@ func (vp *ArchiveVectorParty) setValue(row int, val unsafe.Pointer, valid bool) 
 			utils.GetLogger().Panicf("Array ArchiveVectorParty SetValue exceeded buffer limit")
 		}
 		// update offset/length
-		vp.SetOffsetLength(row, unsafe.Pointer(&vp.bytesWritten), unsafe.Pointer(&newLen), true)
+		vp.SetOffsetLength(row, unsafe.Pointer(&vp.bytesWritten), unsafe.Pointer(&newLen))
 		baseAddr := uintptr(vp.values.Buffer()) + uintptr(vp.bytesWritten)
 		utils.MemCopy(unsafe.Pointer(baseAddr), val, newBytes)
 		vp.lengthFilled++

@@ -301,7 +301,11 @@ func (vp *LiveVectorParty) SetValue(row int, val unsafe.Pointer, valid bool) {
 
 	buf := vp.memoryPool.Reallocate([2]uintptr{uintptr(oldOffset), uintptr(oldCap)}, oldBytes, newBytes)
 
-	vp.SetOffsetLength(row, unsafe.Pointer(&buf[0]), unsafe.Pointer(&newLen), valid)
+	if !valid {
+		vp.SetOffsetLength(row, nil, nil)
+	} else {
+		vp.SetOffsetLength(row, unsafe.Pointer(&buf[0]), unsafe.Pointer(&newLen))
+	}
 	// Set footer offset.
 	vp.caps.SetValue(row, unsafe.Pointer(&buf[1]))
 
@@ -343,9 +347,9 @@ func (vp *LiveVectorParty) GetValue(row int) (val unsafe.Pointer, validity bool)
 
 	offset, length, valid := vp.GetOffsetLength(row)
 	if !valid {
-		return unsafe.Pointer(uintptr(0)), false
+		return nil, false
 	} else if length == 0 {
-		return unsafe.Pointer(uintptr(0)), true
+		return nil, true
 	}
 	baseAddr := vp.memoryPool.GetNativeMemoryAllocator().GetBaseAddr()
 	return unsafe.Pointer(baseAddr + uintptr(offset)), true
