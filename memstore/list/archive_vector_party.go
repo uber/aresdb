@@ -147,7 +147,7 @@ func (vp *ArchiveVectorParty) setValue(row int, val unsafe.Pointer, valid bool) 
 		return
 	}
 	var newLen uint32
-	if val == nil {
+	if uintptr(val) != 0 {
 		newLen = *(*uint32)(val)
 	}
 	newBytes := common.CalculateListElementBytes(vp.dataType, int(newLen))

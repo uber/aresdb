@@ -421,7 +421,10 @@ class ArrayVectorPartyIterator
             reinterpret_cast<uint64_t *>(basePtr));
 
     if (length == 0) {
-      return thrust::make_tuple(reinterpret_cast<Value*>(NULL), offset != 0);
+      if (offset == 0) {
+        return thrust::make_tuple(reinterpret_cast<Value*>(NULL), false);
+      }
+      return thrust::make_tuple(reinterpret_cast<Value*>(NULL), true);
     }
     return thrust::make_tuple(
         reinterpret_cast<Value*>(valuePtr + offset), true);

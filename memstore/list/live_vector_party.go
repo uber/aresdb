@@ -289,7 +289,7 @@ func (vp *LiveVectorParty) SetValue(row int, val unsafe.Pointer, valid bool) {
 
 	var newLen int
 	if valid {
-		if val != nil {
+		if uintptr(val) != 0 {
 			newLen = int(*(*uint32)(val))
 		}
 	}
@@ -343,9 +343,9 @@ func (vp *LiveVectorParty) GetValue(row int) (val unsafe.Pointer, validity bool)
 
 	offset, length, valid := vp.GetOffsetLength(row)
 	if !valid {
-		return nil, false
+		return unsafe.Pointer(uintptr(0)), false
 	} else if length == 0 {
-		return nil, true
+		return unsafe.Pointer(uintptr(0)), true
 	}
 	baseAddr := vp.memoryPool.GetNativeMemoryAllocator().GetBaseAddr()
 	return unsafe.Pointer(baseAddr + uintptr(offset)), true
