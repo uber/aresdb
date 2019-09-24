@@ -730,7 +730,6 @@ func (d *dataNode) startBootstrapRetryWatch() {
 					d.opts.InstrumentOptions().Logger().With("error", err.Error()).Error("error while retry bootstrapping")
 				}
 			}()
-		default:
 		}
 	}
 }
