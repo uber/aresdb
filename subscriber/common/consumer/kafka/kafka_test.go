@@ -65,9 +65,7 @@ var _ = Describe("KafkaConsumer", func() {
 
 	BeforeEach(func() {
 		// kafka broker mock setup
-		broker = sarama.NewMockBroker(serviceConfig.Logger.Sugar(), 1)
-		jobConfigs["job1"]["dev01"].StreamingConfig.KafkaBroker = broker.Addr()
-
+		broker = sarama.NewMockBrokerAddr(serviceConfig.Logger.Sugar(), 1, jobConfigs["job1"]["dev01"].StreamingConfig.KafkaBroker)
 		mockFetchResponse := sarama.NewMockFetchResponse(serviceConfig.Logger.Sugar(), 1)
 		for i := 0; i < 10; i++ {
 			mockFetchResponse.SetMessage("job1-topic", 0, int64(i+1234), sarama.StringEncoder("foo"))
