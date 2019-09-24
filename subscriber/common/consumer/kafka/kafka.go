@@ -148,6 +148,7 @@ func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceCo
 	}
 	cgHandler := CGHandler{
 		consumer: &kc,
+		ready: make(chan bool),
 	}
 	ctx := context.Background()
 	go kc.startConsuming(ctx, &cgHandler)
@@ -212,24 +213,18 @@ func (c *KafkaConsumer) startConsuming(ctx context.Context, cgHandler *CGHandler
 	c.logger.Info("Start consumption goroutine")
 
 	// those four Metrics are of the format {"<topic name>":{<partition id>: <offset>, ...}, ...}
-	msgCounter := make(map[string]map[int32]tally.Counter)
-	msgByteCounter := make(map[string]map[int32]tally.Counter)
-	msgOffsetGauge := make(map[string]map[int32]tally.Gauge)
-	msgLagGauge := make(map[string]map[int32]tally.Gauge)
+	cgHandler.msgCounter = make(map[string]map[int32]tally.Counter)
+	cgHandler.msgByteCounter = make(map[string]map[int32]tally.Counter)
+	cgHandler.msgOffsetGauge = make(map[string]map[int32]tally.Gauge)
+	cgHandler.msgLagGauge = make(map[string]map[int32]tally.Gauge)
 
 	// initialize counter map
 	for _, topic := range c.topicArray {
-		msgCounter[topic] = make(map[int32]tally.Counter)
-		msgByteCounter[topic] = make(map[int32]tally.Counter)
-		msgOffsetGauge[topic] = make(map[int32]tally.Gauge)
-		msgLagGauge[topic] = make(map[int32]tally.Gauge)
+		cgHandler.msgCounter[topic] = make(map[int32]tally.Counter)
+		cgHandler.msgByteCounter[topic] = make(map[int32]tally.Counter)
+		cgHandler.msgOffsetGauge[topic] = make(map[int32]tally.Gauge)
+		cgHandler.msgLagGauge[topic] = make(map[int32]tally.Gauge)
 	}
-
-	cgHandler.ready = make(chan bool)
-	cgHandler.msgCounter = msgCounter
-	cgHandler.msgByteCounter = msgByteCounter
-	cgHandler.msgOffsetGauge = msgOffsetGauge
-	cgHandler.msgLagGauge = msgLagGauge
 
 	for run := true; run; {
 		if err := c.Consume(ctx, c.topicArray, cgHandler); err != nil {

@@ -15,7 +15,6 @@
 package kafka
 
 import (
-	"context"
 	"github.com/Shopify/sarama"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -109,8 +108,6 @@ var _ = Describe("KafkaConsumer", func() {
 		Ω(closeCh).ShouldNot(BeNil())
 
 		cgHandler := CGHandler{}
-		ctx := context.Background()
-		go kc.(*KafkaConsumer).startConsuming(ctx, &cgHandler)
 
 		msg := &sarama.ConsumerMessage{
 			Topic:     "topic",
@@ -136,9 +133,6 @@ var _ = Describe("KafkaConsumer", func() {
 
 		err = kc.(*KafkaConsumer).Close()
 		Ω(err).Should(BeNil())
-
-		err = kc.(*KafkaConsumer).Close()
-		Ω(err).ShouldNot(BeNil())
 	})
 
 	It("KafkaMessage functions", func() {
@@ -172,14 +166,5 @@ var _ = Describe("KafkaConsumer", func() {
 
 		partition := message.Partition()
 		Ω(partition).Should(Equal(int32(0)))
-
-		message.Ack()
-		message.consumer, _ = NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
-
-		message.Ack()
-
-		message.Nack()
-
-		message.consumer.Close()
 	})
 })
