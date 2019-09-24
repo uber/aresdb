@@ -329,12 +329,18 @@ func (ap *AggQueryPlan) postProcessHLLBinary(res queryCom.AQLQueryResult, execEr
 		return
 	}
 
+	resultSize := len(res)
+	if resultSize == 0 {
+		hllQueryResults.WriteResult([]byte{})
+		data = hllQueryResults.GetBytes()
+		return
+	}
+
 	var (
 		qc           = ap.qc
 		dimDataTypes = make([]memCom.DataType, len(qc.AQLQuery.Dimensions))
 		reverseDicts = make(map[int][]string)
 		enumDicts    = make(map[int]map[string]int)
-		resultSize   = len(res)
 		hllVector    []byte
 		dimVector    []byte
 		countVector  []byte
