@@ -1122,7 +1122,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 						qc.Error = utils.StackError(nil, "array function %s needs uuid string literal", e.Name)
 						break
 					}
-					val, err := memCom.UUIDFromString(strLiteral.Val);
+					val, err := memCom.UUIDFromString(strLiteral.Val)
 					if err != nil {
 						qc.Error = err
 						break

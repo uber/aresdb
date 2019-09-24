@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"unsafe"
 
-	"fmt"
 	"github.com/uber/aresdb/cgoutils"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
@@ -589,7 +588,6 @@ func (bc *oopkBatchContext) processExpression(exp, parentExp expr.Expr, tableSca
 
 		return makeScratchSpaceInput(values.getPointer(), nulls.getPointer(), outputDataType)
 	default:
-		fmt.Println("unknown type")
 		return C.InputVector{}
 	}
 }

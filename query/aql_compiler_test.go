@@ -3607,6 +3607,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				memCom.ArrayBool,
 				memCom.ArrayGeoPoint,
 				memCom.ArraySmallEnum,
+				memCom.ArrayUUID,
 			},
 			ColumnIDs: map[string]int{
 				"request_at":           0,
@@ -3614,6 +3615,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"bool_array_field":     2,
 				"geopoint_array_field": 3,
 				"enum_array_field":     4,
+				"uuid_array_field":     5,
 			},
 			Schema: metaCom.Table{
 				Name:        "table1",
@@ -3624,6 +3626,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 					{Name: "bool_array_field", Type: metaCom.ArrayBool},
 					{Name: "geopoint_array_field", Type: metaCom.ArrayGeoPoint},
 					{Name: "enum_array_field", Type: metaCom.ArraySmallEnum},
+					{Name: "uuid_array_field", Type: metaCom.ArrayUUID},
 				},
 			},
 			EnumDicts: map[string]memCom.EnumDict{
@@ -3689,7 +3692,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			ExprType: expr.Unsigned,
 		}))
 
-		// contains works as dimension and filter
+		// contains works as dimension and filter for geopint
 		qc.Query = &queryCom.AQLQuery{
 			Table: "table1",
 			Measures: []queryCom.Measure{
@@ -3731,6 +3734,113 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			RHS:      &expr.NumberLiteral{Val: 0, Int: 0, ExprType: expr.Unsigned},
 			ExprType: expr.Boolean,
 		}))
+
+		// not work for invalid geopint string literal
+		qc.Query = &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "contains(enum_array_field, 'foo')"},
+			},
+			Filters: []string{
+				"request_at >= 1540399140000",
+				"request_at < 1540399320000",
+				"contains(geopoint_array_field, '12345')",
+			},
+		}
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).ShouldNot(BeNil())
+
+		// not work for non-string literal
+		qc.Query = &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "contains(enum_array_field, 'foo')"},
+			},
+			Filters: []string{
+				"request_at >= 1540399140000",
+				"request_at < 1540399320000",
+				"contains(geopoint_array_field, 12345)",
+			},
+		}
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).ShouldNot(BeNil())
+
+		// contains works as dimension and filter for uuid
+		qc.Query = &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "contains(enum_array_field, 'foo')"},
+			},
+			Filters: []string{
+				"request_at >= 1540399140000",
+				"request_at < 1540399320000",
+				"contains(uuid_array_field, '11223344-1122-1122-1122-112233445566')",
+			},
+		}
+		qc.parseExprs()
+		qc.resolveTypes()
+		qc.processFilters()
+		qc.processDimensions()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.ARRAY_CONTAINS,
+			ExprType: expr.Boolean,
+			LHS: &expr.VarRef{
+				Val:      "uuid_array_field",
+				DataType: memCom.ArrayUUID,
+				ColumnID: 5,
+			},
+			RHS: &expr.UUIDLiteral{Val: [2]uint64{2454780729447621137, 7373874951294624273}},
+		}))
+
+		// not work for invalid string literal uuid
+		qc.Query = &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "contains(enum_array_field, 'foo')"},
+			},
+			Filters: []string{
+				"request_at >= 1540399140000",
+				"request_at < 1540399320000",
+				"contains(uuid_array_field, '12345')",
+			},
+		}
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).ShouldNot(BeNil())
+
+		// not work for non-string literal uuid
+		qc.Query = &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "contains(enum_array_field, 'foo')"},
+			},
+			Filters: []string{
+				"request_at >= 1540399140000",
+				"request_at < 1540399320000",
+				"contains(uuid_array_field, 12345)",
+			},
+		}
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).ShouldNot(BeNil())
 
 		// element_at works as dimension and filter
 		qc.Query = &queryCom.AQLQuery{
@@ -3774,5 +3884,114 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			RHS:      &expr.NumberLiteral{Val: 1, Int: 1, Expr: "1", ExprType: expr.Unsigned},
 			ExprType: expr.Unsigned,
 		}))
+	})
+
+	ginkgo.It("parses uuid expressions", func() {
+		q := &queryCom.AQLQuery{
+			Table: "trips",
+			Measures: []queryCom.Measure{
+				{
+					Expr: "count(*)",
+				},
+			},
+		}
+
+		qc := &AQLQueryContext{
+			TableIDByAlias: map[string]int{
+				"trips": 0,
+			},
+			TableScanners: []*TableScanner{
+				{
+					Schema: &memCom.TableSchema{
+						ValueTypeByColumn: []memCom.DataType{
+							memCom.Uint16,
+							memCom.UUID,
+						},
+						ColumnIDs: map[string]int{
+							"city_id":   0,
+							"trip_uuid": 1,
+						},
+						Schema: metaCom.Table{
+							Columns: []metaCom.Column{
+								{Name: "city_id", Type: metaCom.Uint16},
+								{Name: "trip_uuid", Type: metaCom.UUID},
+							},
+						},
+					},
+				},
+			},
+		}
+		qc.Query = q
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		Ω(q.Measures[0].ExprParsed).Should(Equal(&expr.Call{
+			Name: "count",
+			Args: []expr.Expr{
+				&expr.Wildcard{},
+			},
+		}))
+
+		qc.Query = &queryCom.AQLQuery{
+			Table: "trips",
+			Measures: []queryCom.Measure{
+				{
+					Expr: "count(*)",
+				},
+			},
+			Filters: []string{
+				"trip_uuid = '11223344-1122-1122-1122-112233445566'",
+			},
+		}
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.Measures[0].ExprParsed).Should(Equal(&expr.Call{
+			Name: "count",
+			Args: []expr.Expr{
+				&expr.Wildcard{},
+			},
+		}))
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
+			Op:  expr.EQ,
+			LHS: &expr.VarRef{Val: "trip_uuid"},
+			RHS: &expr.StringLiteral{Val: "11223344-1122-1122-1122-112233445566"},
+		}))
+
+		qc.resolveTypes()
+
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.EQ,
+			LHS:      &expr.VarRef{Val: "trip_uuid", ColumnID: 1, TableID: 0, ExprType: expr.UUID, DataType: memCom.UUID},
+			RHS:      &expr.UUIDLiteral{Val: [2]uint64{2454780729447621137, 7373874951294624273}},
+			ExprType: expr.Boolean,
+		}))
+
+		// invalid uuid string
+		qc.Query = &queryCom.AQLQuery{
+			Table: "trips",
+			Measures: []queryCom.Measure{
+				{
+					Expr: "count(*)",
+				},
+			},
+			Filters: []string{
+				"trip_uuid = '11223344-1122-1122-1122-1122334455'",
+			},
+		}
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.Measures[0].ExprParsed).Should(Equal(&expr.Call{
+			Name: "count",
+			Args: []expr.Expr{
+				&expr.Wildcard{},
+			},
+		}))
+		Ω(qc.Query.FiltersParsed[0]).Should(Equal(&expr.BinaryExpr{
+			Op:  expr.EQ,
+			LHS: &expr.VarRef{Val: "trip_uuid"},
+			RHS: &expr.StringLiteral{Val: "11223344-1122-1122-1122-1122334455"},
+		}))
+
+		qc.resolveTypes()
+		Ω(qc.Error).ShouldNot(BeNil())
 	})
 })
