@@ -36,4 +36,4 @@ SimpleIterator<GeoPointT> make_scratch_space_input_iterator<GeoPointT>(
                                nullOffset, val, 0);
 }
 
-} // namespace ares
+}  // namespace ares
