@@ -174,7 +174,7 @@ func (c *KafkaConsumer) Topics() []string {
 // consumer.Error interface, which allows structured access to the topic
 // name and partition number.
 func (c *KafkaConsumer) Errors() <-chan error {
-	return c.Errors()
+	return c.ConsumerGroup.Errors()
 }
 
 // Closed returns a channel that unblocks when the consumer successfully shuts
