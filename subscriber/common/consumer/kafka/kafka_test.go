@@ -144,5 +144,7 @@ var _ = Describe("KafkaConsumer", func() {
 
 		partition := message.Partition()
 		Ω(partition).Should(Equal(int32(0)))
+
+		message.Ack()
 	})
 })

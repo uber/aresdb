@@ -153,7 +153,6 @@ func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceCo
 	ctx := context.Background()
 	go kc.startConsuming(ctx, &cgHandler)
 
-	<-cgHandler.ready
 	logger.Info("Consumer is up and running")
 	return &kc, nil
 }
