@@ -76,14 +76,16 @@ var _ = Describe("KafkaConsumer", func() {
 				SetLeader("job1-topic", 0, broker.BrokerID()),
 			"OffsetRequest": sarama.NewMockOffsetResponse(serviceConfig.Logger.Sugar()).
 				SetOffset("job1-topic", 0, sarama.OffsetOldest, 0).
-				SetOffset("job1-topic", 0, sarama.OffsetNewest, 2345),
+				SetOffset("job1-topic", 0, sarama.OffsetNewest, 1234),
 			"FetchRequest": mockFetchResponse,
 		})
 	})
-
+/*
 	AfterEach(func() {
 		broker.Close()
 	})
+
+ */
 
 	It("KafkaConsumer functions", func() {
 		kc, err := NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
@@ -106,30 +108,6 @@ var _ = Describe("KafkaConsumer", func() {
 
 		closeCh := kc.Closed()
 		Ω(closeCh).ShouldNot(BeNil())
-
-		cgHandler := CGHandler{}
-
-		msg := &sarama.ConsumerMessage{
-			Topic:     "topic",
-			Partition: 0,
-			Offset:    0,
-			Value:     []byte("value"),
-			Key:       []byte("key"),
-		}
-
-		cgHandler.msgCounter = map[string]map[int32]tally.Counter{
-			"topic": make(map[int32]tally.Counter),
-		}
-		cgHandler.msgByteCounter = map[string]map[int32]tally.Counter{
-			"topic": make(map[int32]tally.Counter),
-		}
-		cgHandler.msgOffsetGauge = map[string]map[int32]tally.Gauge{
-			"topic": make(map[int32]tally.Gauge),
-		}
-		cgHandler.msgLagGauge = map[string]map[int32]tally.Gauge{
-			"topic": make(map[int32]tally.Gauge),
-		}
-		kc.(*KafkaConsumer).processMsg(msg, &cgHandler, 12345, nil)
 
 		err = kc.(*KafkaConsumer).Close()
 		Ω(err).Should(BeNil())
