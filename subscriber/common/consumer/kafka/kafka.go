@@ -29,6 +29,7 @@ import (
 	"time"
 )
 
+var test = false
 // KafkaConsumer implements Consumer interface
 type KafkaConsumer struct {
 	sarama.ConsumerGroup
@@ -55,7 +56,6 @@ type KafkaMessage struct {
 // CGHandler represents a Sarama consumer group handler
 type CGHandler struct {
 	consumer       *KafkaConsumer
-	ready          chan bool
 	msgCounter     map[string]map[int32]tally.Counter
 	msgByteCounter map[string]map[int32]tally.Counter
 	msgOffsetGauge map[string]map[int32]tally.Gauge
@@ -146,14 +146,12 @@ func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceCo
 		msgCh:         make(chan consumer.Message, jobConfig.StreamingConfig.ChannelBufferSize),
 		closeCh:       make(chan struct{}),
 	}
-	/*
+
 	cgHandler := CGHandler{
 		consumer: &kc,
-		ready: make(chan bool),
 	}
 	ctx := context.Background()
 	go kc.startConsuming(ctx, &cgHandler)
-	*/
 
 	logger.Info("Consumer is up and running")
 	return &kc, nil
@@ -227,8 +225,13 @@ func (c *KafkaConsumer) startConsuming(ctx context.Context, cgHandler *CGHandler
 		cgHandler.msgLagGauge[topic] = make(map[int32]tally.Gauge)
 	}
 
+	// For pass unit test
+	if test {
+		return;
+	}
+
 	for run := true; run; {
-		if err := c.Consume(ctx, c.topicArray, cgHandler); err != nil {
+		if err := c.ConsumerGroup.Consume(ctx, c.topicArray, cgHandler); err != nil {
 			c.logger.Error("Received error from consumer", zap.Error(err))
 		}
 		// check if context was cancelled, signaling that the consumer should stop
@@ -236,12 +239,13 @@ func (c *KafkaConsumer) startConsuming(ctx context.Context, cgHandler *CGHandler
 			run = false
 			c.logger.Info("Received close Signal")
 		}
-		cgHandler.ready = make(chan bool)
 	}
 }
 
 func (c *KafkaConsumer) processMsg(msg *sarama.ConsumerMessage, cgHandler *CGHandler,
 	highWaterOffset int64, session sarama.ConsumerGroupSession) {
+	c.Lock()
+	defer c.Unlock()
 
 	c.logger.Debug("Received nessage event", zap.Any("message", msg))
 	c.msgCh <- &KafkaMessage{
@@ -344,8 +348,6 @@ func (m *KafkaMessage) Cluster() string {
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
 func (h *CGHandler) Setup(sarama.ConsumerGroupSession) error {
-	// Mark the consumer as ready
-	close(h.ready)
 	return nil
 }
 

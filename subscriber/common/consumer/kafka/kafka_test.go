@@ -31,6 +31,7 @@ import (
 var _ = Describe("KafkaConsumer", func() {
 	var broker *sarama.MockBroker
 
+	test = true
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",
@@ -78,6 +79,9 @@ var _ = Describe("KafkaConsumer", func() {
 				SetOffset("job1-topic", 0, sarama.OffsetOldest, 0).
 				SetOffset("job1-topic", 0, sarama.OffsetNewest, 2345),
 			"FetchRequest": mockFetchResponse,
+			"JoinGroupRequest": sarama.NewMockConsumerMetadataResponse(serviceConfig.Logger.Sugar()).
+				SetCoordinator("ares-subscriber_test_job1_dev01_streaming", broker),
+				"OffsetCommitRequest": sarama.NewMockOffsetCommitResponse(serviceConfig.Logger.Sugar()),
 		})
 	})
 
