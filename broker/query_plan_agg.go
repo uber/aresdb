@@ -455,9 +455,10 @@ func splitAvgQuery(qc QueryContext) (sumqc QueryContext, countqc QueryContext) {
 
 func buildSubPlan(agg common.AggType, qc QueryContext, assignments map[topology.Host][]uint32, topo topology.HealthTrackingDynamicTopoloy, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
+	query := qc.GetRewrittenQuery()
 	for host, shardIDs := range assignments {
 		// make deep copy
-		currQ := qc.GetRewrittenQuery()
+		currQ := query
 		for _, shard := range shardIDs {
 			currQ.Shards = append(currQ.Shards, int(shard))
 		}
