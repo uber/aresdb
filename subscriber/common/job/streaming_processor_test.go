@@ -43,6 +43,7 @@ import (
 
 var _ = Describe("streaming_processor", func() {
 	var broker *sarama.MockBroker
+	kafka.Test = true
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",

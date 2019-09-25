@@ -44,6 +44,7 @@ import (
 
 var _ = Describe("driver", func() {
 	var broker *sarama.MockBroker
+	kafka.Test = true
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",

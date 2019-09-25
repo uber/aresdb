@@ -30,8 +30,7 @@ import (
 
 var _ = Describe("KafkaConsumer", func() {
 	var broker *sarama.MockBroker
-
-	test = true
+	Test = true
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",

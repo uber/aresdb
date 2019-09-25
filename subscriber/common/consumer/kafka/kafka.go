@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-var test = false
+var Test = false
 // KafkaConsumer implements Consumer interface
 type KafkaConsumer struct {
 	sarama.ConsumerGroup
