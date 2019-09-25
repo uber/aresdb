@@ -146,12 +146,14 @@ func NewKafkaConsumer(jobConfig *rules.JobConfig, serviceConfig config.ServiceCo
 		msgCh:         make(chan consumer.Message, jobConfig.StreamingConfig.ChannelBufferSize),
 		closeCh:       make(chan struct{}),
 	}
+	/*
 	cgHandler := CGHandler{
 		consumer: &kc,
 		ready: make(chan bool),
 	}
 	ctx := context.Background()
 	go kc.startConsuming(ctx, &cgHandler)
+	*/
 
 	logger.Info("Consumer is up and running")
 	return &kc, nil

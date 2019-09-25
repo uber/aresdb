@@ -76,16 +76,14 @@ var _ = Describe("KafkaConsumer", func() {
 				SetLeader("job1-topic", 0, broker.BrokerID()),
 			"OffsetRequest": sarama.NewMockOffsetResponse(serviceConfig.Logger.Sugar()).
 				SetOffset("job1-topic", 0, sarama.OffsetOldest, 0).
-				SetOffset("job1-topic", 0, sarama.OffsetNewest, 1234),
+				SetOffset("job1-topic", 0, sarama.OffsetNewest, 2345),
 			"FetchRequest": mockFetchResponse,
 		})
 	})
-/*
+
 	AfterEach(func() {
 		broker.Close()
 	})
-
- */
 
 	It("KafkaConsumer functions", func() {
 		kc, err := NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
