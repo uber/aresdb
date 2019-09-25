@@ -91,10 +91,8 @@ func (t TestFactoryBase) ReadLiveBatch(name string) (*common.Batch, error) {
 	}
 	for i, column := range batch.Columns {
 		if column != nil {
-			if !column.IsList() {
-				liveColumn := t.ToLiveVectorParty(column)
-				batch.Columns[i] = liveColumn
-			}
+			liveColumn := t.ToLiveVectorParty(column)
+			batch.Columns[i] = liveColumn
 		}
 	}
 	batch.RWMutex = &sync.RWMutex{}

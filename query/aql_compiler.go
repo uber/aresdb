@@ -1108,6 +1108,13 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 							Val: val,
 						}
 					}
+				case memCom.Uint8, memCom.Uint16, memCom.Uint32, memCom.Int8, memCom.Int16, memCom.Int32:
+					ok := false
+					literalExpr, ok = secondArg.(*expr.NumberLiteral)
+					if !ok {
+						qc.Error = utils.StackError(
+							nil, "array function %s argument type mismatch", e.Name)
+					}
 				}
 
 				return &expr.BinaryExpr{

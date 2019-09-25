@@ -357,6 +357,41 @@ class InputVectorBinderBase {
             defaultValueStruct.Value.Int64Val, int64_t)
         default: break;
       }
+    } else if (input.Type == ArrayVectorPartyInput) {
+      // Array type can only bind to first argument for BinaryTransformer
+      ArrayVectorPartySlice inputVP = input.Vector.ArrayVP;
+      uint8_t *basePtr = inputVP.OffsetLengthVector;
+      uint32_t length = inputVP.Length;
+      int valueOffsetAdj = inputVP.ValueOffsetAdj;
+
+      #define BIND_ARRAY_COLUMN_INPUT(dataType) \
+        return nextBinder.bind(make_array_column_iterator<dataType>( \
+            basePtr, valueOffsetAdj, length));
+
+      switch (inputVP.DataType) {
+        case Bool:
+          BIND_ARRAY_COLUMN_INPUT(bool)
+        case Int8:
+          BIND_ARRAY_COLUMN_INPUT(int8_t)
+        case Int16:
+          BIND_ARRAY_COLUMN_INPUT(int16_t)
+        case Int32:
+          BIND_ARRAY_COLUMN_INPUT(int32_t)
+        case Uint8:
+          BIND_ARRAY_COLUMN_INPUT(uint8_t)
+        case Uint16:
+          BIND_ARRAY_COLUMN_INPUT(uint16_t)
+        case Uint32:
+          BIND_ARRAY_COLUMN_INPUT(uint32_t)
+        case Float32:
+          BIND_ARRAY_COLUMN_INPUT(float_t)
+        case Int64:
+          BIND_ARRAY_COLUMN_INPUT(int64_t)
+        default:
+          throw std::invalid_argument(
+              "Unsupported data type for ArrayVectorPartyInput: " +
+                  std::to_string(__LINE__));
+      }
     }
     return bindGeneric();
   }
@@ -391,6 +426,36 @@ class InputVectorBinderBase {
                    GeoPointT>::value, int>::type bind(
       GeoIterator geoIter) {
     return bindGeoPoint(geoIter);
+  }
+
+  // Array type only support UnaryTransform or first argument in BinaryTransform
+  template <typename ArrayColumnIterator>
+  typename std::enable_if<
+      std::is_pointer<
+          typename ArrayColumnIterator::value_type::head_type>::value,
+      int>::type
+  bind(ArrayColumnIterator arrayColumnIter) {
+    InputVectorBinderBase<Context, NumVectors, NumUnboundIterators - 1>
+        nextBinder(context, inputVectors, indexVector, baseCounts, startCount);
+
+    InputVector input = inputVectors[NumVectors - NumUnboundIterators];
+    if (input.Type == ConstantInput) {
+        #define BIND_ARRAY_CONSTANT_INPUT(defaultValue, isValid) \
+          return nextBinder.bind( \
+                arrayColumnIter, \
+                make_constant_iterator( \
+                    defaultValue, isValid));
+
+      ConstantVector constant = input.Vector.Constant;
+      if (constant.DataType == ConstInt) {
+        BIND_ARRAY_CONSTANT_INPUT(constant.Value.IntVal, constant.IsValid)
+      } else if (constant.DataType == ConstFloat) {
+        BIND_ARRAY_CONSTANT_INPUT(constant.Value.FloatVal, constant.IsValid)
+      }
+    }
+    throw std::invalid_argument(
+        "Unsupported data type " + std::to_string(__LINE__)
+            + "when value type of first input iterator is ArrayVP Iterator");
   }
 };
 

@@ -16,22 +16,20 @@ package job
 
 import (
 	"fmt"
-	"strconv"
-	"sync"
-	"time"
-
-	controllerCli "github.com/uber/aresdb/controller/client"
-	"github.com/uber/aresdb/subscriber/common/sink"
-
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	controllerCli "github.com/uber/aresdb/controller/client"
 	"github.com/uber/aresdb/subscriber/common/consumer"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
+	"github.com/uber/aresdb/subscriber/common/sink"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"strconv"
+	"sync"
+	"time"
 )
 
 // NewConsumer is the type of function each consumer that implements Consumer should provide for initialization.
@@ -72,9 +70,33 @@ type StreamingProcessor struct {
 // NewStreamingProcessor returns Processor to consume, process and save data to db.
 func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, aresControllerClient controllerCli.ControllerClient, sinkInitFunc NewSink, consumerInitFunc NewConsumer, decoderInitFunc NewDecoder,
 	errors chan ProcessorError, msgSizes chan int64, serviceConfig config.ServiceConfig) (Processor, error) {
+	var (
+		err        error
+		db         sink.Sink
+		hlConsumer consumer.Consumer
+		decoder    message.Decoder
+	)
+	defer func() {
+		if err == nil {
+			return
+		}
+
+		if db != nil {
+			db.Shutdown()
+		}
+
+		if hlConsumer != nil {
+			hlConsumer.Close()
+		}
+
+		if decoder != nil {
+			decoder = nil
+		}
+	}()
+
 	cluster := jobConfig.AresTableConfig.Cluster
 	// Initialize downstream DB
-	db, err := initSink(jobConfig, serviceConfig, aresControllerClient, sinkInitFunc)
+	db, err = initSink(jobConfig, serviceConfig, aresControllerClient, sinkInitFunc)
 	if err != nil {
 		return nil, utils.StackError(err,
 			fmt.Sprintf("Failed to initialize database connection for job: %s, cluster: %s",
@@ -84,14 +106,14 @@ func NewStreamingProcessor(id int, jobConfig *rules.JobConfig, aresControllerCli
 	failureHandler := initFailureHandler(serviceConfig, jobConfig, db)
 
 	// Initialize Kafka consumer
-	hlConsumer, err := consumerInitFunc(jobConfig, serviceConfig)
+	hlConsumer, err = consumerInitFunc(jobConfig, serviceConfig)
 	if err != nil {
 		return nil, utils.StackError(err, fmt.Sprintf(
 			"Unable to initialize Kafka consumer for job: %s, cluster: %s", jobConfig.Name, cluster))
 	}
 
 	// Initialize the decoder based on topic
-	decoder, err := decoderInitFunc(jobConfig, serviceConfig)
+	decoder, err = decoderInitFunc(jobConfig, serviceConfig)
 	if err != nil {
 		return nil, utils.StackError(err,
 			fmt.Sprintf("Unable to initialize Kafka message decoder for job: %s, cluster: %s",
