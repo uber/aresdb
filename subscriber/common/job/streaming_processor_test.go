@@ -42,6 +42,7 @@ import (
 )
 
 var _ = Describe("streaming_processor", func() {
+	var broker *sarama.MockBroker
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",
@@ -220,10 +221,31 @@ var _ = Describe("streaming_processor", func() {
 			}))
 		testServer.Start()
 		address = testServer.Listener.Addr().String()
+
+		// kafka broker mock setup
+		broker = sarama.NewMockBrokerAddr(serviceConfig.Logger.Sugar(), 1, jobConfigs["job1"]["dev01"].StreamingConfig.KafkaBroker)
+		mockFetchResponse := sarama.NewMockFetchResponse(serviceConfig.Logger.Sugar(), 1)
+		for i := 0; i < 10; i++ {
+			mockFetchResponse.SetMessage("job1-topic", 0, int64(i+1234), sarama.StringEncoder("foo"))
+		}
+
+		broker.SetHandlerByMap(map[string]sarama.MockResponse{
+			"MetadataRequest": sarama.NewMockMetadataResponse(serviceConfig.Logger.Sugar()).
+				SetBroker(broker.Addr(), broker.BrokerID()).
+				SetLeader("job1-topic", 0, broker.BrokerID()),
+			"OffsetRequest": sarama.NewMockOffsetResponse(serviceConfig.Logger.Sugar()).
+				SetOffset("job1-topic", 0, sarama.OffsetOldest, 0).
+				SetOffset("job1-topic", 0, sarama.OffsetNewest, 2345),
+			"FetchRequest": mockFetchResponse,
+			"JoinGroupRequest": sarama.NewMockConsumerMetadataResponse(serviceConfig.Logger.Sugar()).
+				SetCoordinator("ares-subscriber_test_job1_dev01_streaming", broker),
+			"OffsetCommitRequest": sarama.NewMockOffsetCommitResponse(serviceConfig.Logger.Sugar()),
+		})
 	})
 
 	AfterEach(func() {
 		testServer.Close()
+		broker.Close()
 	})
 	It("NewStreamingProcessor", func() {
 		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka.NewKafkaConsumer, message.NewDefaultDecoder,
