@@ -24,6 +24,7 @@ import (
 	"github.com/uber/aresdb/utils"
 	"io/ioutil"
 	"net/http/httptest"
+	"reflect"
 )
 
 var _ = ginkgo.Describe("agg query plan", func() {
@@ -370,13 +371,21 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		hllResult := queryCom.AQLQueryResult{
 			"NULL": map[string]interface{}{
 				"NULL": map[string]interface{}{
+					"514": queryCom.HLL{NonZeroRegisters: 4, SparseData: []queryCom.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
+					"2": queryCom.HLL{NonZeroRegisters: 3,
+						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
 					"NULL": queryCom.HLL{NonZeroRegisters: 3,
 						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
 					},
 				}},
 			"1": map[string]interface{}{
 				"c": map[string]interface{}{
+					"514": queryCom.HLL{NonZeroRegisters: 4, SparseData: []queryCom.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
 					"2": queryCom.HLL{NonZeroRegisters: 3,
+						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+					"NULL": queryCom.HLL{NonZeroRegisters: 3,
 						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
 					},
 				},
@@ -384,6 +393,12 @@ var _ = ginkgo.Describe("agg query plan", func() {
 			"4294967295": map[string]interface{}{
 				"d": map[string]interface{}{
 					"514": queryCom.HLL{NonZeroRegisters: 4, SparseData: []queryCom.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
+					"2": queryCom.HLL{NonZeroRegisters: 3,
+						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+					"NULL": queryCom.HLL{NonZeroRegisters: 3,
+						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
 				},
 			}}
 
@@ -434,6 +449,7 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		Ω(qErrors[0]).Should(BeNil())
 		Ω(qResults).Should(HaveLen(1))
 		Ω(qResults[0]).Should(Equal(hllResult))
+		Ω(reflect.DeepEqual(qResults[0], hllResult)).Should(BeTrue())
 
 		qResults, qErrors, err = queryCom.ParseHLLQueryResults(bs, true)
 		Ω(err).Should(BeNil())
@@ -446,16 +462,30 @@ var _ = ginkgo.Describe("agg query plan", func() {
 					"NULL": queryCom.HLL{NonZeroRegisters: 3,
 						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
 					},
-				}},
-			"1": map[string]interface{}{
-				"0": map[string]interface{}{
 					"2": queryCom.HLL{NonZeroRegisters: 3,
 						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
 					},
+					"514": queryCom.HLL{NonZeroRegisters: 4, SparseData: []queryCom.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
+				}},
+			"1": map[string]interface{}{
+				"0": map[string]interface{}{
+					"NULL": queryCom.HLL{NonZeroRegisters: 3,
+						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+					"2": queryCom.HLL{NonZeroRegisters: 3,
+						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+					"514": queryCom.HLL{NonZeroRegisters: 4, SparseData: []queryCom.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
 				},
 			},
 			"4294967295": map[string]interface{}{
 				"1": map[string]interface{}{
+					"NULL": queryCom.HLL{NonZeroRegisters: 3,
+						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
+					"2": queryCom.HLL{NonZeroRegisters: 3,
+						SparseData: []queryCom.HLLRegister{{Index: 1, Rho: 255}, {Index: 2, Rho: 254}, {Index: 3, Rho: 253}},
+					},
 					"514": queryCom.HLL{NonZeroRegisters: 4, SparseData: []queryCom.HLLRegister{{Index: 255, Rho: 1}, {Index: 254, Rho: 2}, {Index: 253, Rho: 3}, {Index: 252, Rho: 4}}},
 				},
 			}}))

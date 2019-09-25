@@ -320,6 +320,23 @@ func traverseRecursive(dimIndex int, curr interface{}, dimReverseDict map[int][]
 	return curr, nil
 }
 
+func getResultSizeRecursive(res interface{}) int {
+	total := 0
+	switch val := res.(type) {
+	case map[string]interface{}:
+		for _, v := range val {
+			total += getResultSizeRecursive(v)
+		}
+	case queryCom.AQLQueryResult:
+		for _, v := range val {
+			total += getResultSizeRecursive(v)
+		}
+	default:
+		return 1
+	}
+	return total
+}
+
 // convert HLL to binary format
 func (ap *AggQueryPlan) postProcessHLLBinary(res queryCom.AQLQueryResult, execErr error) (data []byte, err error) {
 	hllQueryResults := queryCom.NewHLLQueryResults()
@@ -329,7 +346,7 @@ func (ap *AggQueryPlan) postProcessHLLBinary(res queryCom.AQLQueryResult, execEr
 		return
 	}
 
-	resultSize := len(res)
+	resultSize := getResultSizeRecursive(res)
 	if resultSize == 0 {
 		hllQueryResults.WriteResult([]byte{})
 		data = hllQueryResults.GetBytes()
