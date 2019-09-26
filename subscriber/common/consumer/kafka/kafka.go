@@ -308,7 +308,6 @@ func (c *KafkaConsumer) Close() error {
 		c.logger.Info("Started to close consumer",
 			zap.String("consumerGroup", c.group))
 	}
-	close(c.closeCh)
 	return err
 }
 
