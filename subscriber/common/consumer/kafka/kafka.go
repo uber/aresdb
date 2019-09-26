@@ -41,6 +41,9 @@ type KafkaConsumer struct {
 	logger     *zap.Logger
 	scope      tally.Scope
 	msgCh      chan consumer.Message
+
+	// WARNING: The following channels should not be closed by the lib users
+	closeAttempted bool
 	closeCh    chan struct{}
 }
 
@@ -233,11 +236,15 @@ func (c *KafkaConsumer) startConsuming(ctx context.Context, cgHandler *CGHandler
 	for run := true; run; {
 		if err := c.ConsumerGroup.Consume(ctx, c.topicArray, cgHandler); err != nil {
 			c.logger.Error("Received error from consumer", zap.Error(err))
+			run = false
 		}
 		// check if context was cancelled, signaling that the consumer should stop
 		if ctx.Err() != nil {
 			run = false
 			c.logger.Info("Received close Signal")
+		}
+		if !run {
+			c.Close()
 		}
 	}
 }
@@ -297,6 +304,9 @@ func (c *KafkaConsumer) Close() error {
 	c.Lock()
 	defer c.Unlock()
 
+	if c.closeAttempted {
+		return fmt.Errorf("Close attempted again on consumer group %s", c.group)
+	}
 	c.logger.Info("Attempting to close consumer",
 		zap.String("consumerGroup", c.group))
 	err := c.ConsumerGroup.Close()
@@ -308,6 +318,8 @@ func (c *KafkaConsumer) Close() error {
 		c.logger.Info("Started to close consumer",
 			zap.String("consumerGroup", c.group))
 	}
+	close(c.closeCh)
+	c.closeAttempted = true
 	return err
 }
 
