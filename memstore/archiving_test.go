@@ -272,7 +272,7 @@ var _ = ginkgo.Describe("archiving", func() {
 
 		// Old version of archiving store should be purged.
 		for i, column := range archiveBatch0.Columns {
-			if i != 3 {
+			if i != 3 && i != 4 {
 				Ω(column.(*archiveVectorParty).values).Should(BeNil())
 				Ω(column.(*archiveVectorParty).nulls).Should(BeNil())
 				Ω(column.(*archiveVectorParty).counts).Should(BeNil())
@@ -283,7 +283,7 @@ var _ = ginkgo.Describe("archiving", func() {
 
 		// If a batch is partially read, it should not be purged
 		for i, column := range batch101.Columns {
-			if i != 3 {
+			if i != 3 && i != 4 {
 				Ω(column.(*cLiveVectorParty).GetMode()).ShouldNot(BeEquivalentTo(memCom.AllValuesDefault))
 				Ω(column.(*cLiveVectorParty).values).ShouldNot(BeNil())
 			} else {

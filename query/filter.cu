@@ -20,6 +20,7 @@
 #include <initializer_list>
 #include "query/transform.hpp"
 #include "query/binder.hpp"
+#include "query/utils.hpp"
 
 namespace ares {
 
@@ -45,10 +46,65 @@ class FilterContext {
   }
 
   template<typename InputIterator>
-  int run(uint32_t *indexVector, InputIterator inputIterator);
+  int run(uint32_t *indexVector, InputIterator inputIterator) {
+    switch (numForeignTables) {
+      #define EXECUTE_UNARY_REMOVE_IF(NumTotalForeignTables) \
+      case NumTotalForeignTables: { \
+        IndexZipIteratorMaker<NumTotalForeignTables> maker; \
+        return executeRemoveIf(inputIterator, \
+                             maker.make(indexVector, \
+                                        foreignTableRecordIDVectors)); \
+      }
+
+      EXECUTE_UNARY_REMOVE_IF(0)
+      EXECUTE_UNARY_REMOVE_IF(1)
+      EXECUTE_UNARY_REMOVE_IF(2)
+      EXECUTE_UNARY_REMOVE_IF(3)
+      EXECUTE_UNARY_REMOVE_IF(4)
+      EXECUTE_UNARY_REMOVE_IF(5)
+      EXECUTE_UNARY_REMOVE_IF(6)
+      EXECUTE_UNARY_REMOVE_IF(7)
+      EXECUTE_UNARY_REMOVE_IF(8)
+      default:throw std::invalid_argument(
+        "only support up to 8 foreign tables");
+    }
+  }
 
   template<typename LHSIterator, typename RHSIterator>
-  int run(uint32_t *indexVector, LHSIterator lhsIter, RHSIterator rhsIter);
+  typename std::enable_if<
+      supported_binary_combination<LHSIterator, RHSIterator>::value, int>::type
+  run(uint32_t *indexVector, LHSIterator lhsIter, RHSIterator rhsIter) {
+    switch (numForeignTables) {
+      #define EXECUTE_BINARY_REMOVE_IF(NumTotalForeignTables) \
+      case NumTotalForeignTables: { \
+        IndexZipIteratorMaker<NumTotalForeignTables> maker; \
+        return executeRemoveIf(lhsIter, rhsIter, maker.make(indexVector, \
+                                foreignTableRecordIDVectors)); \
+      }
+
+      EXECUTE_BINARY_REMOVE_IF(0)
+      EXECUTE_BINARY_REMOVE_IF(1)
+      EXECUTE_BINARY_REMOVE_IF(2)
+      EXECUTE_BINARY_REMOVE_IF(3)
+      EXECUTE_BINARY_REMOVE_IF(4)
+      EXECUTE_BINARY_REMOVE_IF(5)
+      EXECUTE_BINARY_REMOVE_IF(6)
+      EXECUTE_BINARY_REMOVE_IF(7)
+      EXECUTE_BINARY_REMOVE_IF(8)
+      default:throw std::invalid_argument(
+        "only support up to 8 foreign tables");
+    }
+  }
+
+  template<typename LHSIterator, typename RHSIterator>
+  typename std::enable_if<
+    !supported_binary_combination<LHSIterator, RHSIterator>::value, int>::type
+  run(uint32_t *indexVector, LHSIterator lhsIter, RHSIterator rhsIter) {
+    throw std::invalid_argument(
+              std::string("Unsupported data type combination ") +
+               __PRETTY_FUNCTION__ + ", " + __FILE__ + ": " +
+               std::to_string(__LINE__) + " in filter context");
+  }
 
  private:
   uint8_t *predicateVector;
@@ -168,33 +224,6 @@ int FilterContext<FunctorType>::executeRemoveIf(
          indexZipIterator;
 }
 
-// run unary filter.
-template<typename FunctorType>
-template<typename InputIterator>
-int FilterContext<FunctorType>::run(uint32_t *indexVector,
-                                    InputIterator inputIterator) {
-  switch (numForeignTables) {
-    #define EXECUTE_UNARY_REMOVE_IF(NumTotalForeignTables) \
-    case NumTotalForeignTables: { \
-      IndexZipIteratorMaker<NumTotalForeignTables> maker; \
-      return executeRemoveIf(inputIterator, \
-                           maker.make(indexVector, \
-                                      foreignTableRecordIDVectors)); \
-    }
-
-    EXECUTE_UNARY_REMOVE_IF(0)
-    EXECUTE_UNARY_REMOVE_IF(1)
-    EXECUTE_UNARY_REMOVE_IF(2)
-    EXECUTE_UNARY_REMOVE_IF(3)
-    EXECUTE_UNARY_REMOVE_IF(4)
-    EXECUTE_UNARY_REMOVE_IF(5)
-    EXECUTE_UNARY_REMOVE_IF(6)
-    EXECUTE_UNARY_REMOVE_IF(7)
-    EXECUTE_UNARY_REMOVE_IF(8)
-    default:throw std::invalid_argument("only support up to 8 foreign tables");
-  }
-}
-
 // run binary filter.
 template<typename FunctorType>
 template<typename LHSIterator, typename RHSIterator, typename IndexZipIterator>
@@ -222,33 +251,4 @@ int FilterContext<FunctorType>::executeRemoveIf(
                            indexZipIterator + indexVectorLength, removeFilter) -
          indexZipIterator;
 }
-
-// template partial specialization with output iterator as uint8_t* for binary
-// transform.
-template<typename FunctorType>
-template<typename LHSIterator, typename RHSIterator>
-int FilterContext<FunctorType>::run(uint32_t *indexVector,
-                                    LHSIterator lhsIter,
-                                    RHSIterator rhsIter) {
-  switch (numForeignTables) {
-    #define EXECUTE_BINARY_REMOVE_IF(NumTotalForeignTables) \
-    case NumTotalForeignTables: { \
-      IndexZipIteratorMaker<NumTotalForeignTables> maker; \
-      return executeRemoveIf(lhsIter, rhsIter, maker.make(indexVector, \
-                               foreignTableRecordIDVectors)); \
-    }
-
-    EXECUTE_BINARY_REMOVE_IF(0)
-    EXECUTE_BINARY_REMOVE_IF(1)
-    EXECUTE_BINARY_REMOVE_IF(2)
-    EXECUTE_BINARY_REMOVE_IF(3)
-    EXECUTE_BINARY_REMOVE_IF(4)
-    EXECUTE_BINARY_REMOVE_IF(5)
-    EXECUTE_BINARY_REMOVE_IF(6)
-    EXECUTE_BINARY_REMOVE_IF(7)
-    EXECUTE_BINARY_REMOVE_IF(8)
-    default:throw std::invalid_argument("only support up to 8 foreign tables");
-  }
-}
-
 }  // namespace ares

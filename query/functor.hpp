@@ -111,6 +111,24 @@ struct EqualFunctor<GeoPointT> {
   }
 };
 
+// Equal functor for UUIDT.
+template<>
+struct EqualFunctor<UUIDT> {
+  __host__ __device__
+  thrust::tuple<bool, bool> operator()(
+      const thrust::tuple<const UUIDT, bool> t1,
+      const thrust::tuple<const UUIDT, bool> t2) const {
+    // if one of them is null, the result is null.
+    if (!thrust::get<1>(t1) || !thrust::get<1>(t2)) {
+      return thrust::make_tuple(false, false);
+    }
+    return thrust::make_tuple(
+        thrust::get<0>(t1).p1 == thrust::get<0>(t2).p1 &&
+            thrust::get<0>(t1).p2 == thrust::get<0>(t2).p2,
+        true);
+  }
+};
+
 template<typename T>
 struct NotEqualFunctor {
   __host__ __device__
@@ -498,12 +516,23 @@ struct ArrayElementAtFunctor {
 // for position index, the Input and Output may have different data type
 // as the aql compiler will convert NumberLitereral to uint32_t or float_t
 // for output data type
-template <typename O, typename I>
-struct ArrayElementAtFunctor<O, I, int32_t> {
-  typedef typename thrust::tuple<I, bool> argument_type_1;
-  typedef typename thrust::tuple<int32_t, bool> argument_type_2;
+template <typename O, typename I1, typename I2>
+struct ArrayElementAtFunctor<O, I1, I2,
+    typename std::enable_if<
+        (std::is_same<I2, int32_t>::value ||
+          std::is_same<I2, int>::value) &&
+        ((std::is_same<GeoPointT*, I1>::value &&
+            std::is_same<GeoPointT, O>::value) ||
+         (std::is_same<UUIDT*, I1>::value &&
+            std::is_same<UUIDT, O>::value) ||
+         (!std::is_same<UUIDT*, I1>::value &&
+            !std::is_same<UUIDT, O>::value &&
+            !std::is_same<GeoPointT*, I1>::value &&
+            !std::is_same<GeoPointT, O>::value))>::type> {
+  typedef typename thrust::tuple<I1, bool> argument_type_1;
+  typedef typename thrust::tuple<I2, bool> argument_type_2;
   typedef typename thrust::tuple<O, bool> result_type;
-  typedef typename std::remove_pointer<I>::type input_type;
+  typedef typename std::remove_pointer<I1>::type input_type;
 
   __host__ __device__
   result_type operator()(argument_type_1 arrVal, argument_type_2 indexT) const {
@@ -519,7 +548,7 @@ struct ArrayElementAtFunctor<O, I, int32_t> {
       O v;
       return thrust::make_tuple<O, bool>(v, false);
     }
-    auto valP = reinterpret_cast<I>(
+    auto valP = reinterpret_cast<I1>(
         reinterpret_cast<uint8_t*>(thrust::get<0>(arrVal)) + 4);
     int len = static_cast<int>(*lenP);
     if (index < 0) {
@@ -556,12 +585,43 @@ struct ArrayContainsFunctor {
   }
 };
 
+// common primitive type equals comparison function
+template<typename T1, typename T2>
+__host__ __device__
+inline bool equals(const T1& o1, const T2& o2) {
+    return o1 == o2;
+}
+
+// specialized equals function for UUIDT
+template<>
+__host__ __device__
+inline bool equals<UUIDT, UUIDT>(const UUIDT& o1, const UUIDT& o2) {
+    return o1.p1 == o2.p1 && o1.p2 == o2.p2;
+}
+
+// specialized equals function for GeoPointT
+template<>
+__host__ __device__
+inline bool equals<GeoPointT, GeoPointT>(
+    const GeoPointT& o1, const GeoPointT& o2) {
+    return o1.Lat == o2.Lat && o1.Long == o2.Long;
+}
+
 // specialized ArrayContainsFunctor while the return type is boolean
 // the Input and Output type may not always be the same
 // the aql compiler will convert NumberLitereral to uint32_t or float_t
 // for 2nd argument
 template <typename I1, typename I2>
-struct ArrayContainsFunctor<bool, I1, I2> {
+struct ArrayContainsFunctor<bool, I1, I2,
+    typename std::enable_if<
+        ((std::is_same<GeoPointT*, I1>::value &&
+            std::is_same<GeoPointT, I2>::value) ||
+          (std::is_same<UUIDT*, I1>::value &&
+            std::is_same<UUIDT, I2>::value) ||
+          (!std::is_same<UUIDT*, I1>::value &&
+            !std::is_same<UUIDT, I2>::value &&
+            !std::is_same<GeoPointT*, I1>::value &&
+            !std::is_same<GeoPointT, I2>::value))>::type> {
   typedef typename thrust::tuple<I1, bool> argument_type_1;
   typedef typename thrust::tuple<I2, bool> argument_type_2;
   typedef typename thrust::tuple<bool, bool> result_type;
@@ -589,7 +649,7 @@ struct ArrayContainsFunctor<bool, I1, I2> {
                             (sizeof(input_type)*8*len + 7) / 8;
     for (int i = 0; i < len; i++) {
       bool elemValid = (*(validStartP + i / 8) & (0x1 << (i%8))) != 0x0;
-      if (elemValid && val == *(valP + i)) {
+      if (elemValid && equals(val, *(valP + i))) {
         return thrust::make_tuple<bool, bool>(true, true);
       }
     }
@@ -865,7 +925,10 @@ template <typename O, typename I1, typename I2>
 struct BinaryFunctor<O, I1, I2,
         typename std::enable_if<std::is_same<I1, I2>::value &&
             !std::is_same<I1, float_t>::value &&
-            !std::is_same<I1, GeoPointT>::value>::type > {
+            !std::is_same<I1, UUIDT>::value &&
+            !std::is_same<I1, GeoPointT>::value &&
+            !std::is_same<O, UUIDT>::value &&
+            !std::is_same<O, GeoPointT>::value>::type > {
   typedef thrust::tuple<I1, bool> argument_type_1;
   typedef thrust::tuple<I2, bool> argument_type_2;
 
@@ -951,12 +1014,31 @@ struct BinaryFunctor<UUIDT, I, I> {
   }
 };
 
+template <typename I>
+struct BinaryFunctor<GeoPointT, I, I> {
+  typedef thrust::tuple<I, bool> argument_type_1;
+  typedef thrust::tuple<I, bool> argument_type_2;
+  typedef thrust::tuple<GeoPointT, bool> result_type;
+
+  explicit BinaryFunctor(BinaryFunctorType functorType)
+      : functorType(functorType) {}
+
+  BinaryFunctorType functorType;
+
+  __host__ __device__ result_type operator()(const argument_type_1 t1,
+                                             const argument_type_2 t2) const {
+    GeoPointT point = {0.0, 0.0};
+    return thrust::make_tuple(point, false);
+  }
+};
+
 // Specialization with float type to avoid illegal functor type template
 // generation.
 template <typename O>
 struct BinaryFunctor<
     O, float_t, float_t,
-        typename std::enable_if<!std::is_same<O, UUIDT>::value>::type> {
+        typename std::enable_if<!std::is_same<O, UUIDT>::value &&
+            !std::is_same<O, GeoPointT>::value>::type> {
   typedef thrust::tuple<float_t, bool> argument_type_1;
   typedef thrust::tuple<float_t, bool> argument_type_2;
   typedef thrust::tuple<O, bool> result_type;
@@ -998,7 +1080,8 @@ struct BinaryFunctor<
 template <typename O>
 struct BinaryFunctor<
     O, GeoPointT, GeoPointT,
-    typename std::enable_if<!std::is_same<O, UUIDT>::value>::type> {
+    typename std::enable_if<!std::is_same<O, UUIDT>::value &&
+        !std::is_same<O, GeoPointT>::value>::type> {
   typedef thrust::tuple<GeoPointT, bool> argument_type_1;
   typedef thrust::tuple<GeoPointT, bool> argument_type_2;
   typedef thrust::tuple<O, bool> result_type;
@@ -1013,6 +1096,34 @@ struct BinaryFunctor<
     switch (functorType) {
       case Equal:
         return EqualFunctor<GeoPointT>()(t1, t2);
+      default:
+        // should not came here, GeoPoint only support equal function
+        return false;
+    }
+  }
+};
+
+// Specialization with UUIDT type to avoid illegal functor type template
+// generation.
+template <typename O>
+struct BinaryFunctor<
+    O, UUIDT, UUIDT,
+    typename std::enable_if<!std::is_same<O, UUIDT>::value &&
+        !std::is_same<O, GeoPointT>::value>::type> {
+  typedef thrust::tuple<UUIDT, bool> argument_type_1;
+  typedef thrust::tuple<UUIDT, bool> argument_type_2;
+  typedef thrust::tuple<O, bool> result_type;
+
+  explicit BinaryFunctor(BinaryFunctorType functorType)
+      : functorType(functorType) {}
+
+  BinaryFunctorType functorType;
+
+  __host__ __device__ result_type operator()(const argument_type_1 t1,
+                                             const argument_type_2 t2) const {
+    switch (functorType) {
+      case Equal:
+        return EqualFunctor<UUIDT>()(t1, t2);
       default:
         // should not came here, GeoPoint only support equal function
         return false;

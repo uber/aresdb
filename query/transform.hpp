@@ -24,6 +24,7 @@
 #include <cfloat>
 #include <cstdint>
 #include <vector>
+#include <string>
 #include "query/algorithm.hpp"
 #include "query/binder.hpp"
 #include "query/functor.hpp"
@@ -53,6 +54,7 @@ class TransformContext {
     return cudaStream;
   }
 
+  // unary transformation
   template<typename InputIterator>
   int run(uint32_t *indexVector, InputIterator inputIter) const {
     typedef typename InputIterator::value_type::head_type InputValueType;
@@ -63,8 +65,11 @@ class TransformContext {
         inputIter + indexVectorLength, outputIter, f) - outputIter;
   }
 
+  // valid combination for binary transformation
   template<typename LHSIterator, typename RHSIterator>
-  int run(uint32_t *indexVector,
+  typename std::enable_if<
+      supported_binary_combination<LHSIterator, RHSIterator>::value, int>::type
+  run(uint32_t *indexVector,
           LHSIterator lhsIter,
           RHSIterator rhsIter) const {
     typedef typename input_iterator_value_type<
@@ -83,6 +88,18 @@ class TransformContext {
         lhsIter + indexVectorLength, rhsIter, outputIter, f) - outputIter;
   }
 
+  // invalid combination
+  template<typename LHSIterator, typename RHSIterator>
+  typename std::enable_if<
+    !supported_binary_combination<LHSIterator, RHSIterator>::value, int>::type
+  run(uint32_t *indexVector,
+          LHSIterator lhsIter,
+          RHSIterator rhsIter) const {
+      throw std::invalid_argument(
+              std::string("Unsupported data type combination ") +
+              __PRETTY_FUNCTION__ + ", " + __FILE__ + ": " +
+              std::to_string(__LINE__) + " in tansform context");
+  }
 
  protected:
   OutputIterator outputIter;

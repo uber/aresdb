@@ -19,6 +19,10 @@ func GetDimensionDataType(expression expr.Expr) memCom.DataType {
 		return memCom.Int32
 	case expr.Float:
 		return memCom.Float32
+	case expr.UUID:
+		return memCom.UUID
+	case expr.GeoPoint:
+		return memCom.GeoPoint
 	default:
 		return memCom.Uint32
 	}
