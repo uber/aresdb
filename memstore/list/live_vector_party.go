@@ -132,9 +132,11 @@ func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 	// write offsets
 	var valueBytes int
 	for i := 0; i < vp.length; i++ {
-		_, length := vp.GetOffsetLength(i)
-		if length == 0 {
+		_, length, valid := vp.GetOffsetLength(i)
+		if !valid {
 			dataWriter.WriteUint32(uint32(0))
+		} else if length == 0 {
+			dataWriter.WriteUint32(uint32(common.ZeroLengthArrayFlag))
 		} else {
 			dataWriter.WriteUint32(uint32(valueBytes))
 		}
@@ -154,7 +156,7 @@ func (vp *LiveVectorParty) Write(writer io.Writer) (err error) {
 	// write values
 	baseAddr := vp.memoryPool.GetNativeMemoryAllocator().GetBaseAddr()
 	for i := 0; i < vp.length; i++ {
-		offset, length := vp.GetOffsetLength(i)
+		offset, length, _ := vp.GetOffsetLength(i)
 		bytes := common.CalculateListElementBytes(vp.dataType, int(length))
 
 		if bytes > 0 {
@@ -287,17 +289,23 @@ func (vp *LiveVectorParty) SetValue(row int, val unsafe.Pointer, valid bool) {
 
 	var newLen int
 	if valid {
-		newLen = int(*(*uint32)(val))
+		if val != nil {
+			newLen = int(*(*uint32)(val))
+		}
 	}
 
-	oldOffset, oldLen := vp.GetOffsetLength(row)
+	oldOffset, oldLen, _ := vp.GetOffsetLength(row)
 	oldCap := *(*uint32)(vp.caps.GetValue(row))
 	oldBytes := common.CalculateListElementBytes(vp.dataType, int(oldLen))
 	newBytes := common.CalculateListElementBytes(vp.dataType, int(newLen))
 
 	buf := vp.memoryPool.Reallocate([2]uintptr{uintptr(oldOffset), uintptr(oldCap)}, oldBytes, newBytes)
 
-	vp.SetOffsetLength(row, unsafe.Pointer(&buf[0]), unsafe.Pointer(&newLen))
+	if !valid {
+		vp.SetOffsetLength(row, nil, nil)
+	} else {
+		vp.SetOffsetLength(row, unsafe.Pointer(&buf[0]), unsafe.Pointer(&newLen))
+	}
 	// Set footer offset.
 	vp.caps.SetValue(row, unsafe.Pointer(&buf[1]))
 
@@ -337,9 +345,11 @@ func (vp *LiveVectorParty) GetValue(row int) (val unsafe.Pointer, validity bool)
 	vp.RLock()
 	defer vp.RUnlock()
 
-	offset, length := vp.GetOffsetLength(row)
-	if offset == 0 && length == 0 {
-		return unsafe.Pointer(uintptr(0)), false
+	offset, length, valid := vp.GetOffsetLength(row)
+	if !valid {
+		return nil, false
+	} else if length == 0 {
+		return nil, true
 	}
 	baseAddr := vp.memoryPool.GetNativeMemoryAllocator().GetBaseAddr()
 	return unsafe.Pointer(baseAddr + uintptr(offset)), true
@@ -391,7 +401,7 @@ func (vp *LiveVectorParty) Dump(file *os.File) {
 		if val.Valid {
 			fmt.Fprintf(file, "\t%v\n", val.ConvertToHumanReadable(vp.dataType))
 		} else {
-			fmt.Println(file, "\tnil")
+			fmt.Fprintln(file, "\tnil")
 		}
 	}
 }

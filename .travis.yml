@@ -37,8 +37,10 @@ install:
   - ./build/cmake/bin/cmake .
   - .travis/install_golang_tools.sh
 script:
-  - make lint -j
-  - make travis
+  - while sleep 2m; do echo "=====[ $SECONDS seconds, build still running... ]====="; done &
+  - make -j 2 travis
+  - make -j 2 lint
+  - kill %1 
 after_success:
   # generate coverage output file
   - gover . coverage.txt

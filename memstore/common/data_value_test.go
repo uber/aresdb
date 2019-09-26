@@ -556,4 +556,9 @@ var _ = ginkgo.Describe("data value", func() {
 		_, err = GetDataValue(true, 1, "UUID")
 		Ω(err).ShouldNot(BeNil())
 	})
+
+	ginkgo.It("ArrayValueReader should ok to read null ptr", func() {
+		reader := NewArrayValueReader(ArrayInt16, nil)
+		Ω(reader.GetLength()).Should(Equal(0))
+	})
 })

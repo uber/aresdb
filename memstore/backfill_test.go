@@ -125,7 +125,6 @@ var _ = ginkgo.Describe("backfill", func() {
 			Shard: shard,
 		}
 		shard.ArchiveStore.CurrentVersion.Batches[0] = baseBatch
-
 		batch, err = GetFactory().ReadArchiveBatch("backfill/backfillNew")
 		Ω(err).Should(BeNil())
 		newBatch = &ArchiveBatch{
@@ -412,6 +411,7 @@ var _ = ginkgo.Describe("backfill", func() {
 				}
 			}
 		}
+
 		Ω(batch.Equals(&backfillBatch.Batch)).Should(BeTrue())
 		Ω(newBatch.Columns[6].IsList()).Should(BeTrue())
 		Ω(backfillCtx.new.Batch.Columns[6].IsList()).Should(BeTrue())

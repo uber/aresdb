@@ -1169,7 +1169,7 @@ TEST(CalculateHLLHashTest, CheckUUIDT) {
 }
 
 TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
-  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
+  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0xFFFFFFFF, 0, 56, 1};
   uint32_t values[72] = {2, 1, 2, 0x03,
                          1, 1, 0x01, 0,
                          3, 1, 2, 3, 0x07, 0,
@@ -1205,7 +1205,7 @@ TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
 }
 
 TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
-  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
+  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0xFFFFFFFF, 0, 56, 1};
   uint32_t values[72] = {2, 1, 2, 0x03,
                          1, 1, 0x01, 0,
                          3, 1, 2, 3, 0x07, 0,
@@ -1250,7 +1250,7 @@ TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
 }
 
 TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
-  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
+  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0xFFFFFFFF, 0, 56, 1};
   uint32_t values[72] = {2, 1, 2, 0x03,
                          1, 1, 0x01, 0,
                          3, 1, 2, 3, 0x07, 0,

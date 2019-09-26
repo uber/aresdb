@@ -23,9 +23,11 @@ package expr
 import (
 	"bytes"
 	"fmt"
+	"github.com/gofrs/uuid"
 	memCom "github.com/uber/aresdb/memstore/common"
 	"strconv"
 	"strings"
+	"unsafe"
 )
 
 // Type defines data types for expression evaluation.
@@ -41,6 +43,7 @@ const (
 	Float
 	GeoPoint
 	GeoShape
+	UUID
 )
 
 var typeNames = map[Type]string{
@@ -51,6 +54,7 @@ var typeNames = map[Type]string{
 	Float:       "Float",
 	GeoPoint:    "GeoPoint",
 	GeoShape:    "GeoShape",
+	UUID:        "UUID",
 }
 
 // constants for call names.
@@ -109,6 +113,7 @@ func (*UnknownLiteral) expr()  {}
 func (*VarRef) expr()          {}
 func (*Wildcard) expr()        {}
 func (*GeopointLiteral) expr() {}
+func (*UUIDLiteral) expr()     {}
 
 // walkNames will walk the Expr and return the database fields
 func walkNames(exp Expr) []string {
@@ -379,6 +384,25 @@ func (l *GeopointLiteral) Type() Type {
 // String returns a string representation of the literal.
 func (l *GeopointLiteral) String() string {
 	return fmt.Sprintf("point(%f, %f)", l.Val[0], l.Val[1])
+}
+
+// UUIDLiteral represents a literal for UUID
+type UUIDLiteral struct {
+	Val [2]uint64
+}
+
+// Type returns the type.
+func (l *UUIDLiteral) Type() Type {
+	return UUID
+}
+
+// String returns a string representation of the literal.
+func (l *UUIDLiteral) String() string {
+	uuidBytes := *(*[]byte)(unsafe.Pointer(&l.Val[0]))
+	if uuidVal, err := uuid.FromBytes(uuidBytes); err != nil {
+		return uuidVal.String()
+	}
+	return ""
 }
 
 // NullLiteral represents a NULL literal.

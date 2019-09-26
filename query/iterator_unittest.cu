@@ -301,7 +301,7 @@ TEST(VectorPartyIteratorTest, CheckFloatIterator) {
 
 // Test for ArrayVectorPartyIterator
 TEST(ArrayVectorPartyIteratorTest, CheckIntArrayIterator) {
-  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0, 0xFFFFFFFF, 56, 1};
+  uint32_t offsetLength[12] = {0, 2, 16, 1, 32, 3, 0, 0, 0xFFFFFFFF, 0, 56, 1};
   uint32_t values[72] = {2, 1, 2, 0xc0,
                          1, 1, 0x80, 0,
                          3, 1, 2, 3, 0xe0, 0,

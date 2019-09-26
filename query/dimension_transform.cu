@@ -46,6 +46,10 @@ class OutputVectorBinderHelper {
               BIND_DIMENSION_OUTPUT(int64_t)
             case Float32:
               BIND_DIMENSION_OUTPUT(float_t)
+            case UUID:
+              BIND_DIMENSION_OUTPUT(UUIDT)
+            case GeoPoint:
+              BIND_DIMENSION_OUTPUT(GeoPointT)
             default:
               throw std::invalid_argument(
                   "Unsupported data type for DimensionOutput");
@@ -70,8 +74,6 @@ class OutputVectorBinderHelper<1>: OutputVectorBinderHelper<2> {
         }
     }
 };
-
-
 
 template<int NInput, typename FunctorType>
 int OutputVectorBinder<NInput, FunctorType>::transformDimensionOutput(

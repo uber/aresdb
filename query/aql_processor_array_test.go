@@ -80,6 +80,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 					{Deleted: false, Name: "c1", Type: metaCom.Bool},
 					{Deleted: false, Name: "c2", Type: metaCom.Float32},
 					{Deleted: false, Name: "c3", Type: metaCom.ArrayInt16},
+					{Deleted: false, Name: "c4", Type: metaCom.ArrayUUID},
 				},
 			},
 			ColumnIDs: map[string]int{
@@ -87,9 +88,10 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 				"c1": 1,
 				"c2": 2,
 				"c3": 3,
+				"c4": 4,
 			},
-			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32, memCom.ArrayInt16},
-			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
+			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32, memCom.ArrayInt16, memCom.ArrayUUID},
+			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
 		}, metaStore, diskStore, hostMemoryManager, shardID, options)
 
 		archiveBatch0 = &memstore.ArchiveBatch{
@@ -159,16 +161,20 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 		defer ctx.cleanupBeforeAggregation()
 		var stream unsafe.Pointer
 		testFactory := list.GetFactory()
-		vp, err := readDeviceVPSlice(testFactory, "list/live_vp_uint32", stream, ctx.device)
+		vp1, err := readDeviceVPSlice(testFactory, "list/live_vp_uint32", stream, ctx.device)
 		Ω(err).Should(BeNil())
-		Ω(vp.length).Should(Equal(4))
+		Ω(vp1.length).Should(Equal(4))
+		vp2, err := readDeviceVPSlice(testFactory, "list/live_vp_uuid", stream, ctx.device)
+		Ω(err).Should(BeNil())
+		Ω(vp2.length).Should(Equal(5))
 		// use AfterEach to clean device memory
 		ctx.columns = []deviceVectorPartySlice{
-			vp,
+			vp1,
+			vp2,
 		}
 	})
 
-	var _ = ginkgo.It("array element_at should work", func() {
+	var _ = ginkgo.It("array element_at should work 1", func() {
 		qc := &AQLQueryContext{}
 		q := &queryCom.AQLQuery{
 			Table: table,
@@ -184,6 +190,47 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 				To:     "1970-01-02",
 			},
 			Filters: []string{"element_at(c3, -1)=143"},
+		}
+		qc.Query = q
+
+		qc.Compile(memStore, topology.NewStaticShardOwner([]int{0}))
+		Ω(qc.Error).Should(BeNil())
+		qc.FindDeviceForQuery(memStore, -1, NewDeviceManager(common.QueryConfig{
+			DeviceMemoryUtilization: 1.0,
+			DeviceChoosingTimeout:   -1,
+		}), 100)
+		Ω(qc.Device).Should(Equal(0))
+		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
+			shard.Users.Add(1)
+		}).Return(shard, nil).Once()
+
+		qc.ProcessQuery(memStore)
+		Ω(qc.Error).Should(BeNil())
+		qc.Postprocess()
+		qc.ReleaseHostResultsBuffers()
+		bs, err := json.Marshal(qc.Results)
+		Ω(err).Should(BeNil())
+		Ω(bs).Should(MatchJSON(` {
+			"120": 2
+		  }`))
+	})
+
+	var _ = ginkgo.It("array element_at should work for uuid", func() {
+		qc := &AQLQueryContext{}
+		q := &queryCom.AQLQuery{
+			Table: table,
+			Dimensions: []queryCom.Dimension{
+				{Expr: "c0", TimeBucketizer: "m", TimeUnit: "second"},
+			},
+			Measures: []queryCom.Measure{
+				{Expr: "count(c1)"},
+			},
+			TimeFilter: queryCom.TimeFilter{
+				Column: "c0",
+				From:   "1970-01-01",
+				To:     "1970-01-02",
+			},
+			Filters: []string{"element_at(c4, -1)='14000000-0000-0000-0300-000000000000'"},
 		}
 		qc.Query = q
 
@@ -290,6 +337,47 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 		  }`))
 	})
 
+	var _ = ginkgo.It("array length should work for UUID", func() {
+		qc := &AQLQueryContext{}
+		q := &queryCom.AQLQuery{
+			Table: table,
+			Dimensions: []queryCom.Dimension{
+				{Expr: "c0", TimeBucketizer: "m", TimeUnit: "second"},
+			},
+			Measures: []queryCom.Measure{
+				{Expr: "count(c1)"},
+			},
+			TimeFilter: queryCom.TimeFilter{
+				Column: "c0",
+				From:   "1970-01-01",
+				To:     "1970-01-02",
+			},
+			Filters: []string{"length(c4) = 2"},
+		}
+		qc.Query = q
+
+		qc.Compile(memStore, topology.NewStaticShardOwner([]int{0}))
+		Ω(qc.Error).Should(BeNil())
+		qc.FindDeviceForQuery(memStore, -1, NewDeviceManager(common.QueryConfig{
+			DeviceMemoryUtilization: 1.0,
+			DeviceChoosingTimeout:   -1,
+		}), 100)
+		Ω(qc.Device).Should(Equal(0))
+		memStore.(*memMocks.MemStore).On("GetTableShard", "table1", 0).Run(func(args mock.Arguments) {
+			shard.Users.Add(1)
+		}).Return(shard, nil).Once()
+		qc.ProcessQuery(memStore)
+		Ω(qc.Error).Should(BeNil())
+		qc.Postprocess()
+		qc.ReleaseHostResultsBuffers()
+		bs, err := json.Marshal(qc.Results)
+		Ω(err).Should(BeNil())
+		Ω(bs).Should(MatchJSON(` {
+			"0": 3,
+			"60": 2
+		  }`))
+	})
+
 	var _ = ginkgo.It("array query for non-aggregation query should work", func() {
 		qc := &AQLQueryContext{}
 		q := &queryCom.AQLQuery{
@@ -298,6 +386,8 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 				{Expr: "c0"},
 				{Expr: "element_at(c3, 1)"},
 				{Expr: "length(c3)"},
+				{Expr: "element_at(c4, 1)"},
+				{Expr: "length(c4)"},
 			},
 			Measures: []queryCom.Measure{
 				{Expr: "1"},
@@ -330,73 +420,101 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
         "headers": [
           "c0",
           "element_at(c3, 1)",
-          "length(c3)"
+          "length(c3)",
+          "element_at(c4, 1)",
+          "length(c4)"
         ],
         "matrixData": [
           [
             "100",
+            "NULL",
+            "2",
             "NULL",
             "2"
           ],
           [
             "110",
             "121",
+            "2",
+            "12000000-0000-0000-0100-000000000000",
             "2"
           ],
           [
             "120",
             "NULL",
-            "0"
+            "NULL",
+            "NULL",
+            "NULL"
           ],
           [
             "130",
             "132",
+            "3",
+            "13000000-0000-0000-0200-000000000000",
             "3"
           ],
           [
             "140",
             "142",
+            "3",
+            "14000000-0000-0000-0200-000000000000",
             "3"
           ],
           [
             "100",
             "12",
+            "3",
+            "01000000-0000-0000-0200-000000000000",
             "3"
           ],
           [
             "110",
+            "NULL",
+            "2",
             "NULL",
             "2"
           ],
           [
             "120",
             "NULL",
-            "0"
+            "NULL",
+            "NULL",
+            "NULL"
           ],
           [
             "0",
             "312",
+            "2",
+            "03000000-0000-0000-0200-000000000000",
             "2"
           ],
           [
             "10",
+            "NULL",
+            "2",
             "NULL",
             "2"
           ],
           [
             "20",
             "NULL",
+            "1",
+            "NULL",
             "1"
           ],
           [
             "30",
             "541",
+            "2",
+            "06000000-0000-0000-0100-000000000000",
             "2"
           ],
           [
             "40",
             "NULL",
-            "0"
+            "NULL",
+            "NULL",
+            "NULL"
           ]
         ]
       }`))

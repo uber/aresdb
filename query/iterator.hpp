@@ -421,13 +421,10 @@ class ArrayVectorPartyIterator
             reinterpret_cast<uint64_t *>(basePtr));
 
     if (length == 0) {
-        return thrust::make_tuple(reinterpret_cast<Value*>(NULL), true);
-    } else if (length == UINT32_MAX) {
-        return thrust::make_tuple(reinterpret_cast<Value*>(NULL), false);
-    } else {
-        return thrust::make_tuple(
-                reinterpret_cast<Value*>(valuePtr + offset), true);
+      return thrust::make_tuple(reinterpret_cast<Value*>(NULL), offset != 0);
     }
+    return thrust::make_tuple(
+        reinterpret_cast<Value*>(valuePtr + offset), true);
   }
 
   __host__ __device__
@@ -483,6 +480,7 @@ class SimpleIterator :
 
   __host__ __device__ SimpleIterator() {}
 
+  __host__ __device__
   SimpleIterator(
       Value *values,
       uint32_t nullsOffset,
@@ -591,6 +589,14 @@ SimpleIterator<Value> make_scratch_space_input_iterator(
   return SimpleIterator<Value>(reinterpret_cast<Value *>(valueIter),
                                nullOffset, 0, 0);
 }
+
+template<>
+SimpleIterator<UUIDT> make_scratch_space_input_iterator<UUIDT>(
+    uint8_t *valueIter, uint32_t nullOffset);
+
+template<>
+SimpleIterator<GeoPointT> make_scratch_space_input_iterator<GeoPointT>(
+    uint8_t *valueIter, uint32_t nullOffset);
 
 template<typename Value>
 using ScratchSpaceOutputIterator = thrust::zip_iterator<
