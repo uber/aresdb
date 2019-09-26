@@ -666,9 +666,9 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		}
 
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
-		Ω(reader.IsValid(1)).Should(BeFalse())
-		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeFalse())
+		Ω(reader.IsItemValid(2)).Should(BeTrue())
 		Ω(*(*int32)(reader.Get(0))).Should(Equal(int32(11)))
 		Ω(*(*int32)(reader.Get(1))).Should(Equal(int32(0)))
 		Ω(*(*int32)(reader.Get(2))).Should(Equal(int32(13)))
@@ -693,9 +693,9 @@ var _ = ginkgo.Describe("upsert batch", func() {
 
 		reader = NewArrayValueReader(value.DataType, value.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
-		Ω(reader.IsValid(1)).Should(BeTrue())
-		Ω(reader.IsValid(2)).Should(BeFalse())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeTrue())
+		Ω(reader.IsItemValid(2)).Should(BeFalse())
 		Ω(*(*int32)(reader.Get(0))).Should(Equal(int32(21)))
 		Ω(*(*int32)(reader.Get(1))).Should(Equal(int32(22)))
 		Ω(*(*int32)(reader.Get(2))).Should(Equal(int32(0)))

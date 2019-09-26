@@ -22,7 +22,6 @@ import (
 	"github.com/uber/aresdb/memstore/vectors"
 	"github.com/uber/aresdb/utils"
 	"io"
-	"math"
 	"os"
 	"sync"
 	"unsafe"
@@ -111,11 +110,13 @@ func (vp *ArchiveVectorParty) Equals(other common.VectorParty) bool {
 	return vp.equals(other, vp.AsList())
 }
 
-// GetValue TODO handling invalid case
+// GetValue is the implementation from common.VectorParty
 func (vp *ArchiveVectorParty) getValue(row int) (val unsafe.Pointer, validity bool) {
-	offset, length := vp.GetOffsetLength(row)
-	if offset == 0 && length == 0 {
-		return unsafe.Pointer(uintptr(0)), false
+	offset, length, valid := vp.GetOffsetLength(row)
+	if !valid {
+		return nil, false
+	} else if length == 0 {
+		return nil, true
 	}
 	baseAddr := uintptr(vp.values.Buffer())
 	return unsafe.Pointer(baseAddr + uintptr(offset)), true
@@ -138,17 +139,19 @@ func (vp *ArchiveVectorParty) GetDataValueByRow(row int) common.DataValue {
 
 func (vp *ArchiveVectorParty) setValue(row int, val unsafe.Pointer, valid bool) {
 	if !valid {
-		var zero uint32
-		vp.SetOffsetLength(row, unsafe.Pointer(&zero), unsafe.Pointer(&zero))
+		vp.SetOffsetLength(row, nil, nil)
 		if row >= vp.lengthFilled {
 			vp.lengthFilled++
 		}
 		return
 	}
-	newLen := *(*uint32)(val)
+	var newLen uint32
+	if val != nil {
+		newLen = *(*uint32)(val)
+	}
 	newBytes := common.CalculateListElementBytes(vp.dataType, int(newLen))
 	if row < vp.lengthFilled {
-		oldOffset, oldLen := vp.GetOffsetLength(row)
+		oldOffset, oldLen, _ := vp.GetOffsetLength(row)
 		if oldLen != newLen {
 			// invalid in-place update, should never happen
 			utils.GetLogger().Panic("in-place update array archive vp with different length")
@@ -395,8 +398,8 @@ func (vp *ArchiveVectorParty) GetHostVectorPartySlice(startIndex, length int) co
 	for i := startIndex; i < (startIndex+length) && i < vp.length; i++ {
 		// find first entry which has non-zero length array value, which will have valid offset
 		// if not found, then will start from baseAddr
-		offset, count := vp.GetOffsetLength(i)
-		if count > 0 && count != math.MaxUint32 {
+		offset, count, valid := vp.GetOffsetLength(i)
+		if valid && count > 0 {
 			valueStart = int(offset)
 			break
 		}
@@ -406,8 +409,8 @@ func (vp *ArchiveVectorParty) GetHostVectorPartySlice(startIndex, length int) co
 		for i := startIndex + length; i < vp.length; i++ {
 			// find first entry which has non-zero length array value, which will have valid offset
 			// if not found, then will be the end of value buffer
-			offset, count := vp.GetOffsetLength(i)
-			if count > 0 && count != math.MaxUint32 {
+			offset, count, valid := vp.GetOffsetLength(i)
+			if valid && count > 0 {
 				valueBytes = int(offset)
 				break
 			}
