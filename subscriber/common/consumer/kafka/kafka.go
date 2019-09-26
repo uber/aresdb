@@ -29,7 +29,6 @@ import (
 	"time"
 )
 
-var Test = false
 // KafkaConsumer implements Consumer interface
 type KafkaConsumer struct {
 	sarama.ConsumerGroup
@@ -226,11 +225,6 @@ func (c *KafkaConsumer) startConsuming(ctx context.Context, cgHandler *CGHandler
 		cgHandler.msgByteCounter[topic] = make(map[int32]tally.Counter)
 		cgHandler.msgOffsetGauge[topic] = make(map[int32]tally.Gauge)
 		cgHandler.msgLagGauge[topic] = make(map[int32]tally.Gauge)
-	}
-
-	// For pass unit test
-	if Test {
-		return;
 	}
 
 	for run := true; run; {

@@ -30,7 +30,6 @@ import (
 
 var _ = Describe("KafkaConsumer", func() {
 	var broker *sarama.MockBroker
-	Test = false
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",
@@ -112,6 +111,9 @@ var _ = Describe("KafkaConsumer", func() {
 
 		err = kc.(*KafkaConsumer).Close()
 		Ω(err).Should(BeNil())
+
+		err = kc.(*KafkaConsumer).Close()
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	It("KafkaMessage functions", func() {
