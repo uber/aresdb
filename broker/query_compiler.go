@@ -71,7 +71,7 @@ func (qc *QueryContext) GetRewrittenQuery() common.AQLQuery {
 		}
 	}
 
-	for i, join := range newQuery.Joins{
+	for i, join := range newQuery.Joins {
 		for j := range join.Conditions {
 			if j < len(join.ConditionsParsed) && join.ConditionsParsed[j] != nil {
 				join.Conditions[j] = join.ConditionsParsed[j].String()
@@ -354,6 +354,7 @@ func (qc *QueryContext) processDimensions() {
 				qc.DimensionEnumReverseDicts[idx] = vr.EnumReverseDict
 			}
 		}
+		qc.AQLQuery.Dimensions[idx] = dim
 	}
 }
 

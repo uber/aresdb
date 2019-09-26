@@ -767,7 +767,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 		Ω(err).Should(BeNil())
 
 		Ω(string(marshalled)).Should(MatchJSON(
-	`{
+			`{
 			"table": "table3",
 			"shards": null,
 			"joins": [

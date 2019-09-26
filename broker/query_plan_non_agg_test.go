@@ -43,8 +43,8 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 				{Expr: "1", ExprParsed: &expr.NumberLiteral{Int: 1, ExprType: expr.Unsigned}},
 			},
 			Dimensions: []queryCom.Dimension{
-				{Expr: "field1", ExprParsed: &expr.VarRef{TableID:0, ColumnID:0, Val: "field1"}},
-				{Expr: "field2", ExprParsed: &expr.VarRef{TableID:0, ColumnID:1, Val: "field2"}},
+				{Expr: "field1", ExprParsed: &expr.VarRef{TableID: 0, ColumnID: 0, Val: "field1"}},
+				{Expr: "field2", ExprParsed: &expr.VarRef{TableID: 0, ColumnID: 1, Val: "field2"}},
 			},
 			Limit: -1,
 		}

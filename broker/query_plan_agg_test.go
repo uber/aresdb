@@ -413,12 +413,12 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		q := queryCom.AQLQuery{
 			Table: "table1",
 			Dimensions: []queryCom.Dimension{
-				{Expr: "field1"},
-				{Expr: "field2"},
-				{Expr: "field3"},
+				{Expr: "(field1)"},
+				{Expr: "(field2)"},
+				{Expr: "(field3)"},
 			},
 			Measures: []queryCom.Measure{
-				{Expr: "hll(field4)"},
+				{Expr: "(hll(field4))"},
 			},
 		}
 		w := httptest.NewRecorder()
@@ -450,7 +450,6 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		Ω(qResults).Should(HaveLen(1))
 		Ω(qResults[0]).Should(Equal(hllResult))
 		Ω(reflect.DeepEqual(qResults[0], hllResult)).Should(BeTrue())
-
 
 		qResults, qErrors, err = queryCom.ParseHLLQueryResults(bs, true)
 		Ω(err).Should(BeNil())
