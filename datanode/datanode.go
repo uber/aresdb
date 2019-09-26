@@ -139,7 +139,7 @@ func NewDataNode(
 	d := &dataNode{
 		hostID:               hostID,
 		topo:                 topo,
-		enumReader:			  enumReader,
+		enumReader:           enumReader,
 		metaStore:            metaStore,
 		memStore:             memStore,
 		diskStore:            diskStore,
