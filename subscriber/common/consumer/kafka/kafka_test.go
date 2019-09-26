@@ -79,7 +79,7 @@ var _ = Describe("KafkaConsumer", func() {
 			"FetchRequest": mockFetchResponse,
 			"JoinGroupRequest": sarama.NewMockConsumerMetadataResponse(serviceConfig.Logger.Sugar()).
 				SetCoordinator("ares-subscriber_test_job1_dev01_streaming", broker),
-				"OffsetCommitRequest": sarama.NewMockOffsetCommitResponse(serviceConfig.Logger.Sugar()),
+			"OffsetCommitRequest": sarama.NewMockOffsetCommitResponse(serviceConfig.Logger.Sugar()),
 		})
 	})
 
@@ -108,6 +108,31 @@ var _ = Describe("KafkaConsumer", func() {
 
 		closeCh := kc.Closed()
 		Ω(closeCh).ShouldNot(BeNil())
+
+		msg := sarama.ConsumerMessage{
+			Topic:     "job1-topic",
+			Partition: 0,
+			Value:     []byte("foo")}
+		cgHandler := CGHandler{
+			msgCounter:     make(map[string]map[int32]tally.Counter),
+			msgByteCounter: make(map[string]map[int32]tally.Counter),
+			msgOffsetGauge: make(map[string]map[int32]tally.Gauge),
+			msgLagGauge:    make(map[string]map[int32]tally.Gauge),
+		}
+
+		cgHandler.msgCounter["job1-topic"] = make(map[int32]tally.Counter)
+		cgHandler.msgByteCounter["job1-topic"] = make(map[int32]tally.Counter)
+		cgHandler.msgOffsetGauge["job1-topic"] = make(map[int32]tally.Gauge)
+		cgHandler.msgLagGauge["job1-topic"] = make(map[int32]tally.Gauge)
+
+		kc.(*KafkaConsumer).processMsg(&msg, &cgHandler, 5632, nil)
+
+		kafkaMsg := KafkaMessage{
+			ConsumerMessage: &msg,
+			consumer:        kc,
+			session:         nil,
+		}
+		kc.CommitUpTo(&kafkaMsg)
 
 		err = kc.(*KafkaConsumer).Close()
 		Ω(err).Should(BeNil())

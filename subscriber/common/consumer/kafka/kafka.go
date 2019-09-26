@@ -43,7 +43,7 @@ type KafkaConsumer struct {
 
 	// WARNING: The following channels should not be closed by the lib users
 	closeAttempted bool
-	closeCh    chan struct{}
+	closeCh        chan struct{}
 }
 
 // KafkaMessage implements Message interface
