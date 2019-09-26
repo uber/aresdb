@@ -44,11 +44,11 @@ type KafkaConfig struct {
 	RestartInterval     int            `json:"restartInterval,omitempty"`
 	FailureHandler      FailureHandler `json:"failureHandler,omitempty"`
 
-	// confluent kafka
-	KafkaBroker       string `json:"kafkaBroker" yaml:"kafkaBroker"`
-	MaxPollIntervalMs int    `json:"maxPollIntervalMs" yaml:"maxPollIntervalMs" default:"300000"`
-	SessionTimeoutNs  int    `json:"sessionTimeoutNs" yaml:"sessionTimeoutNs" default:"10000"`
-	ChannelBufferSize uint   `json:"channelBufferSize" yaml:"channelBufferSize" default:"256"`
+	// sarama config
+	KafkaBroker        string `json:"kafkaBroker" yaml:"kafkaBroker"`
+	SessionTimeoutMs   int    `json:"sessionTimeoutMs" yaml:"sessionTimeoutMs" default:"10000"`
+	ChannelBufferSize  uint   `json:"channelBufferSize" yaml:"channelBufferSize" default:"256"`
+	ReblanceTimeoutSec int    `json:"reblanceTimeoutSec" yaml:"reblanceTimeoutSec" default:"10"`
 }
 
 // JobConfig is job's config
