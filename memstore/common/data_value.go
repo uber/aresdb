@@ -723,7 +723,7 @@ type ArrayValueReader struct {
 
 // NewArrayValueReader is to create ArrayValueReader to read from upsertbatch, which includes the item number
 func NewArrayValueReader(dataType DataType, value unsafe.Pointer) *ArrayValueReader {
-	if value == nil || uintptr(value) == 0 {
+	if value == nil {
 		return &ArrayValueReader{
 			itemType: GetElementDataType(dataType),
 			value:    nil,

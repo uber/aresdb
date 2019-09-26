@@ -289,7 +289,7 @@ func (vp *LiveVectorParty) SetValue(row int, val unsafe.Pointer, valid bool) {
 
 	var newLen int
 	if valid {
-		if uintptr(val) != 0 {
+		if val != nil {
 			newLen = int(*(*uint32)(val))
 		}
 	}

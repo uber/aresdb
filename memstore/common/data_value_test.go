@@ -558,9 +558,7 @@ var _ = ginkgo.Describe("data value", func() {
 	})
 
 	ginkgo.It("ArrayValueReader should ok to read null ptr", func() {
-		reader := NewArrayValueReader(ArrayInt16, unsafe.Pointer(uintptr(0)))
-		Ω(reader.GetLength()).Should(Equal(0))
-		reader = NewArrayValueReader(ArrayInt16, nil)
+		reader := NewArrayValueReader(ArrayInt16, nil)
 		Ω(reader.GetLength()).Should(Equal(0))
 	})
 })
