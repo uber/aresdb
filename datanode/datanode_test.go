@@ -44,38 +44,38 @@ var _ = ginkgo.Describe("datanode", func() {
 			staticTopology,
 			enumReader,
 			NewOptions().
-			SetServerConfig(common.AresServerConfig{
-				Port:            9374,
-				DebugPort:       43202,
-				RootPath:        "/tmp/datanode-root",
-				TotalMemorySize: 1 << 20,
-				SchedulerOff:    false,
-				DiskStore:       common.DiskStoreConfig{WriteSync: true},
-				HTTP:            common.HTTPConfig{MaxConnections: 300, ReadTimeOutInSeconds: 20, WriteTimeOutInSeconds: 300},
-				RedoLogConfig: common.RedoLogConfig{
-					DiskConfig:  common.DiskRedoLogConfig{Disabled: false},
-					KafkaConfig: common.KafkaRedoLogConfig{Enabled: false},
-				},
-				Cluster: common.ClusterConfig{
-					Enable:      true,
-					Distributed: true,
-					Namespace:   "test",
-					InstanceID:  "instance0",
-					Controller:  &common.ControllerConfig{Address: "localhost:6708"},
-					Etcd: etcd.Configuration{
-						Zone:    "local",
-						Env:     "test",
-						Service: "ares-datanode",
-						ETCDClusters: []etcd.ClusterConfig{
-							{
-								Zone:      "local",
-								Endpoints: []string{"127.0.0.1:2379"},
+				SetServerConfig(common.AresServerConfig{
+					Port:            9374,
+					DebugPort:       43202,
+					RootPath:        "/tmp/datanode-root",
+					TotalMemorySize: 1 << 20,
+					SchedulerOff:    false,
+					DiskStore:       common.DiskStoreConfig{WriteSync: true},
+					HTTP:            common.HTTPConfig{MaxConnections: 300, ReadTimeOutInSeconds: 20, WriteTimeOutInSeconds: 300},
+					RedoLogConfig: common.RedoLogConfig{
+						DiskConfig:  common.DiskRedoLogConfig{Disabled: false},
+						KafkaConfig: common.KafkaRedoLogConfig{Enabled: false},
+					},
+					Cluster: common.ClusterConfig{
+						Enable:      true,
+						Distributed: true,
+						Namespace:   "test",
+						InstanceID:  "instance0",
+						Controller:  &common.ControllerConfig{Address: "localhost:6708"},
+						Etcd: etcd.Configuration{
+							Zone:    "local",
+							Env:     "test",
+							Service: "ares-datanode",
+							ETCDClusters: []etcd.ClusterConfig{
+								{
+									Zone:      "local",
+									Endpoints: []string{"127.0.0.1:2379"},
+								},
 							},
 						},
+						HeartbeatConfig: common.HeartbeatConfig{Timeout: 10, Interval: 1},
 					},
-					HeartbeatConfig: common.HeartbeatConfig{Timeout: 10, Interval: 1},
-				},
-			}))
+				}))
 		Ω(err).Should(BeNil())
 		Ω(dataNode).ShouldNot(BeNil())
 		os.RemoveAll("/tmp/datanode-root")

@@ -158,10 +158,10 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(val.Valid).Should(BeTrue())
 		reader := common.NewArrayValueReader(common.Uint32, val.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(11)))
-		Ω(reader.IsValid(1)).Should(BeFalse())
-		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeFalse())
+		Ω(reader.IsItemValid(2)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(13)))
 
 		// row 1
@@ -169,11 +169,11 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(val.Valid).Should(BeTrue())
 		reader = common.NewArrayValueReader(common.Uint32, val.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(21)))
-		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(22)))
-		Ω(reader.IsValid(2)).Should(BeFalse())
+		Ω(reader.IsItemValid(2)).Should(BeFalse())
 
 		// row 2
 		val = vp.GetDataValue(2)
@@ -184,11 +184,11 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(val.Valid).Should(BeTrue())
 		reader = common.NewArrayValueReader(common.Uint32, val.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(41)))
-		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(42)))
-		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(reader.IsItemValid(2)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(43)))
 
 		// save to buffer
@@ -276,5 +276,41 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		}
 		hostSlice = vp.GetHostVectorPartySlice(1, vp.length-2)
 		Ω(hostSlice).Should(Equal(expectedHostSlice))
+	})
+
+	ginkgo.It("Array archive vector party should work in special cases", func() {
+		// set data
+		vp := NewArchiveVectorParty(10, common.ArrayInt16, 1024, &sync.RWMutex{})
+		vp.Allocate(false)
+		val := common.DataValue{
+			DataType: common.ArrayInt16,
+			OtherVal: nil,
+			Valid: false,
+		}
+		vp.SetDataValue(0, val, common.IgnoreCount)
+
+		var data uint32
+		val = common.DataValue{
+			DataType: common.ArrayInt16,
+			OtherVal: unsafe.Pointer(&data),
+			Valid: true,
+		}
+		vp.SetDataValue(1, val, common.IgnoreCount)
+		// get data
+		val = vp.GetDataValue(0)
+		Ω(val.Valid).Should(BeFalse())
+
+		val = vp.GetDataValue(1)
+		Ω(val.Valid).Should(BeTrue())
+		Ω(uintptr(val.OtherVal)).Should(Equal(uintptr(0)))
+
+		// update same row with different length
+		data = 2
+		val = common.DataValue{
+			DataType: common.ArrayInt16,
+			OtherVal: unsafe.Pointer(&data),
+			Valid: true,
+		}
+		Ω(func() {vp.SetDataValue(1, val, common.IgnoreCount)}).Should(Panic())
 	})
 })

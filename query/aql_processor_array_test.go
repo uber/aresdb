@@ -442,9 +442,9 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
           [
             "120",
             "NULL",
-            "0",
             "NULL",
-            "0"
+            "NULL",
+            "NULL"
           ],
           [
             "130",
@@ -477,9 +477,9 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
           [
             "120",
             "NULL",
-            "0",
             "NULL",
-            "0"
+            "NULL",
+            "NULL"
           ],
           [
             "0",
@@ -512,9 +512,9 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
           [
             "40",
             "NULL",
-            "0",
             "NULL",
-            "0"
+            "NULL",
+            "NULL"
           ]
         ]
       }`))
