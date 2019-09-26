@@ -366,18 +366,9 @@ func (ap *AggQueryPlan) postProcessHLLBinary(res queryCom.AQLQueryResult, execEr
 	// build dataTypes and enumDicts
 	for dimIdx, dim := range qc.AQLQuery.Dimensions {
 		dimDataTypes[dimIdx] = queryCom.GetDimensionDataType(dim.ExprParsed)
-		if memCom.IsEnumType(dimDataTypes[dimIdx]) {
-			var (
-				tableID  int
-				columnID int
-			)
-			tableID, columnID, err = qc.resolveColumn(dim.Expr)
-			if err != nil {
-				return
-			}
-			table := qc.Tables[tableID]
-			reverseDicts[dimIdx] = table.EnumDicts[table.Schema.Columns[columnID].Name].ReverseDict
-			enumDicts[dimIdx] = table.EnumDicts[table.Schema.Columns[columnID].Name].Dict
+		if varRef, ok := dim.ExprParsed.(*expr.VarRef); ok && memCom.IsEnumType(varRef.DataType) {
+			reverseDicts[dimIdx] = varRef.EnumReverseDict
+			enumDicts[dimIdx] = varRef.EnumDict
 		}
 	}
 

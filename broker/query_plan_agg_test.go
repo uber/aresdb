@@ -451,6 +451,7 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		Ω(qResults[0]).Should(Equal(hllResult))
 		Ω(reflect.DeepEqual(qResults[0], hllResult)).Should(BeTrue())
 
+
 		qResults, qErrors, err = queryCom.ParseHLLQueryResults(bs, true)
 		Ω(err).Should(BeNil())
 		Ω(qErrors).Should(HaveLen(1))
