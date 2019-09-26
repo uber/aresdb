@@ -226,7 +226,7 @@ func (c *KafkaConsumer) startConsuming(ctx context.Context, cgHandler *CGHandler
 	}
 
 	// For pass unit test
-	if test {
+	if Test {
 		return;
 	}
 
