@@ -61,6 +61,54 @@ func NewQueryContext(aql *common.AQLQuery, returnHLLBinary bool, w http.Response
 	return &ctx
 }
 
+// GetRewrittenQuery get the rewritten query after query parsing
+func (qc *QueryContext) GetRewrittenQuery() common.AQLQuery {
+	newQuery := *qc.AQLQuery
+	for i, measure := range newQuery.Measures {
+		if measure.ExprParsed != nil {
+			measure.Expr = measure.ExprParsed.String()
+			newQuery.Measures[i] = measure
+		}
+	}
+
+	for i, join := range newQuery.Joins {
+		for j := range join.Conditions {
+			if j < len(join.ConditionsParsed) && join.ConditionsParsed[j] != nil {
+				join.Conditions[j] = join.ConditionsParsed[j].String()
+			}
+		}
+		newQuery.Joins[i] = join
+	}
+
+	for i, dim := range newQuery.Dimensions {
+		if dim.ExprParsed != nil {
+			dim.Expr = dim.ExprParsed.String()
+			newQuery.Dimensions[i] = dim
+		}
+	}
+
+	for i := range newQuery.Filters {
+		if i < len(newQuery.FiltersParsed) && newQuery.FiltersParsed[i] != nil {
+			newQuery.Filters[i] = newQuery.FiltersParsed[i].String()
+		}
+	}
+
+	for i, measure := range newQuery.SupportingMeasures {
+		if measure.ExprParsed != nil {
+			measure.Expr = measure.ExprParsed.String()
+			newQuery.SupportingMeasures[i] = measure
+		}
+	}
+
+	for i, dim := range newQuery.SupportingDimensions {
+		if dim.ExprParsed != nil {
+			dim.Expr = dim.ExprParsed.String()
+			newQuery.SupportingDimensions[i] = dim
+		}
+	}
+	return newQuery
+}
+
 // Compile parses expressions into ast, load schema from schema reader, resolve types,
 // and collects meta data needed by post processing
 func (qc *QueryContext) Compile(tableSchemaReader memCom.TableSchemaReader) {
@@ -306,6 +354,7 @@ func (qc *QueryContext) processDimensions() {
 				qc.DimensionEnumReverseDicts[idx] = vr.EnumReverseDict
 			}
 		}
+		qc.AQLQuery.Dimensions[idx] = dim
 	}
 }
 

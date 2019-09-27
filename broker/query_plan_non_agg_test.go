@@ -23,28 +23,28 @@ import (
 	shardMock "github.com/uber/aresdb/cluster/shard/mocks"
 	"github.com/uber/aresdb/cluster/topology"
 	topoMock "github.com/uber/aresdb/cluster/topology/mocks"
-	common2 "github.com/uber/aresdb/common"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/client"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
-	"github.com/uber/aresdb/query/common"
+	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"net/http/httptest"
 )
 
 var _ = ginkgo.Describe("non agg query plan", func() {
-	utils.Init(common2.AresServerConfig{}, common2.NewLoggerFactory().GetDefaultLogger(), common2.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
+	utils.Init(common.AresServerConfig{}, common.NewLoggerFactory().GetDefaultLogger(), common.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
 
-	ginkgo.It("should work happy path", func() {
+	ginkgo.It("non agg should work happy path", func() {
 
-		q := common.AQLQuery{
+		q := queryCom.AQLQuery{
 			Table: "table1",
-			Measures: []common.Measure{
-				{Expr: "1"},
+			Measures: []queryCom.Measure{
+				{Expr: "1", ExprParsed: &expr.NumberLiteral{Int: 1, ExprType: expr.Unsigned}},
 			},
-			Dimensions: []common.Dimension{
-				{Expr: "field1"},
-				{Expr: "field2"},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "field1", ExprParsed: &expr.VarRef{TableID: 0, ColumnID: 0, Val: "field1"}},
+				{Expr: "field2", ExprParsed: &expr.VarRef{TableID: 0, ColumnID: 1, Val: "field2"}},
 			},
 			Limit: -1,
 		}
@@ -143,12 +143,12 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 	})
 
 	ginkgo.It("should mark host unhealthy on connection error", func() {
-		q := common.AQLQuery{
+		q := queryCom.AQLQuery{
 			Table: "table1",
-			Measures: []common.Measure{
+			Measures: []queryCom.Measure{
 				{Expr: "1"},
 			},
-			Dimensions: []common.Dimension{
+			Dimensions: []queryCom.Dimension{
 				{Expr: "field1"},
 				{Expr: "field2"},
 			},
@@ -204,15 +204,15 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		ctx, cf := context.WithCancel(context.Background())
 		cf()
 
-		q := common.AQLQuery{
-			Measures: []common.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
+		q := queryCom.AQLQuery{
+			Measures: []queryCom.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
 		}
 
 		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockHost1 := topoMock.Host{}
 		mockTopo.On("MarkHostHealthy", &mockHost1).Return(nil).Once()
 		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
-		myResult := common.AQLQueryResult{"foo": 1}
+		myResult := queryCom.AQLQueryResult{"foo": 1}
 		mockDatanodeCli.On("Query", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(myResult, nil)
 
 		sn := StreamingScanNode{
