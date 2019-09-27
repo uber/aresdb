@@ -44,6 +44,7 @@ type DebugHandler struct {
 	metaStore          metaCom.MetaStore
 	queryHandler       *QueryHandler
 	healthCheckHandler *HealthCheckHandler
+	bootstrapRetryChan chan bool
 }
 
 // NewDebugHandler returns a new DebugHandler.
@@ -64,6 +65,7 @@ func NewDebugHandler(
 		metaStore:          metaStore,
 		queryHandler:       queryHandler,
 		healthCheckHandler: healthCheckHandler,
+		bootstrapRetryChan: make(chan bool),
 	}
 }
 
@@ -91,6 +93,7 @@ func (handler *DebugHandler) Register(router *mux.Router) {
 	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches/{offset}", handler.ReadUpsertBatch).
 		Methods(http.MethodGet)
 	router.HandleFunc("/{table}/{shard}/backfill-manager/upsertbatches/{offset}", handler.ReadBackfillQueueUpsertBatch).Methods(http.MethodGet)
+	router.HandleFunc("/bootstrap/retry", handler.BootstrapRetry).Methods(http.MethodPost)
 }
 
 // ShowShardSet shows the shard set owned by the server
@@ -724,4 +727,15 @@ func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w http.ResponseWriter,
 
 	common.RespondWithJSONObject(w, response)
 	return
+}
+
+// Bootstrap will turn on bootstrap based on the request.
+func (handler *DebugHandler) BootstrapRetry(w http.ResponseWriter, r *http.Request) {
+	handler.bootstrapRetryChan <- true
+
+	common.RespondJSONObjectWithCode(w, http.StatusOK, "Bootstrap retry submitted")
+}
+
+func (handler *DebugHandler) GetBootstrapRetryChan() chan bool {
+	return handler.bootstrapRetryChan
 }
