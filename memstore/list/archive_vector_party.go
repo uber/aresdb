@@ -395,7 +395,7 @@ func (vp *ArchiveVectorParty) GetHostVectorPartySlice(startIndex, length int) co
 	var valueStart int
 	valueBytes := vp.values.Bytes
 
-	for i := startIndex; i < (startIndex+length) && i < vp.length; i++ {
+	for i := startIndex; i < (startIndex+length); i++ {
 		// find first entry which has non-zero length array value, which will have valid offset
 		// if not found, then will start from baseAddr
 		offset, count, valid := vp.GetOffsetLength(i)
@@ -405,15 +405,13 @@ func (vp *ArchiveVectorParty) GetHostVectorPartySlice(startIndex, length int) co
 		}
 	}
 
-	if startIndex+length < vp.length {
-		for i := startIndex + length; i < vp.length; i++ {
-			// find first entry which has non-zero length array value, which will have valid offset
-			// if not found, then will be the end of value buffer
-			offset, count, valid := vp.GetOffsetLength(i)
-			if valid && count > 0 {
-				valueBytes = int(offset)
-				break
-			}
+	for i := startIndex + length; i < vp.length; i++ {
+		// find first entry which has non-zero length array value, which will have valid offset
+		// if not found, then will be the end of value buffer
+		offset, count, valid := vp.GetOffsetLength(i)
+		if valid && count > 0 {
+			valueBytes = int(offset)
+			break
 		}
 	}
 
