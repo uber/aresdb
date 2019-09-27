@@ -15,6 +15,7 @@
 package broker
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -45,6 +46,17 @@ var _ = ginkgo.Describe("query compiler", func() {
 	}
 	tableSchema2 := memCom.NewTableSchema(table2)
 
+	table3 := &metaCom.Table{
+		Name: "table3",
+		Columns: []metaCom.Column{
+			{Name: "field1", Type: "SmallEnum"},
+			{Name: "field2", Type: "BigEnum"},
+		},
+	}
+	tableSchema3 := memCom.NewTableSchema(table3)
+	tableSchema3.CreateEnumDict("field1", []string{"a", "b", "c"})
+	tableSchema3.CreateEnumDict("field2", []string{"d", "e", "f"})
+
 	ginkgo.It("should work happy path", func() {
 		mockTableSchemaReader := memComMocks.TableSchemaReader{}
 		mockTableSchemaReader.On("RLock").Return(nil)
@@ -71,7 +83,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 		}, false, httptest.NewRecorder())
 		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.AQLQuery).Should(Equal(&common.AQLQuery{
+		Ω(qc.GetRewrittenQuery()).Should(Equal(common.AQLQuery{
 			Table: "table1",
 			Joins: []common.Join{
 				{
@@ -135,7 +147,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 		}, false, httptest.NewRecorder())
 		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).Should(BeNil())
-		Ω(qc.AQLQuery).Should(Equal(&common.AQLQuery{
+		Ω(qc.GetRewrittenQuery()).Should(Equal(common.AQLQuery{
 			Table: "table1",
 			Joins: nil,
 			Dimensions: []common.Dimension{
@@ -716,5 +728,76 @@ var _ = ginkgo.Describe("query compiler", func() {
 		qc.processFilters()
 		Ω(qc.Error).ShouldNot(BeNil())
 		Ω(qc.Error.Error()).Should(ContainSubstring("from_unixtime must be time column / 1000"))
+	})
+
+	ginkgo.It("GetRewrittenQuery should work", func() {
+		mockTableSchemaReader := memComMocks.TableSchemaReader{}
+		mockTableSchemaReader.On("RLock").Return(nil)
+		mockTableSchemaReader.On("RUnlock").Return(nil)
+		mockTableSchemaReader.On("GetSchema", "table2").Return(tableSchema2, nil)
+		mockTableSchemaReader.On("GetSchema", "table3").Return(tableSchema3, nil)
+
+		qc := NewQueryContext(&common.AQLQuery{
+			Table: "table3",
+			Joins: []common.Join{
+				{
+					Table: "table2",
+					Conditions: []string{
+						"table3.field1 = table2.field2",
+					},
+				},
+			},
+			Dimensions: []common.Dimension{
+				{
+					Expr: "field1",
+				},
+			},
+			Measures: []common.Measure{
+				{
+					Expr: "count(*)",
+				},
+			},
+			Filters: []string{
+				"table3.field1 = 'a'",
+			},
+		}, false, httptest.NewRecorder())
+		qc.Compile(&mockTableSchemaReader)
+		Ω(qc.Error).Should(BeNil())
+		marshalled, err := json.Marshal(qc.GetRewrittenQuery())
+		Ω(err).Should(BeNil())
+
+		Ω(string(marshalled)).Should(MatchJSON(
+			`{
+			"table": "table3",
+			"shards": null,
+			"joins": [
+			  {
+				"table": "table2",
+				"alias": "",
+				"conditions": [
+				  "table3.field1 = table2.field2"
+				]
+			  }
+			],
+			"measures": [
+				{
+					"sqlExpression": "count(*)"
+				}
+			],
+			"dimensions": [
+				{
+					"sqlExpression": "field1",
+					"numericBucketizer": {}
+				}
+			],
+			"rowFilters": [
+				"table3.field1 = 0"
+			],
+			"timeFilter": {
+				"column": "",
+				"from": "", 
+				"to": ""
+			}
+		}`))
 	})
 })

@@ -115,9 +115,11 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTop
 
 	plan.nodes = make([]*StreamingScanNode, len(assignment))
 	i := 0
+	// get rewritten query after compilation
+	query := qc.GetRewrittenQuery()
 	for host, shards := range assignment {
-		// make deep copy
-		currQ := *qc.AQLQuery
+		// make a deep copy
+		currQ := query
 		for _, shard := range shards {
 			currQ.Shards = append(currQ.Shards, int(shard))
 		}

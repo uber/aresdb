@@ -68,7 +68,8 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, requestID string, 
 			return
 		}
 		if len(results) != 1 {
-			errors.New(fmt.Sprintf("invalid response from datanode, resp: %s", bs))
+			err = errors.New(fmt.Sprintf("invalid response from datanode, resp: %s", bs))
+			return
 		}
 		result = results[0]
 	} else {

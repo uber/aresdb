@@ -17,7 +17,7 @@ package broker
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	common2 "github.com/uber/aresdb/memstore/common"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore/common"
 )
 
@@ -57,10 +57,10 @@ var _ = ginkgo.Describe("broker schema mutator", func() {
 		Ω(err).Should(BeNil())
 		Ω(*t).Should(Equal(testTableOneMoreCol))
 
-		var ts *common2.TableSchema
+		var ts *memCom.TableSchema
 		ts, err = mutator.GetSchema("t1")
 		Ω(err).Should(BeNil())
-		tsExpected := common2.NewTableSchema(&testTableOneMoreCol)
+		tsExpected := memCom.NewTableSchema(&testTableOneMoreCol)
 		Ω(ts).Should(Equal(tsExpected))
 
 		err = mutator.UpdateEnum("t1", "c2", []string{"foo", "bar"})
@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("broker schema mutator", func() {
 
 		ts, err = mutator.GetSchema("t1")
 		Ω(err).Should(BeNil())
-		tsExpected.EnumDicts = map[string]common2.EnumDict{
+		tsExpected.EnumDicts = map[string]memCom.EnumDict{
 			"c2": {
 				Capacity: 256,
 				Dict: map[string]int{
