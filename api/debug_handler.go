@@ -739,3 +739,7 @@ func (handler *DebugHandler) BootstrapRetry(w http.ResponseWriter, r *http.Reque
 func (handler *DebugHandler) GetBootstrapRetryChan() chan bool {
 	return handler.bootstrapRetryChan
 }
+
+func (handler *DebugHandler) SetBootstrapRetryChan(bootstrapRetryChan chan bool) {
+	handler.bootstrapRetryChan = bootstrapRetryChan
+}

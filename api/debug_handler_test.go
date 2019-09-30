@@ -1021,7 +1021,9 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 	})
 
 	ginkgo.It("BootstrapRetry", func() {
-		debugHandler.bootstrapRetryChan = make(chan bool, 1)
+		debugHandler.SetBootstrapRetryChan(make(chan bool, 1))
+		retryChan := debugHandler.GetBootstrapRetryChan()
+		Ω(retryChan).ShouldNot(BeNil())
 		hostPort := testServer.Listener.Addr().String()
 
 		resp, err := http.Post(fmt.Sprintf("http://%s/debug/bootstrap/retry", hostPort), "", nil)

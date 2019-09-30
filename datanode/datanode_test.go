@@ -152,10 +152,11 @@ var _ = ginkgo.Describe("datanode", func() {
 		dataNode := dataNode{}
 		dataNode.handlers = datanodeHandlers{}
 		dataNode.handlers.debugHandler = &api.DebugHandler{}
+		dataNode.handlers.debugHandler.SetBootstrapRetryChan(make(chan bool, 1))
 		dataNode.bootstrapManager = &bootstrapManagerImpl{
 			state: bootstrap.Bootstrapping,
 		}
-		go dataNode.startBootstrapRetryWatch()
 		dataNode.handlers.debugHandler.GetBootstrapRetryChan() <- true
+		dataNode.startBootstrapRetryWatch()
 	})
 })
