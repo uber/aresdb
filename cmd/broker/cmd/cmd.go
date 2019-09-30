@@ -37,7 +37,6 @@ import (
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
 	"net/http"
-	"net/http/pprof"
 	_ "net/http/pprof"
 	"time"
 )
