@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	hllQueryRequiredMemoryInMB = 10 * 1024
+	hllQueryRequiredMemoryInBytes = 10 * (1 << 30)
 )
 
 // batchTransferExecutor defines the type of the functor to transfer a live batch or a archive batch
@@ -974,7 +974,7 @@ func (qc *AQLQueryContext) calculateMemoryRequirement(memStore memstore.MemStore
 	//we can track memory usage
 	//based on table, dimensions, duration to do estimation
 	if qc.OOPK.IsHLL() {
-		return hllQueryRequiredMemoryInMB
+		return hllQueryRequiredMemoryInBytes
 	}
 
 	for _, shardID := range qc.TableScanners[0].Shards {
