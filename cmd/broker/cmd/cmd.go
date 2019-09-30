@@ -36,6 +36,8 @@ import (
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"net/http"
+	"net/http/pprof"
 	"time"
 )
 
@@ -159,6 +161,13 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	router := mux.NewRouter()
 	httpWrappers = append([]utils.HTTPHandlerWrapper{utils.WithMetricsFunc}, httpWrappers...)
 	queryHandler.Register(router.PathPrefix("/query").Subrouter(), httpWrappers...)
+
+	// debug profiler
+	router.HandleFunc("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	router.HandleFunc("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	router.HandleFunc("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	router.HandleFunc("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
+	router.PathPrefix("/debug/pprof/").Handler(http.HandlerFunc(pprof.Index))
 
 	// Support CORS calls.
 	allowOrigins := handlers.AllowedOrigins([]string{"*"})
