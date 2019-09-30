@@ -38,6 +38,7 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"net/http/pprof"
+	_ "net/http/pprof"
 	"time"
 )
 
@@ -163,11 +164,7 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	queryHandler.Register(router.PathPrefix("/query").Subrouter(), httpWrappers...)
 
 	// debug profiler
-	router.HandleFunc("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-	router.HandleFunc("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-	router.HandleFunc("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
-	router.HandleFunc("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
-	router.PathPrefix("/debug/pprof/").Handler(http.HandlerFunc(pprof.Index))
+	router.PathPrefix("/debug/").Handler(http.DefaultServeMux)
 
 	// Support CORS calls.
 	allowOrigins := handlers.AllowedOrigins([]string{"*"})
