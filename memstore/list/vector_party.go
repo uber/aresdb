@@ -35,6 +35,8 @@ type baseVectorParty struct {
 	dataType common.DataType
 
 	reporter HostMemoryChangeReporter
+	//convenient function to call child class to retrieve data
+	getDataValueFn func(int) common.DataValue
 }
 
 // GetOffsetLength returns the <offset, length> pair at ith row.
@@ -96,9 +98,24 @@ func (vp *baseVectorParty) GetLength() int {
 
 // Slice vector party into human readable SlicedVector format. For now just return an
 // empty slice.
-// TODO(lucafuji): implement slice vector on list vp.
 func (vp *baseVectorParty) Slice(startRow, numRows int) common.SlicedVector {
-	return common.SlicedVector{}
+	size := vp.length - startRow
+	if size < 0 {
+		size = 0
+	}
+	if size > numRows {
+		size = numRows
+	}
+	vector := common.SlicedVector{
+		Values: make([]interface{}, size),
+		Counts: make([]int, size),
+	}
+	for i := 0; i < size; i++ {
+		vector.Values[i] = vp.getDataValueFn(startRow + i).ConvertToHumanReadable(vp.dataType)
+		vector.Counts[i] = i + 1
+	}
+
+	return vector
 }
 
 // Check whether two vector parties are equal (used only in unit tests)

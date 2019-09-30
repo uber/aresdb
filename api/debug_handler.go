@@ -230,7 +230,7 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 
 	schema.RLock()
 	for columnID, column := range schema.Schema.Columns {
-		if !column.Deleted && column.IsEnumColumn() && columnID < len(response.Body.Vectors) {
+		if !column.Deleted && column.IsEnumBasedColumn() && columnID < len(response.Body.Vectors) {
 			vector := &response.Body.Vectors[columnID]
 			var enumCases []string
 			if handler.enumReader != nil {
@@ -243,7 +243,7 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 				// 2. use local in memory enum dict
 				enumCases = schema.EnumDicts[column.Name].ReverseDict
 			}
-			err = translateEnums(vector, enumCases)
+			err = translateEnums(column.IsEnumArrayColumn(), vector, enumCases)
 		}
 	}
 	schema.RUnlock()
@@ -267,7 +267,10 @@ func readRows(vps []memCom.VectorParty, startRow, numRows int) (n int, vectors [
 	return n, vectors
 }
 
-func translateEnums(vector *memCom.SlicedVector, enumCases []string) error {
+func translateEnums(isEnumArray bool, vector *memCom.SlicedVector, enumCases []string) error {
+	if isEnumArray {
+		return tranlateEnumsArray(vector, enumCases)
+	}
 	for index, value := range vector.Values {
 		if value != nil {
 			var id int
@@ -286,6 +289,39 @@ func translateEnums(vector *memCom.SlicedVector, enumCases []string) error {
 			vector.Values[index] = value
 			if id < len(enumCases) {
 				vector.Values[index] = enumCases[id]
+			}
+		}
+	}
+	return nil
+}
+
+func tranlateEnumsArray(vector *memCom.SlicedVector, enumCases []string) error {
+	for index, value := range vector.Values {
+		if value != nil {
+			ids := make([]interface{}, 0)
+			err := json.Unmarshal(([]byte)(value.(string)), &ids)
+			if err == nil {
+				for i, v := range ids {
+					if v != nil {
+						var id int
+						switch v := v.(type) {
+						// unmarshal will turn number to float64
+						case float64:
+							id = int(v)
+						default:
+							// this should never happen
+							return utils.StackError(nil, "Wrong data type for enum vector, %T", value)
+						}
+						if id < len(enumCases) {
+							ids[i] = enumCases[id]
+						}
+
+					}
+				}
+				newValue, err := json.Marshal(ids)
+				if err == nil {
+					vector.Values[index] = string(newValue)
+				}
 			}
 		}
 	}
