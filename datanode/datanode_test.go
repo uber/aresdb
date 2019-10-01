@@ -1,6 +1,7 @@
 package datanode
 
 import (
+	"github.com/uber/aresdb/api"
 	"github.com/uber/aresdb/controller/mutators/mocks"
 	"os"
 
@@ -145,5 +146,17 @@ var _ = ginkgo.Describe("datanode", func() {
 		shards := []uint32{0, 1, 2}
 		Ω(dataNode.checkShardReadiness([]string{"t1", "t2"}, shards)).Should(Equal(1))
 		Ω(shards[0]).Should(Equal(uint32(1)))
+	})
+
+	ginkgo.It("startBootstrapRetryWatch", func() {
+		dataNode := dataNode{}
+		dataNode.handlers = datanodeHandlers{}
+		dataNode.handlers.debugHandler = &api.DebugHandler{}
+		dataNode.handlers.debugHandler.SetBootstrapRetryChan(make(chan bool, 1))
+		dataNode.bootstrapManager = &bootstrapManagerImpl{
+			state: bootstrap.Bootstrapping,
+		}
+		dataNode.handlers.debugHandler.GetBootstrapRetryChan() <- true
+		go dataNode.startBootstrapRetryWatch()
 	})
 })
