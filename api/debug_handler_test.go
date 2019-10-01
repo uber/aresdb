@@ -15,40 +15,34 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/aresdb/cluster/topology"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-
-	"time"
-
 	"github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
-
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/utils"
-	utilsMocks "github.com/uber/aresdb/utils/mocks"
-
-	"path/filepath"
-
-	"strconv"
-
-	"bytes"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/mock"
-	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query"
 	"github.com/uber/aresdb/redolog"
+	"github.com/uber/aresdb/utils"
+	utilsMocks "github.com/uber/aresdb/utils/mocks"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strconv"
 	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -1052,5 +1046,16 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		Ω(vector.Values[0]).Should(Equal("[\"one\",null,\"three\"]"))
 		Ω(vector.Values[1]).Should(Equal("[\"two\",\"four\"]"))
 		Ω(vector.Values[2]).Should(BeNil())
+	})
+
+	ginkgo.It("BootstrapRetry", func() {
+		debugHandler.SetBootstrapRetryChan(make(chan bool, 1))
+		retryChan := debugHandler.GetBootstrapRetryChan()
+		Ω(retryChan).ShouldNot(BeNil())
+		hostPort := testServer.Listener.Addr().String()
+
+		resp, err := http.Post(fmt.Sprintf("http://%s/debug/bootstrap/retry", hostPort), "", nil)
+		Ω(err).Should(BeNil())
+		Ω(resp.StatusCode).Should(Equal(200))
 	})
 })
