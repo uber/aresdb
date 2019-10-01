@@ -27,6 +27,7 @@ import (
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
 	"time"
+	"github.com/uber/aresdb/memstore/list"
 )
 
 const (
@@ -1044,7 +1045,13 @@ func (qc *AQLQueryContext) estimateLiveBatchMemoryUsage(batch *memstore.LiveBatc
 		if sourceVP == nil {
 			continue
 		}
-		columnMemUsage += int(sourceVP.GetBytes())
+		if memCom.IsArrayType(sourceVP.GetDataType()) {
+			vp := sourceVP.(*list.LiveVectorParty)
+			// for array live vp, we need to use offset size + pool size, and remove cap size for device
+			columnMemUsage += int(vp.GetTotalBytes()) - vp.GetLength() * 4
+		} else {
+			columnMemUsage += int(sourceVP.GetBytes())
+		}
 	}
 	if batch.Capacity > qc.maxBatchSizeAfterPrefilter {
 		qc.maxBatchSizeAfterPrefilter = batch.Capacity
@@ -1087,7 +1094,11 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 			}
 			prefilterIndex++
 			if usage&matchedColumnUsages != 0 {
-				columnMemUsage += hostSlice.ValueBytes + hostSlice.NullBytes + hostSlice.CountBytes
+				if memCom.IsArrayType(hostSlice.ValueType) {
+					columnMemUsage += hostSlice.ValueBytes + hostSlice.Length * 8
+				} else {
+					columnMemUsage += hostSlice.ValueBytes + hostSlice.NullBytes + hostSlice.CountBytes
+				}
 				firstColumnSize = hostSlice.Length
 			}
 		}
