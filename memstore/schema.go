@@ -74,7 +74,7 @@ func (m *memStoreImpl) fetchTable(tableName string) error {
 		tableSchema := memCom.NewTableSchema(table)
 		for columnID, column := range table.Columns {
 			if !column.Deleted {
-				if column.IsEnumColumn() {
+				if column.IsEnumBasedColumn() {
 					enumCases, err := m.metaStore.GetEnumDict(tableName, column.Name)
 					if err != nil {
 						if err != metaCom.ErrTableDoesNotExist && err != metaCom.ErrColumnDoesNotExist {
@@ -172,7 +172,7 @@ func (m *memStoreImpl) applyTableSchema(newTable *metaCom.Table) {
 		tableSchema = memCom.NewTableSchema(newTable)
 		for columnID, column := range newTable.Columns {
 			if !column.Deleted {
-				if column.IsEnumColumn() {
+				if column.IsEnumBasedColumn() {
 					var enumCases []string
 					if column.DefaultValue != nil {
 						enumCases = append(enumCases, *column.DefaultValue)
@@ -205,7 +205,7 @@ func (m *memStoreImpl) applyTableSchema(newTable *metaCom.Table) {
 				columnsToDelete = append(columnsToDelete, columnID)
 			}
 		} else {
-			if column.IsEnumColumn() {
+			if column.IsEnumBasedColumn() {
 				_, exist := tableSchema.EnumDicts[column.Name]
 				if !exist {
 					var enumCases []string

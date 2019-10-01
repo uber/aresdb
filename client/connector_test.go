@@ -77,6 +77,18 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 					DisableAutoExpand: true,
 					CaseInsensitive:   true,
 				},
+				{
+					Name:              "col6",
+					Type:              metaCom.ArraySmallEnum,
+					DisableAutoExpand: false,
+					CaseInsensitive:   true,
+				},
+				{
+					Name:              "col7",
+					Type:              metaCom.ArrayBigEnum,
+					DisableAutoExpand: false,
+					CaseInsensitive:   true,
+				},
 			},
 			PrimaryKeyColumns: []int{1},
 			IsFactTable:       true,
@@ -88,6 +100,8 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		"col2": {"1"},
 		"col4": {"a"},
 		"col5": {"A"},
+		"col6": {"E"},
+		"col7": {"F"},
 	}
 
 	// extendedEnumIDs
@@ -116,7 +130,16 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 						w.WriteHeader(http.StatusOK)
 						w.Write(enumBytes)
 					} else if r.Method == http.MethodPost {
-						enumIDBytes, _ := json.Marshal(column2extendedEnumIDs)
+						column := string(re.FindSubmatch([]byte(r.URL.Path))[1])
+						var columnExtendedEnumIDs []int
+						if column == "col6" {
+							columnExtendedEnumIDs = []int{1, 2, 3, 4}
+						} else if column == "col7" {
+							columnExtendedEnumIDs = []int{1, 2, 3}
+						} else {
+							columnExtendedEnumIDs = column2extendedEnumIDs
+						}
+						enumIDBytes, _ := json.Marshal(columnExtendedEnumIDs)
 						w.WriteHeader(http.StatusOK)
 						w.Write(enumIDBytes)
 					}
@@ -262,6 +285,28 @@ var _ = ginkgo.Describe("AresDB connector", func() {
 		})
 		Ω(err).Should(BeNil())
 		Ω(n).Should(Equal(1))
+	})
+
+	ginkgo.It("Insert enum array should work", func() {
+		config := ConnectorConfig{
+			Address: hostPort,
+		}
+		logger := zap.NewExample().Sugar()
+		rootScope, _, _ := common.NewNoopMetrics().NewRootScope()
+
+		c := config.NewConnector(logger, rootScope)
+
+		n, err := c.Insert("a", []string{"col0", "col1", "col6", "col7"}, []Row{
+			{100, int32(1), "[\"a\",\"b\"]", "[\"a\",null]"},
+			{200, int32(2), "[\"c\",null]", "[\"a\",\"b\"]"},
+			{300, int32(3), nil, "[\"d\",\"b\"]"},
+			{400, int32(3), "[\"a\",\"d\"]", nil},
+			{500, int32(3), "[\"invalid value\"", "invalid value"}, // invalid json format
+			{600, int32(3), "[\"a\",1]", "[2,1]"},                  // invalid value - not string
+
+		})
+		Ω(err).Should(BeNil())
+		Ω(n).Should(Equal(4))
 	})
 
 	ginkgo.It("computeHLLValue should work", func() {

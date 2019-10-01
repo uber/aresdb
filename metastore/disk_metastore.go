@@ -1068,7 +1068,7 @@ func (dm *diskMetaStore) removeColumn(table *common.Table, columnName string) er
 				return err
 			}
 
-			if column.IsEnumColumn() {
+			if column.IsEnumBasedColumn() {
 				dm.removeEnumColumn(table.Name, column.Name)
 			}
 
@@ -1431,7 +1431,7 @@ func (dm *diskMetaStore) enumColumnExists(tableName string, columnName string) e
 				continue
 			}
 
-			if !column.IsEnumColumn() {
+			if !column.IsEnumBasedColumn() {
 				return common.ErrNotEnumColumn
 			}
 
