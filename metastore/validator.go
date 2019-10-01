@@ -143,7 +143,7 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 			return common.ErrDuplicatedColumn
 		}
 		colDataType :=  memCom.DataTypeFromString(table.Columns[colId].Type)
-		if colDataType >= memCom.ArrayBool && colDataType <= memCom.ArrayInt64 {
+		if memCom.IsArrayType(colDataType) {
 			return common.ErrInvalidPrimaryKeyDataType
 		}
 		colIdDedup[colId] = true
