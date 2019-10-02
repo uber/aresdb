@@ -34,8 +34,42 @@ func TestEnumMutator(t *testing.T) {
 				Type:    metaCom.BigEnum,
 				Deleted: false,
 			},
+			{
+				Name:    "c2",
+				Type:    metaCom.SmallEnum,
+				Deleted: false,
+			},
 		},
 	}
+
+	t.Run("Extend enum case reach maximum", func(t *testing.T) {
+		// test setup
+		txnStore := mem.NewStore()
+
+		_, err := txnStore.Set(utils.EnumNodeListKey("ns1", "test", 0, 1), &pb.EnumNodeList{
+			NumEnumNodes: 1,
+		})
+		assert.NoError(t, err)
+		_, err = txnStore.Set(utils.EnumNodeKey("ns1", "test", 0, 1, 0), &pb.EnumCases{
+			Cases: []string{},
+		})
+		assert.NoError(t, err)
+
+		schemaMutator := &mocks.TableSchemaMutator{}
+		// test
+		enumMutator := NewEnumMutator(txnStore, schemaMutator)
+		schemaMutator.On("GetTable", "ns1", "test").Return(&testTable, nil)
+
+		// test more than 1 node
+		newCases := make([]string, 0)
+		for i := 0; i < 257; i++ {
+			newCases = append(newCases, strconv.Itoa(i))
+		}
+
+		enumIDs, err := enumMutator.ExtendEnumCases("ns1", "test", "c2", newCases)
+		assert.EqualError(t, err, metaCom.ErrMaxEnumIDReached.Error())
+		assert.Empty(t, enumIDs)
+	})
 
 	t.Run("Extend and get enum cases", func(t *testing.T) {
 		// test setup

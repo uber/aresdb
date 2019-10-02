@@ -176,6 +176,18 @@ func (c *Column) IsOverwriteOnlyDataType() bool {
 	}
 }
 
+// EnumCardinality returns cardinality for enum type
+func EnumCardinality(columnType string) int {
+	switch columnType {
+	case SmallEnum:
+		return 1 << 8
+	case BigEnum:
+		return 1 << 16
+	default:
+		return 0
+	}
+}
+
 // ShardOwnership defines an instruction on whether the receiving instance
 // should start to own or disown the specified table shard.
 type ShardOwnership struct {

@@ -15,13 +15,13 @@ package etcd
 
 import (
 	"github.com/uber/aresdb/cluster/kvstore"
+	"github.com/uber/aresdb/controller/mutators/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"path"
 	"strconv"
 	"sync"
 
 	"github.com/uber/aresdb/controller/generated/proto"
-	"github.com/uber/aresdb/controller/mutators/common"
 
 	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/uber/aresdb/utils"
@@ -60,9 +60,11 @@ func (e *enumMutator) ExtendEnumCases(namespace, tableName, columnName string, e
 		return nil, err
 	}
 	columnID := -1
+	enumIDUpperBound := 0
 	for id, column := range schema.Columns {
 		if column.Name == columnName && !column.Deleted && column.IsEnumBasedColumn() {
 			columnID = id
+			enumIDUpperBound = metaCom.EnumCardinality(column.Type)
 			break
 		}
 	}
@@ -75,7 +77,7 @@ func (e *enumMutator) ExtendEnumCases(namespace, tableName, columnName string, e
 	if !exist {
 		e.RUnlock()
 		// fetch enum case from etcd and update cache
-		return e.extendEnumCase(namespace, tableName, schema.Incarnation, columnID, 0, enumCases)
+		return e.extendEnumCase(namespace, tableName, schema.Incarnation, columnID, 0, enumCases, enumIDUpperBound)
 	}
 
 	currentNodeID := enumCache.currentNodeID
@@ -95,7 +97,7 @@ func (e *enumMutator) ExtendEnumCases(namespace, tableName, columnName string, e
 
 	if len(newEnumCases) > 0 {
 		// fetch enum cases from etcd and update cache
-		missingIDs, err := e.extendEnumCase(namespace, tableName, schema.Incarnation, columnID, currentNodeID, newEnumCases)
+		missingIDs, err := e.extendEnumCase(namespace, tableName, schema.Incarnation, columnID, currentNodeID, newEnumCases, enumIDUpperBound)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +122,7 @@ func getEnumID(nodeID int, innerID int) int {
 	return maxEnumCasePerNode*nodeID + innerID
 }
 
-func (e *enumMutator) extendEnumCase(namespace, tableName string, incarnation, columnID int, fromEnumNodeID int, newEnumCases []string) ([]int, error) {
+func (e *enumMutator) extendEnumCase(namespace, tableName string, incarnation, columnID int, fromEnumNodeID int, newEnumCases []string, enumIDUpperBound int) ([]int, error) {
 	// track result resolvedEnumIDs
 	resolvedEnumIDs := make([]int, len(newEnumCases))
 	// newEnumCaseDict records the resolved resolvedEnumIDs for newEnumCases
@@ -194,6 +196,10 @@ func (e *enumMutator) extendEnumCase(namespace, tableName string, incarnation, c
 				enumNodeList.NumEnumNodes++
 			}
 			enumID := getEnumID(lastEnumNodeID, len(lastEnumNode.Cases))
+			// check max enum id before creating new enum ids
+			if enumID >= enumIDUpperBound {
+				return nil, metaCom.ErrMaxEnumIDReached
+			}
 			lastEnumNode.Cases = append(lastEnumNode.Cases, newCase)
 			resolvedEnumIDs[index] = enumID
 			newEnumCaseDict[newCase] = enumID
