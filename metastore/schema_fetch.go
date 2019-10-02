@@ -201,7 +201,7 @@ func (j *SchemaFetchJob) FetchEnum() {
 			continue
 		}
 		for _, column := range table.Columns {
-			if !column.IsEnumColumn() {
+			if !column.IsEnumBasedColumn() {
 				continue
 			}
 			enumCases, err = j.enumMutator.GetEnumCases(j.clusterName, tableName, column.Name)

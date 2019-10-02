@@ -313,4 +313,13 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		}
 		Ω(func() {vp.SetDataValue(1, val, common.IgnoreCount)}).Should(Panic())
 	})
+
+	ginkgo.It("archive array vp slice should work", func() {
+		vp := createArchiveVP()
+		vc := vp.Slice(1, 3)
+		Ω(len(vc.Values)).Should(Equal(3))
+		Ω(vc.Values[0]).Should(Equal("[21,22,null]"))
+		Ω(vc.Values[1]).Should(BeNil())
+		Ω(vc.Values[2]).Should(Equal("[41,42,43]"))
+	})
 })

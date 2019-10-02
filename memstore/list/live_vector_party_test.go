@@ -230,4 +230,12 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(err).Should(BeNil())
 		Ω(newVP.Equals(vp)).Should(BeTrue())
 	})
+
+	ginkgo.It("live array vp slice should work", func() {
+		vc := expectedUint32LiveStoreVP.Slice(0, 3)
+		Ω(len(vc.Values)).Should(Equal(3))
+		Ω(vc.Values[0]).Should(Equal("[1]"))
+		Ω(vc.Values[1]).Should(Equal("[1,null,3]"))
+		Ω(vc.Values[2]).Should(BeNil())
+	})
 })

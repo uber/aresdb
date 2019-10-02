@@ -61,7 +61,7 @@ func (e *enumMutator) ExtendEnumCases(namespace, tableName, columnName string, e
 	}
 	columnID := -1
 	for id, column := range schema.Columns {
-		if column.Name == columnName && !column.Deleted && column.IsEnumColumn() {
+		if column.Name == columnName && !column.Deleted && column.IsEnumBasedColumn() {
 			columnID = id
 			break
 		}
@@ -251,7 +251,7 @@ func (e *enumMutator) GetEnumCases(namespace, tableName, columnName string) ([]s
 	}
 	columnID := -1
 	for id, column := range schema.Columns {
-		if column.Name == columnName && !column.Deleted && column.IsEnumColumn() {
+		if column.Name == columnName && !column.Deleted && column.IsEnumBasedColumn() {
 			columnID = id
 			break
 		}

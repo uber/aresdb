@@ -427,7 +427,7 @@ func (vp *LiveVectorParty) SetLength(length int) {
 // It's safe to pass nil HostMemoryManager.
 func NewLiveVectorParty(length int, dataType common.DataType,
 	hmm common.HostMemoryManager) common.LiveVectorParty {
-	return &LiveVectorParty{
+	vp := &LiveVectorParty{
 		baseVectorParty: baseVectorParty{
 			length:   length,
 			dataType: dataType,
@@ -438,4 +438,6 @@ func NewLiveVectorParty(length int, dataType common.DataType,
 			},
 		},
 	}
+	vp.baseVectorParty.getDataValueFn = vp.GetDataValue
+	return vp
 }

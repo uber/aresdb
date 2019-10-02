@@ -61,7 +61,7 @@ func NewArchiveVectorParty(length int, dataType common.DataType,
 
 func newArchiveVectorParty(length int, dataType common.DataType,
 	totalValueBytes int64, locker sync.Locker) *ArchiveVectorParty {
-	return &ArchiveVectorParty{
+	vp := &ArchiveVectorParty{
 		baseVectorParty: baseVectorParty{
 			length:   length,
 			dataType: dataType,
@@ -71,6 +71,8 @@ func newArchiveVectorParty(length int, dataType common.DataType,
 		},
 		totalValueBytes: totalValueBytes,
 	}
+	vp.baseVectorParty.getDataValueFn = vp.GetDataValue
+	return vp
 }
 
 // Allocate allocate underlying storage for vector party. Note allocation for
