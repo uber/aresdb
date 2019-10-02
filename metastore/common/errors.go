@@ -77,4 +77,6 @@ var (
 	ErrHLLColumnDoesNotAllowDefaultValue = errors.New("hll column does not allow default value")
 	ErrInvalidTableBatchSize             = errors.New("Table batch size should be larger than zero")
 	ErrInvalidPrimaryKeyBucketSize       = errors.New("Table primary key bucket size should be larger than zero")
+	ErrInvalidPrimaryKeyDataType         = errors.New("Specified data type can not be used as primary key")
+	ErrInvalidSortColumnDataType         = errors.New("Specified data type can not be used as sorting column")
 )
