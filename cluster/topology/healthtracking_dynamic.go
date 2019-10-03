@@ -58,8 +58,8 @@ func NewHealthTrackingDynamicTopology(opts DynamicOptions) (HealthTrackingDynami
 }
 
 func (ht *healthTrackingDynamicTopoImpl) Get() Map {
-	ht.RLock()
-	defer ht.RUnlock()
+	ht.Lock()
+	defer ht.Unlock()
 
 	// filter known unhealthy hosts from dynamic topology
 	dm := ht.dynamicTopology.Get()
