@@ -751,7 +751,6 @@ var _ = ginkgo.Describe("Validator", func() {
 		Ω(err).ShouldNot(BeNil())
 	})
 
-
 	ginkgo.It("array columns should work", func() {
 		table := common.Table{
 			Name: "testTable",

@@ -31,6 +31,8 @@ var (
 	ErrColumnAlreadyDeleted = errors.New("Column already deleted")
 	// ErrNotEnumColumn indicates Column is not enum type
 	ErrNotEnumColumn = errors.New("Column is not enum type")
+	// ErrEnumCardinalityOverflow indicates invalid enum extension over cardinality limit
+	ErrEnumCardinalityOverflow = errors.New("Enum column cardinality exceeds limit")
 	// ErrShardDoesNotExist indicates Shard does not exist
 	ErrShardDoesNotExist = errors.New("Shard does not exist")
 	// ErrNotFactTable indicates table not a fact table

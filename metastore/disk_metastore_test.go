@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/onsi/ginkgo"
@@ -43,7 +45,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 
 	testColumn1 := common.Column{
 		Name:    "column1",
-		Type:    common.BigEnum,
+		Type:    common.SmallEnum,
 		Deleted: false,
 		Config: common.ColumnConfig{
 			PreloadingDays: 1,
@@ -176,7 +178,11 @@ var _ = ginkgo.Describe("disk metastore", func() {
 	mockFileSystem.On("ReadFile", "base/c/schema").Return(testTableCBytes, nil)
 	mockFileSystem.On("ReadFile", "base/read_fail/schema").Return(nil, os.ErrNotExist)
 
-	mockFileSystem.On("ReadFile", "base/a/enums/column1").Return([]byte(fmt.Sprintf("foo%sbar", common.EnumDelimiter)), nil)
+	mockEnums := make([]string, 254)
+	for i := 0; i < 254; i++ {
+		mockEnums[i] = "e" + strconv.Itoa(i)
+	}
+	mockFileSystem.On("ReadFile", "base/a/enums/column1").Return([]byte(strings.Join(mockEnums, common.EnumDelimiter)), nil)
 	mockFileSystem.On("ReadFile", "base/a/enums/column4").Return([]byte(fmt.Sprintf("foo%sbar", common.EnumDelimiter)), nil)
 	mockFileSystem.On("ReadFile", "base/a/enums/bad_col").Return(nil, os.ErrNotExist)
 
@@ -259,7 +265,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		diskMetaStore := createDiskMetastore("base")
 		enumCases, err := diskMetaStore.GetEnumDict("a", "column1")
 		Ω(err).Should(BeNil())
-		Ω(enumCases).Should(Equal([]string{"foo", "bar"}))
+		Ω(enumCases).Should(Equal(mockEnums))
 
 		enumCases, err = diskMetaStore.GetEnumDict("unknown", "column1")
 		Ω(err).ShouldNot(BeNil())
@@ -400,7 +406,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		enumCases = append(enumCases, enumCase)
 		enumCase = <-events
 		enumCases = append(enumCases, enumCase)
-		Ω(enumCases).Should(Equal([]string{"foo", "bar"}))
+		Ω(enumCases).Should(Equal([]string{"e0", "e1"}))
 
 		events, done, err = diskMetastore.WatchEnumDictEvents("unknown", "column1", 0)
 		Ω(err).ShouldNot(BeNil())
@@ -597,7 +603,9 @@ var _ = ginkgo.Describe("disk metastore", func() {
 		diskMetaStore := createDiskMetastore("base")
 		enumIDs, err := diskMetaStore.ExtendEnumDict(testTableA.Name, testColumn1.Name, []string{"hello", "world"})
 		Ω(err).Should(BeNil())
-		Ω(enumIDs).Should(Equal([]int{2, 3}))
+		Ω(enumIDs).Should(Equal([]int{254, 255}))
+		enumIDs, err = diskMetaStore.ExtendEnumDict(testTableA.Name, testColumn1.Name, []string{"hello", "world", "and", "more"})
+		Ω(err).Should(Equal(common.ErrEnumCardinalityOverflow))
 	})
 
 	ginkgo.It("AddArchiveBatchVersion: seqNum is 0", func() {
