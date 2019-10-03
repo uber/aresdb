@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/subscriber/common/consumer"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
@@ -105,9 +106,11 @@ var _ = Describe("KafkaConsumer", func() {
 
 		msgCh := kc.Messages()
 		Ω(msgCh).ShouldNot(BeNil())
+		kc.Messages() = make(chan consumer.Message, 1)
 
 		closeCh := kc.Closed()
 		Ω(closeCh).ShouldNot(BeNil())
+		kc.Closed() = make(chan struct{}, 1)
 
 		msg := sarama.ConsumerMessage{
 			Topic:     "job1-topic",
@@ -133,13 +136,6 @@ var _ = Describe("KafkaConsumer", func() {
 			session:         nil,
 		}
 		kc.CommitUpTo(&kafkaMsg)
-
-		go func() {
-			select {
-			case <-kc.Closed():
-				return;
-			}
-		}()
 
 		err = kc.(*KafkaConsumer).Close()
 		Ω(err).Should(BeNil())
