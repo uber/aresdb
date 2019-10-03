@@ -134,6 +134,13 @@ var _ = Describe("KafkaConsumer", func() {
 		}
 		kc.CommitUpTo(&kafkaMsg)
 
+		go func() {
+			select {
+			case <-kc.Closed():
+				return;
+			}
+		}()
+
 		err = kc.(*KafkaConsumer).Close()
 		Ω(err).Should(BeNil())
 
