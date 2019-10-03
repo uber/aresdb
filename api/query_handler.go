@@ -16,6 +16,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/m3db/m3/src/x/sync"
 	"github.com/uber/aresdb/cluster/topology"
 	"net/http"
 
@@ -36,6 +37,7 @@ type QueryHandler struct {
 	shardOwner    topology.ShardOwner
 	memStore      memstore.MemStore
 	deviceManager *query.DeviceManager
+	workerPool   sync.WorkerPool
 }
 
 // NewQueryHandler creates a new QueryHandler.
@@ -44,6 +46,7 @@ func NewQueryHandler(memStore memstore.MemStore, shardOwner topology.ShardOwner,
 		memStore:      memStore,
 		shardOwner:    shardOwner,
 		deviceManager: query.NewDeviceManager(cfg),
+		workerPool:    sync.NewWorkerPool(utils.GetConfig().HTTP.MaxQueryConnections),
 	}
 }
 
@@ -85,7 +88,14 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler.handleAQLInternal(aqlRequest, w, r)
+	available := handler.workerPool.GoIfAvailable(func() {
+		handler.handleAQLInternal(aqlRequest, w, r)
+	})
+
+	if !available {
+		apiCom.RespondWithError(w, apiCom.ErrQueryServiceNotAvailable)
+		return
+	}
 }
 
 func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w http.ResponseWriter, r *http.Request) {

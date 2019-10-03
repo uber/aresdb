@@ -52,7 +52,13 @@ var _ = ginkgo.Describe("datanode", func() {
 					TotalMemorySize: 1 << 20,
 					SchedulerOff:    false,
 					DiskStore:       common.DiskStoreConfig{WriteSync: true},
-					HTTP:            common.HTTPConfig{MaxConnections: 300, ReadTimeOutInSeconds: 20, WriteTimeOutInSeconds: 300},
+					HTTP:            common.HTTPConfig{
+						MaxConnections: 300,
+						MaxIngestionConnections: 150,
+						MaxQueryConnections: 150,
+						ReadTimeOutInSeconds: 20,
+						WriteTimeOutInSeconds: 300,
+					},
 					RedoLogConfig: common.RedoLogConfig{
 						DiskConfig:  common.DiskRedoLogConfig{Disabled: false},
 						KafkaConfig: common.KafkaRedoLogConfig{Enabled: false},

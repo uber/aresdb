@@ -15,6 +15,7 @@
 package api
 
 import (
+	"github.com/m3db/m3/src/x/sync"
 	"net/http"
 
 	"github.com/uber/aresdb/api/common"
@@ -28,12 +29,14 @@ import (
 // DataHandler handles data ingestion requests from the ingestion pipeline.
 type DataHandler struct {
 	memStore memstore.MemStore
+	workerPool sync.WorkerPool
 }
 
 // NewDataHandler creates a new DataHandler.
 func NewDataHandler(memStore memstore.MemStore) *DataHandler {
 	return &DataHandler{
 		memStore: memStore,
+		workerPool: sync.NewWorkerPool(utils.GetConfig().HTTP.MaxQueryConnections),
 	}
 }
 
@@ -64,11 +67,16 @@ func (handler *DataHandler) PostData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.memStore.HandleIngestion(postDataRequest.TableName, postDataRequest.Shard, upsertBatch)
-	if err != nil {
-		common.RespondWithError(w, err)
-		return
-	}
+	available := handler.workerPool.GoIfAvailable(func() {
+		err = handler.memStore.HandleIngestion(postDataRequest.TableName, postDataRequest.Shard, upsertBatch)
+		if err != nil {
+			common.RespondWithError(w, err)
+			return
+		}
+		common.RespondWithJSONObject(w, nil)
+	})
 
-	common.RespondWithJSONObject(w, nil)
+	if !available {
+		common.RespondWithError(w, common.ErrIngestionServiceNotAvailable)
+	}
 }
