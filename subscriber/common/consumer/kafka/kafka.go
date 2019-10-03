@@ -185,12 +185,22 @@ func (c *KafkaConsumer) Closed() <-chan struct{} {
 	return c.closeCh
 }
 
+// SetClosed is used for testing
+func (c *KafkaConsumer) SetClosed(closeCh chan struct{}) {
+	c.closeCh = closeCh
+}
+
 // Messages returns a channel of messages for the topic.
 //
 // If the consumer is not configured with nonzero buffer size, the Errors()
 // channel must be read in conjunction with Messages() to prevent deadlocks.
 func (c *KafkaConsumer) Messages() <-chan consumer.Message {
 	return c.msgCh
+}
+
+// SetMessages is used for testing
+func (c *KafkaConsumer) SetMessages(msgCh chan consumer.Message) {
+	c.msgCh = msgCh
 }
 
 // CommitUpTo marks this message and all previous messages in the same partition
