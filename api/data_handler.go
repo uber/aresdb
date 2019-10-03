@@ -33,10 +33,12 @@ type DataHandler struct {
 }
 
 // NewDataHandler creates a new DataHandler.
-func NewDataHandler(memStore memstore.MemStore) *DataHandler {
+func NewDataHandler(memStore memstore.MemStore, maxConcurrentRequests int) *DataHandler {
+	workerPool := sync.NewWorkerPool(maxConcurrentRequests)
+	workerPool.Init()
 	return &DataHandler{
 		memStore: memStore,
-		workerPool: sync.NewWorkerPool(utils.GetConfig().HTTP.MaxQueryConnections),
+		workerPool: workerPool,
 	}
 }
 
@@ -67,7 +69,9 @@ func (handler *DataHandler) PostData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	done := make(chan struct{})
 	available := handler.workerPool.GoIfAvailable(func() {
+		defer close(done)
 		err = handler.memStore.HandleIngestion(postDataRequest.TableName, postDataRequest.Shard, upsertBatch)
 		if err != nil {
 			common.RespondWithError(w, err)
@@ -78,5 +82,7 @@ func (handler *DataHandler) PostData(w http.ResponseWriter, r *http.Request) {
 
 	if !available {
 		common.RespondWithError(w, common.ErrIngestionServiceNotAvailable)
+		return
 	}
+	<-done
 }

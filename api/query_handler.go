@@ -41,12 +41,19 @@ type QueryHandler struct {
 }
 
 // NewQueryHandler creates a new QueryHandler.
-func NewQueryHandler(memStore memstore.MemStore, shardOwner topology.ShardOwner, cfg common.QueryConfig) *QueryHandler {
+func NewQueryHandler(
+	memStore memstore.MemStore,
+	shardOwner topology.ShardOwner,
+	cfg common.QueryConfig,
+	maxConcurrentQueries int,
+) *QueryHandler {
+	workerPool := sync.NewWorkerPool(maxConcurrentQueries)
+	workerPool.Init()
 	return &QueryHandler{
 		memStore:      memStore,
 		shardOwner:    shardOwner,
 		deviceManager: query.NewDeviceManager(cfg),
-		workerPool:    sync.NewWorkerPool(utils.GetConfig().HTTP.MaxQueryConnections),
+		workerPool:	   workerPool,
 	}
 }
 
@@ -88,7 +95,9 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	done := make(chan struct{})
 	available := handler.workerPool.GoIfAvailable(func() {
+		defer close(done)
 		handler.handleAQLInternal(aqlRequest, w, r)
 	})
 
@@ -96,6 +105,7 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 		apiCom.RespondWithError(w, apiCom.ErrQueryServiceNotAvailable)
 		return
 	}
+	<-done
 }
 
 func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w http.ResponseWriter, r *http.Request) {

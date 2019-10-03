@@ -45,7 +45,7 @@ var _ = ginkgo.Describe("DataHandler", func() {
 	ginkgo.BeforeEach(func() {
 		memStore = CreateMemStore(testSchema, 0, nil, CreateMockDiskStore())
 		memStore.On("HandleIngestion", "abc", 0, mock.Anything).Return(nil)
-		dataHandler := NewDataHandler(memStore)
+		dataHandler := NewDataHandler(memStore, 10)
 		testRouter := mux.NewRouter()
 		dataHandler.Register(testRouter.PathPrefix("/data").Subrouter())
 

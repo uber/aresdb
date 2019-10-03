@@ -15,7 +15,7 @@ disk_store:
 meta_store:
   write_sync: true
 http:
-  max_connections: 600
+  max_connections: 650
   max_ingestion_connections: 300
   max_query_connections: 300
   read_time_out_in_seconds: 20

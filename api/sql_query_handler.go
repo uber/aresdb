@@ -15,7 +15,7 @@
 package api
 
 import (
-	"github.com/uber/aresdb/api/common"
+	apiCom "github.com/uber/aresdb/api/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/sql"
 	"github.com/uber/aresdb/utils"
@@ -37,10 +37,10 @@ import (
 //        200: aqlResponse
 //        400: aqlResponse
 func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
-	sqlRequest := common.SQLRequest{Device: -1}
+	sqlRequest := apiCom.SQLRequest{Device: -1}
 
-	if err := common.ReadRequest(r, &sqlRequest); err != nil {
-		common.RespondWithBadRequest(w, err)
+	if err := apiCom.ReadRequest(r, &sqlRequest); err != nil {
+		apiCom.RespondWithBadRequest(w, err)
 		utils.GetLogger().With(
 			"error", err,
 			"statusCode", http.StatusBadRequest,
@@ -55,7 +55,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		for i, sqlQuery := range sqlRequest.Body.Queries {
 			parsedAQLQuery, err := sql.Parse(sqlQuery, utils.GetLogger())
 			if err != nil {
-				common.RespondWithBadRequest(w, err)
+				apiCom.RespondWithBadRequest(w, err)
 				return
 			}
 			aqlQueries[i] = *parsedAQLQuery
@@ -66,7 +66,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	aqlRequest := common.AQLRequest{
+	aqlRequest := apiCom.AQLRequest{
 		Device:                sqlRequest.Device,
 		Verbose:               sqlRequest.Verbose + sqlRequest.Debug,
 		Debug:                 sqlRequest.Debug,
@@ -78,5 +78,16 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 			Queries: aqlQueries,
 		},
 	}
-	handler.handleAQLInternal(aqlRequest, w, r)
+
+	done := make(chan struct{})
+	available := handler.workerPool.GoIfAvailable(func() {
+		defer close(done)
+		handler.handleAQLInternal(aqlRequest, w, r)
+	})
+
+	if !available {
+		apiCom.RespondWithError(w, apiCom.ErrQueryServiceNotAvailable)
+		return
+	}
+	<-done
 }
