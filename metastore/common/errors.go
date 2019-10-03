@@ -81,4 +81,7 @@ var (
 	ErrInvalidPrimaryKeyBucketSize       = errors.New("Table primary key bucket size should be larger than zero")
 	ErrInvalidPrimaryKeyDataType         = errors.New("Specified data type can not be used as primary key")
 	ErrInvalidSortColumnDataType         = errors.New("Specified data type can not be used as sorting column")
+	// ErrMaxEnumIDReached indicates a column has already reached its maximum enum id
+	// eg. SmallEnum: 255, BigEnum: 65535
+	ErrMaxEnumIDReached = errors.New("Maximum enum id reached")
 )

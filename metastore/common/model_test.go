@@ -31,4 +31,10 @@ var _ = ginkgo.Describe("model tests", func() {
 		Ω(c.IsEnumBasedColumn()).Should(BeTrue())
 		Ω(c.IsEnumArrayColumn()).Should(BeTrue())
 	})
+
+	ginkgo.It("EnumCardinality should work", func() {
+		Ω(EnumCardinality(SmallEnum)).Should(Equal(256))
+		Ω(EnumCardinality(BigEnum)).Should(Equal(65536))
+		Ω(EnumCardinality(UUID)).Should(Equal(0))
+	})
 })
