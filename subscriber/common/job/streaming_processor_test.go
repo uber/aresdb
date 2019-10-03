@@ -330,6 +330,7 @@ var _ = Describe("streaming_processor", func() {
 
 		go p.Run()
 		p.Restart()
+		p.(*StreamingProcessor).highLevelConsumer.(*kafka.KafkaConsumer).SetClosed(make(chan struct{}, 1))
 		p.(*StreamingProcessor).highLevelConsumer.(*kafka.KafkaConsumer).Close()
 
 		p.(*StreamingProcessor).reInitialize()

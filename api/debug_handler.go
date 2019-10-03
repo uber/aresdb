@@ -772,10 +772,12 @@ func (handler *DebugHandler) BootstrapRetry(w http.ResponseWriter, r *http.Reque
 	common.RespondJSONObjectWithCode(w, http.StatusOK, "Bootstrap retry submitted")
 }
 
+// GetBootstrapRetryChan returns bootstrapRetryChan
 func (handler *DebugHandler) GetBootstrapRetryChan() chan bool {
 	return handler.bootstrapRetryChan
 }
 
+// SetBootstrapRetryChan is used for testing
 func (handler *DebugHandler) SetBootstrapRetryChan(bootstrapRetryChan chan bool) {
 	handler.bootstrapRetryChan = bootstrapRetryChan
 }
