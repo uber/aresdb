@@ -106,11 +106,11 @@ var _ = Describe("KafkaConsumer", func() {
 
 		msgCh := kc.Messages()
 		Ω(msgCh).ShouldNot(BeNil())
-		kc.SetMessages(make(chan consumer.Message, 1))
+		kc.(*KafkaConsumer).SetMessages(make(chan consumer.Message, 1))
 
 		closeCh := kc.Closed()
 		Ω(closeCh).ShouldNot(BeNil())
-		kc.SetClosed(make(chan struct{}, 1))
+		kc.(*KafkaConsumer).SetClosed(make(chan struct{}, 1))
 
 		msg := sarama.ConsumerMessage{
 			Topic:     "job1-topic",
