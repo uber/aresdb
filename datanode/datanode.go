@@ -699,8 +699,8 @@ func (d *dataNode) newHandlers() datanodeHandlers {
 	return datanodeHandlers{
 		schemaHandler:      api.NewSchemaHandler(d.metaStore),
 		enumHandler:        api.NewEnumHandler(d.memStore, d.metaStore),
-		queryHandler:       api.NewQueryHandler(d.memStore, d, d.opts.ServerConfig().Query),
-		dataHandler:        api.NewDataHandler(d.memStore),
+		queryHandler:       api.NewQueryHandler(d.memStore, d, d.opts.ServerConfig().Query, d.opts.ServerConfig().HTTP.MaxQueryConnections),
+		dataHandler:        api.NewDataHandler(d.memStore, d.opts.ServerConfig().HTTP.MaxIngestionConnections),
 		nodeModuleHandler:  http.StripPrefix("/node_modules/", http.FileServer(http.Dir("./api/ui/node_modules/"))),
 		debugStaticHandler: http.StripPrefix("/static/", utils.NoCache(http.FileServer(http.Dir("./api/ui/debug/")))),
 		swaggerHandler:     http.StripPrefix("/swagger/", http.FileServer(http.Dir("./api/ui/swagger/"))),

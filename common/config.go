@@ -42,9 +42,11 @@ type DiskStoreConfig struct {
 
 // HTTPConfig is the static configuration for main http server (query and schema).
 type HTTPConfig struct {
-	MaxConnections        int `yaml:"max_connections"`
-	ReadTimeOutInSeconds  int `yaml:"read_time_out_in_seconds"`
-	WriteTimeOutInSeconds int `yaml:"write_time_out_in_seconds"`
+	MaxConnections        	int `yaml:"max_connections"`
+	MaxIngestionConnections int `yaml:"max_ingestion_connections"`
+	MaxQueryConnections 	int `yaml:"max_query_connections"`
+	ReadTimeOutInSeconds  	int `yaml:"read_time_out_in_seconds"`
+	WriteTimeOutInSeconds 	int `yaml:"write_time_out_in_seconds"`
 }
 
 // ControllerConfig is the config for ares-controller client

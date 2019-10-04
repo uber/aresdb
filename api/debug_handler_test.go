@@ -223,7 +223,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 			common.QueryConfig{
 				DeviceMemoryUtilization: 0.9,
 				DeviceChoosingTimeout:   5,
-			})
+			},
+			10)
 
 		healthCheckHandler := NewHealthCheckHandler()
 		debugHandler = NewDebugHandler("", memStore, mockMetaStore, queryHandler, healthCheckHandler, topology.NewStaticShardOwner([]int{0}), nil)
