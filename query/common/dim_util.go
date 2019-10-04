@@ -10,6 +10,12 @@ func GetDimensionDataType(expression expr.Expr) memCom.DataType {
 	if e, ok := expression.(*expr.VarRef); ok {
 		return e.DataType
 	}
+	// special handling element_at for array enum type
+	if binExpr, ok := expression.(*expr.BinaryExpr); ok && binExpr.Op == expr.ARRAY_ELEMENT_AT {
+		if vr, ok := binExpr.LHS.(*expr.VarRef); ok && memCom.IsEnumType(vr.DataType) {
+			return vr.DataType
+		}
+	}
 	switch expression.Type() {
 	case expr.Boolean:
 		return memCom.Bool

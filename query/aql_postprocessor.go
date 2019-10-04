@@ -186,8 +186,14 @@ func (qc *AQLQueryContext) PostprocessAsHLLData() ([]byte, error) {
 // a nil slice.
 func (qc *AQLQueryContext) getEnumReverseDict(dimIndex int, expression expr.Expr) []string {
 	varRef, ok := expression.(*expr.VarRef)
-	if ok && (varRef.DataType == memCom.SmallEnum || varRef.DataType == memCom.BigEnum) {
+	if ok && memCom.IsEnumType(varRef.DataType) {
 		return varRef.EnumReverseDict
+	}
+	// special handling element_at for array enum type
+	if binExpr, ok := expression.(*expr.BinaryExpr); ok && binExpr.Op == expr.ARRAY_ELEMENT_AT {
+		if vr, ok := binExpr.LHS.(*expr.VarRef); ok && memCom.IsEnumType(vr.DataType) {
+			return vr.EnumReverseDict
+		}
 	}
 
 	// return validShapeUUIDs as the reverse enum dict if dimIndex match geo dimension
