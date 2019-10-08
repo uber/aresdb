@@ -3735,6 +3735,58 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 			ExprType: expr.Boolean,
 		}))
 
+		// contains should not work for enum number literal if not from broker
+		qc.Query = &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "contains(enum_array_field, 100)"},
+			},
+			Filters: []string{
+				"request_at >= 1540399140000",
+				"request_at < 1540399320000",
+			},
+		}
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).ShouldNot(BeNil())
+
+		// contains works for enum number literal if from broker
+		qc.Query = &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "contains(enum_array_field, 100)"},
+			},
+			Filters: []string{
+				"request_at >= 1540399140000",
+				"request_at < 1540399320000",
+			},
+		}
+		qc.DataOnly = true // modify to simulate from broker
+		qc.parseExprs()
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processFilters()
+		qc.processDimensions()
+		Ω(qc.Error).Should(BeNil())
+		Ω(qc.Query.Dimensions[0].ExprParsed).Should(Equal(&expr.BinaryExpr{
+			Op: expr.ARRAY_CONTAINS,
+			LHS: &expr.VarRef{
+				Val:             "enum_array_field",
+				DataType:        memCom.ArraySmallEnum,
+				ColumnID:        4,
+				EnumDict:        schema.EnumDicts["enum_array_field"].Dict,
+				EnumReverseDict: schema.EnumDicts["enum_array_field"].ReverseDict,
+			},
+			RHS:      &expr.NumberLiteral{Val: 100, Int: 100, Expr: "100", ExprType: expr.Unsigned},
+			ExprType: expr.Boolean,
+		}))
+
 		// not work for invalid geopint string literal
 		qc.Query = &queryCom.AQLQuery{
 			Table: "table1",
@@ -3750,6 +3802,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 				"contains(geopoint_array_field, '12345')",
 			},
 		}
+		qc.DataOnly = false // reset
 		qc.parseExprs()
 		qc.resolveTypes()
 		Ω(qc.Error).ShouldNot(BeNil())
@@ -3993,5 +4046,66 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 
 		qc.resolveTypes()
 		Ω(qc.Error).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("Array column should not used in measure and dimension directly", func() {
+		table := metaCom.Table{
+			Columns: []metaCom.Column{
+				{Name: "request_at", Type: metaCom.Uint32},
+				{Name: "id", Type: metaCom.Uint16},
+				{Name: "fare", Type: metaCom.Float32},
+				{Name: "smallenum1", Type: metaCom.ArraySmallEnum},
+				{Name: "bigenum1", Type: metaCom.ArrayBigEnum},
+			},
+		}
+		schema := memCom.NewTableSchema(&table)
+
+		qc := &AQLQueryContext{
+			TableIDByAlias: map[string]int{
+				"trips": 0,
+			},
+			TableScanners: []*TableScanner{
+				{Schema: schema, ColumnUsages: map[int]columnUsage{}},
+			},
+		}
+		// array column used in measure or dimension directly, should fail
+		qc.Query = &queryCom.AQLQuery{
+			Table: "trips",
+			Measures: []queryCom.Measure{
+				{Expr: "sum(bigenum1)"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "smallenum1"},
+				{Expr: "request_at", TimeBucketizer: "m"},
+			},
+		}
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processMeasure()
+		Ω(qc.Error).ShouldNot(BeNil())
+		qc.processDimensions()
+		Ω(qc.Error).ShouldNot(BeNil())
+
+		// it is fine to use array column indirectly in dimension
+		qc.Query = &queryCom.AQLQuery{
+			Table: "trips",
+			Measures: []queryCom.Measure{
+				{Expr: "sum(fare)"},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "element_at(smallenum1, 1)"},
+				{Expr: "request_at", TimeBucketizer: "m"},
+			},
+		}
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		qc.resolveTypes()
+		Ω(qc.Error).Should(BeNil())
+		qc.processMeasure()
+		Ω(qc.Error).Should(BeNil())
+		qc.processDimensions()
+		Ω(qc.Error).Should(BeNil())
 	})
 })
