@@ -91,9 +91,9 @@ var _ = Describe("streaming_processor", func() {
 		AresUpdateModes: modes,
 	}
 	rows := []client.Row{
-		{"v11", "v12", "v13"},
-		{"v21", "v22", "v23"},
-		{"v31", "v32", "v33"},
+		{"1570489452", "v12", "v13"},
+		{"1570489552", "v22", "v23"},
+		{"1570489652", "v32", "v33"},
 	}
 
 	aresDB := &sink.AresDatabase{
@@ -134,7 +134,7 @@ var _ = Describe("streaming_processor", func() {
 			Columns: []metaCom.Column{
 				{
 					Name: "col0",
-					Type: metaCom.Int32,
+					Type: metaCom.Uint32,
 				},
 				{
 					Name: "col1",
