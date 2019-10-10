@@ -113,6 +113,7 @@ var _ = Describe("message_parser", func() {
 		}
 
 		mp.Transformations = map[string]*rules.TransformationConfig{
+			"changed_at": &rules.TransformationConfig{},
 			"project": &rules.TransformationConfig{},
 		}
 		row, err := mp.ParseMessage(msg32, dst)
