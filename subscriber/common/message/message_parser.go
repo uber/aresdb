@@ -15,11 +15,7 @@
 package message
 
 import (
-	"code.uber.internal/data/ares-subscriber/.tmp/.go/goroot/src/strconv"
 	"fmt"
-	"runtime"
-	"sort"
-
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
 	memcom "github.com/uber/aresdb/memstore/common"
@@ -29,6 +25,9 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"runtime"
+	"sort"
+	"strconv"
 )
 
 // Parser holds all resources needed to parse one message
