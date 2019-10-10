@@ -293,7 +293,7 @@ var _ = Describe("streaming_processor", func() {
 				MsgMetaDataTS: time.Now(),
 				DecodedMessage: map[string]interface{}{
 					"msg": map[string]interface{}{
-						"c1": "v11",
+						"c1": "1570489452",
 						"c2": "v12",
 						"c3": "v13",
 					},
@@ -304,7 +304,7 @@ var _ = Describe("streaming_processor", func() {
 				MsgMetaDataTS: time.Now(),
 				DecodedMessage: map[string]interface{}{
 					"msg": map[string]interface{}{
-						"c1": "v21",
+						"c1": "1570489552",
 						"c2": "v22",
 						"c3": "v23",
 					},
@@ -315,7 +315,7 @@ var _ = Describe("streaming_processor", func() {
 				MsgMetaDataTS: time.Now(),
 				DecodedMessage: map[string]interface{}{
 					"msg": map[string]interface{}{
-						"c1": "v31",
+						"c1": "1570489652",
 						"c2": "v32",
 						"c3": "v33",
 					},
