@@ -285,7 +285,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		val := common.DataValue{
 			DataType: common.ArrayInt16,
 			OtherVal: nil,
-			Valid: false,
+			Valid:    false,
 		}
 		vp.SetDataValue(0, val, common.IgnoreCount)
 
@@ -293,7 +293,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		val = common.DataValue{
 			DataType: common.ArrayInt16,
 			OtherVal: unsafe.Pointer(&data),
-			Valid: true,
+			Valid:    true,
 		}
 		vp.SetDataValue(1, val, common.IgnoreCount)
 		// get data
@@ -309,9 +309,9 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		val = common.DataValue{
 			DataType: common.ArrayInt16,
 			OtherVal: unsafe.Pointer(&data),
-			Valid: true,
+			Valid:    true,
 		}
-		Ω(func() {vp.SetDataValue(1, val, common.IgnoreCount)}).Should(Panic())
+		Ω(func() { vp.SetDataValue(1, val, common.IgnoreCount) }).Should(Panic())
 	})
 
 	ginkgo.It("archive array vp slice should work", func() {

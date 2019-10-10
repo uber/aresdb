@@ -22,6 +22,7 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
 	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/sink"
 	"github.com/uber/aresdb/subscriber/common/tools"
@@ -72,21 +73,70 @@ var _ = Describe("message_parser", func() {
 	})
 
 	It("ParseMessage", func() {
-		msg := map[string]interface{}{
+		msg32 := map[string]interface{}{
+			"changed_at": "1570489452",
+			"project":    "ares-subscriber",
+		}
+
+		msg64 := map[string]interface{}{
+			"changed_at": "1570489452010",
+			"project":    "ares-subscriber",
+		}
+
+		errMsg1 := map[string]interface{}{
 			"project": "ares-subscriber",
 		}
 
+		errMsg2 := map[string]interface{}{
+			"changed_at": "1570489452.010",
+			"project":    "ares-subscriber",
+		}
+
 		dst := sink.Destination{
-			Table:           "table",
-			ColumnNames:     []string{"project"},
-			PrimaryKeys:     map[string]int{"project": 1},
+			Table:       "table",
+			ColumnNames: []string{"changed_at", "project"},
+			PrimaryKeys: map[string]int{
+				"changed_at": 0,
+				"project":    1},
 			AresUpdateModes: []memCom.ColumnUpdateMode{memCom.UpdateOverwriteNotNull},
 		}
+
+		schema := metaCom.Table{
+			IsFactTable: true,
+			Config: metaCom.TableConfig{
+				AllowMissingEventTime: true,
+			},
+		}
+		columnDict := map[string]int{
+			"changed_at": 0,
+			"project":    1,
+		}
+
 		mp.Transformations = map[string]*rules.TransformationConfig{
 			"project": &rules.TransformationConfig{},
 		}
-		row, err := mp.ParseMessage(msg, dst)
+		row, err := mp.ParseMessage(msg32, dst)
 		Ω(row).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
+		err = mp.CheckTimeColumnExistence(&schema, columnDict, dst, row)
+		Ω(err).Should(BeNil())
+
+		row, err = mp.ParseMessage(msg64, dst)
+		Ω(row).ShouldNot(BeNil())
+		Ω(err).Should(BeNil())
+		err = mp.CheckTimeColumnExistence(&schema, columnDict, dst, row)
+		Ω(err).Should(BeNil())
+
+		row, err = mp.ParseMessage(errMsg1, dst)
+		Ω(row).ShouldNot(BeNil())
+		Ω(err).Should(BeNil())
+		err = mp.CheckTimeColumnExistence(&schema, columnDict, dst, row)
+		Ω(err).ShouldNot(BeNil())
+
+		row, err = mp.ParseMessage(errMsg2, dst)
+		Ω(row).ShouldNot(BeNil())
+		Ω(err).Should(BeNil())
+		err = mp.CheckTimeColumnExistence(&schema, columnDict, dst, row)
+		Ω(err).ShouldNot(BeNil())
 	})
 })

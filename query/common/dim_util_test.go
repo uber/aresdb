@@ -3,8 +3,8 @@ package common
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber/aresdb/query/expr"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/query/expr"
 )
 
 var _ = ginkgo.Describe("dim utils", func() {
@@ -31,9 +31,9 @@ var _ = ginkgo.Describe("dim utils", func() {
 		expr2 = &expr.Call{ExprType: expr.Float}
 		Ω(GetDimensionDataType(expr2)).Should(Equal(memCom.Float32))
 
-		exprGeo := &expr.GeopointLiteral{Val :[2]float32{0.0, 0.0}}
+		exprGeo := &expr.GeopointLiteral{Val: [2]float32{0.0, 0.0}}
 		Ω(GetDimensionDataType(exprGeo)).Should(Equal(memCom.GeoPoint))
-		exprUUID := &expr.UUIDLiteral{Val :[2]uint64{0, 0}}
+		exprUUID := &expr.UUIDLiteral{Val: [2]uint64{0, 0}}
 		Ω(GetDimensionDataType(exprUUID)).Should(Equal(memCom.UUID))
 	})
 })

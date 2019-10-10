@@ -15,6 +15,7 @@
 package message
 
 import (
+	"code.uber.internal/data/ares-subscriber/.tmp/.go/goroot/src/strconv"
 	"fmt"
 	"runtime"
 	"sort"
@@ -151,6 +152,16 @@ func (mp *Parser) CheckTimeColumnExistence(schema *metaCom.Table, columnDict map
 
 		columnID := columnDict[columnName]
 		if columnID == 0 && row[id] != nil {
+			// force time column value is uint32
+			_, ok := memcom.ConvertToUint32(row[id])
+			if !ok {
+				v64, ok := memcom.ConvertToUint64(row[id])
+				if ok {
+					row[id] = strconv.FormatUint(v64/1000, 10)
+				} else {
+					return utils.StackError(nil, "Invalid time column value: %v", row[id])
+				}
+			}
 			return nil
 		}
 	}
