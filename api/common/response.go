@@ -15,6 +15,7 @@
 package common
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"net/http"
 
@@ -74,12 +75,20 @@ func RespondBytesWithCode(w http.ResponseWriter, code int, bs []byte) {
 // writeJSONBytes write jsonBytes to response if err is nil otherwise respond
 // with a ErrFailedToJSONMarshalResponseBody.
 func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int) {
+	var gw *gzip.Writer
 	if err != nil {
 		RespondWithError(w, ErrFailedToJSONMarshalResponseBody)
 	}
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Encoding", "gzip")
 	w.WriteHeader(code)
 	if jsonBytes != nil {
+		gw, err = gzip.NewWriterLevel(w, gzip.BestSpeed)
+		if err != nil {
+			RespondWithError(w, ErrFailedToJSONMarshalResponseBody)
+		}
+		defer gw.Close()
+		gw.Write(jsonBytes)
 		w.Write(jsonBytes)
 	}
 }
