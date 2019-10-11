@@ -100,7 +100,7 @@ var _ = Describe("message_parser", func() {
 		schema := metaCom.Table{
 			IsFactTable: true,
 			Config: metaCom.TableConfig{
-				AllowMissingEventTime: true,
+				AllowMissingEventTime: false,
 			},
 		}
 		columnDict := map[string]int{
