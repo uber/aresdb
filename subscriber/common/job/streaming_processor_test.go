@@ -249,7 +249,7 @@ var _ = Describe("streaming_processor", func() {
 	})
 	It("NewStreamingProcessor", func() {
 		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka.NewKafkaConsumer, message.NewDefaultDecoder,
-			make(chan ProcessorError), make(chan int64), serviceConfig)
+			make(chan ProcessorError, 1), make(chan int64, 1), serviceConfig)
 		Ω(p).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
 
@@ -335,6 +335,8 @@ var _ = Describe("streaming_processor", func() {
 
 		p.(*StreamingProcessor).reInitialize()
 		go p.Run()
+		p.(*StreamingProcessor).highLevelConsumer.(*kafka.KafkaConsumer).SetClosed(make(chan struct{}, 1))
+		p.(*StreamingProcessor).highLevelConsumer.(*kafka.KafkaConsumer).Close()
 		p.Stop()
 	})
 	It("HandleFailure", func() {
