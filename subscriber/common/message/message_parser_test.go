@@ -84,7 +84,7 @@ var _ = Describe("message_parser", func() {
 		}
 
 		errMsg := map[string]interface{}{
-			"changed_at": "1570489452.010",
+			"changed_at": "abcd",
 			"project":    "ares-subscriber",
 		}
 
@@ -123,7 +123,7 @@ var _ = Describe("message_parser", func() {
 		Ω(err).Should(BeNil())
 		err = mp.CheckTimeColumnExistence(&schema, columnDict, dst, row)
 		Ω(err).Should(BeNil())
-		
+
 		row, err = mp.ParseMessage(errMsg, dst)
 		Ω(row).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
