@@ -45,12 +45,12 @@ Building and running AresDB requires:
 
 Configure
 ---------
-Run following commands to generate makefile:
+Run the following commands to generate makefile:
 ```
 cmake -DQUERY_MODE=DEVICE .
 ```
 
-Alternatively, if you want to run the query in CPU mode, run following commands:
+Alternatively, if you want to run the query in CPU mode, run the following commands:
 ```
 cmake -DQUERY_MODE=HOST .
 ```
