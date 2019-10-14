@@ -15,6 +15,7 @@
 package common
 
 import (
+	"fmt"
 	"github.com/uber/aresdb/utils"
 	"math"
 	"unsafe"
@@ -62,6 +63,15 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 	} else {
 		var err error
 		c.values[row], err = ConvertValueForType(c.dataType, value)
+		if c.columnID == 0 && err != nil {
+			// force time column value is uint32
+			value64, ok := ConvertToUint64(value)
+			if ok {
+				c.values[row] = uint32(value64 / 1000)
+			} else {
+				return fmt.Errorf("Invalid value at time column, value=%b", value)
+			}
+		}
 		if err != nil {
 			return err
 		}
