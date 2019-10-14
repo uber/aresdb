@@ -373,7 +373,7 @@ func (shard *TableShard) createVectorPartyRawDataRequest(
 	tableMeta *rpc.TableShardMetaData,
 	batchMeta *rpc.BatchMetaData,
 	vpMeta *rpc.VectorPartyMetaData,
-) (rawVPDataRequest *rpc.VectorPartyRawDataRequest, vpWriter io.WriteCloser, err error) {
+) (rawVPDataRequest *rpc.VectorPartyRawDataRequest, vpWriter utils.WriteSyncCloser, err error) {
 	if shard.Schema.Schema.IsFactTable {
 		// fact table archive vp writer
 		vpWriter, err = shard.diskStore.OpenVectorPartyFileForWrite(tableMeta.GetTable(),
@@ -425,7 +425,7 @@ func (shard *TableShard) createVectorPartyRawDataRequest(
 
 func (shard *TableShard) fetchVectorPartyRawDataFromPeer(
 	client rpc.PeerDataNodeClient,
-	vpWriter io.WriteCloser,
+	vpWriter utils.WriteSyncCloser,
 	request *rpc.VectorPartyRawDataRequest,
 ) (int, error) {
 	stream, err := client.FetchVectorPartyRawData(context.Background(), request)
@@ -447,6 +447,10 @@ func (shard *TableShard) fetchVectorPartyRawDataFromPeer(
 			return totalBytes, err
 		}
 		totalBytes += bytesWritten
+	}
+
+	if err = vpWriter.Sync(); err != nil {
+		return totalBytes, utils.StackError(err, "failed to sync to disk")
 	}
 	return totalBytes, nil
 }

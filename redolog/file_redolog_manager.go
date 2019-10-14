@@ -56,7 +56,7 @@ type FileRedoLogManager struct {
 	SizePerFile map[int64]uint32 `json:"sizePerFile"`
 
 	// Current log file points to the current redo log file used for appending new upsert batches.
-	currentLogFile io.WriteCloser
+	currentLogFile utils.WriteSyncCloser
 
 	// Current file creation time in milliseconds.
 	CurrentFileCreationTime int64 `json:"currentFileCreationTime"`
@@ -120,6 +120,10 @@ func (r *FileRedoLogManager) openFileForWrite(upsertBatchSize uint32) {
 	if err = writer.WriteUint32(UpsertHeader); err != nil {
 		utils.GetLogger().Panic("Failed to write magic header to the new redo log")
 	}
+	// sync file after writing upsert header
+	if err = r.currentLogFile.Sync(); err != nil {
+		utils.GetLogger().Panic("Failed to sync redolog")
+	}
 
 	r.CurrentFileCreationTime = dataTime
 	utils.GetReporter(r.tableName, r.shard).GetGauge(utils.CurrentRedologCreationTime).Update(float64(r.CurrentFileCreationTime))
@@ -150,6 +154,11 @@ func (r *FileRedoLogManager) AppendToRedoLog(upsertBatch *common.UpsertBatch) (i
 
 	if _, err := r.currentLogFile.Write(buffer); err != nil {
 		utils.GetLogger().With("error", err).Panic("Failed to write upsert buffer into the redo log")
+	}
+
+	// sync after upsert batch appended to redolog
+	if err := r.currentLogFile.Sync(); err != nil {
+		utils.GetLogger().With("error", err).Panic("Failed to sync write to redo log")
 	}
 
 	// update current redo log size

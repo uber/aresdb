@@ -96,16 +96,13 @@ func (l LocalDiskStore) OpenLogFileForReplay(table string, shard int,
 }
 
 // OpenLogFileForAppend : Opens/creates the specified log file for append.
-func (l LocalDiskStore) OpenLogFileForAppend(table string, shard int, creationTime int64) (io.WriteCloser, error) {
+func (l LocalDiskStore) OpenLogFileForAppend(table string, shard int, creationTime int64) (utils.WriteSyncCloser, error) {
 	tableRedologDir := GetPathForTableRedologs(l.rootPath, table, shard)
 	if err := os.MkdirAll(tableRedologDir, 0755); err != nil {
 		return nil, utils.StackError(err, "Failed to make dirs for path: %s", tableRedologDir)
 	}
 	logFilePath := GetPathForRedologFile(l.rootPath, table, shard, creationTime)
 	mode := os.O_APPEND | os.O_CREATE | os.O_WRONLY
-	if l.diskStoreConfig.WriteSync {
-		mode |= os.O_SYNC
-	}
 	f, err := os.OpenFile(logFilePath, mode, 0644)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to open redolog file: %s for append", logFilePath)
@@ -221,16 +218,13 @@ func (l LocalDiskStore) OpenSnapshotVectorPartyFileForRead(table string, shard i
 
 // OpenSnapshotVectorPartyFileForWrite : Creates/truncates the snapshot file for write at the specified version.
 func (l LocalDiskStore) OpenSnapshotVectorPartyFileForWrite(table string, shard int,
-	redoLogFile int64, offset uint32, batchID int, columnID int) (io.WriteCloser, error) {
+	redoLogFile int64, offset uint32, batchID int, columnID int) (utils.WriteSyncCloser, error) {
 	snapshotFilePath := GetPathForTableSnapshotColumnFilePath(l.rootPath, table, shard, redoLogFile, offset, batchID, columnID)
 	dir := filepath.Dir(snapshotFilePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, utils.StackError(err, "Failed to make dirs for path: %s", dir)
 	}
 	mode := os.O_CREATE | os.O_WRONLY
-	if l.diskStoreConfig.WriteSync {
-		mode |= os.O_SYNC
-	}
 	f, err := os.OpenFile(snapshotFilePath, mode, 0644)
 	os.Truncate(snapshotFilePath, 0)
 	if err != nil {
@@ -315,7 +309,7 @@ func (l LocalDiskStore) OpenVectorPartyFileForRead(table string, columnID int, s
 
 // OpenVectorPartyFileForWrite : Creates/truncates the vector party file at the specified batchVersion for write.
 func (l LocalDiskStore) OpenVectorPartyFileForWrite(table string, columnID int, shard, batchID int, batchVersion uint32,
-	seqNum uint32) (io.WriteCloser, error) {
+	seqNum uint32) (utils.WriteSyncCloser, error) {
 	batchIDTimeStr := daysSinceEpochToTimeStr(batchID)
 	batchDir := GetPathForTableArchiveBatchDir(l.rootPath, table, shard, batchIDTimeStr, batchVersion, seqNum)
 	if err := os.MkdirAll(batchDir, 0755); err != nil {
@@ -325,10 +319,6 @@ func (l LocalDiskStore) OpenVectorPartyFileForWrite(table string, columnID int, 
 		seqNum, columnID)
 
 	mode := os.O_CREATE | os.O_WRONLY
-	if l.diskStoreConfig.WriteSync {
-		mode |= os.O_SYNC
-	}
-
 	f, err := os.OpenFile(vectorPartyFilePath, mode, 0644)
 	if err != nil {
 		return nil, utils.StackError(err, "Failed to open vector party file: %s for write", vectorPartyFilePath)
