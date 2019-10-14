@@ -100,7 +100,7 @@ func (handler *DebugHandler) Register(router *mux.Router) {
 func (handler *DebugHandler) ShowShardSet(w http.ResponseWriter, r *http.Request) {
 	shards := handler.shardOwner.GetOwnedShards()
 	sort.Ints(shards)
-	common.Respond(w, shards)
+	common.Respond(w, shards, false)
 }
 
 // Health returns whether the health check is on or off
@@ -189,7 +189,7 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			common.RespondWithError(w, err)
 		} else {
-			common.RespondWithJSONObject(w, response.Body)
+			common.RespondWithJSONObject(w, response.Body, false)
 		}
 	}()
 
@@ -361,7 +361,7 @@ func (handler *DebugHandler) LookupPrimaryKey(w http.ResponseWriter, r *http.Req
 		})
 		return
 	}
-	common.RespondWithJSONObject(w, recordID)
+	common.RespondWithJSONObject(w, recordID, false)
 }
 
 // Archive starts an archiving process on demand.
@@ -388,9 +388,9 @@ func (handler *DebugHandler) Archive(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			<-errChan
 		}()
-		common.RespondJSONObjectWithCode(w, http.StatusOK, "Archiving job submitted")
+		common.RespondJSONObjectWithCode(w, http.StatusOK, "Archiving job submitted", false)
 	} else {
-		common.RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, err)
+		common.RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, err, false)
 	}
 
 }
@@ -420,7 +420,7 @@ func (handler *DebugHandler) Backfill(w http.ResponseWriter, r *http.Request) {
 			<-errChan
 		}()
 
-		common.RespondJSONObjectWithCode(w, http.StatusOK, "Backfill job submitted")
+		common.RespondJSONObjectWithCode(w, http.StatusOK, "Backfill job submitted", false)
 	}
 }
 
@@ -449,7 +449,7 @@ func (handler *DebugHandler) Snapshot(w http.ResponseWriter, r *http.Request) {
 			<-errChan
 		}()
 
-		common.RespondJSONObjectWithCode(w, http.StatusOK, "Snapshot job submitted")
+		common.RespondJSONObjectWithCode(w, http.StatusOK, "Snapshot job submitted", false)
 	}
 }
 
@@ -495,7 +495,7 @@ func (handler *DebugHandler) Purge(w http.ResponseWriter, r *http.Request) {
 			<-errChan
 		}()
 
-		common.RespondJSONObjectWithCode(w, http.StatusOK, "Purge job submitted")
+		common.RespondJSONObjectWithCode(w, http.StatusOK, "Purge job submitted", false)
 	}
 }
 
@@ -513,7 +513,7 @@ func (handler *DebugHandler) ShowShardMeta(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	defer shard.Users.Done()
-	common.RespondWithJSONObject(w, shard)
+	common.RespondWithJSONObject(w, shard, false)
 	return
 }
 
@@ -545,7 +545,7 @@ func (handler *DebugHandler) ListRedoLogs(w http.ResponseWriter, r *http.Request
 		response[i] = strconv.FormatInt(redoLogFile, 10)
 	}
 
-	common.RespondWithJSONObject(w, response)
+	common.RespondWithJSONObject(w, response, false)
 	return
 }
 
@@ -569,7 +569,7 @@ func (handler *DebugHandler) ListUpsertBatches(w http.ResponseWriter, r *http.Re
 		common.RespondWithError(w, err)
 		return
 	}
-	common.RespondWithJSONObject(w, &offsets)
+	common.RespondWithJSONObject(w, &offsets, false)
 	return
 }
 
@@ -601,7 +601,7 @@ func (handler *DebugHandler) ReadUpsertBatch(w http.ResponseWriter, r *http.Requ
 		RecordsTotal:    numTotalRows,
 		RecordsFiltered: numTotalRows,
 	}
-	common.RespondWithJSONObject(w, &response)
+	common.RespondWithJSONObject(w, &response, false)
 	return
 }
 
@@ -653,7 +653,7 @@ func (handler *DebugHandler) LoadVectorParty(w http.ResponseWriter, r *http.Requ
 		vp.WaitForDiskLoad()
 		vp.Release()
 	}
-	common.RespondWithJSONObject(w, nil)
+	common.RespondWithJSONObject(w, nil, false)
 }
 
 // EvictVectorParty evict a vector party from memory.
@@ -691,7 +691,7 @@ func (handler *DebugHandler) EvictVectorParty(w http.ResponseWriter, r *http.Req
 	batch := version.RequestBatch(int32(request.BatchID))
 	// this operation is blocking and needs the user to wait
 	batch.BlockingDelete(columnID)
-	common.RespondWithJSONObject(w, nil)
+	common.RespondWithJSONObject(w, nil, false)
 }
 
 // ShowJobStatus shows the current archive job status.
@@ -706,7 +706,7 @@ func (handler *DebugHandler) ShowJobStatus(w http.ResponseWriter, r *http.Reques
 	scheduler.RLock()
 	jsonBuffer, err := json.Marshal(scheduler.GetJobDetails(memCom.JobType(request.JobType)))
 	scheduler.RUnlock()
-	common.RespondWithJSONBytes(w, jsonBuffer, err)
+	common.RespondWithJSONBytes(w, jsonBuffer, err, false)
 	return
 }
 
@@ -717,7 +717,7 @@ func (handler *DebugHandler) ShowDeviceStatus(w http.ResponseWriter, r *http.Req
 	jsonBuffer, err := json.Marshal(*deviceManager)
 	deviceManager.RUnlock()
 
-	common.RespondWithJSONBytes(w, jsonBuffer, err)
+	common.RespondWithJSONBytes(w, jsonBuffer, err, false)
 	return
 }
 
@@ -728,7 +728,7 @@ func (handler *DebugHandler) ShowHostMemory(w http.ResponseWriter, r *http.Reque
 		common.RespondWithError(w, err)
 		return
 	}
-	common.RespondWithJSONObject(w, memoryUsageByTableShard)
+	common.RespondWithJSONObject(w, memoryUsageByTableShard, false)
 }
 
 // ReadBackfillQueueUpsertBatch reads upsert batch inside backfill manager backfill queue
@@ -761,7 +761,7 @@ func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w http.ResponseWriter,
 		Draw:            request.Draw,
 	}
 
-	common.RespondWithJSONObject(w, response)
+	common.RespondWithJSONObject(w, response, false)
 	return
 }
 
@@ -769,7 +769,7 @@ func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w http.ResponseWriter,
 func (handler *DebugHandler) BootstrapRetry(w http.ResponseWriter, r *http.Request) {
 	handler.bootstrapRetryChan <- true
 
-	common.RespondJSONObjectWithCode(w, http.StatusOK, "Bootstrap retry submitted")
+	common.RespondJSONObjectWithCode(w, http.StatusOK, "Bootstrap retry submitted", false)
 }
 
 // GetBootstrapRetryChan returns bootstrapRetryChan

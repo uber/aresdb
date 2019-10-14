@@ -77,7 +77,7 @@ func (handler *DataHandler) PostData(w http.ResponseWriter, r *http.Request) {
 			common.RespondWithError(w, err)
 			return
 		}
-		common.RespondWithJSONObject(w, nil)
+		common.RespondWithJSONObject(w, nil, false)
 	})
 
 	if !available {
