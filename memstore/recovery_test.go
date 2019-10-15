@@ -48,7 +48,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		builder.SetValue(0, 0, uint32(123))
 		buffer, _ := builder.ToByteArray()
 
-		file := &testing.TestReadWriteCloser{}
+		file := &testing.TestReadWriteSyncCloser{}
 		writer := utils.NewStreamDataWriter(file)
 		writer.WriteUint32(redolog.UpsertHeader)
 		writer.WriteUint32(uint32(len(buffer)))
@@ -84,7 +84,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		Ω(redologManager.MaxEventTimePerFile).Should(Equal(map[int64]uint32{1: 123}))
 
 		// New shard abc-1 being assigned.
-		file2 := &testing.TestReadWriteCloser{}
+		file2 := &testing.TestReadWriteSyncCloser{}
 		writer2 := utils.NewStreamDataWriter(file2)
 		writer2.WriteUint32(redolog.UpsertHeader)
 		writer2.WriteUint32(uint32(len(buffer)))
@@ -157,7 +157,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		builder.SetValue(0, 0, uint32(123))
 		buffer, _ := builder.ToByteArray()
 
-		file := &testing.TestReadWriteCloser{}
+		file := &testing.TestReadWriteSyncCloser{}
 		writer := utils.NewStreamDataWriter(file)
 		writer.WriteUint32(redolog.UpsertHeader)
 		writer.WriteUint32(uint32(len(buffer)))
@@ -165,7 +165,7 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		diskStore.On("ListLogFiles", tableName, 0).Return([]int64{1}, nil)
 		diskStore.On("OpenLogFileForReplay", tableName, 0, int64(1)).Return(file, nil)
-		diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
+		diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteSyncCloser{}, nil)
 
 		m := createMemStore(tableName, 0, []memCom.DataType{memCom.Uint32},
 			[]int{0}, batchSize, true, false, metaStore, diskStore)
@@ -188,7 +188,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		builder.SetValue(0, 0, uint32(123))
 		buffer, _ := builder.ToByteArray()
 
-		file := &testing.TestReadWriteCloser{}
+		file := &testing.TestReadWriteSyncCloser{}
 		writer := utils.NewStreamDataWriter(file)
 		writer.WriteUint32(redolog.UpsertHeader)
 		writer.WriteUint32(uint32(len(buffer)))
@@ -211,7 +211,7 @@ var _ = ginkgo.Describe("recovery", func() {
 
 		diskStore.On("ListLogFiles", tableName, 1).Return([]int64{1}, nil)
 		diskStore.On("OpenLogFileForReplay", tableName, 1, int64(1)).Return(file, nil)
-		diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
+		diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteSyncCloser{}, nil)
 		metaStore.On("GetRedoLogCommitOffset", tableName, 1).Return(int64(1), nil)
 		//metaStore.On("GetRedoLogCheckpointOffset", tableName, 1).Return(int64(5), nil)
 

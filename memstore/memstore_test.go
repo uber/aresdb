@@ -31,7 +31,7 @@ import (
 
 func CreateMockDiskStore() *mocks.DiskStore {
 	diskStore := &mocks.DiskStore{}
-	diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
+	diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteSyncCloser{}, nil)
 	return diskStore
 }
 

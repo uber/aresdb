@@ -76,7 +76,7 @@ var _ = ginkgo.Describe("snapshot", func() {
 	diskStore := &diskMocks.DiskStore{}
 	metaStore := &metaMocks.MetaStore{}
 
-	diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
+	diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteSyncCloser{}, nil)
 
 	lastBatchID := int32(math.MinInt32 + 1)
 	lastIndex := uint32(5)

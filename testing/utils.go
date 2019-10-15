@@ -22,22 +22,26 @@ import (
 	"github.com/onsi/ginkgo"
 )
 
-// TestReadWriteCloser implements a in-memory io.ReadWriteCloser and utils.ReaderSeekerCloser for testing files.
-type TestReadWriteCloser struct {
+// TestReadWriteSyncCloser implements a in-memory io.ReadWriteCloser and utils.ReaderSeekerCloser for testing files.
+type TestReadWriteSyncCloser struct {
 	bytes.Buffer
 }
 
 // Close implements io.ReadWriteCloser.Close.
-func (t *TestReadWriteCloser) Close() error {
+func (t *TestReadWriteSyncCloser) Close() error {
 	return nil
 }
 
-func (t *TestReadWriteCloser) Write(bytes []byte) (n int, err error) {
+func (t *TestReadWriteSyncCloser) Write(bytes []byte) (n int, err error) {
 	return t.Buffer.Write(bytes)
 }
 
+func (t *TestReadWriteSyncCloser) Sync() error {
+	return nil
+}
+
 // Seek implements utils.ReaderSeekerCloser.Seek.
-func (t *TestReadWriteCloser) Seek(offset int64, whence int) (int64, error) {
+func (t *TestReadWriteSyncCloser) Seek(offset int64, whence int) (int64, error) {
 	return 0, nil
 }
 
