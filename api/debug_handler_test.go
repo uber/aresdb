@@ -210,9 +210,10 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 			"DeleteLogFile", mock.Anything, mock.Anything,
 			mock.Anything).Return(nil)
 
-		writer := new(utilsMocks.WriteCloser)
+		writer := new(utilsMocks.WriteSyncCloser)
 		writer.On("Write", mock.Anything).Return(0, nil)
 		writer.On("Close").Return(nil)
+		writer.On("Sync").Return(nil)
 		mockDiskStore.On(
 			"OpenVectorPartyFileForWrite", mock.Anything,
 			mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(writer, nil)

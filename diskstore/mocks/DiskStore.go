@@ -195,15 +195,15 @@ func (_m *DiskStore) ListSnapshotVectorPartyFiles(table string, shard int, redoL
 }
 
 // OpenLogFileForAppend provides a mock function with given fields: table, shard, creationTime
-func (_m *DiskStore) OpenLogFileForAppend(table string, shard int, creationTime int64) (io.WriteCloser, error) {
+func (_m *DiskStore) OpenLogFileForAppend(table string, shard int, creationTime int64) (utils.WriteSyncCloser, error) {
 	ret := _m.Called(table, shard, creationTime)
 
-	var r0 io.WriteCloser
-	if rf, ok := ret.Get(0).(func(string, int, int64) io.WriteCloser); ok {
+	var r0 utils.WriteSyncCloser
+	if rf, ok := ret.Get(0).(func(string, int, int64) utils.WriteSyncCloser); ok {
 		r0 = rf(table, shard, creationTime)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.WriteCloser)
+			r0 = ret.Get(0).(utils.WriteSyncCloser)
 		}
 	}
 
@@ -264,15 +264,15 @@ func (_m *DiskStore) OpenSnapshotVectorPartyFileForRead(table string, shard int,
 }
 
 // OpenSnapshotVectorPartyFileForWrite provides a mock function with given fields: table, shard, redoLogFile, offset, batchID, columnID
-func (_m *DiskStore) OpenSnapshotVectorPartyFileForWrite(table string, shard int, redoLogFile int64, offset uint32, batchID int, columnID int) (io.WriteCloser, error) {
+func (_m *DiskStore) OpenSnapshotVectorPartyFileForWrite(table string, shard int, redoLogFile int64, offset uint32, batchID int, columnID int) (utils.WriteSyncCloser, error) {
 	ret := _m.Called(table, shard, redoLogFile, offset, batchID, columnID)
 
-	var r0 io.WriteCloser
-	if rf, ok := ret.Get(0).(func(string, int, int64, uint32, int, int) io.WriteCloser); ok {
+	var r0 utils.WriteSyncCloser
+	if rf, ok := ret.Get(0).(func(string, int, int64, uint32, int, int) utils.WriteSyncCloser); ok {
 		r0 = rf(table, shard, redoLogFile, offset, batchID, columnID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.WriteCloser)
+			r0 = ret.Get(0).(utils.WriteSyncCloser)
 		}
 	}
 
@@ -310,15 +310,15 @@ func (_m *DiskStore) OpenVectorPartyFileForRead(table string, column int, shard 
 }
 
 // OpenVectorPartyFileForWrite provides a mock function with given fields: table, column, shard, batchID, batchVersion, seqNum
-func (_m *DiskStore) OpenVectorPartyFileForWrite(table string, column int, shard int, batchID int, batchVersion uint32, seqNum uint32) (io.WriteCloser, error) {
+func (_m *DiskStore) OpenVectorPartyFileForWrite(table string, column int, shard int, batchID int, batchVersion uint32, seqNum uint32) (utils.WriteSyncCloser, error) {
 	ret := _m.Called(table, column, shard, batchID, batchVersion, seqNum)
 
-	var r0 io.WriteCloser
-	if rf, ok := ret.Get(0).(func(string, int, int, int, uint32, uint32) io.WriteCloser); ok {
+	var r0 utils.WriteSyncCloser
+	if rf, ok := ret.Get(0).(func(string, int, int, int, uint32, uint32) utils.WriteSyncCloser); ok {
 		r0 = rf(table, column, shard, batchID, batchVersion, seqNum)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.WriteCloser)
+			r0 = ret.Get(0).(utils.WriteSyncCloser)
 		}
 	}
 

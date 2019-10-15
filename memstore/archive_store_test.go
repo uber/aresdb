@@ -70,9 +70,10 @@ var _ = ginkgo.Describe("archive store", func() {
 			},
 		}
 
-		writer := new(utilsMocks.WriteCloser)
+		writer := new(utilsMocks.WriteSyncCloser)
 		writer.On("Write", mock.Anything).Return(0, nil)
 		writer.On("Close").Return(nil)
+		writer.On("Sync").Return(nil)
 
 		ds.On("OpenVectorPartyFileForWrite",
 			table, mock.Anything, shardID,

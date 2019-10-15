@@ -32,7 +32,7 @@ import (
 
 func CreateMockDiskStore() *mocks.DiskStore {
 	diskStore := &mocks.DiskStore{}
-	diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
+	diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteSyncCloser{}, nil)
 	return diskStore
 }
 
@@ -146,7 +146,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 	ginkgo.It("works for Iterator iterator with 3 batches in 2 file", func() {
 		buffer, _ := memCom.NewUpsertBatchBuilder().ToByteArray()
 
-		file1 := &testing.TestReadWriteCloser{}
+		file1 := &testing.TestReadWriteSyncCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
 		streamWriter1.WriteUint32(UpsertHeader)
 		streamWriter1.WriteUint32(uint32(len(buffer)))
@@ -154,7 +154,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		streamWriter1.WriteUint32(uint32(len(buffer)))
 		streamWriter1.Write(buffer)
 
-		file2 := &testing.TestReadWriteCloser{}
+		file2 := &testing.TestReadWriteSyncCloser{}
 		streamWriter2 := utils.NewStreamDataWriter(file2)
 		streamWriter2.WriteUint32(UpsertHeader)
 		streamWriter2.WriteUint32(uint32(len(buffer)))
@@ -193,7 +193,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		buffer, _ := memCom.NewUpsertBatchBuilder().ToByteArray()
 		correctBufferSize := len(buffer)
 
-		file1 := &testing.TestReadWriteCloser{}
+		file1 := &testing.TestReadWriteSyncCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
 		streamWriter1.WriteUint32(UpsertHeader)
 		streamWriter1.WriteUint32(uint32(len(buffer)))
@@ -201,7 +201,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		streamWriter1.WriteUint32(uint32(len(buffer)))
 		streamWriter1.Write(buffer)
 
-		file2 := &testing.TestReadWriteCloser{}
+		file2 := &testing.TestReadWriteSyncCloser{}
 		streamWriter2 := utils.NewStreamDataWriter(file2)
 		streamWriter2.WriteUint32(UpsertHeader)
 		streamWriter2.WriteUint32(uint32(len(buffer)))
@@ -244,7 +244,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		buffer, _ := memCom.NewUpsertBatchBuilder().ToByteArray()
 		correctBufferSize := len(buffer)
 
-		file1 := &testing.TestReadWriteCloser{}
+		file1 := &testing.TestReadWriteSyncCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
 		streamWriter1.WriteUint32(UpsertHeader)
 		streamWriter1.WriteUint32(uint32(len(buffer)))
@@ -252,7 +252,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		streamWriter1.WriteUint32(uint32(len(buffer)))
 		streamWriter1.Write(buffer)
 
-		file2 := &testing.TestReadWriteCloser{}
+		file2 := &testing.TestReadWriteSyncCloser{}
 		streamWriter2 := utils.NewStreamDataWriter(file2)
 		streamWriter2.WriteUint32(UpsertHeader)
 		streamWriter2.WriteUint32(uint32(len(buffer)))
@@ -298,7 +298,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		buffer, _ := memCom.NewUpsertBatchBuilder().ToByteArray()
 		correctBufferSize := len(buffer)
 
-		file1 := &testing.TestReadWriteCloser{}
+		file1 := &testing.TestReadWriteSyncCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
 		streamWriter1.WriteUint32(UpsertHeader)
 		streamWriter1.WriteUint32(uint32(len(buffer)))
@@ -306,7 +306,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		streamWriter1.WriteUint32(uint32(len(buffer)))
 		streamWriter1.Write(buffer)
 
-		file2 := &testing.TestReadWriteCloser{}
+		file2 := &testing.TestReadWriteSyncCloser{}
 		streamWriter2 := utils.NewStreamDataWriter(file2)
 		streamWriter2.WriteUint32(UpsertHeader)
 		streamWriter2.WriteUint32(uint32(len(buffer)))
@@ -352,7 +352,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		buffer, _ := memCom.NewUpsertBatchBuilder().ToByteArray()
 		correctBufferSize := len(buffer)
 
-		file1 := &testing.TestReadWriteCloser{}
+		file1 := &testing.TestReadWriteSyncCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
 		streamWriter1.WriteUint32(UpsertHeader)
 		streamWriter1.WriteUint32(uint32(len(buffer)))
@@ -360,7 +360,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		streamWriter1.WriteUint32(uint32(len(buffer)))
 		streamWriter1.Write(buffer)
 
-		file2 := &testing.TestReadWriteCloser{}
+		file2 := &testing.TestReadWriteSyncCloser{}
 		streamWriter2 := utils.NewStreamDataWriter(file2)
 		streamWriter2.WriteUint32(UpsertHeader)
 		streamWriter2.WriteUint32(uint32(len(buffer)))
@@ -370,7 +370,7 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 		b := [20]byte{2, 3, 3, 3, 3, 3, 1, 2, 2}
 		streamWriter2.Write(b[:])
 
-		file3 := &testing.TestReadWriteCloser{}
+		file3 := &testing.TestReadWriteSyncCloser{}
 		streamWriter3 := utils.NewStreamDataWriter(file3)
 		streamWriter3.WriteUint32(UpsertHeader)
 		streamWriter3.WriteUint32(uint32(len(buffer)))
@@ -416,17 +416,17 @@ var _ = ginkgo.Describe("redo_log_manager", func() {
 	ginkgo.It("works for Iterator iterator with empty file", func() {
 		buffer, _ := memCom.NewUpsertBatchBuilder().ToByteArray()
 
-		file1 := &testing.TestReadWriteCloser{}
+		file1 := &testing.TestReadWriteSyncCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
 		streamWriter1.WriteUint32(UpsertHeader)
 
-		file2 := &testing.TestReadWriteCloser{}
+		file2 := &testing.TestReadWriteSyncCloser{}
 		streamWriter2 := utils.NewStreamDataWriter(file2)
 		streamWriter2.WriteUint32(UpsertHeader)
 		streamWriter2.WriteUint32(uint32(len(buffer)))
 		streamWriter2.Write(buffer)
 
-		file3 := &testing.TestReadWriteCloser{}
+		file3 := &testing.TestReadWriteSyncCloser{}
 		streamWriter3 := utils.NewStreamDataWriter(file3)
 		streamWriter3.WriteUint32(UpsertHeader)
 

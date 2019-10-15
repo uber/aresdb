@@ -14,7 +14,9 @@
 
 package utils
 
-import "io"
+import (
+	"io"
+)
 
 // ReaderSeekerCloser represents the interface that we can read, seek and close an io stream.
 // We have define our own since there is no go built-in interface fot this.
@@ -22,4 +24,9 @@ type ReaderSeekerCloser interface {
 	io.Reader
 	io.Seeker
 	io.Closer
+}
+
+type WriteSyncCloser interface {
+	io.WriteCloser
+	Sync() error
 }

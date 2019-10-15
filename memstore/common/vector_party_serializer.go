@@ -123,13 +123,17 @@ func (s *vectorPartyArchiveSerializer) WriteVectorParty(vp VectorParty) error {
 	if vp == nil {
 		return nil
 	}
-	writerCloser, err := s.diskstore.OpenVectorPartyFileForWrite(s.table, s.columnID, s.shard,
+	writer, err := s.diskstore.OpenVectorPartyFileForWrite(s.table, s.columnID, s.shard,
 		s.batchID, s.batchVersion, s.seqNum)
 	if err != nil {
 		return err
 	}
-	defer writerCloser.Close()
-	return vp.Write(writerCloser)
+	defer writer.Close()
+
+	if err = vp.Write(writer); err != nil {
+		return err
+	}
+	return writer.Sync()
 }
 
 // ReportVectorPartyMemoryUsage report memory usage according to underneath VectorParty property
@@ -143,12 +147,17 @@ func (s *vectorPartySnapshotSerializer) WriteVectorParty(vp VectorParty) error {
 	if vp == nil {
 		return nil
 	}
-	writerCloser, err := s.diskstore.OpenSnapshotVectorPartyFileForWrite(s.table, s.shard, s.redoLogFile, s.offset, s.batchID, s.columnID)
+	writer, err := s.diskstore.OpenSnapshotVectorPartyFileForWrite(s.table, s.shard, s.redoLogFile, s.offset, s.batchID, s.columnID)
 	if err != nil {
 		return err
 	}
-	defer writerCloser.Close()
-	return vp.Write(writerCloser)
+	defer writer.Close()
+
+	err = vp.Write(writer)
+	if err != nil {
+		return err
+	}
+	return writer.Sync()
 }
 
 // ReadVectorParty reads snapshot vector party from disk

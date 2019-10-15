@@ -229,9 +229,10 @@ var _ = ginkgo.Describe("archiving", func() {
 		(m.diskStore).(*diskMocks.DiskStore).On(
 			"DeleteLogFile", table, shardID, int64(1)).Return(nil)
 
-		writer := new(utilsMocks.WriteCloser)
+		writer := new(utilsMocks.WriteSyncCloser)
 		writer.On("Write", mock.Anything).Return(0, nil)
 		writer.On("Close").Return(nil)
+		writer.On("Sync").Return(nil)
 
 		(m.diskStore).(*diskMocks.DiskStore).On(
 			"OpenVectorPartyFileForWrite", table, mock.Anything, shardID, day, mock.Anything, mock.Anything).Return(writer, nil)

@@ -177,9 +177,9 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			ctrl := gomock.NewController(utils.TestingT)
 			defer ctrl.Finish()
 
-			column0MockBuffer := &testingUtils.TestReadWriteCloser{}
-			column1MockBuffer := &testingUtils.TestReadWriteCloser{}
-			column2MockBuffer := &testingUtils.TestReadWriteCloser{}
+			column0MockBuffer := &testingUtils.TestReadWriteSyncCloser{}
+			column1MockBuffer := &testingUtils.TestReadWriteSyncCloser{}
+			column2MockBuffer := &testingUtils.TestReadWriteSyncCloser{}
 
 			diskStore.On("OpenVectorPartyFileForWrite", table, 0, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(column0MockBuffer, nil).Once()
 			diskStore.On("OpenVectorPartyFileForWrite", table, 1, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(column1MockBuffer, nil).Once()
@@ -295,9 +295,9 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			diskStore.On("ListSnapshotVectorPartyFiles", table, shardID, int64(redoFileID), uint32(redoFileOffset), lastReadBatchID).Return([]int{0, 1, 2}, nil).Once()
 			diskStore.On("ListLogFiles", table, shardID).Return([]int64{}, nil).Once()
 
-			column0MockBuffer := &testingUtils.TestReadWriteCloser{}
-			column1MockBuffer := &testingUtils.TestReadWriteCloser{}
-			column2MockBuffer := &testingUtils.TestReadWriteCloser{}
+			column0MockBuffer := &testingUtils.TestReadWriteSyncCloser{}
+			column1MockBuffer := &testingUtils.TestReadWriteSyncCloser{}
+			column2MockBuffer := &testingUtils.TestReadWriteSyncCloser{}
 
 			diskStore.On("OpenSnapshotVectorPartyFileForWrite", table, shardID, mock.Anything, mock.Anything, mock.Anything, 0).Return(column0MockBuffer, nil).Once()
 			diskStore.On("OpenSnapshotVectorPartyFileForWrite", table, shardID, mock.Anything, mock.Anything, mock.Anything, 1).Return(column1MockBuffer, nil).Once()

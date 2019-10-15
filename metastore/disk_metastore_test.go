@@ -32,7 +32,7 @@ import (
 
 var _ = ginkgo.Describe("disk metastore", func() {
 
-	mockWriterCloser := &testing.TestReadWriteCloser{}
+	mockWriterCloser := &testing.TestReadWriteSyncCloser{}
 
 	testColumn0 := common.Column{
 		Name: "column0",
@@ -511,7 +511,7 @@ var _ = ginkgo.Describe("disk metastore", func() {
 			DefaultValue: &col6DefaultValue,
 		}
 
-		mockWriterCloser2 := &testing.TestReadWriteCloser{}
+		mockWriterCloser2 := &testing.TestReadWriteSyncCloser{}
 		mockFileSystem.On("OpenFileForWrite", "base/a/enums/column6", os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.FileMode(0644)).Return(mockWriterCloser2, nil)
 
 		diskMetaStore := createDiskMetastore("base")

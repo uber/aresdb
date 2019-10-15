@@ -231,7 +231,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 	ginkgo.It("LoadFromDisk should work for Array Archive VP", func() {
 		vp1 := createArchiveVP()
 		table := "test"
-		buf := &testingUtils.TestReadWriteCloser{}
+		buf := &testingUtils.TestReadWriteSyncCloser{}
 
 		hostMemoryManager := &commMock.HostMemoryManager{}
 		hostMemoryManager.On("ReportManagedObject", mock.Anything, mock.Anything,

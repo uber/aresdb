@@ -34,7 +34,7 @@ type DiskStore interface {
 	// Opens the specified log file for replay.
 	OpenLogFileForReplay(table string, shard int, creationTime int64) (utils.ReaderSeekerCloser, error)
 	// Opens/creates the specified log file for append.
-	OpenLogFileForAppend(table string, shard int, creationTime int64) (io.WriteCloser, error)
+	OpenLogFileForAppend(table string, shard int, creationTime int64) (utils.WriteSyncCloser, error)
 	// Deletes the specified log file.
 	DeleteLogFile(table string, shard int, creationTime int64) error
 	// Truncate Redolog to drop the last incomplete/corrupted upsert batch.
@@ -75,7 +75,7 @@ type DiskStore interface {
 
 	// Creates/truncates the snapshot column file for write.
 	OpenSnapshotVectorPartyFileForWrite(table string, shard int,
-		redoLogFile int64, offset uint32, batchID int, columnID int) (io.WriteCloser, error)
+		redoLogFile int64, offset uint32, batchID int, columnID int) (utils.WriteSyncCloser, error)
 	// Deletes snapshot files **older than** the specified version.
 	DeleteSnapshot(table string, shard int, redoLogFile int64, offset uint32) error
 
@@ -88,7 +88,7 @@ type DiskStore interface {
 		seqNum uint32) (io.ReadCloser, error)
 	// Creates/truncates the vector party file at the specified batchVersion for write.
 	OpenVectorPartyFileForWrite(table string, column, shard, batchID int, batchVersion uint32,
-		seqNum uint32) (io.WriteCloser, error)
+		seqNum uint32) (utils.WriteSyncCloser, error)
 	// Deletes all old batches with the specified batchID that have version lower than or equal to the specified batch
 	// version. All columns of those batches will be deleted.
 	DeleteBatchVersions(table string, shard, batchID int, batchVersion uint32, seqNum uint32) error
