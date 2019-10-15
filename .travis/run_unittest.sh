@@ -19,6 +19,7 @@ fi
 if [ "${cudaFileChanged}" == "true" ]; then
   # clean up lib and cuda test when cuda file change found
   make clean
+  make test-cuda -j
 else
   # touch files in lib and gtest to update the timestamp so that make will not treat lib objects as outdated 
   find lib -type f -exec touch {} +
@@ -26,10 +27,10 @@ else
 fi
 
 # run test-cuda in host mode
-make test-cuda -j
+# make test-cuda -j
 
 # build binary
-make aresd -j
+# make aresd -j
 
 # run test
 function run_skipped_package(){
