@@ -22,6 +22,11 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
+const (
+	// CompressionThreshold is the min number of bytes beyond which we will compress json payload
+	CompressionThreshold = 1 << 10
+)
+
 // ErrorResponse represents error response.
 // swagger:response errorResponse
 type ErrorResponse struct {
@@ -74,18 +79,19 @@ func RespondBytesWithCode(w http.ResponseWriter, code int, bs []byte) {
 
 // writeJSONBytes write jsonBytes to response if err is nil otherwise respond
 // with a ErrFailedToJSONMarshalResponseBody.
-func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int, compress bool) {
+func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int, allowCompression bool) {
 	var gw *gzip.Writer
 	if err != nil {
 		RespondWithError(w, ErrFailedToJSONMarshalResponseBody)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	if compress {
+	willCompress := allowCompression && len(jsonBytes) > CompressionThreshold
+	if willCompress {
 		w.Header().Set("Content-Encoding", "gzip")
 	}
 	w.WriteHeader(code)
 	if jsonBytes != nil {
-		if compress {
+		if willCompress {
 			gw, err = gzip.NewWriterLevel(w, gzip.BestSpeed)
 			if err != nil {
 				RespondWithError(w, ErrFailedToJSONMarshalResponseBody)

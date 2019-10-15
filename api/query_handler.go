@@ -37,7 +37,7 @@ type QueryHandler struct {
 	shardOwner    topology.ShardOwner
 	memStore      memstore.MemStore
 	deviceManager *query.DeviceManager
-	workerPool   sync.WorkerPool
+	workerPool    sync.WorkerPool
 }
 
 // NewQueryHandler creates a new QueryHandler.
@@ -53,7 +53,7 @@ func NewQueryHandler(
 		memStore:      memStore,
 		shardOwner:    shardOwner,
 		deviceManager: query.NewDeviceManager(cfg),
-		workerPool:	   workerPool,
+		workerPool:    workerPool,
 	}
 }
 
@@ -323,6 +323,7 @@ type QueryResponseWriter interface {
 	ReportError(queryIndex int, table string, err error, statusCode int)
 	ReportQueryContext(*query.AQLQueryContext)
 	ReportResult(int, *query.AQLQueryContext)
+	// param compress means whether client accepts compressed results
 	Respond(w http.ResponseWriter, compress bool)
 	GetStatusCode() int
 }
