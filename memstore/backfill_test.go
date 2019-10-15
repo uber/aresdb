@@ -102,9 +102,10 @@ var _ = ginkgo.Describe("backfill", func() {
 		}
 
 		m = GetFactory().NewMockMemStore()
-		writer := new(utilsMocks.WriteCloser)
+		writer := new(utilsMocks.WriteSyncCloser)
 		writer.On("Write", mock.Anything).Return(0, nil)
 		writer.On("Close").Return(nil)
+		writer.On("Sync").Return(nil)
 		(m.diskStore).(*diskMocks.DiskStore).
 			On("OpenVectorPartyFileForWrite",
 				table, mock.Anything, shardID, 0, uint32(0), uint32(1)).Return(writer, nil)
