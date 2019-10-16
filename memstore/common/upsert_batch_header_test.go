@@ -99,6 +99,7 @@ var _ = ginkgo.Describe("upsert batch header tests", func() {
 			columnID: 0,
 			dataType: Uint32,
 			values: make([]interface{}, 1),
+			isTimeColumn: true,
 		}
 
 		err := builder.SetValue(0, "1570489452010")

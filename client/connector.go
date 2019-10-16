@@ -389,6 +389,10 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 		return nil, 0, err
 	}
 
+	if schema.Table.IsFactTable {
+		upsertBatchBuilder.MarkFactTable()
+	}
+
 	// use abandonRows to record abandoned row index due to invalid data
 	abandonRows := make(map[int]struct{})
 
