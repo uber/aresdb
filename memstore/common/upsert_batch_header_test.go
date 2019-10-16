@@ -93,22 +93,4 @@ var _ = ginkgo.Describe("upsert batch header tests", func() {
 		Ω(err).Should(BeNil())
 		Ω(offset).Should(Equal(10))
 	})
-
-	ginkgo.It("upsert batch column builder setValue", func() {
-		builder := columnBuilder{
-			columnID: 0,
-			dataType: Uint32,
-			values: make([]interface{}, 1),
-			isTimeColumn: true,
-		}
-
-		err := builder.SetValue(0, "1570489452010")
-		Ω(err).Should(BeNil())
-
-		err = builder.SetValue(0, "1570489452")
-		Ω(err).Should(BeNil())
-
-		err = builder.SetValue(0, "abcd")
-		Ω(err).ShouldNot(BeNil())
-	})
 })

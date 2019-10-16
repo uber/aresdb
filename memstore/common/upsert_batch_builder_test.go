@@ -304,4 +304,22 @@ var _ = ginkgo.Describe("upsert batch builder", func() {
 		MinMaxUpdate(unsafe.Pointer(&oldValue), unsafe.Pointer(&newValue), Float32, CompareFloat32, -1)
 		Ω(*(*float32)(unsafe.Pointer(&oldValue))).Should(Equal(float32(1.0)))
 	})
+
+	ginkgo.It("upsert batch column builder setValue", func() {
+		builder := columnBuilder{
+			columnID: 0,
+			dataType: Uint32,
+			values: make([]interface{}, 1),
+			isTimeColumn: true,
+		}
+
+		err := builder.SetValue(0, "1570489452010")
+		Ω(err).Should(BeNil())
+
+		err = builder.SetValue(0, "1570489452")
+		Ω(err).Should(BeNil())
+
+		err = builder.SetValue(0, "abcd")
+		Ω(err).ShouldNot(BeNil())
+	})
 })
