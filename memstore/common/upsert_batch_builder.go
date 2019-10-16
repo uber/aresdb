@@ -52,7 +52,7 @@ type columnBuilder struct {
 	values         []interface{}
 	numValidValues int
 	updateMode     ColumnUpdateMode
-	isTimeColumn bool
+	isTimeColumn   bool
 }
 
 // SetValue write a value into the column at given row.
@@ -318,8 +318,8 @@ func (c *columnBuilder) GetMode() ColumnMode {
 // UpsertBatchBuilder is the builder for constructing an UpsertBatch buffer. It allows random value
 // write at (row, col).
 type UpsertBatchBuilder struct {
-	NumRows int
-	columns []*columnBuilder
+	NumRows     int
+	columns     []*columnBuilder
 	isFactTable bool
 }
 

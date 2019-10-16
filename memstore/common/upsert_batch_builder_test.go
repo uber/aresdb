@@ -307,9 +307,9 @@ var _ = ginkgo.Describe("upsert batch builder", func() {
 
 	ginkgo.It("upsert batch column builder setValue", func() {
 		builder := columnBuilder{
-			columnID: 0,
-			dataType: Uint32,
-			values: make([]interface{}, 1),
+			columnID:     0,
+			dataType:     Uint32,
+			values:       make([]interface{}, 1),
 			isTimeColumn: true,
 		}
 
