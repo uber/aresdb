@@ -655,10 +655,10 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		ctx.Postprocess()
 		Ω(ctx.Results).Should(Equal(queryCom.AQLQueryResult{
 			"two": map[string]interface{}{
-				"12":   float64(float32(3.2)),
+				"12": float64(float32(3.2)),
 			},
 			"one": map[string]interface{}{
-				"NULL":   float64(float32(6.4)),
+				"NULL": float64(float32(6.4)),
 			},
 		}))
 	})

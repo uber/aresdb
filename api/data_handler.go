@@ -28,7 +28,7 @@ import (
 
 // DataHandler handles data ingestion requests from the ingestion pipeline.
 type DataHandler struct {
-	memStore memstore.MemStore
+	memStore   memstore.MemStore
 	workerPool sync.WorkerPool
 }
 
@@ -37,7 +37,7 @@ func NewDataHandler(memStore memstore.MemStore, maxConcurrentRequests int) *Data
 	workerPool := sync.NewWorkerPool(maxConcurrentRequests)
 	workerPool.Init()
 	return &DataHandler{
-		memStore: memStore,
+		memStore:   memStore,
 		workerPool: workerPool,
 	}
 }

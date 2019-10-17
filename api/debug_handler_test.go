@@ -185,8 +185,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		mockShardNotExistErr := convertToAPIError(errors.New("Failed to get shard"))
 		memStore.On("GetTableShard", redoLogTableName, redoLogShardID).Return(redoLogShard, nil).
 			Run(func(arguments mock.Arguments) {
-			redoLogShard.Users.Add(1)
-		})
+				redoLogShard.Users.Add(1)
+			})
 		memStore.On("GetTableShard", redoLogTableName, testTableShardID).Return(nil, mockShardNotExistErr)
 		memStore.On("GetTableShard", testTableName, 2).Return(nil, mockShardNotExistErr)
 		memStore.On("GetSchema", redoLogTableName).Return(redoLogTableSchema, nil)
@@ -1023,8 +1023,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 	})
 
 	ginkgo.It("translateEnums should work", func() {
-		vector := memCom.SlicedVector {
-			Values: []interface{} {
+		vector := memCom.SlicedVector{
+			Values: []interface{}{
 				"[1,null,3]",
 				"[2,4]",
 				nil,
@@ -1035,7 +1035,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 				3,
 			},
 		}
-		enumCases :=[]string{
+		enumCases := []string{
 			"zero",
 			"one",
 			"two",

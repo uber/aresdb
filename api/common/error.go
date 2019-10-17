@@ -78,15 +78,14 @@ var (
 	// ErrQueryServiceNotAvailable represents the api error for failed to run query
 	// due to to much pending queries executing
 	ErrQueryServiceNotAvailable = utils.APIError{
-		Code: http.StatusServiceUnavailable,
+		Code:    http.StatusServiceUnavailable,
 		Message: "Service unavailable: too many concurrent queries, please try again later",
 	}
 
 	// ErrIngestionServiceNotAvailable represents the api error
 	// due to to much pending ingestion requests executing
 	ErrIngestionServiceNotAvailable = utils.APIError{
-		Code: http.StatusServiceUnavailable,
+		Code:    http.StatusServiceUnavailable,
 		Message: "Service unavailable: too many concurrent ingestion requests, please try again later",
 	}
-
 )
