@@ -84,10 +84,10 @@ func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int
 	if err != nil {
 		RespondWithError(w, ErrFailedToJSONMarshalResponseBody)
 	}
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeApplicationJson)
 	willCompress := allowCompression && len(jsonBytes) > CompressionThreshold
 	if willCompress {
-		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set(utils.HTTPContentEncodingHeaderKey, utils.HTTPContentEncodingGzip)
 	}
 	w.WriteHeader(code)
 	if jsonBytes != nil {

@@ -250,7 +250,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 	duration = utils.Now().Sub(start)
 	queryTimer.Record(duration)
 	if requestResponseWriter != nil {
-		requestResponseWriter.Respond(w, r.Header.Get("Accept-Encoding") == "gzip")
+		requestResponseWriter.Respond(w, r.Header.Get(utils.HTTPAcceptEncodingHeaderKey) == utils.HTTPContentEncodingGzip)
 		statusCode = requestResponseWriter.GetStatusCode()
 	}
 	return
@@ -420,7 +420,7 @@ func (w *HLLQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQuery
 
 // Respond writes the final response into ResponseWriter.
 func (w *HLLQueryResponseWriter) Respond(rw http.ResponseWriter, compress bool) {
-	rw.Header().Set("Content-Type", utils.HTTPContentTypeHyperLogLog)
+	rw.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
 	apiCom.RespondBytesWithCode(rw, w.statusCode, w.response.GetBytes())
 }
 

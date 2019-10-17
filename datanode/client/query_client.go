@@ -30,7 +30,6 @@ import (
 
 const (
 	requestIDHeaderKey = "RequestID"
-	encodingHeaderKey  = "Accept-Encoding"
 )
 
 var ErrFailedToConnect = errors.New("Datanode query client failed to connect")
@@ -128,7 +127,7 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, requestID strin
 		return
 	}
 
-	req.Header.Add(encodingHeaderKey, "gzip")
+	req.Header.Add(utils.HTTPAcceptEncodingHeaderKey, utils.HTTPContentEncodingGzip)
 	req.Header.Add(requestIDHeaderKey, requestID)
 	if hll {
 		req.Header.Add(utils.HTTPAcceptTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
