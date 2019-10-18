@@ -1175,8 +1175,14 @@ TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
                          3, 1, 2, 3, 0x07, 0,
                          1, 1, 0x01, 0};
 
-  int expectedVals[6] = {2, 1, 3, 0, 0, 1};
-
+  uint32_t expectedVals[6] = {2, 1, 3, 0, 0, 1};
+  bool expectedNulls[6] = {true, true, true, false, true, true};
+  int device = 0;
+  cudaStream_t s = NULL;
+#ifdef RUN_ON_DEVICE
+  cudaStreamCreate(&s);
+  cudaSetDevice(device);
+#endif
   uint8_t *basePtr = allocate_array_column(
         reinterpret_cast<uint8_t *>(&offsetLength[0]),
         reinterpret_cast<uint8_t *>(&values[0]), 6, 72*4);
@@ -1184,24 +1190,20 @@ TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
   ArrayVectorPartyIterator<uint32_t> begin =
             make_array_column_iterator<uint32_t>(basePtr, 0, 6);
 
-  typedef thrust::zip_iterator<thrust::tuple<Uint32Iter,
-                                             BoolIter> > OutputZipIterator;
+  auto outputValues = allocate_raw(8+6*4);
+  auto outputBegin = make_zip_iterator(
+        thrust::make_tuple((uint32_t *)(outputValues+8), (bool *)outputValues));
 
-  uint32_t outputValues[6];
-  thrust::fill(std::begin(outputValues), std::end(outputValues), 0);
-  bool outputNulls[6];
-  thrust::fill(std::begin(outputNulls), std::end(outputNulls), false);
-  OutputZipIterator outputBegin(
-      thrust::make_tuple(std::begin(outputValues),
-                         std::begin(outputNulls)));
-
-  thrust::transform(begin, begin + 6, outputBegin,
+  thrust::transform(GET_EXECUTION_POLICY(s), begin, begin + 6, outputBegin,
                     UnaryFunctor<uint32_t, uint32_t*>(ArrayLength));
-
   EXPECT_TRUE(
-      thrust::equal(std::begin(outputValues), std::end(outputValues),
-                    std::begin(expectedVals)));
+      equal((uint32_t*)(outputValues+8), ((uint32_t*)(outputValues+8))+6,
+                    expectedVals));
+  EXPECT_TRUE(
+      equal((bool*)(outputValues), ((bool*)outputValues)+6,
+                    expectedNulls));
   release(basePtr);
+  release(outputValues);
 }
 
 TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
@@ -1210,9 +1212,13 @@ TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
                          1, 1, 0x01, 0,
                          3, 1, 2, 3, 0x07, 0,
                          1, 1, 0x01, 0};
-
   bool expectedValues[6] = {true, false, true, false, false, false};
-
+  int device = 0;
+  cudaStream_t s = NULL;
+#ifdef RUN_ON_DEVICE
+  cudaStreamCreate(&s);
+  cudaSetDevice(device);
+#endif
   uint8_t *basePtr = allocate_array_column(
         reinterpret_cast<uint8_t *>(&offsetLength[0]),
         reinterpret_cast<uint8_t *>(&values[0]), 6, 72*4);
@@ -1220,33 +1226,22 @@ TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
   ArrayVectorPartyIterator<uint32_t> begin =
             make_array_column_iterator<uint32_t>(basePtr, 0, 6);
 
-  typedef thrust::zip_iterator<thrust::tuple<BoolIter,
-                                             BoolIter> > OutputZipIterator;
-  typedef thrust::zip_iterator<thrust::tuple<Uint32Iter,
-                                             BoolIter> > ConstInputIterator;
+  auto begin2 = thrust::make_constant_iterator(
+        thrust::make_tuple<uint32_t, bool>(2, true));
 
-  uint32_t constValue[6] = {2, 2, 2, 2, 2, 2};
-  bool constNulls[6];
-  thrust::fill(std::begin(constNulls), std::end(constNulls), true);
-  ConstInputIterator begin2(
-      thrust::make_tuple(std::begin(constValue),
-                         std::begin(constNulls)));
-  bool outputValues[6];
-  thrust::fill(std::begin(outputValues), std::end(outputValues), false);
-  bool outputNulls[6];
-  thrust::fill(std::begin(outputNulls), std::end(outputNulls), false);
-  OutputZipIterator outputBegin(
-      thrust::make_tuple(std::begin(outputValues),
-                         std::begin(outputNulls)));
+  auto outputValues = allocate_raw(16);
+  auto outputBegin = make_zip_iterator(
+        thrust::make_tuple((bool *)(outputValues+8), (bool *)outputValues));
 
   // Test BitwiseAndFunctor
-  thrust::transform(begin, begin + 6, begin2, outputBegin,
-                    BinaryFunctor<bool, uint32_t*, uint32_t>(ArrayContains));
+  thrust::transform(GET_EXECUTION_POLICY(s), begin, begin + 6, begin2,
+         outputBegin, BinaryFunctor<bool, uint32_t*, uint32_t>(ArrayContains));
 
   EXPECT_TRUE(
-      thrust::equal(std::begin(outputValues), std::end(outputValues),
-                    std::begin(expectedValues)));
+      equal_print((bool *)(outputValues+8), ((bool *)(outputValues+8))+6,
+                 expectedValues));
   release(basePtr);
+  release(outputValues);
 }
 
 TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
@@ -1259,6 +1254,12 @@ TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
   uint32_t expectedValues[6] = {2, 0, 2, 0, 0, 0};
   bool expectedNulls[6] = {true, false, true, false, false, false};
 
+  int device = 0;
+  cudaStream_t s = NULL;
+#ifdef RUN_ON_DEVICE
+  cudaStreamCreate(&s);
+  cudaSetDevice(device);
+#endif
   uint8_t *basePtr = allocate_array_column(
         reinterpret_cast<uint8_t *>(&offsetLength[0]),
         reinterpret_cast<uint8_t *>(&values[0]), 6, 72*4);
@@ -1266,36 +1267,23 @@ TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
   ArrayVectorPartyIterator<uint32_t> begin =
             make_array_column_iterator<uint32_t>(basePtr, 0, 6);
 
-  typedef thrust::zip_iterator<thrust::tuple<Uint32Iter,
-                                             BoolIter> > OutputZipIterator;
-  typedef thrust::zip_iterator<thrust::tuple<IntIter,
-                                             BoolIter> > ConstInputIterator;
-
-  int constValue[6] = {1, 1, 1, 1, 1, 1};
-  bool constNulls[6];
-  thrust::fill(std::begin(constNulls), std::end(constNulls), true);
-  ConstInputIterator begin2(
-      thrust::make_tuple(std::begin(constValue),
-                         std::begin(constNulls)));
-  uint32_t outputValues[6];
-  thrust::fill(std::begin(outputValues), std::end(outputValues), 0);
-  bool outputNulls[6];
-  thrust::fill(std::begin(outputNulls), std::end(outputNulls), false);
-  OutputZipIterator outputBegin(
-      thrust::make_tuple(std::begin(outputValues),
-                         std::begin(outputNulls)));
+  auto begin2 = thrust::make_constant_iterator(thrust::make_tuple<int, bool>(1, true));
+  auto outputValues = allocate_raw(8+6*4);
+  auto outputBegin = make_zip_iterator(
+        thrust::make_tuple((uint32_t *)(outputValues+8), (bool *)outputValues));
 
   // Test BitwiseAndFunctor
-  thrust::transform(begin, begin + 6, begin2, outputBegin,
+  thrust::transform(GET_EXECUTION_POLICY(s), begin, begin + 6, begin2, outputBegin,
                     BinaryFunctor<uint32_t, uint32_t*, int>(ArrayElementAt));
 
   EXPECT_TRUE(
-      thrust::equal(std::begin(outputValues), std::end(outputValues),
-                    std::begin(expectedValues)));
+      equalt((uint32_t *)(outputValues+8), (uint32_t *)(outputValues+8) + 6,
+                    expectedValues));
   EXPECT_TRUE(
-      thrust::equal(std::begin(outputNulls), std::end(outputNulls),
-                    std::begin(expectedNulls)));
+      equal((bool *)outputValues, (bool *)outputValues+6,
+                    expectedNulls));
   release(basePtr);
+  release(outputValues);
 }
 
 }  // namespace ares

@@ -110,6 +110,21 @@ inline int align_offset(int offset, int alignment) {
   return (offset + alignment - 1) / alignment * alignment;
 }
 
+// allocate_raw allocate bytes of memory from gpu/cpu with 0 values filled
+// The return pointer must be released by caller
+inline uint8_t * allocate_raw(int bytes) {
+  uint8_t *ptr;
+  int totalBytes = align_offset(bytes, 8);
+#ifdef RUN_ON_DEVICE
+  ares::deviceMalloc(reinterpret_cast<void **>(&ptr), totalBytes);
+  ares::deviceMemset(ptr, 0, bytes);
+#else
+  ptr = reinterpret_cast<uint8_t *>(malloc(totalBytes));
+  memset(ptr, 0, bytes);
+#endif
+  return ptr;
+}
+
 // Pointer returned by this function must be released by caller. Pointers
 // will be aligned by 8 bytes. Note if it's scratch space, values comes
 // before nulls. So 5th parameter should be values bytes and 6th parameter

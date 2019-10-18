@@ -529,6 +529,10 @@ struct ArrayElementAtFunctor<O, I1, I2,
             !std::is_same<UUIDT, O>::value &&
             !std::is_same<GeoPointT*, I1>::value &&
             !std::is_same<GeoPointT, O>::value))>::type> {
+private:
+  O zero;
+
+public:
   typedef typename thrust::tuple<I1, bool> argument_type_1;
   typedef typename thrust::tuple<I2, bool> argument_type_2;
   typedef typename thrust::tuple<O, bool> result_type;
@@ -538,15 +542,13 @@ struct ArrayElementAtFunctor<O, I1, I2,
   result_type operator()(argument_type_1 arrVal, argument_type_2 indexT) const {
     auto valid = thrust::get<1>(arrVal);
     if (!valid) {
-      O v;
-      return thrust::make_tuple<O, bool>(v, false);
+      return thrust::make_tuple<O, bool>(zero, false);
     }
     uint32_t *lenP = reinterpret_cast<uint32_t *>(thrust::get<0>(arrVal));
     int index = static_cast<int>(thrust::get<0>(indexT));
     if (lenP == nullptr || (index >= 0 && *lenP <= index) ||
        (index < 0 && *lenP < -index)) {
-      O v;
-      return thrust::make_tuple<O, bool>(v, false);
+      return thrust::make_tuple<O, bool>(zero, false);
     }
     auto valP = reinterpret_cast<I1>(
         reinterpret_cast<uint8_t*>(thrust::get<0>(arrVal)) + 4);
@@ -555,8 +557,7 @@ struct ArrayElementAtFunctor<O, I1, I2,
       index = len + index;
     }
     if (len == 0 || index >= len || index < 0) {
-        O v;
-        return thrust::make_tuple<O, bool>(v, false);
+        return thrust::make_tuple<O, bool>(zero, false);
     }
     uint8_t * elemValidP = reinterpret_cast<uint8_t*>(valP) +
         (sizeof(input_type)*8*len + 7) / 8 + index / 8;
@@ -565,8 +566,7 @@ struct ArrayElementAtFunctor<O, I1, I2,
         return thrust::make_tuple<O, bool>(
             static_cast<O>(*(valP + index)), true);
     }
-    O v;
-    return thrust::make_tuple<O, bool>(v, false);
+    return thrust::make_tuple<O, bool>(zero, false);
   }
 };
 
