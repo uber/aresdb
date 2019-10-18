@@ -1177,9 +1177,9 @@ TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
 
   uint32_t expectedVals[6] = {2, 1, 3, 0, 0, 1};
   bool expectedNulls[6] = {true, true, true, false, true, true};
-  int device = 0;
-  cudaStream_t s = NULL;
 #ifdef RUN_ON_DEVICE
+  cudaStream_t s = NULL;
+  int device = 0;
   cudaStreamCreate(&s);
   cudaSetDevice(device);
 #endif
@@ -1192,15 +1192,18 @@ TEST(ArrayLengthTest, CheckArrayLengthFunctor) {
 
   auto outputValues = allocate_raw(8+6*4);
   auto outputBegin = make_zip_iterator(
-        thrust::make_tuple((uint32_t *)(outputValues+8), (bool *)outputValues));
+        thrust::make_tuple(reinterpret_cast<uint32_t *>(outputValues+8),
+                           reinterpret_cast<bool *>(outputValues)));
 
   thrust::transform(GET_EXECUTION_POLICY(s), begin, begin + 6, outputBegin,
                     UnaryFunctor<uint32_t, uint32_t*>(ArrayLength));
   EXPECT_TRUE(
-      equal((uint32_t*)(outputValues+8), ((uint32_t*)(outputValues+8))+6,
+      equal(reinterpret_cast<uint32_t*>(outputValues+8),
+            reinterpret_cast<uint32_t*>(outputValues+8)+6,
                     expectedVals));
   EXPECT_TRUE(
-      equal((bool*)(outputValues), ((bool*)outputValues)+6,
+      equal(reinterpret_cast<bool*>(outputValues),
+            reinterpret_cast<bool*>(outputValues)+6,
                     expectedNulls));
   release(basePtr);
   release(outputValues);
@@ -1213,9 +1216,9 @@ TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
                          3, 1, 2, 3, 0x07, 0,
                          1, 1, 0x01, 0};
   bool expectedValues[6] = {true, false, true, false, false, false};
-  int device = 0;
-  cudaStream_t s = NULL;
 #ifdef RUN_ON_DEVICE
+  cudaStream_t s = NULL;
+  int device = 0;
   cudaStreamCreate(&s);
   cudaSetDevice(device);
 #endif
@@ -1231,14 +1234,16 @@ TEST(ArrayContainsTest, CheckArrayContainsFunctor) {
 
   auto outputValues = allocate_raw(16);
   auto outputBegin = make_zip_iterator(
-        thrust::make_tuple((bool *)(outputValues+8), (bool *)outputValues));
+        thrust::make_tuple(reinterpret_cast<bool *>(outputValues+8),
+                           reinterpret_cast<bool *>(outputValues)));
 
   // Test BitwiseAndFunctor
   thrust::transform(GET_EXECUTION_POLICY(s), begin, begin + 6, begin2,
          outputBegin, BinaryFunctor<bool, uint32_t*, uint32_t>(ArrayContains));
 
   EXPECT_TRUE(
-      equal_print((bool *)(outputValues+8), ((bool *)(outputValues+8))+6,
+      equal_print(reinterpret_cast<bool *>(outputValues+8),
+                  reinterpret_cast<bool *>(outputValues+8)+6,
                  expectedValues));
   release(basePtr);
   release(outputValues);
@@ -1254,9 +1259,9 @@ TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
   uint32_t expectedValues[6] = {2, 0, 2, 0, 0, 0};
   bool expectedNulls[6] = {true, false, true, false, false, false};
 
-  int device = 0;
-  cudaStream_t s = NULL;
 #ifdef RUN_ON_DEVICE
+  cudaStream_t s = NULL;
+  int device = 0;
   cudaStreamCreate(&s);
   cudaSetDevice(device);
 #endif
@@ -1267,21 +1272,25 @@ TEST(ArrayElementAtTest, CheckArrayElementAtFunctor) {
   ArrayVectorPartyIterator<uint32_t> begin =
             make_array_column_iterator<uint32_t>(basePtr, 0, 6);
 
-  auto begin2 = thrust::make_constant_iterator(thrust::make_tuple<int, bool>(1, true));
+  auto begin2 = thrust::make_constant_iterator(
+                thrust::make_tuple<int, bool>(1, true));
   auto outputValues = allocate_raw(8+6*4);
   auto outputBegin = make_zip_iterator(
-        thrust::make_tuple((uint32_t *)(outputValues+8), (bool *)outputValues));
+        thrust::make_tuple(reinterpret_cast<uint32_t *>(outputValues+8),
+                           reinterpret_cast<bool *>(outputValues)));
 
   // Test BitwiseAndFunctor
-  thrust::transform(GET_EXECUTION_POLICY(s), begin, begin + 6, begin2, outputBegin,
-                    BinaryFunctor<uint32_t, uint32_t*, int>(ArrayElementAt));
+  thrust::transform(GET_EXECUTION_POLICY(s), begin, begin + 6, begin2,
+        outputBegin, BinaryFunctor<uint32_t, uint32_t*, int>(ArrayElementAt));
 
   EXPECT_TRUE(
-      equalt((uint32_t *)(outputValues+8), (uint32_t *)(outputValues+8) + 6,
-                    expectedValues));
+      equal(reinterpret_cast<uint32_t *>(outputValues+8),
+             reinterpret_cast<uint32_t *>(outputValues+8) + 6,
+             expectedValues));
   EXPECT_TRUE(
-      equal((bool *)outputValues, (bool *)outputValues+6,
-                    expectedNulls));
+      equal(reinterpret_cast<bool *>(outputValues),
+            reinterpret_cast<bool *>(outputValues+6),
+            expectedNulls));
   release(basePtr);
   release(outputValues);
 }
