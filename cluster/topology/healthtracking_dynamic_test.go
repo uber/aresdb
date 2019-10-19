@@ -50,18 +50,24 @@ var _ = ginkgo.Describe("health tracking dynamic topology", func() {
 
 		Ω(topo.Get().HostsLen()).Should(Equal(3))
 
-		topo.MarkHostUnhealthy(host1)
+		err := topo.MarkHostUnhealthy(host1)
+		Ω(err).Should(BeNil())
 		Ω(topo.Get().HostsLen()).Should(Equal(2))
 		topo.MarkHostHealthy(host1)
 		Ω(topo.Get().HostsLen()).Should(Equal(3))
 
-		topo.MarkHostUnhealthy(host2)
+		err = topo.MarkHostUnhealthy(host2)
+		Ω(err).Should(BeNil())
 		Ω(topo.Get().HostsLen()).Should(Equal(2))
 
 		timeIncrementer = &utils.TimeIncrementer{IncBySecond: 11}
 		utils.SetClockImplementation(timeIncrementer.Now)
 		Ω(topo.Get().HostsLen()).Should(Equal(3))
 
+		// add test for coverage
+		hostUnknown := NewHost("4", "unknown")
+		err = topo.MarkHostHealthy(hostUnknown)
+		Ω(err).ShouldNot(BeNil())
 	})
 
 	ginkgo.It("concurrent test", func() {
