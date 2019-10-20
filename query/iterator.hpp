@@ -373,6 +373,83 @@ ColumnIterator<Value> make_column_iterator(
       indexVector);
 }
 
+//////////////////////////////////////////////////////////////
+// Array VectorParty Iterator
+// The VectorParty Iterator for Array Column
+/////////////////////////////////////////////////////////////
+template<typename Value>
+class ArrayVectorPartyIterator
+    : public thrust::iterator_adaptor<
+          ArrayVectorPartyIterator<Value>, uint64_t*,
+          thrust::tuple<Value*, bool>,
+          thrust::use_default, thrust::use_default,
+          thrust::tuple<Value*, bool>,
+          thrust::use_default> {
+ public:
+  friend class thrust::iterator_core_access;
+  typedef thrust::iterator_adaptor<ArrayVectorPartyIterator<Value>,
+                                   uint64_t*, thrust::tuple<Value*, bool>,
+                                   thrust::use_default, thrust::use_default,
+                                   thrust::tuple<Value*, bool>,
+                                   thrust::use_default> super_t;
+
+  __host__ __device__ ArrayVectorPartyIterator() {}
+
+  // base is counts vector if mode 0. nulls vector if mode 2, values vector
+  // if mode 0.
+  __host__ __device__
+  ArrayVectorPartyIterator(
+      uint8_t *basePtr,
+      uint32_t valueOffsetAdj,
+      uint32_t length)
+      : super_t(reinterpret_cast<uint64_t *>(basePtr)),
+        basePtr(basePtr),
+        valuePtr(basePtr + 8 * length - valueOffsetAdj),
+        length(length) {
+  }
+
+ private:
+  uint8_t *basePtr;
+  uint8_t *valuePtr;
+  uint32_t length;
+
+  __host__ __device__
+  typename super_t::reference dereference() const {
+    uint32_t offset = *(reinterpret_cast<uint32_t *>(this->base_reference()));
+    uint32_t length = *(reinterpret_cast<uint32_t *>(this->base_reference())+1);
+    int n = static_cast<int>(this->base_reference() -
+            reinterpret_cast<uint64_t *>(basePtr));
+
+    if (length == 0) {
+      return thrust::make_tuple(reinterpret_cast<Value*>(NULL), offset != 0);
+    }
+    return thrust::make_tuple(
+        reinterpret_cast<Value*>(valuePtr + offset), true);
+  }
+
+  __host__ __device__
+  void advance(typename super_t::difference_type n) {
+    this->base_reference() += n;
+  }
+
+  __host__ __device__
+  void increment() {
+    advance(1);
+  }
+
+  __host__ __device__
+  void decrement() {
+    advance(-1);
+  }
+};
+
+// Helper function for creating ArrayVectorPartyIterator
+template<typename Value>
+inline ArrayVectorPartyIterator<Value> make_array_column_iterator(
+    uint8_t* basePtr, int valueOffsetAdj, uint32_t length) {
+  return ArrayVectorPartyIterator<Value>(basePtr, valueOffsetAdj, length);
+}
+
 // SimpleIterator combines interators in 4 different cases:
 // 1. Constant value.
 // 2. Mode 0 column, equivalent to constant value.
@@ -403,6 +480,7 @@ class SimpleIterator :
 
   __host__ __device__ SimpleIterator() {}
 
+  __host__ __device__
   SimpleIterator(
       Value *values,
       uint32_t nullsOffset,
@@ -511,6 +589,14 @@ SimpleIterator<Value> make_scratch_space_input_iterator(
   return SimpleIterator<Value>(reinterpret_cast<Value *>(valueIter),
                                nullOffset, 0, 0);
 }
+
+template<>
+SimpleIterator<UUIDT> make_scratch_space_input_iterator<UUIDT>(
+    uint8_t *valueIter, uint32_t nullOffset);
+
+template<>
+SimpleIterator<GeoPointT> make_scratch_space_input_iterator<GeoPointT>(
+    uint8_t *valueIter, uint32_t nullOffset);
 
 template<typename Value>
 using ScratchSpaceOutputIterator = thrust::zip_iterator<

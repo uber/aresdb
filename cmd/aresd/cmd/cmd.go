@@ -182,7 +182,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	// create query hanlder.
 	// static shard owner with non distributed version
 	staticShardOwner := topology.NewStaticShardOwner([]int{0})
-	queryHandler := api.NewQueryHandler(memStore, staticShardOwner, cfg.Query)
+	queryHandler := api.NewQueryHandler(memStore, staticShardOwner, cfg.Query, cfg.HTTP.MaxQueryConnections)
 
 	// create health check handler.
 	healthCheckHandler := api.NewHealthCheckHandler()
@@ -216,7 +216,7 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	memStore.InitShards(cfg.SchedulerOff, topology.NewStaticShardOwner([]int{0}))
 
 	// Start serving.
-	dataHandler := api.NewDataHandler(memStore)
+	dataHandler := api.NewDataHandler(memStore, cfg.HTTP.MaxIngestionConnections)
 	router := mux.NewRouter()
 
 	httpWrappers = append([]utils.HTTPHandlerWrapper{utils.WithMetricsFunc}, httpWrappers...)

@@ -146,9 +146,10 @@ type BlockingScanNode struct {
 }
 
 func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQueryResult, err error) {
+	done := ctx.Done()
+
 	isHll := common.CallNameToAggType[sn.qc.AQLQuery.Measures[0].ExprParsed.(*expr.Call).Name] == common.Hll
 
-	trial := 0
 	hostHealthy := true
 	defer func() {
 		var markErr error
@@ -162,12 +163,21 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 		}
 	}()
 
-	for trial < rpcRetries {
-		trial++
-
+	for trial := 1; trial <= rpcRetries; trial++ {
 		var fetchErr error
 		utils.GetLogger().With("host", sn.host, "query", sn.qc.AQLQuery).Debug("sending query to datanode")
-		result, fetchErr = sn.dataNodeClient.Query(ctx, sn.qc.RequestID, sn.host, *sn.qc.AQLQuery, isHll)
+		select {
+		case <-done:
+			err = utils.StackError(nil, "BlockingScanNode execution canceled")
+			return
+		default:
+			if ctx.Err() != nil {
+				// context cancelled or expired, cancel node execution
+				return nil, nil
+			}
+			result, fetchErr = sn.dataNodeClient.Query(ctx, sn.qc.RequestID, sn.host, *sn.qc.AQLQuery, isHll)
+		}
+
 		if fetchErr != nil {
 			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(
@@ -176,10 +186,12 @@ func (sn *BlockingScanNode) Execute(ctx context.Context) (result queryCom.AQLQue
 				"query", sn.qc.AQLQuery,
 				"requestID", sn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
-			if fetchErr == dataCli.ErrFailedToConnect {
+			err = utils.StackError(fetchErr, "fetch from datanode failed")
+			// check ctx.Err() in case context expired during client call
+			if fetchErr == dataCli.ErrFailedToConnect && ctx.Err() == nil {
 				hostHealthy = false
 			}
-			err = utils.StackError(fetchErr, "fetch from datanode failed")
+			// retry
 			continue
 		}
 		utils.GetLogger().With(
@@ -308,6 +320,23 @@ func traverseRecursive(dimIndex int, curr interface{}, dimReverseDict map[int][]
 	return curr, nil
 }
 
+func getResultSizeRecursive(res interface{}) int {
+	total := 0
+	switch val := res.(type) {
+	case map[string]interface{}:
+		for _, v := range val {
+			total += getResultSizeRecursive(v)
+		}
+	case queryCom.AQLQueryResult:
+		for _, v := range val {
+			total += getResultSizeRecursive(v)
+		}
+	default:
+		return 1
+	}
+	return total
+}
+
 // convert HLL to binary format
 func (ap *AggQueryPlan) postProcessHLLBinary(res queryCom.AQLQueryResult, execErr error) (data []byte, err error) {
 	hllQueryResults := queryCom.NewHLLQueryResults()
@@ -317,12 +346,18 @@ func (ap *AggQueryPlan) postProcessHLLBinary(res queryCom.AQLQueryResult, execEr
 		return
 	}
 
+	resultSize := getResultSizeRecursive(res)
+	if resultSize == 0 {
+		hllQueryResults.WriteResult([]byte{})
+		data = hllQueryResults.GetBytes()
+		return
+	}
+
 	var (
 		qc           = ap.qc
 		dimDataTypes = make([]memCom.DataType, len(qc.AQLQuery.Dimensions))
 		reverseDicts = make(map[int][]string)
 		enumDicts    = make(map[int]map[string]int)
-		resultSize   = len(res)
 		hllVector    []byte
 		dimVector    []byte
 		countVector  []byte
@@ -331,18 +366,9 @@ func (ap *AggQueryPlan) postProcessHLLBinary(res queryCom.AQLQueryResult, execEr
 	// build dataTypes and enumDicts
 	for dimIdx, dim := range qc.AQLQuery.Dimensions {
 		dimDataTypes[dimIdx] = queryCom.GetDimensionDataType(dim.ExprParsed)
-		if memCom.IsEnumType(dimDataTypes[dimIdx]) {
-			var (
-				tableID  int
-				columnID int
-			)
-			tableID, columnID, err = qc.resolveColumn(dim.Expr)
-			if err != nil {
-				return
-			}
-			table := qc.Tables[tableID]
-			reverseDicts[dimIdx] = table.EnumDicts[table.Schema.Columns[columnID].Name].ReverseDict
-			enumDicts[dimIdx] = table.EnumDicts[table.Schema.Columns[columnID].Name].Dict
+		if varRef, ok := dim.ExprParsed.(*expr.VarRef); ok && memCom.IsEnumType(varRef.DataType) {
+			reverseDicts[dimIdx] = varRef.EnumReverseDict
+			enumDicts[dimIdx] = varRef.EnumDict
 		}
 	}
 
@@ -437,9 +463,10 @@ func splitAvgQuery(qc QueryContext) (sumqc QueryContext, countqc QueryContext) {
 
 func buildSubPlan(agg common.AggType, qc QueryContext, assignments map[topology.Host][]uint32, topo topology.HealthTrackingDynamicTopoloy, client dataCli.DataNodeQueryClient) common.MergeNode {
 	root := NewMergeNode(agg)
+	query := qc.GetRewrittenQuery()
 	for host, shardIDs := range assignments {
 		// make deep copy
-		currQ := *qc.AQLQuery
+		currQ := query
 		for _, shard := range shardIDs {
 			currQ.Shards = append(currQ.Shards, int(shard))
 		}

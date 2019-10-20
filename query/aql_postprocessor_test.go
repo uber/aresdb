@@ -591,4 +591,75 @@ var _ = ginkgo.Describe("AQL postprocessor", func() {
 		ctx.flushResultBuffer()
 		Ω(w.Body.String()).Should(Equal(`["2","12"],["2","NULL"],["2","12"],["2","NULL"]`))
 	})
+
+	ginkgo.It("ResultsRowsFlushed should work", func() {
+		qc := AQLQueryContext{
+			IsNonAggregationQuery: true,
+			resultFlushContext: resultFlushContext{
+				rowsFlushed: 100,
+			},
+			OOPK: OOPKContext{
+				ResultSize: 10,
+			},
+		}
+		Ω(qc.ResultsRowsFlushed()).Should(Equal(100))
+
+		qc.IsNonAggregationQuery = false
+		Ω(qc.ResultsRowsFlushed()).Should(Equal(10))
+	})
+
+	ginkgo.It("array element_at in dimension should work", func() {
+		ctx := &AQLQueryContext{
+			Query: &queryCom.AQLQuery{
+				Dimensions: []queryCom.Dimension{
+					{Expr: ""},
+					{Expr: ""},
+				},
+			},
+		}
+		oopkContext := OOPKContext{
+			Dimensions: []expr.Expr{
+				&expr.BinaryExpr{
+					Op: expr.ARRAY_ELEMENT_AT,
+					LHS: &expr.VarRef{
+						ExprType:        expr.Unsigned,
+						DataType:        memCom.BigEnum,
+						EnumReverseDict: []string{"zero", "one", "two"},
+					},
+					RHS: &expr.NumberLiteral{
+						Int: 1,
+					},
+					ExprType: expr.Unsigned,
+				},
+				&expr.NumberLiteral{
+					ExprType: expr.Signed,
+				},
+			},
+			Measure: &expr.NumberLiteral{
+				ExprType: expr.Float,
+			},
+			MeasureBytes:       4,
+			DimRowBytes:        8,
+			NumDimsPerDimWidth: queryCom.DimCountsPerDimWidth{0, 0, 1, 1, 0},
+			DimensionVectorIndex: []int{
+				1,
+				0,
+			},
+			ResultSize:       2,
+			dimensionVectorH: unsafe.Pointer(&[]uint8{12, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 1, 0, 1, 1}[0]),
+			measureVectorH:   unsafe.Pointer(&[]float32{3.2, 6.4}[0]),
+		}
+
+		ctx.OOPK = oopkContext
+		ctx.initResultFlushContext()
+		ctx.Postprocess()
+		Ω(ctx.Results).Should(Equal(queryCom.AQLQueryResult{
+			"two": map[string]interface{}{
+				"12": float64(float32(3.2)),
+			},
+			"one": map[string]interface{}{
+				"NULL": float64(float32(6.4)),
+			},
+		}))
+	})
 })

@@ -25,6 +25,7 @@ import (
 	"strings"
 	"unsafe"
 
+	"encoding/json"
 	"github.com/uber-go/tally"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
@@ -52,6 +53,8 @@ type Connector interface {
 	// updateModes are optional, if ignored for all columns, no need to set
 	// if set, then all columns needs to be set
 	Insert(tableName string, columnNames []string, rows []Row, updateModes ...memCom.ColumnUpdateMode) (int, error)
+	// Close the connection
+	Close()
 }
 
 // UpsertBatchBuilder is an interface of upsertBatch on client side
@@ -187,6 +190,12 @@ func (c *connector) Insert(tableName string, columnNames []string, rows []Row, u
 	return numRows, nil
 }
 
+// Close the connection
+func (c *connector) Close() {
+	c.schemaHandler = nil
+	c.upsertBatchBuilder = nil
+}
+
 // computeHLLValue populate hyperloglog value
 func computeHLLValue(dataType memCom.DataType, value interface{}) (uint32, error) {
 	var ok bool
@@ -273,7 +282,7 @@ func (c *connector) dataPath(tableName string, shard int) string {
 	return fmt.Sprintf("http://%s/data/%s/%d", c.cfg.Address, tableName, shard)
 }
 
-func (u *UpsertBatchBuilderImpl) prepareEnumCases(tableName, columnName string, colIndex, columnID int, rows []Row, abandonRows map[int]struct{}, caseInsensitive bool, disableAutoExpand bool) error {
+func (u *UpsertBatchBuilderImpl) prepareEnumCases(isEnumArrayCol bool, tableName, columnName string, colIndex, columnID int, rows []Row, abandonRows map[int]struct{}, caseInsensitive bool, disableAutoExpand bool) error {
 	enumCaseSet := make(map[string]struct{})
 	for rowIndex, row := range rows {
 		if _, exist := abandonRows[rowIndex]; exist {
@@ -298,10 +307,45 @@ func (u *UpsertBatchBuilderImpl) prepareEnumCases(tableName, columnName string, 
 				u.metricScope.Tagged(map[string]string{"table": tableName, "columnID": strconv.Itoa(columnID)}).
 					Counter("abandoned_rows_long_string").Inc(1)
 			} else {
-				if caseInsensitive {
-					enumCase = strings.ToLower(enumCase)
+				if isEnumArrayCol {
+					arrVal := make([]interface{}, 0)
+					if err := json.Unmarshal([]byte(enumCase), &arrVal); err != nil {
+						abandonRow = true
+						u.logger.With(
+							"name", "prepareEnumCases",
+							"error", "Fail to unmarshal enum array value",
+							"table", tableName,
+							"columnID", columnID,
+							"value", value).Debug("Fail to unmarshal enum array value")
+						u.metricScope.Tagged(map[string]string{"table": tableName, "columnID": strconv.Itoa(columnID)}).
+							Counter("abandoned_rows_enum_array_parse_error").Inc(1)
+					} else {
+						for _, val := range arrVal {
+							if val != nil {
+								item, ok := val.(string)
+								if !ok {
+									abandonRow = true
+									u.logger.With(
+										"name", "prepareEnumCases",
+										"error", "Enum array value should be string",
+										"table", tableName,
+										"columnID", columnID,
+										"value", value).Debug("Enum array value is not string")
+									break
+								}
+								if caseInsensitive {
+									item = strings.ToLower(item)
+								}
+								enumCaseSet[item] = struct{}{}
+							}
+						}
+					}
+				} else {
+					if caseInsensitive {
+						enumCase = strings.ToLower(enumCase)
+					}
+					enumCaseSet[enumCase] = struct{}{}
 				}
-				enumCaseSet[enumCase] = struct{}{}
 			}
 		} else {
 			abandonRow = true
@@ -345,6 +389,10 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 		return nil, 0, err
 	}
 
+	if schema.Table.IsFactTable {
+		upsertBatchBuilder.MarkFactTable()
+	}
+
 	// use abandonRows to record abandoned row index due to invalid data
 	abandonRows := make(map[int]struct{})
 
@@ -373,8 +421,8 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 			return nil, 0, err
 		}
 
-		if column.IsEnumColumn() {
-			if err = u.prepareEnumCases(tableName, columnName, colIndex, columnID, rows, abandonRows, column.CaseInsensitive, column.DisableAutoExpand); err != nil {
+		if column.IsEnumBasedColumn() {
+			if err = u.prepareEnumCases(column.IsEnumArrayColumn(), tableName, columnName, colIndex, columnID, rows, abandonRows, column.CaseInsensitive, column.DisableAutoExpand); err != nil {
 				return nil, 0, err
 			}
 		}
@@ -418,22 +466,52 @@ func (u *UpsertBatchBuilderImpl) PrepareUpsertBatch(tableName string, columnName
 				break
 			}
 
-			if column.IsEnumColumn() {
-				value, err = u.schemaHandler.TranslateEnum(tableName, columnID, value, column.CaseInsensitive)
-				if err != nil {
-					upsertBatchBuilder.RemoveRow()
-					u.logger.With(
-						"name", "prepareUpsertBatch",
-						"error", err.Error(),
-						"table", tableName,
-						"columnID", columnID,
-						"value", value).Error("Failed to translate enum")
-					break
-				}
+			if column.IsEnumBasedColumn() {
+				if column.IsEnumArrayColumn() {
+					if value != nil {
+						arrVal := make([]interface{}, 0)
+						// no error handling here as it should already be covered in prepareEnumCases
+						json.Unmarshal([]byte(value.(string)), &arrVal)
+						hasError := false
+						for i := 0; i < len(arrVal); i++ {
+							arrVal[i], err = u.schemaHandler.TranslateEnum(tableName, columnID, arrVal[i], column.CaseInsensitive)
+							if err != nil {
+								hasError = true
+								upsertBatchBuilder.RemoveRow()
+								u.logger.With(
+									"name", "prepareUpsertBatch",
+									"error", err.Error(),
+									"table", tableName,
+									"columnID", columnID,
+									"value", arrVal[i]).Error("Failed to translate enum")
+								break
+							}
+							if arrVal[i] == -1 {
+								arrVal[i] = nil
+							}
+						}
+						if hasError {
+							break
+						}
+						value = arrVal
+					}
+				} else {
+					value, err = u.schemaHandler.TranslateEnum(tableName, columnID, value, column.CaseInsensitive)
+					if err != nil {
+						upsertBatchBuilder.RemoveRow()
+						u.logger.With(
+							"name", "prepareUpsertBatch",
+							"error", err.Error(),
+							"table", tableName,
+							"columnID", columnID,
+							"value", value).Error("Failed to translate enum")
+						break
+					}
 
-				// If enum value is not found from predefined enum cases and default value is not set, we set it to nil.
-				if value == -1 {
-					value = nil
+					// If enum value is not found from predefined enum cases and default value is not set, we set it to nil.
+					if value == -1 {
+						value = nil
+					}
 				}
 			}
 

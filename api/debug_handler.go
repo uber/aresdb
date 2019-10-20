@@ -44,6 +44,7 @@ type DebugHandler struct {
 	metaStore          metaCom.MetaStore
 	queryHandler       *QueryHandler
 	healthCheckHandler *HealthCheckHandler
+	bootstrapRetryChan chan bool
 }
 
 // NewDebugHandler returns a new DebugHandler.
@@ -64,6 +65,7 @@ func NewDebugHandler(
 		metaStore:          metaStore,
 		queryHandler:       queryHandler,
 		healthCheckHandler: healthCheckHandler,
+		bootstrapRetryChan: make(chan bool),
 	}
 }
 
@@ -91,6 +93,7 @@ func (handler *DebugHandler) Register(router *mux.Router) {
 	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches/{offset}", handler.ReadUpsertBatch).
 		Methods(http.MethodGet)
 	router.HandleFunc("/{table}/{shard}/backfill-manager/upsertbatches/{offset}", handler.ReadBackfillQueueUpsertBatch).Methods(http.MethodGet)
+	router.HandleFunc("/bootstrap/retry", handler.BootstrapRetry).Methods(http.MethodPost)
 }
 
 // ShowShardSet shows the shard set owned by the server
@@ -230,7 +233,7 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 
 	schema.RLock()
 	for columnID, column := range schema.Schema.Columns {
-		if !column.Deleted && column.IsEnumColumn() && columnID < len(response.Body.Vectors) {
+		if !column.Deleted && column.IsEnumBasedColumn() && columnID < len(response.Body.Vectors) {
 			vector := &response.Body.Vectors[columnID]
 			var enumCases []string
 			if handler.enumReader != nil {
@@ -243,7 +246,7 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 				// 2. use local in memory enum dict
 				enumCases = schema.EnumDicts[column.Name].ReverseDict
 			}
-			err = translateEnums(vector, enumCases)
+			err = translateEnums(column.IsEnumArrayColumn(), vector, enumCases)
 		}
 	}
 	schema.RUnlock()
@@ -267,7 +270,10 @@ func readRows(vps []memCom.VectorParty, startRow, numRows int) (n int, vectors [
 	return n, vectors
 }
 
-func translateEnums(vector *memCom.SlicedVector, enumCases []string) error {
+func translateEnums(isEnumArray bool, vector *memCom.SlicedVector, enumCases []string) error {
+	if isEnumArray {
+		return tranlateEnumsArray(vector, enumCases)
+	}
 	for index, value := range vector.Values {
 		if value != nil {
 			var id int
@@ -286,6 +292,39 @@ func translateEnums(vector *memCom.SlicedVector, enumCases []string) error {
 			vector.Values[index] = value
 			if id < len(enumCases) {
 				vector.Values[index] = enumCases[id]
+			}
+		}
+	}
+	return nil
+}
+
+func tranlateEnumsArray(vector *memCom.SlicedVector, enumCases []string) error {
+	for index, value := range vector.Values {
+		if value != nil {
+			ids := make([]interface{}, 0)
+			err := json.Unmarshal(([]byte)(value.(string)), &ids)
+			if err == nil {
+				for i, v := range ids {
+					if v != nil {
+						var id int
+						switch v := v.(type) {
+						// unmarshal will turn number to float64
+						case float64:
+							id = int(v)
+						default:
+							// this should never happen
+							return utils.StackError(nil, "Wrong data type for enum vector, %T", value)
+						}
+						if id < len(enumCases) {
+							ids[i] = enumCases[id]
+						}
+
+					}
+				}
+				newValue, err := json.Marshal(ids)
+				if err == nil {
+					vector.Values[index] = string(newValue)
+				}
 			}
 		}
 	}
@@ -724,4 +763,21 @@ func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w http.ResponseWriter,
 
 	common.RespondWithJSONObject(w, response)
 	return
+}
+
+// Bootstrap will turn on bootstrap based on the request.
+func (handler *DebugHandler) BootstrapRetry(w http.ResponseWriter, r *http.Request) {
+	handler.bootstrapRetryChan <- true
+
+	common.RespondJSONObjectWithCode(w, http.StatusOK, "Bootstrap retry submitted")
+}
+
+// GetBootstrapRetryChan returns bootstrapRetryChan
+func (handler *DebugHandler) GetBootstrapRetryChan() chan bool {
+	return handler.bootstrapRetryChan
+}
+
+// SetBootstrapRetryChan is used for testing
+func (handler *DebugHandler) SetBootstrapRetryChan(bootstrapRetryChan chan bool) {
+	handler.bootstrapRetryChan = bootstrapRetryChan
 }

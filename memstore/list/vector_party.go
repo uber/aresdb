@@ -35,22 +35,36 @@ type baseVectorParty struct {
 	dataType common.DataType
 
 	reporter HostMemoryChangeReporter
+	//convenient function to call child class to retrieve data
+	getDataValueFn func(int) common.DataValue
 }
 
 // GetOffsetLength returns the <offset, length> pair at ith row.
-func (vp *baseVectorParty) GetOffsetLength(row int) (offset uint32, length uint32) {
+func (vp *baseVectorParty) GetOffsetLength(row int) (offset uint32, length uint32, valid bool) {
 	if vp.offsets == nil || row < 0 || row >= vp.length {
 		return
 	}
 	offset = *(*uint32)(vp.offsets.GetValue(2 * row))
 	length = *(*uint32)(vp.offsets.GetValue(2*row + 1))
+	valid = !(length == 0 && offset == 0)
 	return
 }
 
 // SetOffsetLength update offset/length for nth fow
 func (vp *baseVectorParty) SetOffsetLength(row int, offset, length unsafe.Pointer) {
-	vp.offsets.SetValue(2*row, offset)
-	vp.offsets.SetValue(2*row+1, length)
+	if offset != nil && length != nil {
+		vp.offsets.SetValue(2*row+1, length)
+		if *(*uint32)(length) == 0 {
+			zeroValueOffset := common.ZeroLengthArrayFlag
+			vp.offsets.SetValue(2*row, unsafe.Pointer(&zeroValueOffset))
+		} else {
+			vp.offsets.SetValue(2*row, offset)
+		}
+	} else {
+		var zero uint32 = 0
+		vp.offsets.SetValue(2*row, unsafe.Pointer(&zero))
+		vp.offsets.SetValue(2*row+1, unsafe.Pointer(&zero))
+	}
 }
 
 // GetElemCount return the number of element for value in n-th row
@@ -63,12 +77,8 @@ func (vp *baseVectorParty) GetElemCount(row int) uint32 {
 
 // GetValidity get validity of given offset.
 func (vp *baseVectorParty) GetValidity(row int) bool {
-	offset, length := vp.GetOffsetLength(row)
-	// we'll treat the 0 length of array as null to save space
-	if offset == 0 && length == 0 {
-		return false
-	}
-	return true
+	_, _, valid := vp.GetOffsetLength(row)
+	return valid
 }
 
 // IsList tells whether this vp is list vp. And user can later on cast it to proper interface.
@@ -88,9 +98,24 @@ func (vp *baseVectorParty) GetLength() int {
 
 // Slice vector party into human readable SlicedVector format. For now just return an
 // empty slice.
-// TODO(lucafuji): implement slice vector on list vp.
 func (vp *baseVectorParty) Slice(startRow, numRows int) common.SlicedVector {
-	return common.SlicedVector{}
+	size := vp.length - startRow
+	if size < 0 {
+		size = 0
+	}
+	if size > numRows {
+		size = numRows
+	}
+	vector := common.SlicedVector{
+		Values: make([]interface{}, size),
+		Counts: make([]int, size),
+	}
+	for i := 0; i < size; i++ {
+		vector.Values[i] = vp.getDataValueFn(startRow + i).ConvertToHumanReadable(vp.dataType)
+		vector.Counts[i] = i + 1
+	}
+
+	return vector
 }
 
 // Check whether two vector parties are equal (used only in unit tests)

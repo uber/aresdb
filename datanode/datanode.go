@@ -128,7 +128,9 @@ func NewDataNode(
 		return nil, utils.StackError(err, "failed to initialize redolog manager master")
 	}
 
-	memStore := memstore.NewMemStore(metaStore, diskStore, memstore.NewOptions(bootstrapToken, redoLogManagerMaster))
+	numShards := len(topo.Get().ShardSet().AllIDs())
+	memStore := memstore.NewMemStore(metaStore, diskStore,
+		memstore.NewOptions(bootstrapToken, redoLogManagerMaster, memstore.WithNumShards(numShards)))
 
 	grpcServer := grpc.NewServer()
 	rpc.RegisterPeerDataNodeServer(grpcServer, bootstrapServer)
@@ -137,7 +139,7 @@ func NewDataNode(
 	d := &dataNode{
 		hostID:               hostID,
 		topo:                 topo,
-		enumReader:			  enumReader,
+		enumReader:           enumReader,
 		metaStore:            metaStore,
 		memStore:             memStore,
 		diskStore:            diskStore,
@@ -215,6 +217,8 @@ func (d *dataNode) Open() error {
 	go d.startAnalyzingShardAvailability()
 	// 9. start analyzing server readiness
 	go d.startAnalyzingServerReadiness()
+	// 10. start bootstrap retry watch
+	go d.startBootstrapRetryWatch()
 
 	return nil
 }
@@ -695,8 +699,8 @@ func (d *dataNode) newHandlers() datanodeHandlers {
 	return datanodeHandlers{
 		schemaHandler:      api.NewSchemaHandler(d.metaStore),
 		enumHandler:        api.NewEnumHandler(d.memStore, d.metaStore),
-		queryHandler:       api.NewQueryHandler(d.memStore, d, d.opts.ServerConfig().Query),
-		dataHandler:        api.NewDataHandler(d.memStore),
+		queryHandler:       api.NewQueryHandler(d.memStore, d, d.opts.ServerConfig().Query, d.opts.ServerConfig().HTTP.MaxQueryConnections),
+		dataHandler:        api.NewDataHandler(d.memStore, d.opts.ServerConfig().HTTP.MaxIngestionConnections),
 		nodeModuleHandler:  http.StripPrefix("/node_modules/", http.FileServer(http.Dir("./api/ui/node_modules/"))),
 		debugStaticHandler: http.StripPrefix("/static/", utils.NoCache(http.FileServer(http.Dir("./api/ui/debug/")))),
 		swaggerHandler:     http.StripPrefix("/swagger/", http.FileServer(http.Dir("./api/ui/swagger/"))),
@@ -714,4 +718,18 @@ func mixedHandler(grpcServer *grpc.Server, httpHandler http.Handler) http.Handle
 			httpHandler.ServeHTTP(w, r)
 		}
 	})
+}
+
+func (d *dataNode) startBootstrapRetryWatch() {
+	for {
+		select {
+		case <-d.handlers.debugHandler.GetBootstrapRetryChan():
+			go func() {
+				err := d.bootstrapManager.Bootstrap()
+				if err != nil {
+					d.opts.InstrumentOptions().Logger().With("error", err.Error()).Error("error while retry bootstrapping")
+				}
+			}()
+		}
+	}
 }

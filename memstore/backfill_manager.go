@@ -28,6 +28,8 @@ import (
 // sorted batches directly.
 type BackfillManager struct {
 	sync.RWMutex `json:"-"`
+	BackfillConfig
+
 	// Name of the table.
 	TableName string `json:"-"`
 
@@ -46,12 +48,6 @@ type BackfillManager struct {
 	// keep track of the size of the buffer that holds batches being backfilled
 	BackfillingBufferSize int64 `json:"backfillingBufferSize"`
 
-	// max buffer size to hold backfill data
-	MaxBufferSize int64 `json:"maxBufferSize"`
-
-	// threshold to trigger archive
-	BackfillThresholdInBytes int64 `json:"backfillThresholdInBytes"`
-
 	// keep track of the redo log file of the last batch backfilled
 	LastRedoFile int64 `json:"lastRedoFile"`
 
@@ -67,13 +63,21 @@ type BackfillManager struct {
 	AppendCond *sync.Cond `json:"-"`
 }
 
+// BackfillConfig defines configs for backfill
+type BackfillConfig struct {
+	// max buffer size to hold backfill data
+	MaxBufferSize int64 `json:"maxBufferSize"`
+
+	// threshold to trigger backfill
+	BackfillThresholdInBytes int64 `json:"backfillThresholdInBytes"`
+}
+
 // NewBackfillManager creates a new BackfillManager instance.
-func NewBackfillManager(tableName string, shard int, tableConfig metaCom.TableConfig) *BackfillManager {
+func NewBackfillManager(tableName string, shard int, config BackfillConfig) *BackfillManager {
 	backfillManager := BackfillManager{
-		TableName:                tableName,
-		Shard:                    shard,
-		MaxBufferSize:            tableConfig.BackfillMaxBufferSize,
-		BackfillThresholdInBytes: tableConfig.BackfillThresholdInBytes,
+		TableName:      tableName,
+		Shard:          shard,
+		BackfillConfig: config,
 	}
 	backfillManager.AppendCond = sync.NewCond(&backfillManager.RWMutex)
 	return &backfillManager

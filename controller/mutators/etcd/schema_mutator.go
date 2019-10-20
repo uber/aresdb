@@ -180,7 +180,7 @@ func (m *tableSchemaMutator) DeleteTable(namespace, name string) error {
 func (m *tableSchemaMutator) deleteEnum(namespace string, table *metaCom.Table) {
 	logger := m.logger.With("namespace", namespace, "table", table.Name, "incarnation", table.Incarnation)
 	for columnID, column := range table.Columns {
-		if column.IsEnumColumn() {
+		if column.IsEnumBasedColumn() {
 			value, err := m.txnStore.Get(utils.EnumNodeListKey(namespace, table.Name, table.Incarnation, columnID))
 			if err != nil {
 				logger.With("column", column.Name, "columnID", columnID, "error", err.Error()).Error("failed to get enum node list")
@@ -280,7 +280,7 @@ func (m *tableSchemaMutator) UpdateTable(namespace string, table metaCom.Table, 
 
 func preCreateEnumNodes(txn *kvstore.Transaction, namespace string, table *metaCom.Table, startColumnID int, endColumnID int) {
 	for columnID := startColumnID; columnID < endColumnID; columnID++ {
-		if table.Columns[columnID].IsEnumColumn() {
+		if table.Columns[columnID].IsEnumBasedColumn() {
 			var firstEnumCases []string
 			if table.Columns[columnID].DefaultValue != nil {
 				defaultValue := *table.Columns[columnID].DefaultValue

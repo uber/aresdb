@@ -15,6 +15,7 @@
 package common
 
 import (
+	"fmt"
 	"github.com/uber/aresdb/utils"
 	"math"
 	"unsafe"
@@ -51,6 +52,7 @@ type columnBuilder struct {
 	values         []interface{}
 	numValidValues int
 	updateMode     ColumnUpdateMode
+	isTimeColumn   bool
 }
 
 // SetValue write a value into the column at given row.
@@ -63,7 +65,17 @@ func (c *columnBuilder) SetValue(row int, value interface{}) error {
 		var err error
 		c.values[row], err = ConvertValueForType(c.dataType, value)
 		if err != nil {
-			return err
+			if c.isTimeColumn {
+				// force time column value is uint32
+				value64, ok := ConvertToUint64(value)
+				if ok {
+					c.values[row] = uint32(value64 / 1000)
+				} else {
+					return fmt.Errorf("Invalid value at time column, value=%b", value)
+				}
+			} else {
+				return err
+			}
 		}
 	}
 
@@ -306,8 +318,9 @@ func (c *columnBuilder) GetMode() ColumnMode {
 // UpsertBatchBuilder is the builder for constructing an UpsertBatch buffer. It allows random value
 // write at (row, col).
 type UpsertBatchBuilder struct {
-	NumRows int
-	columns []*columnBuilder
+	NumRows     int
+	columns     []*columnBuilder
+	isFactTable bool
 }
 
 // NewUpsertBatchBuilder creates a new builder for constructing an UpersetBatch.
@@ -326,6 +339,9 @@ func (u *UpsertBatchBuilder) AddColumn(columnID int, dataType DataType) error {
 		dataType:       dataType,
 		numValidValues: 0,
 		values:         values,
+	}
+	if u.isFactTable && columnID == 0 && dataType == Uint32 {
+		column.isTimeColumn = true
 	}
 	u.columns = append(u.columns, column)
 	return nil
@@ -380,6 +396,10 @@ func (u *UpsertBatchBuilder) SetValue(row int, col int, value interface{}) error
 		return utils.StackError(nil, "Col index %d out of range %d", col, len(u.columns))
 	}
 	return u.columns[col].SetValue(row, value)
+}
+
+func (u *UpsertBatchBuilder) MarkFactTable() {
+	u.isFactTable = true
 }
 
 // ToByteArray produces a serialized UpsertBatch in byte array.

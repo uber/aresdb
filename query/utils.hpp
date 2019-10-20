@@ -25,6 +25,7 @@
 #include <type_traits>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <utility>
 #include "query/time_series_aggregate.h"
 #ifdef USE_RMM
@@ -98,6 +99,69 @@ struct common_type<GeoPointT, GeoPointT> {
   typedef GeoPointT type;
 };
 
+// Special common_type for UUIDT
+template<>
+struct common_type<UUIDT, UUIDT> {
+  typedef UUIDT type;
+};
+
+template<typename LHSIterator, typename RHSIterator>
+struct supported_binary_combination {
+  static constexpr bool value =
+  ((std::is_same<
+    typename LHSIterator::value_type::head_type, UUIDT*>::value &&
+    (std::is_same<
+        typename RHSIterator::value_type::head_type, UUIDT>::value ||
+        std::is_same<
+          typename RHSIterator::value_type::head_type, int32_t>::value ||
+        std::is_same<
+          typename RHSIterator::value_type::head_type, int>::value)) ||
+  (std::is_same<
+    typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
+    (std::is_same<
+        typename RHSIterator::value_type::head_type, GeoPointT>::value ||
+        std::is_same<
+            typename RHSIterator::value_type::head_type, int32_t>::value ||
+        std::is_same<
+            typename RHSIterator::value_type::head_type, int>::value)) ||
+  (std::is_same<
+    typename LHSIterator::value_type::head_type, GeoPointT>::value &&
+      std::is_same<
+        typename RHSIterator::value_type::head_type, GeoPointT>::value) ||
+  (std::is_same<
+    typename LHSIterator::value_type::head_type, UUIDT>::value &&
+      std::is_same<
+        typename RHSIterator::value_type::head_type, UUIDT>::value) ||
+  (!std::is_same<
+    typename LHSIterator::value_type::head_type, UUIDT*>::value &&
+    !std::is_same<
+        typename LHSIterator::value_type::head_type, UUIDT>::value &&
+    !std::is_same<
+        typename LHSIterator::value_type::head_type, GeoPointT>::value &&
+    !std::is_same<
+        typename RHSIterator::value_type::head_type, UUIDT>::value &&
+    !std::is_same<
+        typename RHSIterator::value_type::head_type, GeoPointT>::value &&
+    !std::is_same<
+        typename LHSIterator::value_type::head_type, GeoPointT*>::value &&
+    !std::is_same<
+        typename RHSIterator::value_type::head_type, UUIDT*>::value &&
+    !std::is_same<
+        typename RHSIterator::value_type::head_type, GeoPointT*>::value));
+};
+
+// This is used to retrieve iterator value type
+// for non-array data type, will use common type,
+// likely will change later to support different types between left/right
+// for array data type, will use it's own data type
+template <typename A, typename B>
+struct input_iterator_value_type {
+  typedef typename std::conditional<
+      !std::is_pointer<A>::value && !std::is_pointer<B>::value,
+      typename common_type<A, B>::type,
+      A>::type type;
+};
+
 // get_identity_value returns the identity value for the aggregation function.
 // Identity value is a special type of element of a set with respect to a
 // binary operation on that set, which leaves other elements unchanged when
@@ -109,12 +173,12 @@ __host__ __device__ Value get_identity_value(AggregateFunction aggFunc) {
     case AGGR_SUM_UNSIGNED:
     case AGGR_SUM_SIGNED:
     case AGGR_SUM_FLOAT:return 0;
-    case AGGR_MIN_UNSIGNED:return UINT32_MAX;
-    case AGGR_MIN_SIGNED:return INT32_MAX;
-    case AGGR_MIN_FLOAT:return FLT_MAX;
+    case AGGR_MIN_UNSIGNED:return static_cast<Value>(UINT32_MAX);
+    case AGGR_MIN_SIGNED:return static_cast<Value>(INT32_MAX);
+    case AGGR_MIN_FLOAT:return static_cast<Value>(FLT_MAX);
     case AGGR_MAX_UNSIGNED:return 0;
-    case AGGR_MAX_SIGNED:return INT32_MIN;
-    case AGGR_MAX_FLOAT:return FLT_MIN;
+    case AGGR_MAX_SIGNED:return static_cast<Value>(INT32_MIN);
+    case AGGR_MAX_FLOAT:return static_cast<Value>(FLT_MIN);
     default:return 0;
   }
 }

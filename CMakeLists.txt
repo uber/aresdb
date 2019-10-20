@@ -188,6 +188,7 @@ add_library(algorithm SHARED
         query/hll.cu
         query/concurrent_unordered_map.hpp
         query/iterator.hpp
+        query/iterator.cu
         query/memory.cu
         query/memory.hpp
         query/measure_transform.cu
@@ -200,10 +201,6 @@ add_library(algorithm SHARED
         query/utils.hpp)
 
 target_link_libraries(algorithm mem)
-################################
-# rdkafka
-################################
-include(rdkafka.cmake)
 ################################
 # Unit Tests
 ################################
@@ -254,13 +251,11 @@ execute_process(
 )
 
 add_custom_target(lint-all
-        DEPENDS rdkafka::rdkafka lib
         COMMAND ./scripts/clang-lint.sh ${ALL_C_SRC}
         COMMAND ./scripts/golang-lint.sh ${ALL_GO_SRC}
         VERBATIM)
 
 add_custom_target(lint
-        DEPENDS rdkafka::rdkafka lib
         COMMAND ./scripts/clang-lint.sh ${CHANGED_C_SRC}
         COMMAND ./scripts/golang-lint.sh ${CHANGED_GO_SRC}
         VERBATIM)
@@ -279,7 +274,7 @@ add_custom_target(aresbrokerd DEPENDS ${ALL_GO_SRC_LIST}
         VERBATIM 
         )
 
-add_custom_target(ares-subscriber DEPENDS rdkafka::rdkafka ${ALL_GO_SRC_LIST}
+add_custom_target(ares-subscriber DEPENDS ${ALL_GO_SRC_LIST}
         COMMAND go build -tags static -o bin/ares-subscriber ./cmd/subscriber/main.go
         VERBATIM
         )
@@ -288,7 +283,7 @@ add_custom_target(run_server DEPENDS aresd
         COMMAND bash -c 'DYLD_LIBRARY_PATH=$$LIBRARY_PATH ./bin/aresd'
         )
 
-add_custom_target(test-golang DEPENDS aresd rdkafka::rdkafka
+add_custom_target(test-golang
         COMMAND bash -c 'ARES_ENV=test DYLD_LIBRARY_PATH=$$LIBRARY_PATH ginkgo -r'
         )
 
@@ -296,7 +291,7 @@ add_custom_target(test-golang DEPENDS aresd rdkafka::rdkafka
 # misc
 ###############################
 
-add_custom_target(travis DEPENDS rdkafka::rdkafka
+add_custom_target(travis
         COMMAND bash -c 'ARES_ENV=test .travis/run_unittest.sh'
         )
 

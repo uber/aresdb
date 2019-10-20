@@ -35,6 +35,7 @@ type StreamingScanNode struct {
 }
 
 func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error) {
+	done := ctx.Done()
 
 	hostHealthy := true
 	defer func() {
@@ -45,15 +46,26 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 			markErr = ssn.topo.MarkHostUnhealthy(ssn.host)
 		}
 		if markErr != nil {
-			utils.GetLogger().With("host", ssn.host, "healthy", hostHealthy).Error("failed to mark host healthiness")
+			utils.GetLogger().With(
+				"host", ssn.host,
+				"healthy", hostHealthy,
+				"err", markErr).Error("failed to mark host healthiness")
 		}
 	}()
 	for trial := 1; trial <= rpcRetries; trial++ {
-
 		var fetchErr error
-
 		utils.GetLogger().With("host", ssn.host, "query", ssn.qc.AQLQuery).Debug("sending query to datanode")
-		bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.qc.RequestID, ssn.host, *ssn.qc.AQLQuery)
+		select {
+		case <-done:
+			err = utils.StackError(nil, "StreamingScanNode execution canceled")
+			return
+		default:
+			if ctx.Err() != nil {
+				// context cancelled or expired, no need to query
+				return nil, nil
+			}
+			bs, fetchErr = ssn.dataNodeClient.QueryRaw(ctx, ssn.qc.RequestID, ssn.host, *ssn.qc.AQLQuery)
+		}
 		if fetchErr != nil {
 			utils.GetRootReporter().GetCounter(utils.DataNodeQueryFailures).Inc(1)
 			utils.GetLogger().With(
@@ -62,10 +74,12 @@ func (ssn *StreamingScanNode) Execute(ctx context.Context) (bs []byte, err error
 				"query", ssn.qc.AQLQuery,
 				"requestID", ssn.qc.RequestID,
 				"trial", trial).Error("fetch from datanode failed")
-			if fetchErr == dataCli.ErrFailedToConnect {
+			err = utils.StackError(fetchErr, "fetch from datanode failed")
+			// check ctx.Err() in case context expired during client call
+			if fetchErr == dataCli.ErrFailedToConnect && ctx.Err() == nil {
 				hostHealthy = false
 			}
-			err = utils.StackError(fetchErr, "fetch from datanode failed")
+			// retry
 			continue
 		}
 		utils.GetLogger().With(
@@ -90,6 +104,7 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTop
 		qc:         qc,
 		headers:    headers,
 		resultChan: make(chan streamingScanNoderesult),
+		doneChan:   make(chan struct{}),
 	}
 
 	var assignment map[topology.Host][]uint32
@@ -100,9 +115,11 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTop
 
 	plan.nodes = make([]*StreamingScanNode, len(assignment))
 	i := 0
+	// get rewritten query after compilation
+	query := qc.GetRewrittenQuery()
 	for host, shards := range assignment {
-		// make deep copy
-		currQ := *qc.AQLQuery
+		// make a deep copy
+		currQ := query
 		for _, shard := range shards {
 			currQ.Shards = append(currQ.Shards, int(shard))
 		}
@@ -129,6 +146,7 @@ type streamingScanNoderesult struct {
 type NonAggQueryPlan struct {
 	qc         *QueryContext
 	resultChan chan streamingScanNoderesult
+	doneChan   chan struct{}
 	headers    []string
 	nodes      []*StreamingScanNode
 	// number of rows flushed
@@ -159,9 +177,14 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 			var bs []byte
 			bs, err = n.Execute(ctx)
 			utils.GetLogger().With("dataSize", len(bs), "error", err).Debug("sending result to result channel")
-			nqp.resultChan <- streamingScanNoderesult{
+			select {
+			case <-nqp.doneChan:
+				utils.GetLogger().Debug("cancel pushing to result channel")
+				return
+			case nqp.resultChan <- streamingScanNoderesult{
 				data: bs,
 				err:  err,
+			}:
 			}
 		}(node)
 	}
@@ -173,6 +196,7 @@ func (nqp *NonAggQueryPlan) Execute(ctx context.Context, w http.ResponseWriter) 
 	for i := 0; i < len(nqp.nodes); i++ {
 		if nqp.getRowsWanted() == 0 {
 			utils.GetLogger().Debug("got enough rows, exiting")
+			close(nqp.doneChan)
 			break
 		}
 		res := <-nqp.resultChan

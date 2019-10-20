@@ -31,6 +31,8 @@ var (
 	ErrColumnAlreadyDeleted = errors.New("Column already deleted")
 	// ErrNotEnumColumn indicates Column is not enum type
 	ErrNotEnumColumn = errors.New("Column is not enum type")
+	// ErrEnumCardinalityOverflow indicates invalid enum extension over cardinality limit
+	ErrEnumCardinalityOverflow = errors.New("Enum column cardinality exceeds limit")
 	// ErrShardDoesNotExist indicates Shard does not exist
 	ErrShardDoesNotExist = errors.New("Shard does not exist")
 	// ErrNotFactTable indicates table not a fact table
@@ -77,4 +79,9 @@ var (
 	ErrHLLColumnDoesNotAllowDefaultValue = errors.New("hll column does not allow default value")
 	ErrInvalidTableBatchSize             = errors.New("Table batch size should be larger than zero")
 	ErrInvalidPrimaryKeyBucketSize       = errors.New("Table primary key bucket size should be larger than zero")
+	ErrInvalidPrimaryKeyDataType         = errors.New("Specified data type can not be used as primary key")
+	ErrInvalidSortColumnDataType         = errors.New("Specified data type can not be used as sorting column")
+	// ErrMaxEnumIDReached indicates a column has already reached its maximum enum id
+	// eg. SmallEnum: 255, BigEnum: 65535
+	ErrMaxEnumIDReached = errors.New("Maximum enum id reached")
 )

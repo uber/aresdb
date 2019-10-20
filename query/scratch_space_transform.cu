@@ -26,9 +26,12 @@ int OutputVectorBinder<NInput, FunctorType>::transformScratchSpaceOutput(
           reinterpret_cast<dataType *>(output.Values), \
           output.NullsOffset));
 
-    case Int32:BIND_SCRATCH__SPACE_OUTPUT(int32_t)
-    case Uint32:BIND_SCRATCH__SPACE_OUTPUT(uint32_t)
-    case Float32:BIND_SCRATCH__SPACE_OUTPUT(float_t)
+    case Int32:    BIND_SCRATCH__SPACE_OUTPUT(int32_t)
+    case Uint32:   BIND_SCRATCH__SPACE_OUTPUT(uint32_t)
+    case Float32:  BIND_SCRATCH__SPACE_OUTPUT(float_t)
+    case Int64:    BIND_SCRATCH__SPACE_OUTPUT(int64_t)
+    case UUID:     BIND_SCRATCH__SPACE_OUTPUT(UUIDT)
+    case GeoPoint: BIND_SCRATCH__SPACE_OUTPUT(GeoPointT)
     default:throw
       std::invalid_argument(
           "Unsupported data type for ScratchSpaceOutput");

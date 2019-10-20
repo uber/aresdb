@@ -15,21 +15,22 @@
 package kafka
 
 import (
-	"os"
-
-	kafkaConfluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/Shopify/sarama"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/client"
+	"github.com/uber/aresdb/subscriber/common/consumer"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/tools"
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"os"
 )
 
 var _ = Describe("KafkaConsumer", func() {
+	var broker *sarama.MockBroker
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",
@@ -61,6 +62,32 @@ var _ = Describe("KafkaConsumer", func() {
 		jobConfigs["job1"]["dev01"].AresTableConfig.Cluster = "dev01"
 	}
 
+	BeforeEach(func() {
+		// kafka broker mock setup
+		broker = sarama.NewMockBrokerAddr(serviceConfig.Logger.Sugar(), 1, jobConfigs["job1"]["dev01"].StreamingConfig.KafkaBroker)
+		mockFetchResponse := sarama.NewMockFetchResponse(serviceConfig.Logger.Sugar(), 1)
+		for i := 0; i < 10; i++ {
+			mockFetchResponse.SetMessage("job1-topic", 0, int64(i+1234), sarama.StringEncoder("foo"))
+		}
+
+		broker.SetHandlerByMap(map[string]sarama.MockResponse{
+			"MetadataRequest": sarama.NewMockMetadataResponse(serviceConfig.Logger.Sugar()).
+				SetBroker(broker.Addr(), broker.BrokerID()).
+				SetLeader("job1-topic", 0, broker.BrokerID()),
+			"OffsetRequest": sarama.NewMockOffsetResponse(serviceConfig.Logger.Sugar()).
+				SetOffset("job1-topic", 0, sarama.OffsetOldest, 0).
+				SetOffset("job1-topic", 0, sarama.OffsetNewest, 2345),
+			"FetchRequest": mockFetchResponse,
+			"JoinGroupRequest": sarama.NewMockConsumerMetadataResponse(serviceConfig.Logger.Sugar()).
+				SetCoordinator("ares-subscriber_test_job1_dev01_streaming", broker),
+			"OffsetCommitRequest": sarama.NewMockOffsetCommitResponse(serviceConfig.Logger.Sugar()),
+		})
+	})
+
+	AfterEach(func() {
+		broker.Close()
+	})
+
 	It("KafkaConsumer functions", func() {
 		kc, err := NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
 		Ω(err).Should(BeNil())
@@ -79,35 +106,36 @@ var _ = Describe("KafkaConsumer", func() {
 
 		msgCh := kc.Messages()
 		Ω(msgCh).ShouldNot(BeNil())
+		kc.(*KafkaConsumer).SetMessages(make(chan consumer.Message, 1))
 
 		closeCh := kc.Closed()
 		Ω(closeCh).ShouldNot(BeNil())
+		kc.(*KafkaConsumer).SetClosed(make(chan struct{}, 1))
 
-		go kc.(*KafkaConsumer).startConsuming()
+		msg := sarama.ConsumerMessage{
+			Topic:     "job1-topic",
+			Partition: 0,
+			Value:     []byte("foo")}
+		cgHandler := CGHandler{
+			msgCounter:     make(map[string]map[int32]tally.Counter),
+			msgByteCounter: make(map[string]map[int32]tally.Counter),
+			msgOffsetGauge: make(map[string]map[int32]tally.Gauge),
+			msgLagGauge:    make(map[string]map[int32]tally.Gauge),
+		}
 
-		topic := "topic"
-		msg := &kafkaConfluent.Message{
-			TopicPartition: kafkaConfluent.TopicPartition{
-				Topic:     &topic,
-				Partition: int32(0),
-				Offset:    0,
-			},
-			Value: []byte("value"),
-			Key:   []byte("key"),
+		cgHandler.msgCounter["job1-topic"] = make(map[int32]tally.Counter)
+		cgHandler.msgByteCounter["job1-topic"] = make(map[int32]tally.Counter)
+		cgHandler.msgOffsetGauge["job1-topic"] = make(map[int32]tally.Gauge)
+		cgHandler.msgLagGauge["job1-topic"] = make(map[int32]tally.Gauge)
+
+		kc.(*KafkaConsumer).processMsg(&msg, &cgHandler, 5632, nil)
+
+		kafkaMsg := KafkaMessage{
+			ConsumerMessage: &msg,
+			consumer:        kc,
+			session:         nil,
 		}
-		msgCounter := map[string]map[int32]tally.Counter{
-			"topic": make(map[int32]tally.Counter),
-		}
-		msgByteCounter := map[string]map[int32]tally.Counter{
-			"topic": make(map[int32]tally.Counter),
-		}
-		msgOffsetGauge := map[string]map[int32]tally.Gauge{
-			"topic": make(map[int32]tally.Gauge),
-		}
-		msgLagGauge := map[string]map[int32]tally.Gauge{
-			"topic": make(map[int32]tally.Gauge),
-		}
-		kc.(*KafkaConsumer).processMsg(msg, msgCounter, msgByteCounter, msgOffsetGauge, msgLagGauge)
+		kc.CommitUpTo(&kafkaMsg)
 
 		err = kc.(*KafkaConsumer).Close()
 		Ω(err).Should(BeNil())
@@ -117,19 +145,17 @@ var _ = Describe("KafkaConsumer", func() {
 	})
 
 	It("KafkaMessage functions", func() {
-		topic := "topic"
 		message := &KafkaMessage{
-			&kafkaConfluent.Message{
-				TopicPartition: kafkaConfluent.TopicPartition{
-					Topic:     &topic,
-					Partition: int32(0),
-					Offset:    0,
-				},
-				Value: []byte("value"),
-				Key:   []byte("key"),
+			ConsumerMessage: &sarama.ConsumerMessage{
+				Topic:     "topic",
+				Partition: 0,
+				Offset:    0,
+				Value:     []byte("value"),
+				Key:       []byte("key"),
 			},
-			nil,
-			"kafka-cluster1",
+			consumer:    nil,
+			clusterName: "kafka-cluster1",
+			session:     nil,
 		}
 
 		key := message.Key()
@@ -141,7 +167,7 @@ var _ = Describe("KafkaConsumer", func() {
 		cluster := message.Cluster()
 		Ω(cluster).Should(Equal("kafka-cluster1"))
 
-		topic = message.Topic()
+		topic := message.Topic()
 		Ω(topic).Should(Equal("topic"))
 
 		offset := message.Offset()
@@ -151,12 +177,5 @@ var _ = Describe("KafkaConsumer", func() {
 		Ω(partition).Should(Equal(int32(0)))
 
 		message.Ack()
-		message.Consumer, _ = NewKafkaConsumer(jobConfigs["job1"]["dev01"], serviceConfig)
-
-		message.Ack()
-
-		message.Nack()
-
-		message.Consumer.Close()
 	})
 })

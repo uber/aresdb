@@ -49,8 +49,8 @@ var _ = ginkgo.Describe("json marshaller", func() {
 			int32(1): &liveBatch,
 		},
 		RedoLogManager: redologManager,
-		BackfillManager: NewBackfillManager("ares_trips", 0, metaCom.TableConfig{
-			BackfillMaxBufferSize:    1 << 32,
+		BackfillManager: NewBackfillManager("ares_trips", 0, BackfillConfig{
+			MaxBufferSize:            1 << 32,
 			BackfillThresholdInBytes: 1 << 21,
 		}),
 		PrimaryKey: NewPrimaryKey(4, true, 10, hostMemoryManager),
@@ -87,8 +87,8 @@ var _ = ginkgo.Describe("json marshaller", func() {
 				int32(1): &liveBatch,
 			},
 			RedoLogManager: redologManager,
-			BackfillManager: NewBackfillManager("ares_trips", 0, metaCom.TableConfig{
-				BackfillMaxBufferSize:    1 << 32,
+			BackfillManager: NewBackfillManager("ares_trips", 0, BackfillConfig{
+				MaxBufferSize:            1 << 32,
 				BackfillThresholdInBytes: 1 << 21,
 			}),
 			PrimaryKey: NewPrimaryKey(4, true, 10, hostMemoryManager),
@@ -335,7 +335,8 @@ var _ = ginkgo.Describe("json marshaller", func() {
             },
             "archivingCutoff": 0
           }
-        }
+        },
+		"BootstrapState": 0
       }`,
 		))
 	})

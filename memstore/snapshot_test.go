@@ -76,7 +76,7 @@ var _ = ginkgo.Describe("snapshot", func() {
 	diskStore := &diskMocks.DiskStore{}
 	metaStore := &metaMocks.MetaStore{}
 
-	diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
+	diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteSyncCloser{}, nil)
 
 	lastBatchID := int32(math.MinInt32 + 1)
 	lastIndex := uint32(5)
@@ -159,9 +159,10 @@ var _ = ginkgo.Describe("snapshot", func() {
 		shard.LiveStore.SnapshotManager.LastRedoFile = 0
 		shard.LiveStore.SnapshotManager.ApplyUpsertBatch(redoLogFile+10, offset, 10, currentRecord)
 
-		writer := new(utilsMocks.WriteCloser)
+		writer := new(utilsMocks.WriteSyncCloser)
 		writer.On("Write", mock.Anything).Return(0, nil)
 		writer.On("Close").Return(nil)
+		writer.On("Sync").Return(nil)
 
 		diskStore.On(
 			"OpenSnapshotVectorPartyFileForWrite", tableName, 0, redoLogFile+10, offset, mock.Anything, mock.Anything).

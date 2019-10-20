@@ -18,6 +18,7 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -300,20 +301,20 @@ func (shard *TableShard) fetchDataFromPeer(
 
 					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).
 						GetChildTimer(map[string]string{
-							"batch":  string(batchMeta.GetBatchID()),
-							"column": string(vpMeta.GetColumnID()),
+							"batch":  strconv.Itoa(int(batchMeta.GetBatchID())),
+							"column": strconv.Itoa(int(vpMeta.GetColumnID())),
 						}, utils.RawVPFetchTime).Record(duration)
 
 					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).GetChildCounter(
 						map[string]string{
-							"batch":  string(batchMeta.GetBatchID()),
-							"column": string(vpMeta.GetColumnID()),
+							"batch":  strconv.Itoa(int(batchMeta.GetBatchID())),
+							"column": strconv.Itoa(int(vpMeta.GetColumnID())),
 						}, utils.RawVPBytesFetched).Inc(int64(bytesFetched))
 
 					utils.GetReporter(tableShardMeta.Table, int(tableShardMeta.Shard)).
 						GetChildGauge(map[string]string{
-							"batch":  string(batchMeta.GetBatchID()),
-							"column": string(vpMeta.GetColumnID()),
+							"batch":  strconv.Itoa(int(batchMeta.GetBatchID())),
+							"column": strconv.Itoa(int(vpMeta.GetColumnID())),
 						}, utils.RawVPFetchBytesPerSec).Update(float64(bytesFetched) / duration.Seconds())
 
 					shard.BootstrapDetails.MarkVPFinished(batchMeta.GetBatchID(), vpMeta.GetColumnID())
@@ -372,7 +373,7 @@ func (shard *TableShard) createVectorPartyRawDataRequest(
 	tableMeta *rpc.TableShardMetaData,
 	batchMeta *rpc.BatchMetaData,
 	vpMeta *rpc.VectorPartyMetaData,
-) (rawVPDataRequest *rpc.VectorPartyRawDataRequest, vpWriter io.WriteCloser, err error) {
+) (rawVPDataRequest *rpc.VectorPartyRawDataRequest, vpWriter utils.WriteSyncCloser, err error) {
 	if shard.Schema.Schema.IsFactTable {
 		// fact table archive vp writer
 		vpWriter, err = shard.diskStore.OpenVectorPartyFileForWrite(tableMeta.GetTable(),
@@ -424,7 +425,7 @@ func (shard *TableShard) createVectorPartyRawDataRequest(
 
 func (shard *TableShard) fetchVectorPartyRawDataFromPeer(
 	client rpc.PeerDataNodeClient,
-	vpWriter io.WriteCloser,
+	vpWriter utils.WriteSyncCloser,
 	request *rpc.VectorPartyRawDataRequest,
 ) (int, error) {
 	stream, err := client.FetchVectorPartyRawData(context.Background(), request)
@@ -446,6 +447,10 @@ func (shard *TableShard) fetchVectorPartyRawDataFromPeer(
 			return totalBytes, err
 		}
 		totalBytes += bytesWritten
+	}
+
+	if err = vpWriter.Sync(); err != nil {
+		return totalBytes, utils.StackError(err, "failed to sync to disk")
 	}
 	return totalBytes, nil
 }
@@ -516,6 +521,7 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 	if err != nil {
 		return 0, nil, utils.StackError(err, "failed to start session")
 	}
+	sessionID = session.ID
 
 	stream, err := client.KeepAlive(context.Background())
 	if err != nil {
@@ -529,7 +535,7 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 			select {
 			case <-ticker.C:
 				err = xretry.NewRetrier(xretry.NewOptions()).Attempt(func() error {
-					return stream.Send(session)
+					return stream.Send(&rpc.Session{ID: sessionID, NodeID: origin})
 				})
 				if err != nil {
 					utils.GetLogger().
@@ -566,7 +572,7 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 				utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Error("server closed keep alive session")
 				return
 			} else if err != nil {
-				utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID).Error("received error from keep alive session")
+				utils.GetLogger().With("table", shard.Schema.Schema.Name, "shard", shard.ShardID, "error", err.Error()).Error("received error from keep alive session")
 				return
 			}
 			if resp.Ttl > 0 {
@@ -575,7 +581,7 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 		}
 	}(stream)
 
-	return session.ID, func() {
+	return sessionID, func() {
 		close(done)
 	}, nil
 }

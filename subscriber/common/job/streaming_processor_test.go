@@ -16,15 +16,7 @@ package job
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"regexp"
-	"strings"
-	"time"
-
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/Shopify/sarama"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
@@ -32,7 +24,7 @@ import (
 	"github.com/uber/aresdb/client/mocks"
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	kafka2 "github.com/uber/aresdb/subscriber/common/consumer/kafka"
+	"github.com/uber/aresdb/subscriber/common/consumer/kafka"
 	"github.com/uber/aresdb/subscriber/common/message"
 	"github.com/uber/aresdb/subscriber/common/rules"
 	"github.com/uber/aresdb/subscriber/common/sink"
@@ -40,9 +32,17 @@ import (
 	"github.com/uber/aresdb/subscriber/config"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"regexp"
+	"strings"
+	"time"
 )
 
 var _ = Describe("streaming_processor", func() {
+	var broker *sarama.MockBroker
 	serviceConfig := config.ServiceConfig{
 		Environment: utils.EnvironmentContext{
 			Deployment:         "test",
@@ -104,33 +104,24 @@ var _ = Describe("streaming_processor", func() {
 		JobConfig:     jobConfig,
 	}
 
-	topic := "topic"
-	msg := &kafka2.KafkaMessage{
-		Message: &kafka.Message{
-			TopicPartition: kafka.TopicPartition{
-				Topic:     &topic,
-				Partition: int32(0),
-				Offset:    0,
-			},
-			Value: []byte(`{"project": "ares-subscriber"}`),
-			Key:   []byte("key"),
+	msg := &kafka.KafkaMessage{
+		ConsumerMessage: &sarama.ConsumerMessage{
+			Topic:     "topic",
+			Partition: 0,
+			Offset:    0,
+			Value:     []byte(`{"project": "ares-subscriber"}`),
+			Key:       []byte("key"),
 		},
-		Consumer:    nil,
-		ClusterName: "kafka-cluster1",
 	}
 
-	errMsg := &kafka2.KafkaMessage{
-		Message: &kafka.Message{
-			TopicPartition: kafka.TopicPartition{
-				Topic:     &topic,
-				Partition: int32(0),
-				Offset:    0,
-			},
-			Value: []byte(`{project: ares-subscriber}`),
-			Key:   []byte("key"),
+	errMsg := &kafka.KafkaMessage{
+		ConsumerMessage: &sarama.ConsumerMessage{
+			Topic:     "topic",
+			Partition: 0,
+			Offset:    0,
+			Value:     []byte(`{project: ares-subscriber}`),
+			Key:       []byte("key"),
 		},
-		Consumer:    nil,
-		ClusterName: "kafka-cluster1",
 	}
 
 	var address string
@@ -230,13 +221,34 @@ var _ = Describe("streaming_processor", func() {
 			}))
 		testServer.Start()
 		address = testServer.Listener.Addr().String()
+
+		// kafka broker mock setup
+		broker = sarama.NewMockBrokerAddr(serviceConfig.Logger.Sugar(), 1, jobConfigs["job1"]["dev01"].StreamingConfig.KafkaBroker)
+		mockFetchResponse := sarama.NewMockFetchResponse(serviceConfig.Logger.Sugar(), 1)
+		for i := 0; i < 10; i++ {
+			mockFetchResponse.SetMessage("job1-topic", 0, int64(i+1234), sarama.StringEncoder("foo"))
+		}
+
+		broker.SetHandlerByMap(map[string]sarama.MockResponse{
+			"MetadataRequest": sarama.NewMockMetadataResponse(serviceConfig.Logger.Sugar()).
+				SetBroker(broker.Addr(), broker.BrokerID()).
+				SetLeader("job1-topic", 0, broker.BrokerID()),
+			"OffsetRequest": sarama.NewMockOffsetResponse(serviceConfig.Logger.Sugar()).
+				SetOffset("job1-topic", 0, sarama.OffsetOldest, 0).
+				SetOffset("job1-topic", 0, sarama.OffsetNewest, 2345),
+			"FetchRequest": mockFetchResponse,
+			"JoinGroupRequest": sarama.NewMockConsumerMetadataResponse(serviceConfig.Logger.Sugar()).
+				SetCoordinator("ares-subscriber_test_job1_dev01_streaming", broker),
+			"OffsetCommitRequest": sarama.NewMockOffsetCommitResponse(serviceConfig.Logger.Sugar()),
+		})
 	})
 
 	AfterEach(func() {
 		testServer.Close()
+		broker.Close()
 	})
 	It("NewStreamingProcessor", func() {
-		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka2.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err := NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
@@ -248,7 +260,7 @@ var _ = Describe("streaming_processor", func() {
 		serviceConfig.ActiveAresClusters = map[string]config.SinkConfig{
 			"dev01": sinkConfig,
 		}
-		p, err = NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka2.NewKafkaConsumer, message.NewDefaultDecoder,
+		p, err = NewStreamingProcessor(1, jobConfig, nil, sink.NewAresDatabase, kafka.NewKafkaConsumer, message.NewDefaultDecoder,
 			make(chan ProcessorError), make(chan int64), serviceConfig)
 		Ω(p).ShouldNot(BeNil())
 		Ω(p.(*StreamingProcessor).highLevelConsumer).ShouldNot(BeNil())
@@ -318,7 +330,8 @@ var _ = Describe("streaming_processor", func() {
 
 		go p.Run()
 		p.Restart()
-		p.(*StreamingProcessor).highLevelConsumer.(*kafka2.KafkaConsumer).Close()
+		p.(*StreamingProcessor).highLevelConsumer.(*kafka.KafkaConsumer).SetClosed(make(chan struct{}, 1))
+		p.(*StreamingProcessor).highLevelConsumer.(*kafka.KafkaConsumer).Close()
 
 		p.(*StreamingProcessor).reInitialize()
 		go p.Run()

@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
+	"github.com/uber/aresdb/memstore/list"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
@@ -1046,7 +1047,13 @@ func (qc *AQLQueryContext) estimateLiveBatchMemoryUsage(batch *memstore.LiveBatc
 		if sourceVP == nil {
 			continue
 		}
-		columnMemUsage += int(sourceVP.GetBytes())
+		if memCom.IsArrayType(sourceVP.GetDataType()) {
+			vp := sourceVP.(*list.LiveVectorParty)
+			// for array live vp, we need to use offset size + pool size, and remove cap size for device
+			columnMemUsage += int(vp.GetTotalBytes()) - vp.GetLength()*4
+		} else {
+			columnMemUsage += int(sourceVP.GetBytes())
+		}
 	}
 	if batch.Capacity > qc.maxBatchSizeAfterPrefilter {
 		qc.maxBatchSizeAfterPrefilter = batch.Capacity
@@ -1089,7 +1096,11 @@ func (qc *AQLQueryContext) estimateArchiveBatchMemoryUsage(batch *memstore.Archi
 			}
 			prefilterIndex++
 			if usage&matchedColumnUsages != 0 {
-				columnMemUsage += hostSlice.ValueBytes + hostSlice.NullBytes + hostSlice.CountBytes
+				if memCom.IsArrayType(hostSlice.ValueType) {
+					columnMemUsage += hostSlice.ValueBytes + hostSlice.Length*8
+				} else {
+					columnMemUsage += hostSlice.ValueBytes + hostSlice.NullBytes + hostSlice.CountBytes
+				}
 				firstColumnSize = hostSlice.Length
 			}
 		}
@@ -1323,6 +1334,24 @@ func (qc *AQLQueryContext) runBatchExecutor(e BatchExecutor, isLastBatch bool) {
 
 // copyHostToDevice copy vector party slice to device vector party slice
 func copyHostToDevice(vps memCom.HostVectorPartySlice, deviceVPSlice deviceVectorPartySlice, stream unsafe.Pointer, device int) (bytesCopied, numTransfers int) {
+	if memCom.IsArrayType(vps.ValueType) {
+		// for array data type
+		// copy offset-length
+		cgoutils.AsyncCopyHostToDevice(
+			deviceVPSlice.offsets.getPointer(), vps.Offsets, vps.Length*8,
+			stream, device)
+		bytesCopied += vps.Length * 8
+		numTransfers++
+
+		// copy value
+		cgoutils.AsyncCopyHostToDevice(
+			deviceVPSlice.values.getPointer(), vps.Values, vps.ValueBytes,
+			stream, device)
+		bytesCopied += vps.ValueBytes
+		numTransfers++
+
+		return
+	}
 	if vps.ValueBytes > 0 {
 		cgoutils.AsyncCopyHostToDevice(
 			deviceVPSlice.values.getPointer(), vps.Values, vps.ValueBytes,
@@ -1348,6 +1377,24 @@ func copyHostToDevice(vps memCom.HostVectorPartySlice, deviceVPSlice deviceVecto
 }
 
 func hostToDeviceColumn(hostColumn memCom.HostVectorPartySlice, device int) deviceVectorPartySlice {
+	if memCom.IsArrayType(hostColumn.ValueType) {
+		deviceColumn := deviceVectorPartySlice{
+			length:       hostColumn.Length,
+			valueType:    hostColumn.ValueType,
+			defaultValue: hostColumn.DefaultValue,
+		}
+		OffsetBytes := hostColumn.Length * 8
+		totalColumnBytes := hostColumn.ValueBytes + OffsetBytes
+
+		if totalColumnBytes > 0 {
+			deviceColumn.basePtr = deviceAllocate(totalColumnBytes, device)
+			deviceColumn.offsets = deviceColumn.basePtr
+			deviceColumn.values = deviceColumn.basePtr.offset(OffsetBytes)
+			deviceColumn.valueOffsetAdjust = hostColumn.ValueOffsetAdjust
+		}
+		return deviceColumn
+	}
+	// fnon-array type
 	deviceColumn := deviceVectorPartySlice{
 		length:          hostColumn.Length,
 		valueType:       hostColumn.ValueType,

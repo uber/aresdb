@@ -110,7 +110,7 @@ type TableConfig struct {
 
 	// Records with timestamp older than now - RecordRetentionInDays will be skipped
 	// during ingestion and backfill. 0 means unlimited days.
-	RecordRetentionInDays int `json:"recordRetentionInDays,omitempty" validate:"min=1"`
+	RecordRetentionInDays int `json:"recordRetentionInDays,omitempty" validate:"min=0"`
 
 	// Dimension table specific configs
 
@@ -155,6 +155,17 @@ func (c *Column) IsEnumColumn() bool {
 	return c.Type == BigEnum || c.Type == SmallEnum
 }
 
+// IsEnumArrayColumn checks whether a column is of enum array column
+func (c *Column) IsEnumArrayColumn() bool {
+	return c.Type == ArrayBigEnum || c.Type == ArraySmallEnum
+}
+
+// IsEnumBasedColumn checks whether a column whose value is enum based
+// including both simple enum columns and arry enum columns
+func (c *Column) IsEnumBasedColumn() bool {
+	return c.IsEnumArrayColumn() || c.IsEnumColumn()
+}
+
 // IsOverwriteOnlyDataType checks whether a column is overwrite only
 func (c *Column) IsOverwriteOnlyDataType() bool {
 	switch c.Type {
@@ -162,6 +173,18 @@ func (c *Column) IsOverwriteOnlyDataType() bool {
 		return false
 	default:
 		return true
+	}
+}
+
+// EnumCardinality returns cardinality for enum type
+func EnumCardinality(columnType string) int {
+	switch columnType {
+	case SmallEnum:
+		return 1 << 8
+	case BigEnum:
+		return 1 << 16
+	default:
+		return 0
 	}
 }
 

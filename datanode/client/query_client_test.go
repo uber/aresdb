@@ -97,4 +97,19 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		_, err := client.Query(context.TODO(), "", &mockHost, common.AQLQuery{}, false)
 		Ω(err).Should(Equal(ErrFailedToConnect))
 	})
+
+	ginkgo.It("should fail context canceled", func() {
+		ctx, cf := context.WithCancel(context.Background())
+		cf()
+		client := NewDataNodeQueryClient()
+		_, err := client.Query(ctx, "", nil, common.AQLQuery{}, false)
+		Ω(err).Should(Equal(context.Canceled))
+	})
+
+	ginkgo.It("should fail nil host", func() {
+		ctx := context.TODO()
+		client := NewDataNodeQueryClient()
+		_, err := client.Query(ctx, "", nil, common.AQLQuery{}, false)
+		Ω(err.Error()).Should(ContainSubstring("host is nil"))
+	})
 })

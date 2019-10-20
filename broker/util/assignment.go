@@ -50,6 +50,10 @@ func CalculateShardAssignment(topo topology.Topology) (as map[topology.Host][]ui
 				pick = shardHost
 			}
 		}
+		if pick == nil {
+			err = utils.StackError(nil, "failed to assign host for shard %d", shardID)
+			return
+		}
 		as[pick] = append(as[pick], shardID)
 	}
 	return

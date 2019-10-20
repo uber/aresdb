@@ -242,6 +242,7 @@ func (cf *CachedSchemaHandler) PrepareEnumCases(tableName, columnName string, en
 	if err != nil {
 		return err
 	}
+	fmt.Printf("enumIDs: %+v, newEnumCases: %+v\n", enumIDs, newEnumCases)
 
 	cf.Lock()
 	for index, enumCase := range newEnumCases {
@@ -273,7 +274,7 @@ func (cf *CachedSchemaHandler) fetchAndSetEnumCases(table *metaCom.Table) error 
 			defValuePtr = &defValue
 		}
 
-		if column.IsEnumColumn() {
+		if column.IsEnumBasedColumn() {
 			enumCases, err := cf.schemaFetcher.FetchAllEnums(table.Name, column.Name)
 			if err == nil {
 				for enumID, enumCase := range enumCases {
@@ -326,7 +327,7 @@ func (cf *CachedSchemaHandler) setTable(table *metaCom.Table) *TableSchema {
 		cf.enumDefaultValueMappings[table.Name] = make(map[int]int)
 	}
 	for columnID, column := range table.Columns {
-		if !column.Deleted && column.IsEnumColumn() {
+		if !column.Deleted && column.IsEnumBasedColumn() {
 			if _, columnExist := cf.enumMappings[table.Name][columnID]; !columnExist {
 				cf.enumMappings[table.Name][columnID] = make(enumDict)
 			}
@@ -418,6 +419,7 @@ func (hf *httpSchemaFetcher) readJSONResponse(response *http.Response, err error
 	}
 
 	err = json.Unmarshal(respBytes, data)
+	fmt.Printf("resp: %s, data: %+v\n", string(respBytes), data)
 	if err != nil {
 		return utils.StackError(err, "Failed to unmarshal json")
 	}

@@ -72,7 +72,8 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 			topology.NewStaticShardOwner([]int{0}),
 			common.QueryConfig{
 				DeviceMemoryUtilization: 1.0,
-			})
+			},
+			10)
 		testRouter := mux.NewRouter()
 		testRouter.HandleFunc("/aql", queryHandler.HandleAQL).Methods(http.MethodGet, http.MethodPost)
 		testServer = httptest.NewUnstartedServer(WithPanicHandling(testRouter))

@@ -16,6 +16,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/m3db/m3/src/x/sync"
 	"github.com/uber/aresdb/cluster/topology"
 	"net/http"
 
@@ -36,14 +37,23 @@ type QueryHandler struct {
 	shardOwner    topology.ShardOwner
 	memStore      memstore.MemStore
 	deviceManager *query.DeviceManager
+	workerPool    sync.WorkerPool
 }
 
 // NewQueryHandler creates a new QueryHandler.
-func NewQueryHandler(memStore memstore.MemStore, shardOwner topology.ShardOwner, cfg common.QueryConfig) *QueryHandler {
+func NewQueryHandler(
+	memStore memstore.MemStore,
+	shardOwner topology.ShardOwner,
+	cfg common.QueryConfig,
+	maxConcurrentQueries int,
+) *QueryHandler {
+	workerPool := sync.NewWorkerPool(maxConcurrentQueries)
+	workerPool.Init()
 	return &QueryHandler{
 		memStore:      memStore,
 		shardOwner:    shardOwner,
 		deviceManager: query.NewDeviceManager(cfg),
+		workerPool:    workerPool,
 	}
 }
 
@@ -85,7 +95,17 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler.handleAQLInternal(aqlRequest, w, r)
+	done := make(chan struct{})
+	available := handler.workerPool.GoIfAvailable(func() {
+		defer close(done)
+		handler.handleAQLInternal(aqlRequest, w, r)
+	})
+
+	if !available {
+		apiCom.RespondWithError(w, apiCom.ErrQueryServiceNotAvailable)
+		return
+	}
+	<-done
 }
 
 func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w http.ResponseWriter, r *http.Request) {
@@ -201,6 +221,10 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 			w.Write([]byte(`}`))
 		}
 
+		utils.GetRootReporter().GetChildCounter(map[string]string{
+			"table": aqlQuery.Table,
+		}, utils.QueryRowsReturned).Inc(int64(qc.ResultsRowsFlushed()))
+
 	} else {
 		requestResponseWriter = getReponseWriter(returnHLL, len(aqlRequest.Body.Queries))
 
@@ -282,7 +306,7 @@ func handleQuery(memStore memstore.MemStore, shardOwner topology.ShardOwner, dev
 		// Report
 		utils.GetRootReporter().GetChildCounter(map[string]string{
 			"table": aqlQuery.Table,
-		}, utils.QueryRowsReturned).Inc(int64(qc.OOPK.ResultSize))
+		}, utils.QueryRowsReturned).Inc(int64(qc.ResultsRowsFlushed()))
 	}
 	return
 }

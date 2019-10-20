@@ -16,6 +16,20 @@ function initBootstrapViewer() {
     getOwnedTableShards();
 }
 
+function BootstrapRetry() {
+    $.ajax({
+        url: "/dbg/bootstrap/retry",
+        method: "POST",
+        success: function (body) {
+            alert(body)
+            initBootstrapViewer()
+        },
+        error: function (xhr) {
+            alert(xhr.responseText);
+        }
+    });
+}
+
 function getOwnedTableShards() {
     Promise.all([
         promiseFromAjax({url: '/schema/tables'}),

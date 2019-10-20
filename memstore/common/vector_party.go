@@ -43,10 +43,12 @@ const (
 // HostVectorPartySlice stores pointers to data for a column in host memory.
 // And its start index and Bytes
 type HostVectorPartySlice struct {
+	// Values will be shared between normal data type and array data type
 	Values unsafe.Pointer
 	Nulls  unsafe.Pointer
 	// The length of the count vector is Length+1
-	Counts       unsafe.Pointer
+	Counts unsafe.Pointer
+
 	Length       int
 	ValueType    DataType
 	DefaultValue DataValue
@@ -55,9 +57,17 @@ type HostVectorPartySlice struct {
 	NullStartIndex  int
 	CountStartIndex int
 
+	// ValueBytes is byte count of Values field
 	ValueBytes int
 	NullBytes  int
 	CountBytes int
+
+	// used only for Array type to point to offset/length buffer
+	// offset byte count = 8 * length
+	Offsets unsafe.Pointer
+	// ValueOffsetAdjust is value pointer adjustment for array archive vector party due to
+	// slice operation, because the offsetLength is still using the original offset value before slice operation
+	ValueOffsetAdjust int
 }
 
 // ValueCountsUpdateMode represents the way we update value counts when we are writing values to

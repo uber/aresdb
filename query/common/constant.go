@@ -21,4 +21,5 @@ var DataTypeToExprType = map[memCom.DataType]expr.Type{
 	memCom.BigEnum:   expr.Unsigned,
 	memCom.GeoPoint:  expr.GeoPoint,
 	memCom.GeoShape:  expr.GeoShape,
+	memCom.UUID:      expr.UUID,
 }

@@ -307,13 +307,13 @@ func TestIngestionAssignmentTask(t *testing.T) {
         "config": {
           "initRetryIntervalInSeconds": 60,
           "multiplier": 1,
-          "maxRetryMinutes": 525600
+          "maxRetryMinutes": 15
         }
       },
       "kafkaBroker": "",
-      "maxPollIntervalMs": 0,
-      "sessionTimeoutNs": 0,
-      "channelBufferSize": 0
+      "sessionTimeoutMs": 0,
+      "channelBufferSize": 0,
+      "reblanceTimeoutSec": 0
     }
   }
 ]`

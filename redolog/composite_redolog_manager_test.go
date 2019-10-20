@@ -130,7 +130,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 
 		buffer, _ := memCom.NewUpsertBatchBuilder().ToByteArray()
 
-		file1 := &testing.TestReadWriteCloser{}
+		file1 := &testing.TestReadWriteSyncCloser{}
 		streamWriter1 := utils.NewStreamDataWriter(file1)
 		streamWriter1.WriteUint32(UpsertHeader)
 		streamWriter1.WriteUint32(uint32(len(buffer)))
@@ -138,7 +138,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 		streamWriter1.WriteUint32(uint32(len(buffer)))
 		streamWriter1.Write(buffer)
 
-		file2 := &testing.TestReadWriteCloser{}
+		file2 := &testing.TestReadWriteSyncCloser{}
 		streamWriter2 := utils.NewStreamDataWriter(file2)
 		streamWriter2.WriteUint32(UpsertHeader)
 		streamWriter2.WriteUint32(uint32(len(buffer)))
@@ -146,7 +146,7 @@ var _ = ginkgo.Describe("composite redolog manager tests", func() {
 
 		diskStore := &diskMocks.DiskStore{}
 		diskStore.On("ListLogFiles", mock.Anything, mock.Anything).Return([]int64{1, 2}, nil)
-		diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteCloser{}, nil)
+		diskStore.On("OpenLogFileForAppend", mock.Anything, mock.Anything, mock.Anything).Return(&testing.TestReadWriteSyncCloser{}, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(1)).Return(file1, nil)
 		diskStore.On("OpenLogFileForReplay", mock.Anything, mock.Anything, int64(2)).Return(file2, nil)
 		diskStore.On("DeleteLogFile", mock.Anything, mock.Anything, mock.Anything).Return(nil)

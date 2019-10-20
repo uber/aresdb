@@ -149,7 +149,7 @@ func (b *BrokerSchemaMutator) UpdateEnum(table, column string, enumList []string
 	}
 
 	col := t.Schema.Columns[columnID]
-	if !col.IsEnumColumn() {
+	if !col.IsEnumBasedColumn() {
 		return utils.StackError(nil, "Column is not enum column, table %s column %s", table, column)
 	}
 

@@ -24,6 +24,7 @@ import (
 	commMock "github.com/uber/aresdb/memstore/common/mocks"
 	testingUtils "github.com/uber/aresdb/testing"
 	"sync"
+	"unsafe"
 )
 
 func createArchiveVP() common.ArchiveVectorParty {
@@ -157,10 +158,10 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(val.Valid).Should(BeTrue())
 		reader := common.NewArrayValueReader(common.Uint32, val.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(11)))
-		Ω(reader.IsValid(1)).Should(BeFalse())
-		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeFalse())
+		Ω(reader.IsItemValid(2)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(13)))
 
 		// row 1
@@ -168,11 +169,11 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(val.Valid).Should(BeTrue())
 		reader = common.NewArrayValueReader(common.Uint32, val.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(21)))
-		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(22)))
-		Ω(reader.IsValid(2)).Should(BeFalse())
+		Ω(reader.IsItemValid(2)).Should(BeFalse())
 
 		// row 2
 		val = vp.GetDataValue(2)
@@ -183,11 +184,11 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		Ω(val.Valid).Should(BeTrue())
 		reader = common.NewArrayValueReader(common.Uint32, val.OtherVal)
 		Ω(reader.GetLength()).Should(Equal(3))
-		Ω(reader.IsValid(0)).Should(BeTrue())
+		Ω(reader.IsItemValid(0)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(0))).Should(Equal(uint32(41)))
-		Ω(reader.IsValid(1)).Should(BeTrue())
+		Ω(reader.IsItemValid(1)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(1))).Should(Equal(uint32(42)))
-		Ω(reader.IsValid(2)).Should(BeTrue())
+		Ω(reader.IsItemValid(2)).Should(BeTrue())
 		Ω(*(*uint32)(reader.Get(2))).Should(Equal(uint32(43)))
 
 		// save to buffer
@@ -230,7 +231,7 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 	ginkgo.It("LoadFromDisk should work for Array Archive VP", func() {
 		vp1 := createArchiveVP()
 		table := "test"
-		buf := &testingUtils.TestReadWriteCloser{}
+		buf := &testingUtils.TestReadWriteSyncCloser{}
 
 		hostMemoryManager := &commMock.HostMemoryManager{}
 		hostMemoryManager.On("ReportManagedObject", mock.Anything, mock.Anything,
@@ -248,5 +249,77 @@ var _ = ginkgo.Describe("list vector party tests", func() {
 		vp2.LoadFromDisk(hostMemoryManager, diskStore, table, 0, 1, 1, 1, 0)
 		vp2.WaitForDiskLoad()
 		Ω(vp2.Equals(vp1)).Should(BeTrue())
+	})
+
+	ginkgo.It("GetHostVectorPartySlice should work for Array Archive VP", func() {
+		vp := createArchiveVP().(*ArchiveVectorParty)
+		expectedHostSlice := common.HostVectorPartySlice{
+			Values:            vp.values.Buffer(),
+			Length:            vp.length,
+			ValueType:         vp.dataType,
+			ValueBytes:        128,
+			Offsets:           vp.offsets.Buffer(),
+			ValueOffsetAdjust: 0,
+		}
+		hostSlice := vp.GetHostVectorPartySlice(0, vp.length)
+		Ω(hostSlice).Should(Equal(expectedHostSlice))
+
+		newValue := uintptr(vp.values.Buffer()) + 24
+		newOffset := uintptr(vp.offsets.Buffer()) + 8
+		expectedHostSlice = common.HostVectorPartySlice{
+			Values:            unsafe.Pointer(newValue),
+			Length:            2,
+			ValueType:         vp.dataType,
+			ValueBytes:        24,
+			Offsets:           unsafe.Pointer(newOffset),
+			ValueOffsetAdjust: 24,
+		}
+		hostSlice = vp.GetHostVectorPartySlice(1, vp.length-2)
+		Ω(hostSlice).Should(Equal(expectedHostSlice))
+	})
+
+	ginkgo.It("Array archive vector party should work in special cases", func() {
+		// set data
+		vp := NewArchiveVectorParty(10, common.ArrayInt16, 1024, &sync.RWMutex{})
+		vp.Allocate(false)
+		val := common.DataValue{
+			DataType: common.ArrayInt16,
+			OtherVal: nil,
+			Valid:    false,
+		}
+		vp.SetDataValue(0, val, common.IgnoreCount)
+
+		var data uint32
+		val = common.DataValue{
+			DataType: common.ArrayInt16,
+			OtherVal: unsafe.Pointer(&data),
+			Valid:    true,
+		}
+		vp.SetDataValue(1, val, common.IgnoreCount)
+		// get data
+		val = vp.GetDataValue(0)
+		Ω(val.Valid).Should(BeFalse())
+
+		val = vp.GetDataValue(1)
+		Ω(val.Valid).Should(BeTrue())
+		Ω(uintptr(val.OtherVal)).Should(Equal(uintptr(0)))
+
+		// update same row with different length
+		data = 2
+		val = common.DataValue{
+			DataType: common.ArrayInt16,
+			OtherVal: unsafe.Pointer(&data),
+			Valid:    true,
+		}
+		Ω(func() { vp.SetDataValue(1, val, common.IgnoreCount) }).Should(Panic())
+	})
+
+	ginkgo.It("archive array vp slice should work", func() {
+		vp := createArchiveVP()
+		vc := vp.Slice(1, 3)
+		Ω(len(vc.Values)).Should(Equal(3))
+		Ω(vc.Values[0]).Should(Equal("[21,22,null]"))
+		Ω(vc.Values[1]).Should(BeNil())
+		Ω(vc.Values[2]).Should(Equal("[41,42,43]"))
 	})
 })

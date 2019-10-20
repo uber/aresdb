@@ -62,28 +62,31 @@ var UnaryExprTypeToCFunctorType = map[expr.Token]C.enum_UnaryFunctorType{
 	expr.GET_MONTH_OF_YEAR:   C.GetMonthOfYear,
 	expr.GET_QUARTER_OF_YEAR: C.GetQuarterOfYear,
 	expr.GET_HLL_VALUE:       C.GetHLLValue,
+	expr.ARRAY_LENGTH:        C.ArrayLength,
 }
 
 // BinaryExprTypeToCFunctorType maps from binary operator to C BinaryFunctorType
 var BinaryExprTypeToCFunctorType = map[expr.Token]C.enum_BinaryFunctorType{
-	expr.AND:         C.And,
-	expr.OR:          C.Or,
-	expr.EQ:          C.Equal,
-	expr.NEQ:         C.NotEqual,
-	expr.LT:          C.LessThan,
-	expr.LTE:         C.LessThanOrEqual,
-	expr.GT:          C.GreaterThan,
-	expr.GTE:         C.GreaterThanOrEqual,
-	expr.ADD:         C.Plus,
-	expr.SUB:         C.Minus,
-	expr.MUL:         C.Multiply,
-	expr.DIV:         C.Divide,
-	expr.MOD:         C.Mod,
-	expr.BITWISE_AND: C.BitwiseAnd,
-	expr.BITWISE_OR:  C.BitwiseOr,
-	expr.BITWISE_XOR: C.BitwiseXor,
-	expr.FLOOR:       C.Floor,
-	expr.CONVERT_TZ:  C.Plus,
+	expr.AND:              C.And,
+	expr.OR:               C.Or,
+	expr.EQ:               C.Equal,
+	expr.NEQ:              C.NotEqual,
+	expr.LT:               C.LessThan,
+	expr.LTE:              C.LessThanOrEqual,
+	expr.GT:               C.GreaterThan,
+	expr.GTE:              C.GreaterThanOrEqual,
+	expr.ADD:              C.Plus,
+	expr.SUB:              C.Minus,
+	expr.MUL:              C.Multiply,
+	expr.DIV:              C.Divide,
+	expr.MOD:              C.Mod,
+	expr.BITWISE_AND:      C.BitwiseAnd,
+	expr.BITWISE_OR:       C.BitwiseOr,
+	expr.BITWISE_XOR:      C.BitwiseXor,
+	expr.FLOOR:            C.Floor,
+	expr.CONVERT_TZ:       C.Plus,
+	expr.ARRAY_CONTAINS:   C.ArrayContains,
+	expr.ARRAY_ELEMENT_AT: C.ArrayElementAt,
 	// TODO: expr.BITWISE_LEFT_SHIFT ?
 	// TODO: expr.BITWISE_RIGHT_SHIFT ?
 }
@@ -202,10 +205,29 @@ func makeVectorPartySlice(column deviceVectorPartySlice) C.VectorPartySlice {
 	return vpSlice
 }
 
+func makeArrayVectorPartySlice(column deviceVectorPartySlice) C.ArrayVectorPartySlice {
+	var vpSlice C.ArrayVectorPartySlice
+	vpSlice.OffsetLengthVector = (*C.uint8_t)(column.basePtr.getPointer())
+	vpSlice.ValueOffsetAdj = (C.uint32_t)(column.valueOffsetAdjust)
+	vpSlice.Length = (C.uint32_t)(column.length)
+	vpSlice.DataType = DataTypeToCDataType[memCom.GetElementDataType(column.valueType)]
+	return vpSlice
+}
+
 func makeVectorPartySliceInput(column deviceVectorPartySlice) C.InputVector {
+	if memCom.IsArrayType(column.valueType) {
+		return makeArrayVectorPartySliceInput(column)
+	}
 	var vector C.InputVector
 	*(*C.VectorPartySlice)(unsafe.Pointer(&vector.Vector)) = makeVectorPartySlice(column)
 	vector.Type = C.VectorPartyInput
+	return vector
+}
+
+func makeArrayVectorPartySliceInput(column deviceVectorPartySlice) C.InputVector {
+	var vector C.InputVector
+	*(*C.ArrayVectorPartySlice)(unsafe.Pointer(&vector.Vector)) = makeArrayVectorPartySlice(column)
+	vector.Type = C.ArrayVectorPartyInput
 	return vector
 }
 
@@ -222,6 +244,10 @@ func makeConstantInput(val interface{}, isValid bool) C.InputVector {
 		geopoint := val.(*expr.GeopointLiteral).Val
 		*(*C.GeoPointT)(unsafe.Pointer(&constVector.Value)) = *(*C.GeoPointT)(unsafe.Pointer(&geopoint[0]))
 		constVector.DataType = C.ConstGeoPoint
+	case *expr.UUIDLiteral:
+		uuidVal := val.(*expr.UUIDLiteral).Val
+		*(*C.UUIDT)(unsafe.Pointer(&constVector.Value)) = *(*C.UUIDT)(unsafe.Pointer(&uuidVal[0]))
+		constVector.DataType = C.ConstUUID
 	case *expr.NumberLiteral:
 		t := val.(*expr.NumberLiteral)
 		if t.Type() == expr.Float {
@@ -309,6 +335,11 @@ func makeDimensionVector(valueVector, hashVector, indexVector unsafe.Pointer, nu
 }
 
 func getOutputDataType(exprType expr.Type, outputWidthInByte int) C.enum_DataType {
+	if exprType == expr.UUID {
+		return C.UUID
+	} else if exprType == expr.GeoPoint {
+		return C.GeoPoint
+	}
 	if outputWidthInByte == 4 {
 		switch exprType {
 		case expr.Float:
@@ -490,7 +521,7 @@ func (bc *oopkBatchContext) processExpression(exp, parentExp expr.Expr, tableSca
 			return C.InputVector{}
 		}
 		return inputVector
-	case *expr.NumberLiteral, *expr.GeopointLiteral:
+	case *expr.NumberLiteral, *expr.GeopointLiteral, *expr.UUIDLiteral:
 		var inputVector C.InputVector
 		inputVector = makeConstantInput(e, true)
 		if action != nil {
@@ -510,8 +541,8 @@ func (bc *oopkBatchContext) processExpression(exp, parentExp expr.Expr, tableSca
 			return C.InputVector{}
 		}
 
-		values, nulls := bc.allocateStackFrame()
 		dataType := getOutputDataType(e.Type(), 4)
+		values, nulls := bc.allocateStackFrame(dataType)
 		var outputVector = makeScratchSpaceOutput(values.getPointer(), nulls.getPointer(), dataType)
 
 		C.UnaryTransform(inputVector, outputVector, (*C.uint32_t)(bc.indexVectorD.getPointer()),
@@ -537,8 +568,8 @@ func (bc *oopkBatchContext) processExpression(exp, parentExp expr.Expr, tableSca
 			return C.InputVector{}
 		}
 
-		values, nulls := bc.allocateStackFrame()
 		outputDataType := getOutputDataType(e.Type(), 4)
+		values, nulls := bc.allocateStackFrame(outputDataType)
 		var outputVector = makeScratchSpaceOutput(values.getPointer(), nulls.getPointer(), outputDataType)
 		C.BinaryTransform(lhsInputVector, rhsInputVector, outputVector,
 			(*C.uint32_t)(bc.indexVectorD.getPointer()), (C.int)(bc.size), (*C.uint32_t)(bc.baseCountD.getPointer()),
@@ -697,10 +728,24 @@ func (bc *oopkBatchContext) expand(numDims common.DimCountsPerDimWidth, stream u
 	bc.dimensionVectorD[0], bc.dimensionVectorD[1] = bc.dimensionVectorD[1], bc.dimensionVectorD[0]
 }
 
-func (bc *oopkBatchContext) allocateStackFrame() (values, nulls devicePointer) {
+func (bc *oopkBatchContext) getDataTypeLength(dataType C.enum_DataType) int {
+	switch dataType {
+	case C.Int64, C.Uint64, C.Float64:
+		return 8
+	case C.GeoPoint:
+		return 8
+	case C.UUID:
+		return 16
+	default:
+		return 4
+	}
+}
+
+func (bc *oopkBatchContext) allocateStackFrame(dataType C.enum_DataType) (values, nulls devicePointer) {
+	dataTypeLen := bc.getDataTypeLength(dataType)
 	// width bytes * bc.size (value buffer) + 1 byte * bc.size (null buffer)
-	valuesPointer := deviceAllocate((4+1)*bc.size, bc.device)
-	nullsPointer := valuesPointer.offset(4 * bc.size)
+	valuesPointer := deviceAllocate((dataTypeLen+1)*bc.size, bc.device)
+	nullsPointer := valuesPointer.offset(dataTypeLen * bc.size)
 	return valuesPointer, nullsPointer
 }
 

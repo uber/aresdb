@@ -1,6 +1,7 @@
 package datanode
 
 import (
+	"github.com/uber/aresdb/api"
 	"github.com/uber/aresdb/controller/mutators/mocks"
 	"os"
 
@@ -44,38 +45,44 @@ var _ = ginkgo.Describe("datanode", func() {
 			staticTopology,
 			enumReader,
 			NewOptions().
-			SetServerConfig(common.AresServerConfig{
-				Port:            9374,
-				DebugPort:       43202,
-				RootPath:        "/tmp/datanode-root",
-				TotalMemorySize: 1 << 20,
-				SchedulerOff:    false,
-				DiskStore:       common.DiskStoreConfig{WriteSync: true},
-				HTTP:            common.HTTPConfig{MaxConnections: 300, ReadTimeOutInSeconds: 20, WriteTimeOutInSeconds: 300},
-				RedoLogConfig: common.RedoLogConfig{
-					DiskConfig:  common.DiskRedoLogConfig{Disabled: false},
-					KafkaConfig: common.KafkaRedoLogConfig{Enabled: false},
-				},
-				Cluster: common.ClusterConfig{
-					Enable:      true,
-					Distributed: true,
-					Namespace:   "test",
-					InstanceID:  "instance0",
-					Controller:  &common.ControllerConfig{Address: "localhost:6708"},
-					Etcd: etcd.Configuration{
-						Zone:    "local",
-						Env:     "test",
-						Service: "ares-datanode",
-						ETCDClusters: []etcd.ClusterConfig{
-							{
-								Zone:      "local",
-								Endpoints: []string{"127.0.0.1:2379"},
+				SetServerConfig(common.AresServerConfig{
+					Port:            9374,
+					DebugPort:       43202,
+					RootPath:        "/tmp/datanode-root",
+					TotalMemorySize: 1 << 20,
+					SchedulerOff:    false,
+					DiskStore:       common.DiskStoreConfig{WriteSync: true},
+					HTTP: common.HTTPConfig{
+						MaxConnections:          300,
+						MaxIngestionConnections: 150,
+						MaxQueryConnections:     150,
+						ReadTimeOutInSeconds:    20,
+						WriteTimeOutInSeconds:   300,
+					},
+					RedoLogConfig: common.RedoLogConfig{
+						DiskConfig:  common.DiskRedoLogConfig{Disabled: false},
+						KafkaConfig: common.KafkaRedoLogConfig{Enabled: false},
+					},
+					Cluster: common.ClusterConfig{
+						Enable:      true,
+						Distributed: true,
+						Namespace:   "test",
+						InstanceID:  "instance0",
+						Controller:  &common.ControllerConfig{Address: "localhost:6708"},
+						Etcd: etcd.Configuration{
+							Zone:    "local",
+							Env:     "test",
+							Service: "ares-datanode",
+							ETCDClusters: []etcd.ClusterConfig{
+								{
+									Zone:      "local",
+									Endpoints: []string{"127.0.0.1:2379"},
+								},
 							},
 						},
+						HeartbeatConfig: common.HeartbeatConfig{Timeout: 10, Interval: 1},
 					},
-					HeartbeatConfig: common.HeartbeatConfig{Timeout: 10, Interval: 1},
-				},
-			}))
+				}))
 		Ω(err).Should(BeNil())
 		Ω(dataNode).ShouldNot(BeNil())
 		os.RemoveAll("/tmp/datanode-root")
@@ -145,5 +152,17 @@ var _ = ginkgo.Describe("datanode", func() {
 		shards := []uint32{0, 1, 2}
 		Ω(dataNode.checkShardReadiness([]string{"t1", "t2"}, shards)).Should(Equal(1))
 		Ω(shards[0]).Should(Equal(uint32(1)))
+	})
+
+	ginkgo.It("startBootstrapRetryWatch", func() {
+		dataNode := dataNode{}
+		dataNode.handlers = datanodeHandlers{}
+		dataNode.handlers.debugHandler = &api.DebugHandler{}
+		dataNode.handlers.debugHandler.SetBootstrapRetryChan(make(chan bool, 1))
+		dataNode.bootstrapManager = &bootstrapManagerImpl{
+			state: bootstrap.Bootstrapping,
+		}
+		dataNode.handlers.debugHandler.GetBootstrapRetryChan() <- true
+		go dataNode.startBootstrapRetryWatch()
 	})
 })

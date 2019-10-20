@@ -21,6 +21,7 @@ import (
 	pb "github.com/uber/aresdb/datanode/generated/proto/rpc"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/metastore"
+	"github.com/uber/aresdb/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 	"net"
@@ -40,7 +41,7 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 
 	req := pb.StartSessionRequest{
 		Shard: uint32(shardID),
-		Ttl:   5 * 60,
+		Ttl:   int64(5 * time.Minute),
 	}
 
 	var testServer *grpc.Server
@@ -58,11 +59,19 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 	}
 
 	ginkgo.BeforeEach(func() {
+		testCreateTime := int64(1564646400)
+		duration := -time.Since(time.Unix(testCreateTime, 0))
+		utils.SetClockImplementation(func() time.Time {
+			return time.Now().Add(duration)
+		})
 		// setup server
+		utils.SetCurrentTime(time.Unix(18056*86400, 0))
 		testServer = grpc.NewServer()
 		peerServer = NewPeerDataNodeServer(metaStore, diskStore)
 		pb.RegisterPeerDataNodeServer(testServer, peerServer)
 		listener = bufconn.Listen(bufSize)
+
+		utils.SetCurrentTime(time.Unix(1560049867, 0))
 
 		go func() {
 			testServer.Serve(listener)
@@ -70,8 +79,10 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 	})
 
 	ginkgo.AfterEach(func() {
+		utils.ResetClockImplementation()
 		testServer.Stop()
 		listener.Close()
+		utils.ResetClockImplementation()
 	})
 
 	ginkgo.It("start session test", func() {
@@ -130,7 +141,7 @@ var _ = ginkgo.Describe("bootstrap server", func() {
 			err = keepAliveClient.Send(&pb.Session{ID: session.ID, NodeID: nodeID})
 			resp, err := keepAliveClient.Recv()
 			Ω(err).Should(BeNil())
-			Ω(resp.Ttl).Should(Equal(int64(300)))
+			Ω(resp.Ttl).Should(Equal(int64(5 * time.Minute)))
 			time.Sleep(time.Millisecond * 10)
 		}
 		err = keepAliveClient.CloseSend()

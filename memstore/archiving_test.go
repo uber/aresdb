@@ -135,8 +135,8 @@ var _ = ginkgo.Describe("archiving", func() {
 		shardMap[shardID].LiveStore.RedoLogManager.UpdateMaxEventTime(1, 1)
 
 		// make purge to pass
-		shardMap[shardID].LiveStore.BackfillManager = NewBackfillManager(table, shardID, metaCom.TableConfig{
-			BackfillMaxBufferSize:    1 << 32,
+		shardMap[shardID].LiveStore.BackfillManager = NewBackfillManager(table, shardID, BackfillConfig{
+			MaxBufferSize:            1 << 32,
 			BackfillThresholdInBytes: 1 << 21,
 		})
 		shardMap[shardID].LiveStore.BackfillManager.LastRedoFile = 2
@@ -229,9 +229,10 @@ var _ = ginkgo.Describe("archiving", func() {
 		(m.diskStore).(*diskMocks.DiskStore).On(
 			"DeleteLogFile", table, shardID, int64(1)).Return(nil)
 
-		writer := new(utilsMocks.WriteCloser)
+		writer := new(utilsMocks.WriteSyncCloser)
 		writer.On("Write", mock.Anything).Return(0, nil)
 		writer.On("Close").Return(nil)
+		writer.On("Sync").Return(nil)
 
 		(m.diskStore).(*diskMocks.DiskStore).On(
 			"OpenVectorPartyFileForWrite", table, mock.Anything, shardID, day, mock.Anything, mock.Anything).Return(writer, nil)
@@ -272,7 +273,7 @@ var _ = ginkgo.Describe("archiving", func() {
 
 		// Old version of archiving store should be purged.
 		for i, column := range archiveBatch0.Columns {
-			if i != 3 {
+			if i != 3 && i != 4 {
 				Ω(column.(*archiveVectorParty).values).Should(BeNil())
 				Ω(column.(*archiveVectorParty).nulls).Should(BeNil())
 				Ω(column.(*archiveVectorParty).counts).Should(BeNil())
@@ -283,7 +284,7 @@ var _ = ginkgo.Describe("archiving", func() {
 
 		// If a batch is partially read, it should not be purged
 		for i, column := range batch101.Columns {
-			if i != 3 {
+			if i != 3 && i != 4 {
 				Ω(column.(*cLiveVectorParty).GetMode()).ShouldNot(BeEquivalentTo(memCom.AllValuesDefault))
 				Ω(column.(*cLiveVectorParty).values).ShouldNot(BeNil())
 			} else {

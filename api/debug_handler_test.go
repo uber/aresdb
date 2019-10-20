@@ -15,40 +15,34 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/aresdb/cluster/topology"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-
-	"time"
-
 	"github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/mock"
+	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/diskstore"
 	"github.com/uber/aresdb/memstore"
 	memCom "github.com/uber/aresdb/memstore/common"
 	memComMocks "github.com/uber/aresdb/memstore/common/mocks"
 	memMocks "github.com/uber/aresdb/memstore/mocks"
-
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
-	"github.com/uber/aresdb/utils"
-	utilsMocks "github.com/uber/aresdb/utils/mocks"
-
-	"path/filepath"
-
-	"strconv"
-
-	"bytes"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/mock"
-	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/query"
 	"github.com/uber/aresdb/redolog"
+	"github.com/uber/aresdb/utils"
+	utilsMocks "github.com/uber/aresdb/utils/mocks"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strconv"
 	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -216,9 +210,10 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 			"DeleteLogFile", mock.Anything, mock.Anything,
 			mock.Anything).Return(nil)
 
-		writer := new(utilsMocks.WriteCloser)
+		writer := new(utilsMocks.WriteSyncCloser)
 		writer.On("Write", mock.Anything).Return(0, nil)
 		writer.On("Close").Return(nil)
+		writer.On("Sync").Return(nil)
 		mockDiskStore.On(
 			"OpenVectorPartyFileForWrite", mock.Anything,
 			mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(writer, nil)
@@ -229,7 +224,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 			common.QueryConfig{
 				DeviceMemoryUtilization: 0.9,
 				DeviceChoosingTimeout:   5,
-			})
+			},
+			10)
 
 		healthCheckHandler := NewHealthCheckHandler()
 		debugHandler = NewDebugHandler("", memStore, mockMetaStore, queryHandler, healthCheckHandler, topology.NewStaticShardOwner([]int{0}), nil)
@@ -593,6 +589,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
     "primaryKeyBytes": 0,
     "primaryKeyColumnTypes": []
   },
+  "BootstrapState": 0,
   "bootstrapDetails": {
 	"source": "",
 	"startedAt": 0,
@@ -1023,5 +1020,44 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		bs, err = ioutil.ReadAll(resp.Body)
 		Ω(err).Should(BeNil())
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
+	})
+
+	ginkgo.It("translateEnums should work", func() {
+		vector := memCom.SlicedVector{
+			Values: []interface{}{
+				"[1,null,3]",
+				"[2,4]",
+				nil,
+			},
+			Counts: []int{
+				1,
+				2,
+				3,
+			},
+		}
+		enumCases := []string{
+			"zero",
+			"one",
+			"two",
+			"three",
+			"four",
+			"five",
+		}
+		err := translateEnums(true, &vector, enumCases)
+		Ω(err).Should(BeNil())
+		Ω(vector.Values[0]).Should(Equal("[\"one\",null,\"three\"]"))
+		Ω(vector.Values[1]).Should(Equal("[\"two\",\"four\"]"))
+		Ω(vector.Values[2]).Should(BeNil())
+	})
+
+	ginkgo.It("BootstrapRetry", func() {
+		debugHandler.SetBootstrapRetryChan(make(chan bool, 1))
+		retryChan := debugHandler.GetBootstrapRetryChan()
+		Ω(retryChan).ShouldNot(BeNil())
+		hostPort := testServer.Listener.Addr().String()
+
+		resp, err := http.Post(fmt.Sprintf("http://%s/debug/bootstrap/retry", hostPort), "", nil)
+		Ω(err).Should(BeNil())
+		Ω(resp.StatusCode).Should(Equal(200))
 	})
 })

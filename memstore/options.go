@@ -19,16 +19,31 @@ import (
 	"github.com/uber/aresdb/redolog"
 )
 
+type Option func(o *Options)
+
 // class to hold all necessary context objects used in memstore
 type Options struct {
+	numShards      int
 	bootstrapToken common.BootStrapToken
 	redoLogMaster  *redolog.RedoLogManagerMaster
 }
 
 // NewOptions create new options instance
-func NewOptions(bootstrapToken common.BootStrapToken, redoLogMaster *redolog.RedoLogManagerMaster) Options {
-	return Options{
+func NewOptions(bootstrapToken common.BootStrapToken, redoLogMaster *redolog.RedoLogManagerMaster, setters ...Option) Options {
+	opts := Options{
+		numShards:      1,
 		bootstrapToken: bootstrapToken,
 		redoLogMaster:  redoLogMaster,
+	}
+	for _, setter := range setters {
+		setter(&opts)
+	}
+	return opts
+}
+
+// WithNumShards set numShards to memstore options
+func WithNumShards(numShards int) Option {
+	return func(o *Options) {
+		o.numShards = numShards
 	}
 }

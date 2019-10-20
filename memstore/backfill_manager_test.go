@@ -59,7 +59,10 @@ var _ = ginkgo.Describe("backfill manager", func() {
 	metaStoreMock := &mocks.MetaStore{}
 	metaStoreMock.On("UpdateBackfillProgress", table, 0, mock.Anything, mock.Anything).Return(nil)
 	ginkgo.It("backfill manager should work", func() {
-		bm := NewBackfillManager(table, 0, tableSchema.Schema.Config)
+		bm := NewBackfillManager(table, 0, BackfillConfig{
+			MaxBufferSize:            tableSchema.Schema.Config.BackfillMaxBufferSize,
+			BackfillThresholdInBytes: tableSchema.Schema.Config.BackfillThresholdInBytes,
+		})
 		shouldLock := bm.Append(upsertBatch, 1, 10)
 		// MaxBufferSize is one byte, so we will block client in such case
 		Ω(shouldLock).Should(BeTrue())
@@ -86,7 +89,10 @@ var _ = ginkgo.Describe("backfill manager", func() {
 	})
 
 	ginkgo.It("ReadUpsertBatch should work ", func() {
-		bm := NewBackfillManager(table, 0, tableSchema.Schema.Config)
+		bm := NewBackfillManager(table, 0, BackfillConfig{
+			MaxBufferSize:            tableSchema.Schema.Config.BackfillMaxBufferSize,
+			BackfillThresholdInBytes: tableSchema.Schema.Config.BackfillThresholdInBytes,
+		})
 		_ = bm.Append(upsertBatch, 1, 10)
 		data, columnNames, err := bm.ReadUpsertBatch(0, 0, numRows, tableSchema)
 		Ω(err).Should(BeNil())

@@ -142,6 +142,10 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 		if colIdDedup[colId] {
 			return common.ErrDuplicatedColumn
 		}
+		colDataType := memCom.DataTypeFromString(table.Columns[colId].Type)
+		if memCom.IsArrayType(colDataType) {
+			return common.ErrInvalidPrimaryKeyDataType
+		}
 		colIdDedup[colId] = true
 	}
 
@@ -160,6 +164,10 @@ func (v tableSchemaValidatorImpl) validateIndividualSchema(table *common.Table, 
 			}
 			if colIdDedup[sortColumnId] {
 				return common.ErrDuplicatedColumn
+			}
+			colDataType := memCom.DataTypeFromString(table.Columns[sortColumnId].Type)
+			if colDataType >= memCom.ArrayBool && colDataType <= memCom.ArrayInt64 {
+				return common.ErrInvalidSortColumnDataType
 			}
 			colIdDedup[sortColumnId] = true
 		}

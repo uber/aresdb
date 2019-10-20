@@ -750,4 +750,43 @@ var _ = ginkgo.Describe("Validator", func() {
 		err := validator.Validate()
 		Ω(err).ShouldNot(BeNil())
 	})
+
+	ginkgo.It("array columns should work", func() {
+		table := common.Table{
+			Name: "testTable",
+			Columns: []common.Column{
+				{
+					Name: "col1",
+					Type: "Uint32",
+				},
+				{
+					Name: "col2",
+					Type: "Uint32",
+				},
+				{
+					Name: "col3",
+					Type: "Int32[]",
+				},
+			},
+			PrimaryKeyColumns:    []int{0},
+			IsFactTable:          true,
+			ArchivingSortColumns: []int{1},
+			Config:               DefaultTableConfig,
+		}
+		validator := NewTableSchameValidator()
+		validator.SetNewTable(table)
+		err := validator.Validate()
+		Ω(err).Should(BeNil())
+
+		table.PrimaryKeyColumns = []int{2}
+		validator.SetNewTable(table)
+		err = validator.Validate()
+		Ω(err).Should(Equal(common.ErrInvalidPrimaryKeyDataType))
+
+		table.PrimaryKeyColumns = []int{0}
+		table.ArchivingSortColumns = []int{2}
+		validator.SetNewTable(table)
+		err = validator.Validate()
+		Ω(err).Should(Equal(common.ErrInvalidSortColumnDataType))
+	})
 })
