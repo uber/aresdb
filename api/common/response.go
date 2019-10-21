@@ -95,6 +95,7 @@ func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int
 			gw, err = gzip.NewWriterLevel(w, gzip.BestSpeed)
 			if err != nil {
 				RespondWithError(w, ErrFailedToJSONMarshalResponseBody)
+				return
 			}
 			defer gw.Close()
 			gw.Write(jsonBytes)
