@@ -1496,6 +1496,14 @@ func (qc *AQLQueryContext) processFilters() {
 				geoFilterFound = true
 			}
 		} else {
+			if be, ok1 := filter.(*expr.BinaryExpr); ok1 {
+				if vr, ok2 := be.LHS.(*expr.VarRef); ok2 {
+					if memCom.Int64 == vr.DataType {
+						qc.Error = utils.StackError(nil, "Int64 can not be used in filters, %s", vr.Val)
+						return
+					}
+				}
+			}
 			qc.OOPK.MainTableCommonFilters = append(qc.OOPK.MainTableCommonFilters, filter)
 		}
 	}
