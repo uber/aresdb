@@ -545,14 +545,14 @@ func (bc *oopkBatchContext) processExpression(exp, parentExp expr.Expr, tableSca
 		values, nulls := bc.allocateStackFrame(dataType)
 		var outputVector = makeScratchSpaceOutput(values.getPointer(), nulls.getPointer(), dataType)
 
-		C.UnaryTransform(inputVector, outputVector, (*C.uint32_t)(bc.indexVectorD.getPointer()),
-			(C.int)(bc.size), (*C.uint32_t)(bc.baseCountD.getPointer()), (C.uint32_t)(bc.startRow), functorType, stream, C.int(device))
+		doCGoCall(func() interface{} {
+			return C.UnaryTransform(inputVector, outputVector, (*C.uint32_t)(bc.indexVectorD.getPointer()),
+				(C.int)(bc.size), (*C.uint32_t)(bc.baseCountD.getPointer()), (C.uint32_t)(bc.startRow), functorType, stream, C.int(device))
+		})
 
 		if inputVector.Type == C.ScratchSpaceInput {
 			bc.shrinkStackFrame()
 		}
-		bc.appendStackFrame(values, nulls)
-
 		return makeScratchSpaceInput(values.getPointer(), nulls.getPointer(), dataType)
 	case *expr.BinaryExpr:
 		lhsInputVector := bc.processExpression(e.LHS, e, tableScanners, foreignTables, stream, device, nil)
@@ -571,10 +571,13 @@ func (bc *oopkBatchContext) processExpression(exp, parentExp expr.Expr, tableSca
 		outputDataType := getOutputDataType(e.Type(), 4)
 		values, nulls := bc.allocateStackFrame(outputDataType)
 		var outputVector = makeScratchSpaceOutput(values.getPointer(), nulls.getPointer(), outputDataType)
-		C.BinaryTransform(lhsInputVector, rhsInputVector, outputVector,
-			(*C.uint32_t)(bc.indexVectorD.getPointer()), (C.int)(bc.size), (*C.uint32_t)(bc.baseCountD.getPointer()),
-			(C.uint32_t)(bc.startRow),
-			functorType, stream, C.int(device))
+
+		doCGoCall(func() interface{} {
+			return C.BinaryTransform(lhsInputVector, rhsInputVector, outputVector,
+				(*C.uint32_t)(bc.indexVectorD.getPointer()), (C.int)(bc.size), (*C.uint32_t)(bc.baseCountD.getPointer()),
+				(C.uint32_t)(bc.startRow),
+				functorType, stream, C.int(device))
+		})
 
 		if rhsInputVector.Type == C.ScratchSpaceInput {
 			bc.shrinkStackFrame()
@@ -583,9 +586,6 @@ func (bc *oopkBatchContext) processExpression(exp, parentExp expr.Expr, tableSca
 		if lhsInputVector.Type == C.ScratchSpaceInput {
 			bc.shrinkStackFrame()
 		}
-
-		bc.appendStackFrame(values, nulls)
-
 		return makeScratchSpaceInput(values.getPointer(), nulls.getPointer(), outputDataType)
 	default:
 		return C.InputVector{}
@@ -741,16 +741,23 @@ func (bc *oopkBatchContext) getDataTypeLength(dataType C.enum_DataType) int {
 	}
 }
 
+// allocate new stack frame and append to the end of the stack
 func (bc *oopkBatchContext) allocateStackFrame(dataType C.enum_DataType) (values, nulls devicePointer) {
 	dataTypeLen := bc.getDataTypeLength(dataType)
 	// width bytes * bc.size (value buffer) + 1 byte * bc.size (null buffer)
 	valuesPointer := deviceAllocate((dataTypeLen+1)*bc.size, bc.device)
 	nullsPointer := valuesPointer.offset(dataTypeLen * bc.size)
+	// append output buffer to the end
+	bc.exprStackD = append(bc.exprStackD, [2]devicePointer{valuesPointer, nullsPointer})
 	return valuesPointer, nullsPointer
 }
 
+// shrink stack by one, but keep top element as is
 func (bc *oopkBatchContext) shrinkStackFrame() {
 	var stackFrame [2]devicePointer
+	// swap last two elements
+	bc.exprStackD[len(bc.exprStackD)-1], bc.exprStackD[len(bc.exprStackD)-2] = bc.exprStackD[len(bc.exprStackD)-2], bc.exprStackD[len(bc.exprStackD)-1]
+	// pop last element
 	stackFrame, bc.exprStackD = bc.exprStackD[len(bc.exprStackD)-1], bc.exprStackD[:len(bc.exprStackD)-1]
 	deviceFreeAndSetNil(&stackFrame[0])
 }

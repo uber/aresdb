@@ -187,6 +187,8 @@ type oopkBatchContext struct {
 	// Values and validities of each stack frame are allocated together,
 	// with the validity array following the value array.
 	// The length of each vector is size (same as indexVectorD).
+	// Note: user should always append the new output stack frame on to the stack
+	// before shrinking the input stack frames
 	exprStackD [][2]devicePointer
 
 	// Input and output storage in device memory before and after sort-reduce-by-key.
