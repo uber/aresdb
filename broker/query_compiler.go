@@ -256,6 +256,14 @@ func (qc *QueryContext) processFilters() {
 		if qc.Error != nil {
 			return
 		}
+		if be, ok1 := qc.AQLQuery.FiltersParsed[i].(*expr.BinaryExpr); ok1 {
+			if vr, ok2 := be.LHS.(*expr.VarRef); ok2 {
+				if memCom.Int64 == vr.DataType {
+					qc.Error = utils.StackError(nil, "Int64 can not be used in filters, %s", vr.Val)
+					return
+				}
+			}
+		}
 	}
 
 	qc.AQLQuery.FiltersParsed = normalizeAndFilters(qc.AQLQuery.FiltersParsed)
