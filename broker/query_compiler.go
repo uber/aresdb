@@ -488,7 +488,7 @@ func (qc *QueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			qc.Error = err
 			return expression
 		}
-
+		// TODO: @shz support int64 binary transform
 		if err := blockInt64(e.LHS, e.RHS); err != nil {
 			qc.Error = err
 			return expression

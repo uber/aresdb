@@ -687,6 +687,7 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			return expression
 		}
 
+		// TODO: @shz support int64 binary transform
 		if err := blockInt64(e.LHS, e.RHS); err != nil {
 			qc.Error = err
 			return expression
