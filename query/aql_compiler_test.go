@@ -4151,9 +4151,7 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.parseExprs()
 		Ω(qc.Error).Should(BeNil())
 		qc.resolveTypes()
-		Ω(qc.Error).Should(BeNil())
-		qc.processFilters()
-		Ω(qc.Error.Error()).Should(ContainSubstring("Int64 can not be used in filters, int64_field"))
+		Ω(qc.Error.Error()).Should(ContainSubstring("binary transformation not allowed for int64 fields"))
 
 	})
 })

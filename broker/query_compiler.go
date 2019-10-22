@@ -256,14 +256,6 @@ func (qc *QueryContext) processFilters() {
 		if qc.Error != nil {
 			return
 		}
-		if be, ok1 := qc.AQLQuery.FiltersParsed[i].(*expr.BinaryExpr); ok1 {
-			if vr, ok2 := be.LHS.(*expr.VarRef); ok2 {
-				if memCom.Int64 == vr.DataType {
-					qc.Error = utils.StackError(nil, "Int64 can not be used in filters, %s", vr.Val)
-					return
-				}
-			}
-		}
 	}
 
 	qc.AQLQuery.FiltersParsed = normalizeAndFilters(qc.AQLQuery.FiltersParsed)
@@ -493,6 +485,11 @@ func (qc *QueryContext) Rewrite(expression expr.Expr) expr.Expr {
 		}
 	case *expr.BinaryExpr:
 		if err := blockNumericOpsForColumnOverFourBytes(e.Op, e.LHS, e.RHS); err != nil {
+			qc.Error = err
+			return expression
+		}
+
+		if err := blockInt64(e.LHS, e.RHS); err != nil {
 			qc.Error = err
 			return expression
 		}
@@ -922,6 +919,15 @@ func blockNumericOpsForColumnOverFourBytes(token expr.Token, expressions ...expr
 			if varRef, isVarRef := expression.(*expr.VarRef); isVarRef && memCom.DataTypeBytes(varRef.DataType) > 4 {
 				return utils.StackError(nil, "numeric operations not supported for column over 4 bytes length, got %s", expression.String())
 			}
+		}
+	}
+	return nil
+}
+
+func blockInt64(expressions ...expr.Expr) error {
+	for _, expression := range expressions {
+		if varRef, isVarRef := expression.(*expr.VarRef); isVarRef && memCom.Int64 == varRef.DataType {
+			return utils.StackError(nil, "binary transformation not allowed for int64 fields, got %s", expression.String())
 		}
 	}
 	return nil

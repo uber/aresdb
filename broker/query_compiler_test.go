@@ -219,7 +219,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 		Ω(qc.Error).ShouldNot(BeNil())
 	})
 
-	ginkgo.It("should fail int64 filters", func() {
+	ginkgo.It("should fail int64 binary transform", func() {
 		mockTableSchemaReader := memComMocks.TableSchemaReader{}
 		mockTableSchemaReader.On("RLock").Return(nil)
 		mockTableSchemaReader.On("RUnlock").Return(nil)
@@ -240,7 +240,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 		}, false, httptest.NewRecorder())
 		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).ShouldNot(BeNil())
-		Ω(qc.Error.Error()).Should(ContainSubstring("Int64 can not be used in filters"))
+		Ω(qc.Error.Error()).Should(ContainSubstring("binary transformation not allowed for int64 fields"))
 	})
 
 	ginkgo.It("should fail more than 1 measure", func() {

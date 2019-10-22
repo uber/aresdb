@@ -584,6 +584,15 @@ func blockNumericOpsForColumnOverFourBytes(token expr.Token, expressions ...expr
 	return nil
 }
 
+func blockInt64(expressions ...expr.Expr) error {
+	for _, expression := range expressions {
+		if varRef, isVarRef := expression.(*expr.VarRef); isVarRef && memCom.Int64 == varRef.DataType {
+			return utils.StackError(nil, "binary transformation not allowed for int64 fields, got %s", expression.String())
+		}
+	}
+	return nil
+}
+
 // Rewrite walks the expresison AST and resolves data types bottom up.
 // In addition it also translates enum strings and rewrites their predicates.
 func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
@@ -674,6 +683,11 @@ func (qc *AQLQueryContext) Rewrite(expression expr.Expr) expr.Expr {
 		}
 	case *expr.BinaryExpr:
 		if err := blockNumericOpsForColumnOverFourBytes(e.Op, e.LHS, e.RHS); err != nil {
+			qc.Error = err
+			return expression
+		}
+
+		if err := blockInt64(e.LHS, e.RHS); err != nil {
 			qc.Error = err
 			return expression
 		}
@@ -1496,14 +1510,6 @@ func (qc *AQLQueryContext) processFilters() {
 				geoFilterFound = true
 			}
 		} else {
-			if be, ok1 := filter.(*expr.BinaryExpr); ok1 {
-				if vr, ok2 := be.LHS.(*expr.VarRef); ok2 {
-					if memCom.Int64 == vr.DataType {
-						qc.Error = utils.StackError(nil, "Int64 can not be used in filters, %s", vr.Val)
-						return
-					}
-				}
-			}
 			qc.OOPK.MainTableCommonFilters = append(qc.OOPK.MainTableCommonFilters, filter)
 		}
 	}
