@@ -1149,11 +1149,7 @@ func (qc *AQLQueryContext) estimateMemUsageForBatch(firstColumnSize, columnMemUs
 
 	// 8. Dimension vector memory usage (input + output)
 	if qc.IsNonAggregationQuery {
-		maxRowsPerBatch := maxSizeAfterPreFilter
-		if qc.Query.Limit < maxRowsPerBatch {
-			maxRowsPerBatch = qc.Query.Limit
-		}
-		memUsage += maxRowsPerBatch * qc.OOPK.DimRowBytes * 2
+		memUsage += maxSizeAfterPreFilter * qc.OOPK.DimRowBytes * 2
 	} else {
 		if qc.OOPK.UseHashReduction() {
 			// For hash reduction, need hash table with int64_t key (8 bytes) and measureBytes value.
