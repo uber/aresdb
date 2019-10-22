@@ -762,10 +762,6 @@ func (bc *oopkBatchContext) shrinkStackFrame() {
 	deviceFreeAndSetNil(&stackFrame[0])
 }
 
-func (bc *oopkBatchContext) appendStackFrame(values, nulls devicePointer) {
-	bc.exprStackD = append(bc.exprStackD, [2]devicePointer{values, nulls})
-}
-
 func (qc *AQLQueryContext) createCutoffTimeFilter(cutoff uint32) expr.Expr {
 	column := &expr.VarRef{
 		Val:      qc.Query.TimeFilter.Column,
