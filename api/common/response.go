@@ -15,10 +15,16 @@
 package common
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"net/http"
 
 	"github.com/uber/aresdb/utils"
+)
+
+const (
+	// CompressionThreshold is the min number of bytes beyond which we will compress json payload
+	CompressionThreshold = 1 << 10
 )
 
 // ErrorResponse represents error response.
@@ -47,19 +53,19 @@ func NewStringArrayResponse() StringArrayResponse {
 }
 
 // Respond responds with object with success status
-func Respond(w http.ResponseWriter, obj interface{}) {
-	RespondJSONObjectWithCode(w, http.StatusOK, obj)
+func Respond(w http.ResponseWriter, obj interface{}, compress bool) {
+	RespondJSONObjectWithCode(w, http.StatusOK, obj, compress)
 }
 
 // RespondJSONObjectWithCode with specified code and object.
-func RespondJSONObjectWithCode(w http.ResponseWriter, code int, obj interface{}) {
+func RespondJSONObjectWithCode(w http.ResponseWriter, code int, obj interface{}, compress bool) {
 	setCommonHeaders(w)
 	var err error
 	var jsonBytes []byte
 	if obj != nil {
 		jsonBytes, err = json.Marshal(obj)
 	}
-	writeJSONBytes(w, jsonBytes, err, code)
+	writeJSONBytes(w, jsonBytes, err, code, compress)
 }
 
 // RespondBytesWithCode with specified code and bytes.
@@ -73,27 +79,43 @@ func RespondBytesWithCode(w http.ResponseWriter, code int, bs []byte) {
 
 // writeJSONBytes write jsonBytes to response if err is nil otherwise respond
 // with a ErrFailedToJSONMarshalResponseBody.
-func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int) {
+func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int, allowCompression bool) {
+	var gw *gzip.Writer
 	if err != nil {
 		RespondWithError(w, ErrFailedToJSONMarshalResponseBody)
 	}
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeApplicationJson)
+	willCompress := allowCompression && len(jsonBytes) > CompressionThreshold
+	if willCompress {
+		w.Header().Set(utils.HTTPContentEncodingHeaderKey, utils.HTTPContentEncodingGzip)
+	}
 	w.WriteHeader(code)
 	if jsonBytes != nil {
-		w.Write(jsonBytes)
+		if willCompress {
+			gw, err = gzip.NewWriterLevel(w, gzip.BestSpeed)
+			if err != nil {
+				RespondWithError(w, ErrFailedToJSONMarshalResponseBody)
+				return
+			}
+			defer gw.Close()
+			gw.Write(jsonBytes)
+		} else {
+			w.Write(jsonBytes)
+		}
+
 	}
 }
 
 // RespondWithJSONBytes writes json bytes to response.
-func RespondWithJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error) {
+func RespondWithJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, compress bool) {
 	setCommonHeaders(w)
-	writeJSONBytes(w, jsonBytes, err, http.StatusOK)
+	writeJSONBytes(w, jsonBytes, err, http.StatusOK, compress)
 }
 
 // RespondWithJSONObject marshals the object into json bytes and write the bytes
 // into response.
-func RespondWithJSONObject(w http.ResponseWriter, jsonObj interface{}) {
-	RespondJSONObjectWithCode(w, http.StatusOK, jsonObj)
+func RespondWithJSONObject(w http.ResponseWriter, jsonObj interface{}, compress bool) {
+	RespondJSONObjectWithCode(w, http.StatusOK, jsonObj, compress)
 }
 
 // setCommonHeaders writes no cache headers.
@@ -118,7 +140,7 @@ func RespondWithError(w http.ResponseWriter, err error) {
 			},
 		}
 	}
-	RespondJSONObjectWithCode(w, errorResponse.Body.Code, errorResponse.Body)
+	RespondJSONObjectWithCode(w, errorResponse.Body.Code, errorResponse.Body, false)
 }
 
 // RespondWithBadRequest responds with StatusBadRequest as code.

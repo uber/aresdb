@@ -127,6 +127,7 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, requestID strin
 		return
 	}
 
+	req.Header.Add(utils.HTTPAcceptEncodingHeaderKey, utils.HTTPContentEncodingGzip)
 	req.Header.Add(requestIDHeaderKey, requestID)
 	if hll {
 		req.Header.Add(utils.HTTPAcceptTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)

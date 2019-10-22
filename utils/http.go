@@ -27,14 +27,18 @@ import (
 )
 
 const (
-	HTTPContentTypeHeaderKey       = "content-type"
-	HTTPAcceptTypeHeaderKey        = "accept"
+	HTTPContentTypeHeaderKey     = "content-type"
+	HTTPAcceptTypeHeaderKey      = "accept"
+	HTTPAcceptEncodingHeaderKey  = "Accept-Encoding"
+	HTTPContentEncodingHeaderKey = "Content-Encoding"
+
 	HTTPContentTypeApplicationJson = "application/json"
 	HTTPContentTypeApplicationGRPC = "application/grpc"
 	// HTTPContentTypeUpsertBatch defines the upsert data content type.
 	HTTPContentTypeUpsertBatch = "application/upsert-data"
 	// HTTPContentTypeHyperLogLog defines the hyperloglog query result content type.
 	HTTPContentTypeHyperLogLog = "application/hll"
+	HTTPContentEncodingGzip    = "gzip"
 )
 
 // HTTPHandlerWrapper wraps context aware httpHandler
