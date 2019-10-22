@@ -488,6 +488,11 @@ func (qc *QueryContext) Rewrite(expression expr.Expr) expr.Expr {
 			qc.Error = err
 			return expression
 		}
+		// TODO: @shz support int64 binary transform
+		if err := blockInt64(e.LHS, e.RHS); err != nil {
+			qc.Error = err
+			return expression
+		}
 
 		if e.Op != expr.EQ && e.Op != expr.NEQ {
 			_, isRHSStr := e.RHS.(*expr.StringLiteral)
@@ -914,6 +919,15 @@ func blockNumericOpsForColumnOverFourBytes(token expr.Token, expressions ...expr
 			if varRef, isVarRef := expression.(*expr.VarRef); isVarRef && memCom.DataTypeBytes(varRef.DataType) > 4 {
 				return utils.StackError(nil, "numeric operations not supported for column over 4 bytes length, got %s", expression.String())
 			}
+		}
+	}
+	return nil
+}
+
+func blockInt64(expressions ...expr.Expr) error {
+	for _, expression := range expressions {
+		if varRef, isVarRef := expression.(*expr.VarRef); isVarRef && memCom.Int64 == varRef.DataType {
+			return utils.StackError(nil, "binary transformation not allowed for int64 fields, got %s", expression.String())
 		}
 	}
 	return nil

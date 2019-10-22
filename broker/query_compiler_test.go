@@ -34,6 +34,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 		Columns: []metaCom.Column{
 			{Name: "field1", Type: "Uint32"},
 			{Name: "field2", Type: "Uint16"},
+			{Name: "field3", Type: "Int64"},
 		},
 	}
 	tableSchema1 := memCom.NewTableSchema(table1)
@@ -153,6 +154,7 @@ var _ = ginkgo.Describe("query compiler", func() {
 			Dimensions: []common.Dimension{
 				{Expr: "field1", ExprParsed: &expr.VarRef{Val: "field1", ExprType: 2, DataType: memCom.Uint32}},
 				{Expr: "field2", ExprParsed: &expr.VarRef{Val: "field2", ColumnID: 1, ExprType: 2, DataType: memCom.Uint16}},
+				{Expr: "field3", ExprParsed: &expr.VarRef{Val: "field3", ColumnID: 2, ExprType: 3, DataType: memCom.Int64}},
 			},
 			Measures: []common.Measure{
 				{
@@ -215,6 +217,30 @@ var _ = ginkgo.Describe("query compiler", func() {
 		}, false, httptest.NewRecorder())
 		qc.Compile(&mockTableSchemaReader)
 		Ω(qc.Error).ShouldNot(BeNil())
+	})
+
+	ginkgo.It("should fail int64 binary transform", func() {
+		mockTableSchemaReader := memComMocks.TableSchemaReader{}
+		mockTableSchemaReader.On("RLock").Return(nil)
+		mockTableSchemaReader.On("RUnlock").Return(nil)
+		mockTableSchemaReader.On("GetSchema", "table1").Return(tableSchema1, nil)
+		qc := NewQueryContext(&common.AQLQuery{
+			Table: "table1",
+			Dimensions: []common.Dimension{
+				{
+					Expr: "field1",
+				},
+			},
+			Measures: []common.Measure{
+				{
+					Expr: "count(*)",
+				},
+			},
+			Filters: []string{"field3 = 1"},
+		}, false, httptest.NewRecorder())
+		qc.Compile(&mockTableSchemaReader)
+		Ω(qc.Error).ShouldNot(BeNil())
+		Ω(qc.Error.Error()).Should(ContainSubstring("binary transformation not allowed for int64 fields"))
 	})
 
 	ginkgo.It("should fail more than 1 measure", func() {

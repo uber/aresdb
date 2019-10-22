@@ -4108,4 +4108,50 @@ var _ = ginkgo.Describe("AQL compiler", func() {
 		qc.processDimensions()
 		Ω(qc.Error).Should(BeNil())
 	})
+
+	ginkgo.It("int64 filter should fail validation", func() {
+		q := &queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{
+					Expr: "count(*)",
+				},
+			},
+			Filters: []string{"int64_field = 1"},
+		}
+
+		qc := &AQLQueryContext{
+			TableIDByAlias: map[string]int{
+				"table1": 0,
+			},
+			TableScanners: []*TableScanner{
+				{
+					Schema: &memCom.TableSchema{
+						ValueTypeByColumn: []memCom.DataType{
+							memCom.Uint16,
+							memCom.Int64,
+						},
+						ColumnIDs: map[string]int{
+							"int16_field": 0,
+							"int64_field": 1,
+						},
+						Schema: metaCom.Table{
+							Columns: []metaCom.Column{
+								{Name: "int16_field", Type: metaCom.Uint16},
+								{Name: "int64_field", Type: metaCom.Int64},
+							},
+						},
+					},
+				},
+			},
+		}
+		qc.Query = q
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		qc.parseExprs()
+		Ω(qc.Error).Should(BeNil())
+		qc.resolveTypes()
+		Ω(qc.Error.Error()).Should(ContainSubstring("binary transformation not allowed for int64 fields"))
+
+	})
 })
