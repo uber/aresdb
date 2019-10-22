@@ -50,10 +50,8 @@ func (e *NonAggrBatchExecutorImpl) prepareForDimEval(
 		bc.resultCapacity = e.qc.maxBatchSizeAfterPrefilter
 		// Extra budget for future proofing.
 		bc.resultCapacity += bc.resultCapacity / 8
-		bc.dimensionVectorD = [2]devicePointer{
-			deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device),
-			deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device),
-		}
+		bc.dimensionVectorD[0] = deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device)
+		bc.dimensionVectorD[1] = deviceAllocate(bc.resultCapacity*dimRowBytes, bc.device)
 	}
 }
 
