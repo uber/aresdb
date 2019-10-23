@@ -742,7 +742,7 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 		// Extra budget for future proofing.
 		bc.resultCapacity += bc.resultCapacity / 8
 
-		bc.dimensionVectorD = bc.reallocateResultBuffers(bc.dimensionVectorD, dimRowBytes, stream, func(to, from unsafe.Pointer) {
+		bc.reallocateResultBuffers(&bc.dimensionVectorD, dimRowBytes, stream, func(to, from unsafe.Pointer) {
 			asyncCopyDimensionVector(to, from, bc.resultSize, 0,
 				numDimsPerDimWidth, bc.resultCapacity, oldCapacity,
 				cgoutils.AsyncCopyDeviceToDevice, stream, bc.device)
@@ -750,19 +750,19 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 
 		// uint32_t for index value
 		if isHLL || !useHashReduction {
-			bc.dimIndexVectorD = bc.reallocateResultBuffers(bc.dimIndexVectorD, 4, stream, nil)
+			bc.reallocateResultBuffers(&bc.dimIndexVectorD, 4, stream, nil)
 		}
 		// uint64_t for hash value
 		// Note: only when aggregate function is hll, we need to reuse vector[0]
 		if isHLL {
-			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, func(to, from unsafe.Pointer) {
+			bc.reallocateResultBuffers(&bc.hashVectorD, 8, stream, func(to, from unsafe.Pointer) {
 				cgoutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*8, stream, bc.device)
 			})
 		} else if !useHashReduction {
-			bc.hashVectorD = bc.reallocateResultBuffers(bc.hashVectorD, 8, stream, nil)
+			bc.reallocateResultBuffers(&bc.hashVectorD, 8, stream, nil)
 		}
 
-		bc.measureVectorD = bc.reallocateResultBuffers(bc.measureVectorD, measureBytes, stream, func(to, from unsafe.Pointer) {
+		bc.reallocateResultBuffers(&bc.measureVectorD, measureBytes, stream, func(to, from unsafe.Pointer) {
 			cgoutils.AsyncCopyDeviceToDevice(to, from, bc.resultSize*measureBytes, stream, bc.device)
 		})
 	}
@@ -770,16 +770,18 @@ func (bc *oopkBatchContext) prepareForDimAndMeasureEval(
 
 // reallocateResultBuffers reallocates the result buffer pair to size
 // resultCapacity*unitBytes and copies resultSize*unitBytes from input[0] to output[0].
+// this function will read and modify the device pointers in buffers
 func (bc *oopkBatchContext) reallocateResultBuffers(
-	input [2]devicePointer, unitBytes int, stream unsafe.Pointer, copyFunc func(to, from unsafe.Pointer)) (output [2]devicePointer) {
+	buffers *[2]devicePointer, unitBytes int, stream unsafe.Pointer, copyFunc func(to, from unsafe.Pointer)) {
 
-	output = [2]devicePointer{
-		deviceAllocate(bc.resultCapacity*unitBytes, bc.device),
-		deviceAllocate(bc.resultCapacity*unitBytes, bc.device),
-	}
+	// copy previous pointers first
+	input := [2]devicePointer{buffers[0], buffers[1]}
+	// reallocate new device buffers
+	buffers[0] = deviceAllocate(bc.resultCapacity*unitBytes, bc.device)
+	buffers[1] = deviceAllocate(bc.resultCapacity*unitBytes, bc.device)
 
 	if copyFunc != nil {
-		copyFunc(output[0].getPointer(), input[0].getPointer())
+		copyFunc(buffers[0].getPointer(), input[0].getPointer())
 	}
 
 	deviceFreeAndSetNil(&input[0])
