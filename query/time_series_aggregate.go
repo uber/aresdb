@@ -545,7 +545,7 @@ func (bc *oopkBatchContext) processExpression(exp, parentExp expr.Expr, tableSca
 		values, nulls := bc.allocateStackFrame(dataType)
 		var outputVector = makeScratchSpaceOutput(values.getPointer(), nulls.getPointer(), dataType)
 
-		doCGoCall(func() interface{} {
+		doCGoCall(func() C.CGoCallResHandle {
 			return C.UnaryTransform(inputVector, outputVector, (*C.uint32_t)(bc.indexVectorD.getPointer()),
 				(C.int)(bc.size), (*C.uint32_t)(bc.baseCountD.getPointer()), (C.uint32_t)(bc.startRow), functorType, stream, C.int(device))
 		})
@@ -572,7 +572,7 @@ func (bc *oopkBatchContext) processExpression(exp, parentExp expr.Expr, tableSca
 		values, nulls := bc.allocateStackFrame(outputDataType)
 		var outputVector = makeScratchSpaceOutput(values.getPointer(), nulls.getPointer(), outputDataType)
 
-		doCGoCall(func() interface{} {
+		doCGoCall(func() C.CGoCallResHandle {
 			return C.BinaryTransform(lhsInputVector, rhsInputVector, outputVector,
 				(*C.uint32_t)(bc.indexVectorD.getPointer()), (C.int)(bc.size), (*C.uint32_t)(bc.baseCountD.getPointer()),
 				(C.uint32_t)(bc.startRow),
