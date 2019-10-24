@@ -93,6 +93,10 @@ type Controller struct {
 	consumerInitFunc NewConsumer
 	// decoderInitFunc is func of NewDecoder
 	decoderInitFunc NewDecoder
+	// etcdServiceId is etcd service id in m3
+	etcdServiceId services.ServiceID
+	// etcdPlacementInstance is etcd placement instance in m3
+	etcdPlacementInstance placement.Instance
 }
 
 // ZKNodeSubscriber defines the information stored in ZKNode subscriber
@@ -192,13 +196,13 @@ func connectEtcdServices(params Params) (services.Services, error) {
 	return servicesClient, nil
 }
 
-func registerHeartBeatService(params Params, servicesClient services.Services) error {
-	sid := services.NewServiceID().
+func registerHeartBeatService(c *Controller, params Params, servicesClient services.Services) error {
+	c.etcdServiceId = services.NewServiceID().
 		SetEnvironment(params.ServiceConfig.EtcdConfig.EtcdConfig.Env).
 		SetZone(params.ServiceConfig.EtcdConfig.EtcdConfig.Zone).
 		SetName(params.ServiceConfig.EtcdConfig.EtcdConfig.Service)
 
-	err := servicesClient.SetMetadata(sid, services.NewMetadata().
+	err := servicesClient.SetMetadata(c.etcdServiceId, services.NewMetadata().
 		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
 		SetLivenessInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Timeout)*time.Second))
 	if err != nil {
@@ -207,16 +211,16 @@ func registerHeartBeatService(params Params, servicesClient services.Services) e
 		return err
 	}
 
-	pInstance := placement.NewInstance().
+	c.etcdPlacementInstance = placement.NewInstance().
 		SetID(params.ServiceConfig.Environment.InstanceID)
 
 	ad := services.NewAdvertisement().
-		SetServiceID(sid).
-		SetPlacementInstance(pInstance)
+		SetServiceID(c.etcdServiceId).
+		SetPlacementInstance(c.etcdPlacementInstance)
 
 	params.ServiceConfig.Logger.Info("service, placement, and ad info",
-		zap.Any("serviceID", sid),
-		zap.Any("placement", pInstance),
+		zap.Any("serviceID", c.etcdServiceId),
+		zap.Any("placement", c.etcdPlacementInstance),
 		zap.Any("ad", ad))
 
 	err = servicesClient.Advertise(ad)
@@ -516,7 +520,7 @@ func (c *Controller) startEtcdHBService(params Params) {
 	if err != nil {
 		params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
 	}
-	if registerHeartBeatService(params, c.etcdServices) != nil {
+	if registerHeartBeatService(c, params, c.etcdServices) != nil {
 		params.ServiceConfig.Logger.Panic("Failed to registerHeartBeatService", zap.Error(err))
 	}
 	params.ServiceConfig.EtcdConfig.Unlock()
@@ -527,8 +531,11 @@ func (c *Controller) RestartEtcdHBService(params Params) {
 	for {
 		select {
 		case <-config.EtcdCfgEvent:
-			// TODO: unadevertises old heartbeat and closes etcd client should be added once M3 provides
 			c.serviceConfig.Logger.Info("RestartEtcdHBService")
+			c.etcdServices.Unadvertise(c.etcdServiceId, c.etcdPlacementInstance.ID())
+			c.etcdServiceId = nil
+			c.etcdPlacementInstance = nil
+			c.etcdServices = nil
 			c.startEtcdHBService(params)
 		}
 	}
