@@ -371,7 +371,9 @@ var _ = Describe("controller", func() {
 			Interval:      10,
 			CheckInterval: 2,
 		}
-		controller := &Controller{}
+		controller := &Controller{
+			serviceConfig: serviceConfig,
+		}
 
 		ctrl := gomock.NewController(GinkgoT())
 		defer ctrl.Finish()
