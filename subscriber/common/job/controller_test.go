@@ -371,7 +371,7 @@ var _ = Describe("controller", func() {
 			Interval:      10,
 			CheckInterval: 2,
 		}
-		controller := Controller{}
+		controller := &Controller{}
 
 		ctrl := gomock.NewController(GinkgoT())
 		defer ctrl.Finish()
@@ -379,7 +379,10 @@ var _ = Describe("controller", func() {
 		mockServices := services.NewMockServices(ctrl)
 		mockServices.EXPECT().SetMetadata(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		mockServices.EXPECT().Advertise(gomock.Any()).Return(nil).AnyTimes()
-		err := registerHeartBeatService(&controller, params, mockServices)
+		mockServices.EXPECT().Unadvertise(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		err := registerHeartBeatService(controller, params, mockServices)
 		Ω(err).Should(BeNil())
+		config.EtcdCfgEvent <- 1
+		controller.RestartEtcdHBService(params)
 	})
 })
