@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
@@ -364,6 +365,7 @@ var _ = Describe("controller", func() {
 				},
 			},
 		}
+		params.ServiceConfig.EtcdConfig.Mutex = &sync.Mutex{}
 
 		params.ServiceConfig.HeartbeatConfig = &config.HeartBeatConfig{
 			Enabled:       true,
