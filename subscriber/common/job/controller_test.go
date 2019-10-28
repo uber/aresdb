@@ -366,6 +366,7 @@ var _ = Describe("controller", func() {
 			},
 		}
 		params.ServiceConfig.EtcdConfig.Mutex = &sync.Mutex{}
+		config.ActiveJobNameSpace = "test"
 
 		params.ServiceConfig.HeartbeatConfig = &config.HeartBeatConfig{
 			Enabled:       true,
