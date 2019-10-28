@@ -97,9 +97,6 @@ func CalculateDSTSwitchTs(fromTs, toTs int64, loc *time.Location) (switchTs int6
 	}
 	for toTs-fromTs > secondsInHour {
 		mid := fromTs + (toTs-fromTs)/2
-		// switch point will always be at hour start
-		mid = mid - mid%secondsInHour
-
 		if CrossDST(fromTs, mid, loc) {
 			toTs = mid
 		} else {
