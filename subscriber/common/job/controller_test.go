@@ -355,7 +355,7 @@ var _ = Describe("controller", func() {
 		params.ServiceConfig.EtcdConfig.EtcdConfig = etcd.Configuration{
 			Zone:    "local",
 			Env:     "test",
-			Service: "",
+			Service: "ares-subscriber",
 			ETCDClusters: []etcd.ClusterConfig{
 				{
 					Zone: "local",
