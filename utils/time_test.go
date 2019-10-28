@@ -46,7 +46,16 @@ var _ = ginkgo.Describe("Time", func() {
 		Ω(CrossDST(1538439200, 1538439300, loc)).Should(BeFalse())
 
 		// includes DST switch point
-		switchTs, err := CalculateDSTSwitchTs(1534680000, 1538439300, loc)
+		switchTs, err := CalculateDSTSwitchTs(1538229600-3600, 1538229610, loc)
+		Ω(err).Should(BeNil())
+		Ω(switchTs).Should(Equal(int64(1538229600)))
+		switchTs, err = CalculateDSTSwitchTs(1538229600-3599, 1538229600+3599, loc)
+		Ω(err).Should(BeNil())
+		Ω(switchTs).Should(Equal(int64(1538229600)))
+		switchTs, err = CalculateDSTSwitchTs(1538229600-1, 1538229600+3600, loc)
+		Ω(err).Should(BeNil())
+		Ω(switchTs).Should(Equal(int64(1538229600)))
+		switchTs, err = CalculateDSTSwitchTs(1538229600-1, 1538229600+1, loc)
 		Ω(err).Should(BeNil())
 		Ω(switchTs).Should(Equal(int64(1538229600)))
 
