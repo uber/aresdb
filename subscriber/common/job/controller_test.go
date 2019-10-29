@@ -16,7 +16,6 @@ package job
 
 import (
 	"encoding/json"
-	"github.com/m3db/m3/src/cluster/placement"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -387,12 +386,12 @@ var _ = Describe("controller", func() {
 			serviceConfig: serviceConfig,
 			etcdServices: mockServices,
 			isTest: true,
-			etcdServiceId: services.NewServiceID(),
-			etcdPlacementInstance: placement.NewInstance(),
 		}
+		config.EtcdCfgEvent <- 1
 		err := registerHeartBeatService(controller, params)
 		Ω(err).Should(BeNil())
-		config.EtcdCfgEvent <- 1
+		Ω(controller.etcdServiceId).ShouldNot(BeNil())
+		Ω(controller.etcdPlacementInstance).ShouldNot(BeNil())
 		go controller.RestartEtcdHBService(params)
 		close(config.EtcdCfgEvent)
 	})
