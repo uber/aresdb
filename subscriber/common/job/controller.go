@@ -97,6 +97,8 @@ type Controller struct {
 	etcdServiceId services.ServiceID
 	// etcdPlacementInstance is etcd placement instance in m3
 	etcdPlacementInstance placement.Instance
+	// isTest is flag for unit test
+	isTest bool
 }
 
 // ZKNodeSubscriber defines the information stored in ZKNode subscriber
@@ -512,6 +514,9 @@ func (c *Controller) startDriver(
 }
 
 func (c *Controller) startEtcdHBService(params Params) {
+	if c.isTest {
+		return
+	}
 	var err error
 	params.ServiceConfig.Logger.Info("heartbeat config",
 		zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))

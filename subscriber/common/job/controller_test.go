@@ -385,9 +385,11 @@ var _ = Describe("controller", func() {
 		controller := &Controller{
 			serviceConfig: serviceConfig,
 			etcdServices: mockServices,
+			isTest: true,
 		}
 		err := registerHeartBeatService(controller, params)
 		Ω(err).Should(BeNil())
 		config.EtcdCfgEvent <- 1
+		controller.RestartEtcdHBService(params)
 	})
 })
