@@ -390,7 +390,7 @@ var _ = Describe("controller", func() {
 		err := registerHeartBeatService(controller, params)
 		Ω(err).Should(BeNil())
 		config.EtcdCfgEvent <- 1
-		controller.RestartEtcdHBService(params)
+		go controller.RestartEtcdHBService(params)
 		close(config.EtcdCfgEvent)
 	})
 })
