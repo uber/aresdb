@@ -392,6 +392,7 @@ var _ = Describe("controller", func() {
 		Ω(err).Should(BeNil())
 		Ω(controller.etcdServiceId).ShouldNot(BeNil())
 		Ω(controller.etcdPlacementInstance).ShouldNot(BeNil())
+		Ω(controller.etcdServices).ShouldNot(BeNil())
 		go controller.RestartEtcdHBService(params)
 		close(config.EtcdCfgEvent)
 	})
