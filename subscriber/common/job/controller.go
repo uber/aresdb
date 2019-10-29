@@ -196,13 +196,13 @@ func connectEtcdServices(params Params) (services.Services, error) {
 	return servicesClient, nil
 }
 
-func registerHeartBeatService(c *Controller, params Params, servicesClient services.Services) error {
+func registerHeartBeatService(c *Controller, params Params) error {
 	c.etcdServiceId = services.NewServiceID().
 		SetEnvironment(params.ServiceConfig.EtcdConfig.EtcdConfig.Env).
 		SetZone(params.ServiceConfig.EtcdConfig.EtcdConfig.Zone).
 		SetName(params.ServiceConfig.EtcdConfig.EtcdConfig.Service)
 
-	err := servicesClient.SetMetadata(c.etcdServiceId, services.NewMetadata().
+	err := c.etcdServices.SetMetadata(c.etcdServiceId, services.NewMetadata().
 		SetHeartbeatInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Interval)*time.Second).
 		SetLivenessInterval(time.Duration(params.ServiceConfig.HeartbeatConfig.Timeout)*time.Second))
 	if err != nil {
@@ -223,7 +223,7 @@ func registerHeartBeatService(c *Controller, params Params, servicesClient servi
 		zap.Any("placement", c.etcdPlacementInstance),
 		zap.Any("ad", ad))
 
-	err = servicesClient.Advertise(ad)
+	err = c.etcdServices.Advertise(ad)
 	if err != nil {
 		params.ServiceConfig.Logger.Error("Failed to advertise heartbeat service",
 			zap.Error(err))
@@ -520,7 +520,8 @@ func (c *Controller) startEtcdHBService(params Params) {
 	if err != nil {
 		params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
 	}
-	if registerHeartBeatService(c, params, c.etcdServices) != nil {
+	err = registerHeartBeatService(c, params)
+	if err != nil {
 		params.ServiceConfig.Logger.Panic("Failed to registerHeartBeatService", zap.Error(err))
 	}
 	params.ServiceConfig.EtcdConfig.Unlock()
