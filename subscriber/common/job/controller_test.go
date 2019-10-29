@@ -391,5 +391,6 @@ var _ = Describe("controller", func() {
 		Ω(err).Should(BeNil())
 		config.EtcdCfgEvent <- 1
 		controller.RestartEtcdHBService(params)
+		close(config.EtcdCfgEvent)
 	})
 })
