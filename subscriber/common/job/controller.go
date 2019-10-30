@@ -544,7 +544,7 @@ func (c *Controller) RestartEtcdHBService(params Params) {
 			c.etcdServices = nil
 			c.startEtcdHBService(params)
 		}
-		if config.EtcdCfgEvent == nil {
+		if c.isTest {
 			break;
 		}
 	}
