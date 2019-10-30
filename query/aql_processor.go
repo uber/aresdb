@@ -433,7 +433,7 @@ func (qc *AQLQueryContext) prepareForeignTable(memStore memstore.MemStore, joinT
 		for i, columnID := range qc.TableScanners[joinTableID+1].Columns {
 			usage := qc.TableScanners[joinTableID+1].ColumnUsages[columnID]
 			if usage&(columnUsedByAllBatches|columnUsedByLiveBatches) != 0 {
-				sourceVP := batch.Columns[columnID]
+				sourceVP := batch.GetVectorParty(columnID)
 				if sourceVP == nil {
 					continue
 				}
@@ -515,7 +515,7 @@ func (qc *AQLQueryContext) transferLiveBatch(batch *memstore.LiveBatch, size int
 				if firstColumn < 0 {
 					firstColumn = i
 				}
-				sourceVP := batch.Columns[columnID]
+				sourceVP := batch.GetVectorParty(columnID)
 				if sourceVP == nil {
 					continue
 				}
@@ -1043,7 +1043,7 @@ func (qc *AQLQueryContext) calculateMemoryRequirement(memStore memstore.MemStore
 func (qc *AQLQueryContext) estimateLiveBatchMemoryUsage(batch *memstore.LiveBatch) int {
 	columnMemUsage := 0
 	for _, columnID := range qc.TableScanners[0].Columns {
-		sourceVP := batch.Columns[columnID]
+		sourceVP := batch.GetVectorParty(columnID)
 		if sourceVP == nil {
 			continue
 		}
@@ -1279,7 +1279,7 @@ func (qc *AQLQueryContext) calculateForeignTableMemUsage(memStore memstore.MemSt
 			for _, columnID := range qc.TableScanners[joinTableID+1].Columns {
 				usage := qc.TableScanners[joinTableID+1].ColumnUsages[columnID]
 				if usage&(columnUsedByAllBatches|columnUsedByLiveBatches) != 0 {
-					sourceVP := batch.Columns[columnID]
+					sourceVP := batch.GetVectorParty(columnID)
 					if sourceVP == nil {
 						continue
 					}
@@ -1483,7 +1483,7 @@ func shouldSkipLiveBatchWithFilter(b *memstore.LiveBatch, filter expr.Expr) bool
 
 		if columnExpr != nil && numExpr != nil {
 			// Time filters and main table filters are guaranteed to be on main table.
-			vp := b.Columns[columnExpr.ColumnID]
+			vp := b.GetVectorParty(columnExpr.ColumnID)
 			if vp == nil {
 				return true
 			}
