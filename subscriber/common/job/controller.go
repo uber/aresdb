@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/m3db/m3/src/cluster/client"
 	"net/http"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -547,6 +548,7 @@ func (c *Controller) RestartEtcdHBService(params Params) {
 			c.etcdPlacementInstance = nil
 			c.etcdServices = nil
 			c.csClient = nil
+			runtime.GC()
 			c.startEtcdHBService(params)
 		}
 		if c.isTest {
