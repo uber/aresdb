@@ -56,6 +56,13 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 			DimensionEnumReverseDicts: map[int][]string{
 				0: {"foo", "bar"},
 			},
+			Tables: []*memCom.TableSchema{
+				{
+					Schema: metaCom.Table{
+						IsFactTable: true,
+					},
+				},
+			},
 		}
 		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockMap := topoMock.Map{}
@@ -205,6 +212,13 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		qc := QueryContext{
 			AQLQuery:              &q,
 			IsNonAggregationQuery: true,
+			Tables: []*memCom.TableSchema{
+				{
+					Schema: metaCom.Table{
+						IsFactTable: true,
+					},
+				},
+			},
 		}
 		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockMap := topoMock.Map{}

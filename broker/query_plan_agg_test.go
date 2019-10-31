@@ -131,6 +131,13 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		}
 		qc := QueryContext{
 			AQLQuery: &q,
+			Tables: []*memCom.TableSchema{
+				{
+					Schema: metaCom.Table{
+						IsFactTable: true,
+					},
+				},
+			},
 		}
 		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockMap := topoMock.Map{}
@@ -183,6 +190,13 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		}
 		qc := QueryContext{
 			AQLQuery: &q,
+			Tables: []*memCom.TableSchema{
+				{
+					Schema: metaCom.Table{
+						IsFactTable: true,
+					},
+				},
+			},
 		}
 		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
 		mockMap := topoMock.Map{}
