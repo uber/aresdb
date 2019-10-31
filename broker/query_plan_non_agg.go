@@ -22,6 +22,7 @@ import (
 	dataCli "github.com/uber/aresdb/datanode/client"
 	"github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
+	"math/rand"
 	"net/http"
 	"strconv"
 )
@@ -108,9 +109,16 @@ func NewNonAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTop
 	}
 
 	var assignment map[topology.Host][]uint32
-	assignment, err = util.CalculateShardAssignment(topo)
-	if err != nil {
-		return
+	if qc.Tables[0].Schema.IsFactTable {
+		assignment, err = util.CalculateShardAssignment(topo)
+		if err != nil {
+			return
+		}
+	} else {
+		hosts := topo.Get().Hosts()
+		assignment = map[topology.Host][]uint32{
+			hosts[rand.Intn(len(hosts))]: {0},
+		}
 	}
 
 	plan.nodes = make([]*StreamingScanNode, len(assignment))

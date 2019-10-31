@@ -26,6 +26,8 @@ import (
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/client"
 	dataCliMock "github.com/uber/aresdb/datanode/client/mocks"
+	memCom "github.com/uber/aresdb/memstore/common"
+	metaCom "github.com/uber/aresdb/metastore/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
@@ -140,6 +142,52 @@ var _ = ginkgo.Describe("non agg query plan", func() {
 		err = plan.Execute(context.TODO(), w)
 		Ω(err).Should(BeNil())
 		Ω(w.Body.String()).Should(Equal(`{"headers":["field1","field2"],"matrixData":[["foo","1"],["NULL","2"],["foo","1"]]}`))
+	})
+
+	ginkgo.It("should generate plan for dimension table", func() {
+		q := queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "1", ExprParsed: &expr.NumberLiteral{Int: 1, ExprType: expr.Unsigned}},
+			},
+			Dimensions: []queryCom.Dimension{
+				{Expr: "field1", ExprParsed: &expr.VarRef{TableID: 0, ColumnID: 0, Val: "field1"}},
+				{Expr: "field2", ExprParsed: &expr.VarRef{TableID: 0, ColumnID: 1, Val: "field2"}},
+			},
+			Limit: -1,
+		}
+		qc := QueryContext{
+			AQLQuery:              &q,
+			IsNonAggregationQuery: true,
+			DimensionEnumReverseDicts: map[int][]string{
+				0: {"foo", "bar"},
+			},
+			Tables: []*memCom.TableSchema{
+				{
+					Schema: metaCom.Table{
+						IsFactTable: false,
+					},
+				},
+			},
+		}
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
+		mockMap := topoMock.Map{}
+		mockTopo.On("Get").Return(&mockMap)
+		mockHost1 := &topoMock.Host{}
+		mockHost2 := &topoMock.Host{}
+		mockHost3 := &topoMock.Host{}
+		mockHosts := []topology.Host{
+			mockHost1,
+			mockHost2,
+			mockHost3,
+		}
+		mockMap.On("Hosts").Return(mockHosts)
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
+
+		plan, err := NewNonAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
+		Ω(plan.nodes).Should(HaveLen(1))
+		Ω(plan.nodes[0].qc.AQLQuery.Shards).Should(Equal([]int{0}))
 	})
 
 	ginkgo.It("should mark host unhealthy on connection error", func() {
