@@ -30,6 +30,9 @@ type MetaStore interface {
 	// Returns the latest archiving/live cutoff for the specified shard.
 	GetArchivingCutoff(table string, shard int) (uint32, error)
 
+	// DeleteTableShard purges table shard level metadata
+	DeleteTableShard(table string, shard int) error
+
 	// PurgeArchiveBatches deletes the metadata related to the archive batch
 	PurgeArchiveBatches(table string, shard, batchIDStart, batchIDEnd int) error
 	// Returns the version to use for the specified archive batch and size of the batch with the

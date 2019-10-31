@@ -45,7 +45,7 @@ type MemStore interface {
 	// GetHostMemoryManager returns the host memory manager
 	GetHostMemoryManager() common.HostMemoryManager
 	// AddTableShard add a table shard to the memstore
-	AddTableShard(table string, shardID int, needPeerCopy bool)
+	AddTableShard(table string, shardID int, needPeerCopy bool, needPurge bool)
 	// GetTableShard gets the data for a pinned table Shard. Caller needs to unpin after use.
 	GetTableShard(table string, shardID int) (*TableShard, error)
 	// RemoveTableShard removes table shard from memstore
@@ -261,7 +261,7 @@ func (m *memStoreImpl) TryEvictBatchColumn(table string, shardID int, batchID in
 	return true, nil
 }
 
-func (m *memStoreImpl) AddTableShard(table string, shardID int, needPeerCopy bool) {
+func (m *memStoreImpl) AddTableShard(table string, shardID int, needPeerCopy bool, needPurge bool) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -281,6 +281,17 @@ func (m *memStoreImpl) AddTableShard(table string, shardID int, needPeerCopy boo
 		if needPeerCopy {
 			tableShard.needPeerCopy = 1
 		}
+
+		// purge to make sure disk space is clean for new table shard when it is added
+		if needPurge {
+			if err := tableShard.diskStore.DeleteTableShard(table, shardID); err != nil {
+				utils.GetLogger().With("table", table, "shard", shardID, "error", err.Error()).Fatalf("failed to purge table shard data")
+			}
+			if err := tableShard.metaStore.DeleteTableShard(table, shardID); err != nil {
+				utils.GetLogger().With("table", table, "shard", shardID, "error", err.Error()).Fatal("failed to purge table shard metadata")
+			}
+		}
+
 		shardMap[shardID] = tableShard
 		utils.AddTableShardReporter(table, shardID)
 	}

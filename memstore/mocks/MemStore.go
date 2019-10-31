@@ -14,9 +14,9 @@ type MemStore struct {
 	mock.Mock
 }
 
-// AddTableShard provides a mock function with given fields: table, shardID, needPeerCopy
-func (_m *MemStore) AddTableShard(table string, shardID int, needPeerCopy bool) {
-	_m.Called(table, shardID, needPeerCopy)
+// AddTableShard provides a mock function with given fields: table, shardID, needPeerCopy, needPurge
+func (_m *MemStore) AddTableShard(table string, shardID int, needPeerCopy bool, needPurge bool) {
+	_m.Called(table, shardID, needPeerCopy, needPurge)
 }
 
 // Archive provides a mock function with given fields: table, shardID, cutoff, reporter

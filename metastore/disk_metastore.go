@@ -159,6 +159,14 @@ func (dm *diskMetaStore) GetArchivingCutoff(tableName string, shard int) (uint32
 	return dm.readVersion(file)
 }
 
+// DeleteTableShard deletes all table shard level metadata
+func (dm *diskMetaStore) DeleteTableShard(tableName string, shard int) error {
+	dm.Lock()
+	defer dm.Unlock()
+	shardDirPath := dm.getShardDirPath(tableName, shard)
+	return dm.RemoveAll(shardDirPath)
+}
+
 // GetSnapshotProgress gets the latest snapshot progress for given table and shard
 func (dm *diskMetaStore) GetSnapshotProgress(tableName string, shard int) (int64, uint32, int32, uint32, error) {
 	dm.RLock()
