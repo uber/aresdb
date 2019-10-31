@@ -26,6 +26,7 @@ import (
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/query/expr"
 	"github.com/uber/aresdb/utils"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -218,9 +219,16 @@ func NewAggQueryPlan(qc *QueryContext, topo topology.HealthTrackingDynamicTopolo
 	var root common.MergeNode
 
 	var assignments map[topology.Host][]uint32
-	assignments, err = util.CalculateShardAssignment(topo)
-	if err != nil {
-		return
+	if qc.Tables[0].Schema.IsFactTable {
+		assignments, err = util.CalculateShardAssignment(topo)
+		if err != nil {
+			return
+		}
+	} else {
+		hosts := topo.Get().Hosts()
+		assignments = map[topology.Host][]uint32{
+			hosts[rand.Intn(len(hosts))]: {0},
+		}
 	}
 
 	// compiler already checked that only 1 measure exists, which is a expr.Call

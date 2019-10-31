@@ -228,6 +228,57 @@ var _ = ginkgo.Describe("agg query plan", func() {
 		Ω(countn.children).Should(HaveLen(len(mockHosts)))
 	})
 
+	ginkgo.It("NewAggQueryPlan should work for dimension table", func() {
+		q := queryCom.AQLQuery{
+			Table: "table1",
+			Measures: []queryCom.Measure{
+				{Expr: "count(*)", ExprParsed: &expr.Call{Name: "count"}},
+			},
+		}
+		qc := QueryContext{
+			AQLQuery: &q,
+			Tables: []*memCom.TableSchema{
+				{
+					Schema: metaCom.Table{
+						IsFactTable: false,
+					},
+				},
+			},
+		}
+		mockTopo := topoMock.HealthTrackingDynamicTopoloy{}
+		mockMap := topoMock.Map{}
+		mockTopo.On("Get").Return(&mockMap)
+		mockHost1 := &topoMock.Host{}
+		mockHost2 := &topoMock.Host{}
+		mockHost3 := &topoMock.Host{}
+		mockHosts := []topology.Host{
+			mockHost1,
+			mockHost2,
+			mockHost3,
+		}
+		mockMap.On("Hosts").Return(mockHosts)
+		//host1: 0,1,2,3
+		//host2: 4,5,0,1
+		//host3: 2,3,4,5
+		mockMap.On("RouteShard", uint32(0)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(1)).Return([]topology.Host{mockHost1, mockHost2}, nil)
+		mockMap.On("RouteShard", uint32(2)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(3)).Return([]topology.Host{mockHost1, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(4)).Return([]topology.Host{mockHost2, mockHost3}, nil)
+		mockMap.On("RouteShard", uint32(5)).Return([]topology.Host{mockHost2, mockHost3}, nil)
+
+		mockDatanodeCli := dataCliMock.DataNodeQueryClient{}
+
+		plan, err := NewAggQueryPlan(&qc, &mockTopo, &mockDatanodeCli)
+		Ω(err).Should(BeNil())
+		mn, ok := plan.root.(*mergeNodeImpl)
+		Ω(ok).Should(BeTrue())
+		Ω(mn.children).Should(HaveLen(1))
+		sn, ok := mn.children[0].(*BlockingScanNode)
+		Ω(ok).Should(BeTrue())
+		Ω(sn.qc.AQLQuery.Shards).Should(Equal([]int{0}))
+	})
+
 	ginkgo.It("BlockingScanNode Execute should work happy path", func() {
 		q := queryCom.AQLQuery{
 			Measures: []queryCom.Measure{{ExprParsed: &expr.Call{Name: "count"}}},
