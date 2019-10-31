@@ -525,7 +525,7 @@ func (c *Controller) startEtcdHBService(params Params) {
 	params.ServiceConfig.Logger.Info("heartbeat config",
 		zap.Any("heartbeat", *params.ServiceConfig.HeartbeatConfig))
 	params.ServiceConfig.EtcdConfig.Lock()
-	c.etcdServices, err = connectEtcdServices(params)
+	c.etcdServices, err = c.connectEtcdServices(params)
 	if err != nil {
 		params.ServiceConfig.Logger.Panic("Failed to createEtcdServices", zap.Error(err))
 	}
