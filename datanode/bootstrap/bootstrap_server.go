@@ -162,6 +162,8 @@ func (p *PeerDataNodeServerImpl) StartSession(ctx context.Context, req *pb.Start
 }
 
 func (p *PeerDataNodeServerImpl) checkReqExist(s *sessionInfo) error {
+	p.RLock()
+	defer p.RUnlock()
 	pair := tableShardPair{
 		table:   s.table,
 		shardID: s.shardID,
