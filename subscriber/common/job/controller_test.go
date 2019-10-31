@@ -334,7 +334,10 @@ var _ = Describe("controller", func() {
 		}
 		config.ActiveJobNameSpace = "test"
 
-		etcdServices, err := connectEtcdServices(params)
+		controller := &Controller{
+			serviceConfig: serviceConfig,
+		}
+		etcdServices, err := controller.connectEtcdServices(params)
 		Ω(etcdServices).ShouldNot(BeNil())
 		Ω(err).Should(BeNil())
 	})

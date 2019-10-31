@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/m3db/m3/src/cluster/client"
 	"net/http"
 	"strings"
 	"sync"
@@ -97,6 +98,8 @@ type Controller struct {
 	etcdServiceId services.ServiceID
 	// etcdPlacementInstance is etcd placement instance in m3
 	etcdPlacementInstance placement.Instance
+	// csClient is etcd client
+	csClient client.Client
 	// isTest is flag for unit test
 	isTest bool
 }
@@ -174,21 +177,22 @@ func NewController(params Params) *Controller {
 	return controller
 }
 
-func connectEtcdServices(params Params) (services.Services, error) {
+func (c *Controller) connectEtcdServices(params Params) (services.Services, error) {
 	iopts := instrument.NewOptions().
 		SetLogger(params.ServiceConfig.Logger).
 		SetMetricsScope(params.ServiceConfig.Scope)
 
 	etcdConfig := &params.ServiceConfig.EtcdConfig.EtcdConfig
 	// create a config service client to access to the etcd cluster services.
-	csClient, err := etcdConfig.NewClient(iopts)
+	var err error
+	c.csClient, err = etcdConfig.NewClient(iopts)
 	if err != nil {
 		params.ServiceConfig.Logger.Error("Failed to NewClient for etcd",
 			zap.Error(err))
 		return nil, err
 	}
 
-	servicesClient, err := csClient.Services(nil)
+	servicesClient, err := c.csClient.Services(nil)
 	if err != nil {
 		params.ServiceConfig.Logger.Error("Failed to create services for etcd",
 			zap.Error(err))
@@ -542,6 +546,7 @@ func (c *Controller) RestartEtcdHBService(params Params) {
 			c.etcdServiceId = nil
 			c.etcdPlacementInstance = nil
 			c.etcdServices = nil
+			c.csClient = nil
 			c.startEtcdHBService(params)
 		}
 		if c.isTest {
