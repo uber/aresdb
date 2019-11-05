@@ -80,6 +80,20 @@ func (_m *MetaStore) DeleteTable(name string) error {
 	return r0
 }
 
+// DeleteTableShard provides a mock function with given fields: table, shard
+func (_m *MetaStore) DeleteTableShard(table string, shard int) error {
+	ret := _m.Called(table, shard)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, int) error); ok {
+		r0 = rf(table, shard)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ExtendEnumDict provides a mock function with given fields: table, column, enumCases
 func (_m *MetaStore) ExtendEnumDict(table string, column string, enumCases []string) ([]int, error) {
 	ret := _m.Called(table, column, enumCases)

@@ -528,6 +528,13 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 		return 0, nil, utils.StackError(err, "failed to create keep alive stream")
 	}
 
+	// send first keep alive request
+	if err = xretry.NewRetrier(xretry.NewOptions()).Attempt(func() error {
+		return stream.Send(&rpc.Session{ID: sessionID, NodeID: origin})
+	}); err != nil {
+		return 0, nil, utils.StackError(err, "failed to send keep alive session")
+	}
+
 	// send loop
 	go func(stream rpc.PeerDataNode_KeepAliveClient) {
 		for {

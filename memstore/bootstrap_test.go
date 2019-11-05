@@ -89,6 +89,8 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 		metaStore.On("UpdateRedoLogCommitOffset", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 		metaStore.On("UpdateRedoLogCheckpointOffset", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 		metaStore.On("OverwriteArchiveBatchVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		metaStore.On("DeleteTableShard", mock.Anything, mock.Anything).Return(nil)
+		diskStore.On("DeleteTableShard", mock.Anything, mock.Anything).Return(nil)
 
 		mockPeerDataNodeClient := &rpcMocks.PeerDataNodeClient{}
 		mockSession := &rpc.Session{ID: 0}
@@ -168,7 +170,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			}
 			memStore.TableSchemas[table] = tableSchema
 
-			memStore.AddTableShard(table, shardID, true)
+			memStore.AddTableShard(table, shardID, true, true)
 			defer memStore.RemoveTableShard(table, shardID)
 			shard, err := memStore.GetTableShard(table, shardID)
 			Ω(err).Should(BeNil())
@@ -330,7 +332,7 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			}
 			memStore.TableSchemas[table] = tableSchema
 
-			memStore.AddTableShard(table, shardID, true)
+			memStore.AddTableShard(table, shardID, true, true)
 			defer memStore.RemoveTableShard(table, shardID)
 
 			shard, err := memStore.GetTableShard(table, shardID)
