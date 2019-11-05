@@ -16,6 +16,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -139,6 +140,7 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, requestID strin
 	if res != nil {
 		defer res.Body.Close()
 	}
+
 	if err != nil {
 		utils.GetLogger().With("err", err).Error("error connecting to datanode")
 		err = ErrFailedToConnect
@@ -148,7 +150,18 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, requestID strin
 		err = errors.New(fmt.Sprintf("got status code %d from datanode", res.StatusCode))
 		return
 	}
-	bs, err = ReadAll(res.Body)
+
+	if res.Header.Get(utils.HTTPContentTypeHeaderKey) == utils.HTTPContentEncodingGzip {
+		gzipReader, err := gzip.NewReader(res.Body)
+		if err != nil {
+			return
+		}
+		defer gzipReader.Close()
+		bs, err = ReadAll(gzipReader)
+	} else {
+		bs, err = ReadAll(res.Body)
+	}
+
 	if err != nil {
 		bs = nil
 	}
