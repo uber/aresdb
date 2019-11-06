@@ -179,9 +179,9 @@ func (c *Column) IsOverwriteOnlyDataType() bool {
 // EnumCardinality returns cardinality for enum type
 func EnumCardinality(columnType string) int {
 	switch columnType {
-	case SmallEnum:
+	case SmallEnum, ArraySmallEnum:
 		return 1 << 8
-	case BigEnum:
+	case BigEnum, ArrayBigEnum:
 		return 1 << 16
 	default:
 		return 0
