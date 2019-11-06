@@ -53,19 +53,19 @@ func NewStringArrayResponse() StringArrayResponse {
 }
 
 // Respond responds with object with success status
-func Respond(w http.ResponseWriter, obj interface{}, compress bool) {
-	RespondJSONObjectWithCode(w, http.StatusOK, obj, compress)
+func Respond(w http.ResponseWriter, obj interface{}) {
+	RespondJSONObjectWithCode(w, http.StatusOK, obj)
 }
 
 // RespondJSONObjectWithCode with specified code and object.
-func RespondJSONObjectWithCode(w http.ResponseWriter, code int, obj interface{}, compress bool) {
+func RespondJSONObjectWithCode(w http.ResponseWriter, code int, obj interface{}) {
 	setCommonHeaders(w)
 	var err error
 	var jsonBytes []byte
 	if obj != nil {
 		jsonBytes, err = json.Marshal(obj)
 	}
-	writeJSONBytes(w, jsonBytes, err, code, compress)
+	writeJSONBytes(w, jsonBytes, err, code)
 }
 
 // RespondBytesWithCode with specified code and bytes.
@@ -79,13 +79,13 @@ func RespondBytesWithCode(w http.ResponseWriter, code int, bs []byte) {
 
 // writeJSONBytes write jsonBytes to response if err is nil otherwise respond
 // with a ErrFailedToJSONMarshalResponseBody.
-func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int, allowCompression bool) {
+func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int) {
 	var gw *gzip.Writer
 	if err != nil {
 		RespondWithError(w, ErrFailedToJSONMarshalResponseBody)
 	}
 	w.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeApplicationJson)
-	willCompress := allowCompression && len(jsonBytes) > CompressionThreshold
+	willCompress := len(jsonBytes) > CompressionThreshold
 	if willCompress {
 		w.Header().Set(utils.HTTPContentEncodingHeaderKey, utils.HTTPContentEncodingGzip)
 	}
@@ -107,15 +107,15 @@ func writeJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, code int
 }
 
 // RespondWithJSONBytes writes json bytes to response.
-func RespondWithJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error, compress bool) {
+func RespondWithJSONBytes(w http.ResponseWriter, jsonBytes []byte, err error) {
 	setCommonHeaders(w)
-	writeJSONBytes(w, jsonBytes, err, http.StatusOK, compress)
+	writeJSONBytes(w, jsonBytes, err, http.StatusOK)
 }
 
 // RespondWithJSONObject marshals the object into json bytes and write the bytes
 // into response.
-func RespondWithJSONObject(w http.ResponseWriter, jsonObj interface{}, compress bool) {
-	RespondJSONObjectWithCode(w, http.StatusOK, jsonObj, compress)
+func RespondWithJSONObject(w http.ResponseWriter, jsonObj interface{}) {
+	RespondJSONObjectWithCode(w, http.StatusOK, jsonObj)
 }
 
 // setCommonHeaders writes no cache headers.
@@ -140,7 +140,7 @@ func RespondWithError(w http.ResponseWriter, err error) {
 			},
 		}
 	}
-	RespondJSONObjectWithCode(w, errorResponse.Body.Code, errorResponse.Body, false)
+	RespondJSONObjectWithCode(w, errorResponse.Body.Code, errorResponse.Body)
 }
 
 // RespondWithBadRequest responds with StatusBadRequest as code.
