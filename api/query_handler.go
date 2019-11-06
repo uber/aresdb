@@ -250,7 +250,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 	duration = utils.Now().Sub(start)
 	queryTimer.Record(duration)
 	if requestResponseWriter != nil {
-		requestResponseWriter.Respond(w, r.Header.Get(utils.HTTPAcceptEncodingHeaderKey) == utils.HTTPContentEncodingGzip)
+		requestResponseWriter.Respond(w)
 		statusCode = requestResponseWriter.GetStatusCode()
 	}
 	return
@@ -324,7 +324,7 @@ type QueryResponseWriter interface {
 	ReportQueryContext(*query.AQLQueryContext)
 	ReportResult(int, *query.AQLQueryContext)
 	// param compress means whether client accepts compressed results
-	Respond(w http.ResponseWriter, compress bool)
+	Respond(w http.ResponseWriter)
 	GetStatusCode() int
 }
 
@@ -375,8 +375,8 @@ func (w *JSONQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQuer
 }
 
 // Respond writes the final response into ResponseWriter.
-func (w *JSONQueryResponseWriter) Respond(rw http.ResponseWriter, compress bool) {
-	apiCom.RespondJSONObjectWithCode(rw, w.statusCode, w.response, compress)
+func (w *JSONQueryResponseWriter) Respond(rw http.ResponseWriter) {
+	apiCom.RespondJSONObjectWithCode(rw, w.statusCode, w.response)
 }
 
 // GetStatusCode returns the status code written into response.
@@ -419,7 +419,7 @@ func (w *HLLQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQuery
 }
 
 // Respond writes the final response into ResponseWriter.
-func (w *HLLQueryResponseWriter) Respond(rw http.ResponseWriter, compress bool) {
+func (w *HLLQueryResponseWriter) Respond(rw http.ResponseWriter) {
 	rw.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
 	apiCom.RespondBytesWithCode(rw, w.statusCode, w.response.GetBytes())
 }
