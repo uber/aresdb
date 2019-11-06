@@ -77,7 +77,7 @@ func (handler *EnumHandler) ListEnumCases(w http.ResponseWriter, r *http.Request
 	listEnumCasesResponse.JSONBuffer, err = json.Marshal(enumDict.ReverseDict)
 	tableSchema.RUnlock()
 
-	common.RespondWithJSONBytes(w, listEnumCasesResponse.JSONBuffer, err, false)
+	common.RespondWithJSONBytes(w, listEnumCasesResponse.JSONBuffer, err)
 }
 
 // AddEnumCase swagger:route POST /schema/tables/{table}/columns/{column}/enum-cases addEnumCase
@@ -105,5 +105,5 @@ func (handler *EnumHandler) AddEnumCase(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	common.RespondWithJSONObject(w, addEnumCaseResponse.Body, false)
+	common.RespondWithJSONObject(w, addEnumCaseResponse.Body)
 }

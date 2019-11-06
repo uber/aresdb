@@ -81,7 +81,7 @@ func (handler *SchemaHandler) ListTables(w http.ResponseWriter, r *http.Request)
 		response.Body = append(response.Body, tableName)
 	}
 
-	common.RespondWithJSONObject(w, response.Body, false)
+	common.RespondWithJSONObject(w, response.Body)
 }
 
 // GetTable swagger:route GET /schema/tables/{table} getTable
@@ -115,7 +115,7 @@ func (handler *SchemaHandler) GetTable(w http.ResponseWriter, r *http.Request) {
 	}
 	getTableResponse.JSONBuffer, err = json.Marshal(table)
 
-	common.RespondWithJSONBytes(w, getTableResponse.JSONBuffer, err, false)
+	common.RespondWithJSONBytes(w, getTableResponse.JSONBuffer, err)
 }
 
 // AddTable swagger:route POST /schema/tables addTable
@@ -144,7 +144,7 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 		common.RespondWithError(w, err)
 		return
 	}
-	common.RespondWithJSONObject(w, nil, false)
+	common.RespondWithJSONObject(w, nil)
 }
 
 // UpdateTableConfig swagger:route PUT /schema/tables/{table} updateTableConfig
@@ -170,7 +170,7 @@ func (handler *SchemaHandler) UpdateTableConfig(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	common.RespondWithJSONObject(w, nil, false)
+	common.RespondWithJSONObject(w, nil)
 }
 
 // DeleteTable swagger:route DELETE /schema/tables/{table} deleteTable
@@ -195,7 +195,7 @@ func (handler *SchemaHandler) DeleteTable(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	common.RespondWithJSONObject(w, nil, false)
+	common.RespondWithJSONObject(w, nil)
 }
 
 // AddColumn swagger:route POST /schema/tables/{table}/columns addColumn
@@ -225,7 +225,7 @@ func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	common.RespondWithJSONObject(w, nil, false)
+	common.RespondWithJSONObject(w, nil)
 }
 
 // UpdateColumn swagger:route PUT /schema/tables/{table}/columns/{column} updateColumn
@@ -254,7 +254,7 @@ func (handler *SchemaHandler) UpdateColumn(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	common.RespondWithJSONObject(w, nil, false)
+	common.RespondWithJSONObject(w, nil)
 }
 
 // DeleteColumn swagger:route DELETE /schema/tables/{table}/columns/{column} deleteColumn
@@ -282,5 +282,5 @@ func (handler *SchemaHandler) DeleteColumn(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	common.RespondWithJSONObject(w, nil, false)
+	common.RespondWithJSONObject(w, nil)
 }
