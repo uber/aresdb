@@ -718,10 +718,7 @@ func (dm *diskMetaStore) ExtendEnumDict(table, columnName string, enumCases []st
 
 	newEnumID := len(existingCases)
 
-	enumCardinalityLimit := 1 << 8
-	if column.Type == common.BigEnum || column.Type == common.ArrayBigEnum {
-		enumCardinalityLimit = 1 << 16
-	}
+	enumCardinalityLimit := common.EnumCardinality(column.Type)
 	if newEnumID+len(enumCases) > enumCardinalityLimit {
 		err = common.ErrEnumCardinalityOverflow
 		return
