@@ -369,6 +369,15 @@ var _ = ginkgo.Describe("data value", func() {
 		dv := DataValue{DataType: ArrayBool, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
 		Ω(dv.ConvertToHumanReadable(ArrayBool)).Should(Equal("[true,false,true]"))
 
+		// 0 length uint8
+		arrayValue = NewArrayValue(Uint8)
+		size = arrayValue.GetSerBytes()
+		Ω(size).Should(Equal(8))
+		buffer = make([]byte, size)
+		writer = utils.NewBufferWriter(buffer)
+		arrayValue.Write(&writer)
+		dv = DataValue{DataType: ArrayUint8, Valid: true, OtherVal: unsafe.Pointer(&buffer[0])}
+		Ω(dv.ConvertToHumanReadable(ArrayUint8)).Should(Equal("[]"))
 		// uint8
 		arrayValue = NewArrayValue(Uint8)
 		arrayValue.AddItem(uint8(11))

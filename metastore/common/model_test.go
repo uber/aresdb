@@ -35,6 +35,8 @@ var _ = ginkgo.Describe("model tests", func() {
 	ginkgo.It("EnumCardinality should work", func() {
 		Ω(EnumCardinality(SmallEnum)).Should(Equal(256))
 		Ω(EnumCardinality(BigEnum)).Should(Equal(65536))
+		Ω(EnumCardinality(ArraySmallEnum)).Should(Equal(256))
+		Ω(EnumCardinality(ArrayBigEnum)).Should(Equal(65536))
 		Ω(EnumCardinality(UUID)).Should(Equal(0))
 	})
 })
