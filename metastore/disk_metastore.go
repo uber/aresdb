@@ -487,7 +487,7 @@ func (dm *diskMetaStore) CreateTable(table *common.Table) (err error) {
 
 	// append enum case for enum column with default value
 	for _, column := range table.Columns {
-		if column.DefaultValue != nil && column.IsEnumColumn() {
+		if column.DefaultValue != nil && column.IsEnumBasedColumn() {
 			err = dm.writeEnumFile(table.Name, column.Name, []string{*column.DefaultValue})
 			if err != nil {
 				return err
@@ -554,7 +554,7 @@ func (dm *diskMetaStore) UpdateTable(table common.Table) (err error) {
 	// append enum case for enum column with default value for new columns
 	for i := len(existingTable.Columns); i < len(table.Columns); i++ {
 		column := table.Columns[i]
-		if column.DefaultValue != nil && column.IsEnumColumn() {
+		if column.DefaultValue != nil && column.IsEnumBasedColumn() {
 			err = dm.writeEnumFile(table.Name, column.Name, []string{*column.DefaultValue})
 			if err != nil {
 				return
@@ -709,7 +709,7 @@ func (dm *diskMetaStore) ExtendEnumDict(table, columnName string, enumCases []st
 	if err != nil {
 		return
 	}
-	if !column.IsEnumColumn() {
+	if !column.IsEnumBasedColumn() {
 		err = common.ErrNotEnumColumn
 		return
 	}
@@ -726,10 +726,7 @@ func (dm *diskMetaStore) ExtendEnumDict(table, columnName string, enumCases []st
 
 	newEnumID := len(existingCases)
 
-	enumCardinalityLimit := 1 << 8
-	if column.Type == common.BigEnum {
-		enumCardinalityLimit = 1 << 16
-	}
+	enumCardinalityLimit := common.EnumCardinality(column.Type)
 	if newEnumID+len(enumCases) > enumCardinalityLimit {
 		err = common.ErrEnumCardinalityOverflow
 		return
@@ -1044,7 +1041,7 @@ func (dm *diskMetaStore) addColumn(table *common.Table, column common.Column, ap
 	}
 
 	// if enum column, append a enum case for default value
-	if column.DefaultValue != nil && column.IsEnumColumn() {
+	if column.DefaultValue != nil && column.IsEnumBasedColumn() {
 		return dm.writeEnumFile(table.Name, column.Name, []string{*column.DefaultValue})
 	}
 
@@ -1468,7 +1465,7 @@ func (dm *diskMetaStore) enumColumnExists(tableName string, columnName string) e
 	if err != nil {
 		return err
 	}
-	if !column.IsEnumColumn() {
+	if !column.IsEnumBasedColumn() {
 		return common.ErrNotEnumColumn
 	}
 

@@ -587,6 +587,10 @@ func (av *ArrayValue) AddItem(item interface{}) {
 
 // GetSerBytes return the bytes will be used in upsertbatch serialized format
 func (av *ArrayValue) GetSerBytes() int {
+	if av.GetLength() == 0 {
+		// we always align to 8 bytes in upsertbatch
+		return 8
+	}
 	return CalculateListElementBytes(av.DataType, av.GetLength())
 }
 
