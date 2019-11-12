@@ -279,6 +279,11 @@ add_custom_target(ares-subscriber DEPENDS ${ALL_GO_SRC_LIST}
         VERBATIM
         )
 
+add_custom_target(arescontrollerd DEPENDS ${ALL_GO_SRC_LIST}
+        COMMAND go build -o bin/arescontrollerd ./cmd/controller/main.go
+        VERBATIM
+        )
+
 add_custom_target(run_server DEPENDS aresd
         COMMAND bash -c 'DYLD_LIBRARY_PATH=$$LIBRARY_PATH ./bin/aresd'
         )

@@ -27,13 +27,6 @@ const (
 	CompressionThreshold = 1 << 10
 )
 
-// ErrorResponse represents error response.
-// swagger:response errorResponse
-type ErrorResponse struct {
-	//in: body
-	Body utils.APIError
-}
-
 // NoContentResponse represents Response with no content.
 // swagger:response noContentResponse
 type NoContentResponse struct{}
@@ -127,13 +120,13 @@ func setCommonHeaders(w http.ResponseWriter) {
 
 // RespondWithError responds with error.
 func RespondWithError(w http.ResponseWriter, err error) {
-	var errorResponse ErrorResponse
+	var errorResponse utils.ErrorResponse
 	if e, ok := err.(utils.APIError); ok {
-		errorResponse = ErrorResponse{
+		errorResponse = utils.ErrorResponse{
 			Body: e,
 		}
 	} else {
-		errorResponse = ErrorResponse{
+		errorResponse = utils.ErrorResponse{
 			Body: utils.APIError{
 				Code:    http.StatusInternalServerError,
 				Message: err.Error(),
