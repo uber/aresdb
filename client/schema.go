@@ -242,7 +242,6 @@ func (cf *CachedSchemaHandler) PrepareEnumCases(tableName, columnName string, en
 	if err != nil {
 		return err
 	}
-	fmt.Printf("enumIDs: %+v, newEnumCases: %+v\n", enumIDs, newEnumCases)
 
 	cf.Lock()
 	for index, enumCase := range newEnumCases {

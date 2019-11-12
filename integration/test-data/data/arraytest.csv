@@ -1,0 +1,3 @@
+request_at,uuid,city_id,status,fare,array_bool,array_int8,array_uint8,array_int16,array_uint16,array_int32,array_uint32,array_smallenum,array_bigenum,array_uuid,array_geopoint
+{time-1d},{uuid},{uint16},{smallenum},{float32},{array_bool},{array_int8},{array_uint8},{array_int16},{array_uint16},{array_int32},{array_uint32},{array_smallenum},{array_bigenum},{array_uuid},{array_geopoint}
+{time-2d},{uuid},{uint16},{smallenum},{float32},{array_bool},{array_int8},{array_uint8},{array_int16},{array_uint16},{array_int32},{array_uint32},{array_smallenum},{array_bigenum},{array_uuid},{array_geopoint}
