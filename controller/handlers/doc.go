@@ -11,4 +11,4 @@
 //     - application/json
 //
 // swagger:meta
-package handler
+package handlers

@@ -83,7 +83,7 @@ func Execute(setters ...cmd.Option) {
 		Run: func(cmd *cobra.Command, args []string) {
 			fx.New(Module,
 				mutators.Module,
-				handler.Module,
+				handlers.Module,
 				tasks.Module,
 				fx.Invoke(runServer),
 			).Run()
@@ -120,7 +120,7 @@ func Init() Result {
 	}
 }
 
-func runServer(logger *zap.SugaredLogger, handlerParams handler.ServerParams) {
-	fallbackHandler := handler.NewCompositeHandler(handlerParams)
-	logger.Fatal(http.ListenAndServe(fmt.Sprintf("localhost:%d", port), fallbackHandler))
+func runServer(logger *zap.SugaredLogger, handlerParams handlers.ServerParams) {
+	compositeHandler := handlers.NewCompositeHandler(handlerParams)
+	logger.Fatal(http.ListenAndServe(fmt.Sprintf("localhost:%d", port), compositeHandler))
 }
