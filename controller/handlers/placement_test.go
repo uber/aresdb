@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/m3db/m3/src/cluster/kv"
+	"github.com/m3db/m3/src/cluster/kv/mem"
+	"github.com/m3db/m3/src/cluster/services"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"code.uber.internal/data/ares-controller/utils"
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/generated/proto/placementpb"
 	"github.com/m3db/m3/src/cluster/placement"
@@ -19,20 +21,51 @@ import (
 	"go.uber.org/zap"
 )
 
+// m3ClientMock mocks m3client
+type m3ClientMock struct {
+	kvStore kv.TxnStore
+	services services.Services
+}
+
+func (c *m3ClientMock) Services(opts services.OverrideOptions) (services.Services, error) {
+	return c.services, nil
+}
+
+func (c *m3ClientMock) KV() (kv.Store, error) {
+	return c.kvStore, nil
+}
+
+func (c *m3ClientMock) Txn() (kv.TxnStore, error) {
+	return c.kvStore, nil
+}
+
+func (c *m3ClientMock) Store(opts kv.OverrideOptions) (kv.Store, error) {
+	return c.kvStore, nil
+}
+
+func (c *m3ClientMock) TxnStore(opts kv.OverrideOptions) (kv.TxnStore, error) {
+	return c.kvStore, nil
+}
+
 func TestPlacementHandler(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	sugaredLogger := logger.Sugar()
 
 	t.Run("Should work for placement handler", func(t *testing.T) {
-		cleanUp, port := utils.SetUpEtcdTestServer(t)
-		defer cleanUp()
-		clusterClient := utils.SetUpEtcdTestClient(t, port)
-		clusterServices, err := clusterClient.Services(nil)
+		txnStore := mem.NewStore()
+		clusterServices, err := services.NewServices(
+			services.NewOptions().
+				SetKVGen(func(zone string) (store kv.Store, e error) {
+					return txnStore, nil
+				}).
+				SetHeartbeatGen(func(sid services.ServiceID) (service services.HeartbeatService, e error) {
+					return nil, nil
+				}).SetLeaderGen(func(sid services.ServiceID, opts services.ElectionOptions) (service services.LeaderService, e error) {
+					return nil, nil
+				}),
+		)
 		assert.NoError(t, err)
-
-		txnStore, err := clusterClient.Txn()
-		assert.NoError(t, err)
-
+		clusterClient := &m3ClientMock{kvStore: txnStore, services: clusterServices}
 		client := kvstore.EtcdClient{
 			Zone:          "test",
 			Environment:   "test",

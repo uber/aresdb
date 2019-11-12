@@ -13,4 +13,5 @@ var Module = fx.Provide(
 		NewNamespaceHandler,
 		NewAssignmentHandler,
 		NewPlacementHandler,
+		NewUIHandler,
 	)

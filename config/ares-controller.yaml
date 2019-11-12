@@ -21,3 +21,6 @@ etcd:
 
 ingestionAssignmentTask:
   intervalInSeconds: 60
+
+ui:
+  path: "controller/ui"

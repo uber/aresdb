@@ -24,6 +24,7 @@ type ServerParams struct {
 	MembershipHandler MembershipHandler
 	AssignmentHandler AssignmentHandler
 	PlacementHandler  PlacementHandler
+	UIHandler		  UIHandler
 	WrapperProvider   utils.MetricsLoggingMiddleWareProvider
 }
 
@@ -38,12 +39,10 @@ func NewCompositeHandler(p ServerParams) http.Handler {
 	p.AssignmentHandler.Register(router.PathPrefix("/assignment").Subrouter(), p.WrapperProvider.WithMetrics, p.WrapperProvider.WithLogging)
 	p.PlacementHandler.Register(router.PathPrefix("/placement").Subrouter(), p.WrapperProvider.WithMetrics, p.WrapperProvider.WithLogging)
 	p.NamespaceHandler.Register(router, p.WrapperProvider.WithMetrics, p.WrapperProvider.WithLogging)
+	p.UIHandler.Register(router)
 
 	// handlers for swagger
-	swaggerHanlder := http.StripPrefix("/swagger/", http.FileServer(http.Dir("./ui/swagger/")))
-	nodeModulesHandler := http.StripPrefix("/node_modules/", http.FileServer(http.Dir("./ui/node_modules/")))
-	router.PathPrefix("/swagger/").Handler(swaggerHanlder)
-	router.PathPrefix("/node_modules").Handler(nodeModulesHandler)
+
 
 	return handlers.CORS()(router)
 }
