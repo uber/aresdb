@@ -16,12 +16,13 @@ package utils
 
 import (
 	"net/http"
-
 	"net/http/httptest"
 
+	"github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/uber-go/tally"
+	"github.com/uber/aresdb/common"
 )
 
 func testHTTPHandlerFunc(w http.ResponseWriter, r *http.Request) {
@@ -73,5 +74,27 @@ var _ = ginkgo.Describe("http", func() {
 
 		r.Header.Set("RPC-Caller", "test2")
 		Ω(GetOrigin(r)).Should(Equal("test2"))
+	})
+
+	ginkgo.It("LimitServerImmediateReturn should work", func() {
+		r := mux.NewRouter()
+		r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Good!"))
+		}).Methods("GET")
+
+		cfg := common.HTTPConfig{
+			MaxConnections:          10,
+			MaxIngestionConnections: 10,
+			MaxQueryConnections:     10,
+			ReadTimeOutInSeconds:    1,
+			WriteTimeOutInSeconds:   1,
+		}
+		_, server := LimitServeImmediateReturn(9374, r, cfg)
+		resp, err := http.Get("http://localhost:9374")
+		Ω(err).Should(BeNil())
+		Ω(resp.Status).Should(Equal("200 OK"))
+		err = server.Close()
+		Ω(err).Should(BeNil())
 	})
 })
