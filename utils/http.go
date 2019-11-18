@@ -166,7 +166,7 @@ func LimitServe(port int, handler http.Handler, httpCfg common.HTTPConfig) {
 }
 
 // LimitServe will start a http server on the port with the handler and at most maxConnection concurrent connections.
-func LimitServeImmediateReturn(port int, handler http.Handler, httpCfg common.HTTPConfig) (chan error, *http.Server) {
+func LimitServeAsync(port int, handler http.Handler, httpCfg common.HTTPConfig) (chan error, *http.Server) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		GetLogger().Fatal(err)
@@ -178,10 +178,10 @@ func LimitServeImmediateReturn(port int, handler http.Handler, httpCfg common.HT
 		WriteTimeout: time.Duration(httpCfg.WriteTimeOutInSeconds) * time.Second,
 		Handler:      h2c.NewHandler(handler, &http2.Server{}),
 	}
-	doneChan := make(chan error)
+	errChan := make(chan error)
 	go func() {
 		defer listener.Close()
-		doneChan <- server.Serve(listener)
+		errChan <- server.Serve(listener)
 	}()
-	return doneChan, server
+	return errChan, server
 }

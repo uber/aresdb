@@ -63,14 +63,13 @@ var once sync.Once
 
 // AresD is a wrapper of original functions for code reuse
 type AresD struct {
-	sync.Mutex
 	// server configuration and options
 	cfg     common.AresServerConfig
 	options *Options
 	// server is http server instance started inside AresD
 	server *http.Server
-	// WaitCond is used to notify other route that the server is started
-	WaitCond *sync.Cond
+	// StartedChan is used to notify other route that the server is started
+	StartedChan chan struct{}
 }
 
 // NewAresD create singleton of AresD
@@ -79,8 +78,8 @@ func NewAresD(cfg common.AresServerConfig, options *Options) *AresD {
 		aresd = &AresD{
 			cfg:     cfg,
 			options: options,
+			StartedChan: make(chan struct{}, 1),
 		}
-		aresd.WaitCond = sync.NewCond(aresd)
 	})
 	return aresd
 }
@@ -288,12 +287,12 @@ func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, que
 	go batchStatsReporter.Run()
 
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
-	doneChan, server := utils.LimitServeImmediateReturn(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
+	doneChan, server := utils.LimitServeAsync(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
 	aresd.server = server
 	// notify other routes that the server is up
-	aresd.WaitCond.Broadcast()
+	aresd.StartedChan <- struct{}{}
 	// waiting for the server to stop
-	<-doneChan
+	utils.GetLogger().Error(<-doneChan)
 	batchStatsReporter.Stop()
 	redoLogManagerMaster.Stop()
 }

@@ -58,9 +58,7 @@ var _ = BeforeSuite(func() {
 	aresd = cmd.NewAresD(cfg, options)
 	go aresd.Start()
 	// wait for the aresd to start, it should panic out if the server can not start
-	aresd.Lock()
-	aresd.WaitCond.Wait()
-	aresd.Unlock()
+	<- aresd.StartedChan
 
 	tableSchemaPath := "./test-data/schema/arraytest.json"
 	// create testing tables

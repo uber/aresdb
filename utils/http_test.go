@@ -90,7 +90,7 @@ var _ = ginkgo.Describe("http", func() {
 			ReadTimeOutInSeconds:    1,
 			WriteTimeOutInSeconds:   1,
 		}
-		_, server := LimitServeImmediateReturn(9374, r, cfg)
+		_, server := LimitServeAsync(9374, r, cfg)
 		resp, err := http.Get("http://localhost:9374")
 		Ω(err).Should(BeNil())
 		Ω(resp.Status).Should(Equal("200 OK"))
