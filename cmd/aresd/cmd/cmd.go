@@ -40,7 +40,6 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"path/filepath"
-	"sync"
 	"time"
 	"unsafe"
 )
@@ -57,10 +56,6 @@ type Options struct {
 // Option is for setting option
 type Option func(*Options)
 
-// singleton of AresD instance
-var aresd *AresD
-var once sync.Once
-
 // AresD is a wrapper of original functions for code reuse
 type AresD struct {
 	// server configuration and options
@@ -74,14 +69,11 @@ type AresD struct {
 
 // NewAresD create singleton of AresD
 func NewAresD(cfg common.AresServerConfig, options *Options) *AresD {
-	once.Do(func() {
-		aresd = &AresD{
-			cfg:     cfg,
-			options: options,
-			StartedChan: make(chan struct{}, 1),
-		}
-	})
-	return aresd
+	return &AresD{
+		cfg:         cfg,
+		options:     options,
+		StartedChan: make(chan struct{}, 1),
+	}
 }
 
 // Start start aresd server
