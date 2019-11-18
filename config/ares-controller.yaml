@@ -1,0 +1,26 @@
+service:
+  name: ares-controller
+
+logging:
+  level: info
+  development: false
+  sampling:
+    initial: 100
+    thereafter: 100
+  encoding: json
+
+etcd:
+  enabled: true
+  zone: local
+  env: dev
+  service: ares-controller
+  etcdClusters:
+    - zone: local
+      endpoints:
+        - 127.0.0.1:2379
+
+ingestionAssignmentTask:
+  intervalInSeconds: 60
+
+ui:
+  path: "controller/ui"
