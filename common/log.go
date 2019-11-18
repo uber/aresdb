@@ -73,6 +73,19 @@ type ZapLoggerFactory struct {
 	logger *ZapLogger
 }
 
+// NewZapLoggerFactory creates ZapLoggerFactory
+func NewZapLoggerFactory(logger *zap.SugaredLogger) LoggerFactory {
+	if logger == nil  {
+		logger = zap.NewExample().Sugar()
+	}
+
+	return &ZapLoggerFactory{
+		&ZapLogger{
+			sugaredLogger: logger,
+		},
+	}
+}
+
 // NewLoggerFactory creates a default zap LoggerFactory implementation.
 func NewLoggerFactory() LoggerFactory {
 	return &ZapLoggerFactory{
