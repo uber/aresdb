@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/uber/aresdb/cluster/topology"
+	"github.com/uber/aresdb/common"
 	queryCom "github.com/uber/aresdb/query/common"
 	"github.com/uber/aresdb/utils"
 	. "io/ioutil"
@@ -32,16 +33,20 @@ const (
 	requestIDHeaderKey = "RequestID"
 )
 
+// ErrFailedToConnect represents error to connect to datanode
 var ErrFailedToConnect = errors.New("Datanode query client failed to connect")
 
-func NewDataNodeQueryClient() DataNodeQueryClient {
+// NewDataNodeQueryClient creates query client to datanode
+func NewDataNodeQueryClient(logger common.Logger) DataNodeQueryClient {
 	return &dataNodeQueryClientImpl{
 		client: http.Client{},
+		logger: logger,
 	}
 }
 
 type dataNodeQueryClientImpl struct {
 	client http.Client
+	logger common.Logger
 }
 
 type aqlRequestBody struct {
@@ -64,7 +69,7 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, requestID string, 
 		var errs []error
 		results, errs, err = queryCom.ParseHLLQueryResults(bs, true)
 		if err != nil {
-			utils.GetLogger().With("host", host, "query", query, "error", err, "errors", errs, "hll", hll).Error("datanode query client Query failed")
+			dc.logger.With("host", host, "query", query, "error", err, "errors", errs, "hll", hll).Error("datanode query client Query failed")
 			return
 		}
 		if len(results) != 1 {
@@ -82,14 +87,14 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, requestID string, 
 		result = respBody.Results[0]
 	}
 
-	utils.GetLogger().With("host", host, "query", query, "result", result, "hll", hll).Debug("datanode query client Query succeeded")
+	dc.logger.With("host", host, "query", query, "result", result, "hll", hll).Debug("datanode query client Query succeeded")
 	return
 }
 
 func (dc *dataNodeQueryClientImpl) QueryRaw(ctx context.Context, requestID string, host topology.Host, query queryCom.AQLQuery) (bs []byte, err error) {
 	bs, err = dc.queryRaw(ctx, requestID, host, query, false)
 	if err == nil {
-		utils.GetLogger().With("host", host, "query", query).Debug("datanode query client QueryRaw succeeded")
+		dc.logger.With("host", host, "query", query).Debug("datanode query client QueryRaw succeeded")
 	}
 	return
 }
@@ -139,7 +144,7 @@ func (dc *dataNodeQueryClientImpl) queryRaw(ctx context.Context, requestID strin
 		defer res.Body.Close()
 	}
 	if err != nil {
-		utils.GetLogger().With("err", err).Error("error connecting to datanode")
+		dc.logger.With("err", err).Error("error connecting to datanode")
 		err = ErrFailedToConnect
 		return
 	}
