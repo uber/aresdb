@@ -82,7 +82,7 @@ func (dc *dataNodeQueryClientImpl) Query(ctx context.Context, requestID string, 
 		result = respBody.Results[0]
 	}
 
-	utils.GetLogger().With("host", host, "query", query, "result", result, "hll", hll).Debug("datanode query client Query succeeded")
+	utils.GetLogger().With("host", host, "query", query, "hll", hll).Debug("datanode query client Query succeeded")
 	return
 }
 
