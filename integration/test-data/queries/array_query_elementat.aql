@@ -1,0 +1,29 @@
+{
+  "queries": [
+    {
+      "table": "arraytest",
+      "measures": [
+        {
+          "alias": "value",
+          "sqlExpression": "count(*)",
+          "rowFilters": [
+             "element_at(array_int16, 0)=10"
+          ]
+        }
+      ],
+      "timeFilter": {
+        "column": "request_at",
+        "from": "24 hours ago",
+        "to": "this quarter-hour"
+      },
+      "dimensions": [
+        {
+          "alias": "ts",
+          "sqlExpression": "request_at",
+          "timeBucketizer": "day"
+        }
+      ],
+      "joins": []
+    }
+  ]
+}

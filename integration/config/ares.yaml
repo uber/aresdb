@@ -1,0 +1,48 @@
+port: 9374
+root_path: ares-root
+total_memory_size: 161061273600 # 150gb
+query:
+  device_memory_utilization: 0.95
+  device_choosing_timeout: 10
+  # enable timezone column for queries with "timezone": "timezone(city_id)"
+  timezone_table:
+    table_name: api_cities
+  enable_hash_reduction: false
+
+disk_store:
+  write_sync: true
+meta_store:
+  write_sync: true
+http:
+  max_connections: 650
+  max_ingestion_connections: 300
+  max_query_connections: 300
+  read_time_out_in_seconds: 20
+  write_time_out_in_seconds: 300 # 5 minutes to write the result
+
+cluster:
+  enable: false
+  distributed: false
+  namespace: ""
+  instance_id: ""
+  # example controller client configs
+  controller:
+    address: localhost:6708
+  heartbeat:
+    timeout: 10
+    interval: 1
+  etcd:
+    zone: local
+    env: dev
+    service: ares-datanode
+    etcdClusters:
+      - zone: local
+        endpoints:
+          - 127.0.0.1:2379
+
+redolog:
+  disk:
+    disabled: false
+  kafka:
+    enabled: false
+

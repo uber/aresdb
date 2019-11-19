@@ -56,6 +56,39 @@ type Options struct {
 // Option is for setting option
 type Option func(*Options)
 
+// AresD is a wrapper of original functions for code reuse
+type AresD struct {
+	// server configuration and options
+	cfg     common.AresServerConfig
+	options *Options
+	// server is http server instance started inside AresD
+	server *http.Server
+	// StartedChan is used to notify other route that the server is started
+	StartedChan chan struct{}
+}
+
+// NewAresD create singleton of AresD
+func NewAresD(cfg common.AresServerConfig, options *Options) *AresD {
+	return &AresD{
+		cfg:         cfg,
+		options:     options,
+		StartedChan: make(chan struct{}, 1),
+	}
+}
+
+// Start start aresd server
+func (aresd *AresD) Start() {
+	aresd.start(aresd.cfg, aresd.options.ServerLogger, aresd.options.QueryLogger, aresd.options.Metrics, aresd.options.HTTPWrappers...)
+}
+
+// Shutdown stop aresd server
+func (aresd *AresD) Shutdown() {
+	if aresd.server != nil {
+		aresd.server.Close()
+		aresd.server = nil
+	}
+}
+
 // Execute executes command with options
 func Execute(setters ...Option) {
 
@@ -82,13 +115,8 @@ func Execute(setters ...Option) {
 				options.ServerLogger.With("err", err.Error()).Fatal("failed to read configs")
 			}
 
-			start(
-				cfg,
-				options.ServerLogger,
-				options.QueryLogger,
-				options.Metrics,
-				options.HTTPWrappers...,
-			)
+			aresd := NewAresD(cfg, options)
+			aresd.Start()
 		},
 	}
 	AddFlags(cmd)
@@ -96,7 +124,7 @@ func Execute(setters ...Option) {
 }
 
 // start is the entry point of starting ares.
-func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common.Logger, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
+func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, queryLogger common.Logger, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
 	logger.With("config", cfg).Info("Bootstrapping service")
 
 	// Check whether we have a correct device running environment
@@ -190,26 +218,30 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	nodeModulesHandler := http.StripPrefix("/node_modules/", http.FileServer(http.Dir("./api/ui/node_modules/")))
 
 	// Start HTTP server for debugging.
-	go func() {
-		debugHandler := api.NewDebugHandler(cfg.Cluster.Namespace, memStore, metaStore, queryHandler, healthCheckHandler, staticShardOwner, nil)
+	if cfg.DebugPort > 0 {
+		go func() {
+			debugHandler := api.NewDebugHandler(cfg.Cluster.Namespace, memStore, metaStore, queryHandler, healthCheckHandler, staticShardOwner, nil)
 
-		debugStaticHandler := http.StripPrefix("/static/", utils.NoCache(
-			http.FileServer(http.Dir("./api/ui/debug/"))))
-		debugRouter := mux.NewRouter()
-		debugHandler.Register(debugRouter.PathPrefix("/dbg").Subrouter())
-		schemaHandler.RegisterForDebug(debugRouter.PathPrefix("/schema").Subrouter())
+			debugStaticHandler := http.StripPrefix("/static/", utils.NoCache(
+				http.FileServer(http.Dir("./api/ui/debug/"))))
+			debugRouter := mux.NewRouter()
+			debugHandler.Register(debugRouter.PathPrefix("/dbg").Subrouter())
+			schemaHandler.RegisterForDebug(debugRouter.PathPrefix("/schema").Subrouter())
 
-		debugRouter.PathPrefix("/node_modules/").Handler(nodeModulesHandler)
-		debugRouter.PathPrefix("/static/").Handler(debugStaticHandler)
-		debugRouter.HandleFunc("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-		debugRouter.HandleFunc("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-		debugRouter.HandleFunc("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
-		debugRouter.HandleFunc("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
-		debugRouter.PathPrefix("/debug/pprof/").Handler(http.HandlerFunc(pprof.Index))
+			debugRouter.PathPrefix("/node_modules/").Handler(nodeModulesHandler)
+			debugRouter.PathPrefix("/static/").Handler(debugStaticHandler)
+			debugRouter.HandleFunc("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+			debugRouter.HandleFunc("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+			debugRouter.HandleFunc("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+			debugRouter.HandleFunc("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
+			debugRouter.PathPrefix("/debug/pprof/").Handler(http.HandlerFunc(pprof.Index))
 
-		utils.GetLogger().Infof("Starting HTTP server on dbg-port %d", cfg.DebugPort)
-		utils.GetLogger().Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.DebugPort), debugRouter))
-	}()
+			utils.GetLogger().Infof("Starting HTTP server on dbg-port %d", cfg.DebugPort)
+			utils.GetLogger().Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.DebugPort), debugRouter))
+		}()
+	} else {
+		utils.GetLogger().Infof("Debug port not configured, debug server will be disabled")
+	}
 
 	// Init shards.
 	utils.GetLogger().Infof("Initializing shards from local DiskStore %s", cfg.RootPath)
@@ -247,7 +279,12 @@ func start(cfg common.AresServerConfig, logger common.Logger, queryLogger common
 	go batchStatsReporter.Run()
 
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
-	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
+	doneChan, server := utils.LimitServeAsync(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
+	aresd.server = server
+	// notify other routes that the server is up
+	aresd.StartedChan <- struct{}{}
+	// waiting for the server to stop
+	utils.GetLogger().Error(<-doneChan)
 	batchStatsReporter.Stop()
 	redoLogManagerMaster.Stop()
 }
