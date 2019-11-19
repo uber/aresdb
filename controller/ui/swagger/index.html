@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AresDB Swagger UI</title>
+    <link rel="stylesheet" type="text/css" href="../node_modules/swagger-ui-dist/swagger-ui.css">
+    <link rel="icon" type="image/png" href="../node_modules/swagger-ui-dist/favicon-32x32.png" sizes="32x32"/>
+    <link rel="icon" type="image/png" href="../node_modules/swagger-ui-dist/favicon-16x16.png" sizes="16x16"/>
+</head>
+
+<body>
+<div id="swagger-div"></div>
+
+<script src="../node_modules/swagger-ui-dist/swagger-ui-bundle.js"></script>
+<script src="../node_modules/swagger-ui-dist/swagger-ui-standalone-preset.js"></script>
+<script>
+    window.onload = function () {
+        const ui = SwaggerUIBundle({
+            url: window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/swagger/swagger.json",
+            dom_id: '#swagger-div',
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIStandalonePreset
+            ],
+            layout: "StandaloneLayout"
+        })
+
+        window.ui = ui
+    }
+</script>
+</body>
+</html>

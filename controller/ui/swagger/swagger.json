@@ -1,0 +1,207 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "http"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "title": "provide the RESTful APIs to interact with Ares-Controller.",
+    "version": "0.0.1"
+  },
+  "basePath": "/",
+  "paths": {
+    "/assignment/{namespace}/assignments": {
+      "get": {
+        "description": "returns all assignments",
+        "operationId": "getAssignments"
+      }
+    },
+    "/assignment/{namespace}/assignments/{subscriber}": {
+      "get": {
+        "description": "gets assignment by subscriber name",
+        "operationId": "getAssignment",
+        "parameters": [
+          {
+            "type": "string",
+            "name": "Namespace",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "name": "Subscriber",
+            "in": "query"
+          }
+        ]
+      }
+    },
+    "/assignment/{namespace}/hash/{subscriber}": {
+      "get": {
+        "description": "returns hash that will be different if any thing changed for given assignment",
+        "operationId": "getAssignmentHash"
+      }
+    },
+    "/config/{namespace}/hash": {
+      "get": {
+        "description": "returns hash that will be different if any job changed",
+        "operationId": "getJobsHash"
+      }
+    },
+    "/config/{namespace}/jobs": {
+      "get": {
+        "description": "returns all jobs config",
+        "operationId": "getJobs"
+      },
+      "post": {
+        "description": "adds a new job",
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "addJob"
+      }
+    },
+    "/config/{namespace}/jobs/{job}": {
+      "get": {
+        "description": "gets job config by name",
+        "operationId": "getJob"
+      },
+      "put": {
+        "description": "updates job config",
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "updateJob"
+      },
+      "delete": {
+        "description": "deletes a job",
+        "operationId": "deleteJob"
+      }
+    },
+    "/membership/{namespace}/hash": {
+      "get": {
+        "description": "returns hash of all instances in a namespace",
+        "operationId": "getMembershipHash"
+      }
+    },
+    "/membership/{namespace}/instances": {
+      "get": {
+        "description": "returns all instances",
+        "operationId": "getInstances"
+      }
+    },
+    "/membership/{namespace}/instances/{instance}": {
+      "get": {
+        "description": "returns an instance",
+        "operationId": "getInstance"
+      }
+    },
+    "/namespaces": {
+      "get": {
+        "description": "returns all namespaces",
+        "produces": [
+          "application/json"
+        ],
+        "operationId": "listNamespaces"
+      },
+      "post": {
+        "description": "adds a new namespace",
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "createNamespace",
+        "parameters": [
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "namespace": {
+                  "type": "string",
+                  "x-go-name": "Namespace"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "/schema/{namespace}/hash": {
+      "get": {
+        "description": "returns hash of all table schemas in a namespace, hash change means there's a change in any of the schemas",
+        "operationId": "getSchemaHash"
+      }
+    },
+    "/schema/{namespace}/tables": {
+      "get": {
+        "description": "returns schema of all tables",
+        "operationId": "getTables"
+      },
+      "post": {
+        "description": "adds a new table",
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "addTable"
+      }
+    },
+    "/schema/{namespace}/tables/{table}": {
+      "get": {
+        "description": "returns table schema of given table name",
+        "operationId": "getTable"
+      },
+      "put": {
+        "description": "updates existing table's schema and config",
+        "consumes": [
+          "application/json"
+        ],
+        "operationId": "updateTable"
+      },
+      "delete": {
+        "description": "deletes an existing table",
+        "operationId": "deleteTable"
+      }
+    }
+  },
+  "definitions": {
+    "APIError": {
+      "type": "object",
+      "title": "APIError ...",
+      "properties": {
+        "cause": {
+          "type": "string",
+          "x-go-name": "Cause"
+        },
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        }
+      },
+      "x-go-package": "code.uber.internal/data/ares-controller/vendor/github.com/uber/aresdb/utils"
+    }
+  },
+  "responses": {
+    "errorResponse": {
+      "description": "ErrorResponse represents error response.",
+      "schema": {
+        "$ref": "#/definitions/APIError"
+      }
+    },
+    "noContentResponse": {
+      "description": "NoContentResponse represents Response with no content."
+    },
+    "stringArrayResponse": {
+      "description": "StringArrayResponse represents string array response.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

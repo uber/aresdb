@@ -19,17 +19,18 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	topoMocks "github.com/uber/aresdb/cluster/topology/mocks"
-	"github.com/uber/aresdb/query/common"
+	"github.com/uber/aresdb/common"
+	queryCom "github.com/uber/aresdb/query/common"
 	"net/http"
 	"net/http/httptest"
 )
 
 var _ = ginkgo.Describe("datanode query client", func() {
-	aqlResult := common.AQLQueryResult{
+	aqlResult := queryCom.AQLQueryResult{
 		"foo": float64(1),
 	}
 	var server *httptest.Server
-
+	logger := common.NewLoggerFactory().GetDefaultLogger()
 	ginkgo.AfterEach(func() {
 		if server != nil {
 			server.Close()
@@ -39,7 +40,7 @@ var _ = ginkgo.Describe("datanode query client", func() {
 	ginkgo.It("should work happy path", func() {
 		server = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			aqlResponseGood := aqlRespBody{
-				Results: []common.AQLQueryResult{
+				Results: []queryCom.AQLQueryResult{
 					aqlResult,
 				},
 			}
@@ -50,8 +51,8 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		mockHost := topoMocks.Host{}
 		mockHost.On("Address").Return(add)
 
-		client := NewDataNodeQueryClient()
-		res, err := client.Query(context.TODO(), "", &mockHost, common.AQLQuery{}, false)
+		client := NewDataNodeQueryClient(logger)
+		res, err := client.Query(context.TODO(), "", &mockHost, queryCom.AQLQuery{}, false)
 		Ω(err).Should(BeNil())
 		Ω(res).Should(Equal(aqlResult))
 	})
@@ -64,8 +65,8 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		mockHost := topoMocks.Host{}
 		mockHost.On("Address").Return(add)
 
-		client := NewDataNodeQueryClient()
-		_, err := client.Query(context.TODO(), "", &mockHost, common.AQLQuery{}, false)
+		client := NewDataNodeQueryClient(logger)
+		_, err := client.Query(context.TODO(), "", &mockHost, queryCom.AQLQuery{}, false)
 		Ω(err.Error()).Should(ContainSubstring("got status code"))
 	})
 
@@ -83,8 +84,8 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		mockHost := topoMocks.Host{}
 		mockHost.On("Address").Return(add)
 
-		client := NewDataNodeQueryClient()
-		_, err := client.Query(context.TODO(), "", &mockHost, common.AQLQuery{}, false)
+		client := NewDataNodeQueryClient(logger)
+		_, err := client.Query(context.TODO(), "", &mockHost, queryCom.AQLQuery{}, false)
 		Ω(err.Error()).Should(ContainSubstring("invalid response from datanode"))
 	})
 
@@ -93,23 +94,23 @@ var _ = ginkgo.Describe("datanode query client", func() {
 		mockHost := topoMocks.Host{}
 		mockHost.On("Address").Return(add)
 
-		client := NewDataNodeQueryClient()
-		_, err := client.Query(context.TODO(), "", &mockHost, common.AQLQuery{}, false)
+		client := NewDataNodeQueryClient(logger)
+		_, err := client.Query(context.TODO(), "", &mockHost, queryCom.AQLQuery{}, false)
 		Ω(err).Should(Equal(ErrFailedToConnect))
 	})
 
 	ginkgo.It("should fail context canceled", func() {
 		ctx, cf := context.WithCancel(context.Background())
 		cf()
-		client := NewDataNodeQueryClient()
-		_, err := client.Query(ctx, "", nil, common.AQLQuery{}, false)
+		client := NewDataNodeQueryClient(logger)
+		_, err := client.Query(ctx, "", nil, queryCom.AQLQuery{}, false)
 		Ω(err).Should(Equal(context.Canceled))
 	})
 
 	ginkgo.It("should fail nil host", func() {
 		ctx := context.TODO()
-		client := NewDataNodeQueryClient()
-		_, err := client.Query(ctx, "", nil, common.AQLQuery{}, false)
+		client := NewDataNodeQueryClient(logger)
+		_, err := client.Query(ctx, "", nil, queryCom.AQLQuery{}, false)
 		Ω(err.Error()).Should(ContainSubstring("host is nil"))
 	})
 })
