@@ -19,7 +19,7 @@ import (
 	"github.com/uber/aresdb/metastore"
 	"net/http"
 
-	"github.com/uber/aresdb/api/common"
+	apiCom "github.com/uber/aresdb/api/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
 
@@ -40,21 +40,21 @@ func NewSchemaHandler(metaStore metaCom.MetaStore) *SchemaHandler {
 }
 
 // Register registers http handlers.
-func (handler *SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
-	router.HandleFunc("/tables", utils.ApplyHTTPWrappers(handler.ListTables, wrappers)).Methods(http.MethodGet)
-	router.HandleFunc("/tables", utils.ApplyHTTPWrappers(handler.AddTable, wrappers)).Methods(http.MethodPost)
-	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers(handler.GetTable, wrappers)).Methods(http.MethodGet)
-	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers(handler.DeleteTable, wrappers)).Methods(http.MethodDelete)
-	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers(handler.UpdateTableConfig, wrappers)).Methods(http.MethodPut)
-	router.HandleFunc("/tables/{table}/columns", utils.ApplyHTTPWrappers(handler.AddColumn, wrappers)).Methods(http.MethodPost)
-	router.HandleFunc("/tables/{table}/columns/{column}", utils.ApplyHTTPWrappers(handler.UpdateColumn, wrappers)).Methods(http.MethodPut)
-	router.HandleFunc("/tables/{table}/columns/{column}", utils.ApplyHTTPWrappers(handler.DeleteColumn, wrappers)).Methods(http.MethodDelete)
+func (handler *SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
+	router.HandleFunc("/tables", utils.ApplyHTTPWrappers2(handler.ListTables, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/tables", utils.ApplyHTTPWrappers2(handler.AddTable, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers2(handler.GetTable, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers2(handler.DeleteTable, wrappers...)).Methods(http.MethodDelete)
+	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers2(handler.UpdateTableConfig, wrappers...)).Methods(http.MethodPut)
+	router.HandleFunc("/tables/{table}/columns", utils.ApplyHTTPWrappers2(handler.AddColumn, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/tables/{table}/columns/{column}", utils.ApplyHTTPWrappers2(handler.UpdateColumn, wrappers...)).Methods(http.MethodPut)
+	router.HandleFunc("/tables/{table}/columns/{column}", utils.ApplyHTTPWrappers2(handler.DeleteColumn, wrappers...)).Methods(http.MethodDelete)
 }
 
 // RegisterForDebug register handlers for debug port
-func (handler *SchemaHandler) RegisterForDebug(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
-	router.HandleFunc("/tables", utils.ApplyHTTPWrappers(handler.ListTables, wrappers)).Methods(http.MethodGet)
-	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers(handler.GetTable, wrappers)).Methods(http.MethodGet)
+func (handler *SchemaHandler) RegisterForDebug(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
+	router.HandleFunc("/tables", utils.ApplyHTTPWrappers2(handler.ListTables, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers2(handler.GetTable, wrappers...)).Methods(http.MethodGet)
 }
 
 // ListTables swagger:route GET /schema/tables listTables
@@ -68,20 +68,20 @@ func (handler *SchemaHandler) RegisterForDebug(router *mux.Router, wrappers ...u
 // Responses:
 //    default: errorResponse
 //        200: stringArrayResponse
-func (handler *SchemaHandler) ListTables(w http.ResponseWriter, r *http.Request) {
+func (handler *SchemaHandler) ListTables(w *utils.ResponseWriter, r *http.Request) {
 
-	response := common.NewStringArrayResponse()
+	response := apiCom.NewStringArrayResponse()
 
 	tables, err := handler.metaStore.ListTables()
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 	for _, tableName := range tables {
 		response.Body = append(response.Body, tableName)
 	}
 
-	common.RespondWithJSONObject(w, response.Body)
+	w.WriteObject(response.Body)
 }
 
 // GetTable swagger:route GET /schema/tables/{table} getTable
@@ -96,26 +96,25 @@ func (handler *SchemaHandler) ListTables(w http.ResponseWriter, r *http.Request)
 // Responses:
 //    default: errorResponse
 //        200: getTableResponse
-func (handler *SchemaHandler) GetTable(w http.ResponseWriter, r *http.Request) {
+func (handler *SchemaHandler) GetTable(w *utils.ResponseWriter, r *http.Request) {
 	var getTableRequest GetTableRequest
 	var getTableResponse GetTableResponse
 
-	err := common.ReadRequest(r, &getTableRequest)
+	err := apiCom.ReadRequest(r, &getTableRequest, w)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
 	table, err := handler.metaStore.GetTable(getTableRequest.TableName)
 	if err != nil {
 		if err.Error() == metaCom.ErrTableDoesNotExist.Error() {
-			common.RespondBytesWithCode(w, http.StatusNotFound, []byte(err.Error()))
+			w.WriteErrorWithCode(http.StatusNotFound, err)
 			return
 		}
 	}
 	getTableResponse.JSONBuffer, err = json.Marshal(table)
-
-	common.RespondWithJSONBytes(w, getTableResponse.JSONBuffer, err)
+	w.WriteJSONBytes(getTableResponse.JSONBuffer, err)
 }
 
 // AddTable swagger:route POST /schema/tables addTable
@@ -127,24 +126,24 @@ func (handler *SchemaHandler) GetTable(w http.ResponseWriter, r *http.Request) {
 // Responses:
 //    default: errorResponse
 //        200: noContentResponse
-func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
+func (handler *SchemaHandler) AddTable(w *utils.ResponseWriter, r *http.Request) {
 
 	var addTableRequest AddTableRequest
 	// add default table configs first
 	addTableRequest.Body.Config = metastore.DefaultTableConfig
-	err := common.ReadRequest(r, &addTableRequest)
+	err := apiCom.ReadRequest(r, &addTableRequest, w)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	newTable := addTableRequest.Body
 	err = handler.metaStore.CreateTable(&newTable)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
-	common.RespondWithJSONObject(w, nil)
+	w.WriteObject(nil)
 }
 
 // UpdateTableConfig swagger:route PUT /schema/tables/{table} updateTableConfig
@@ -156,21 +155,20 @@ func (handler *SchemaHandler) AddTable(w http.ResponseWriter, r *http.Request) {
 // Responses:
 //    default: errorResponse
 //        200: noContentResponse
-func (handler *SchemaHandler) UpdateTableConfig(w http.ResponseWriter, r *http.Request) {
+func (handler *SchemaHandler) UpdateTableConfig(w *utils.ResponseWriter, r *http.Request) {
 	var request UpdateTableConfigRequest
-	err := common.ReadRequest(r, &request)
+	err := apiCom.ReadRequest(r, &request, w)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteError(err)
 		return
 	}
 
 	err = handler.metaStore.UpdateTableConfig(request.TableName, request.Body)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
-
-	common.RespondWithJSONObject(w, nil)
+	w.WriteObject(nil)
 }
 
 // DeleteTable swagger:route DELETE /schema/tables/{table} deleteTable
@@ -179,11 +177,11 @@ func (handler *SchemaHandler) UpdateTableConfig(w http.ResponseWriter, r *http.R
 // Responses:
 //    default: errorResponse
 //        200: noContentResponse
-func (handler *SchemaHandler) DeleteTable(w http.ResponseWriter, r *http.Request) {
+func (handler *SchemaHandler) DeleteTable(w *utils.ResponseWriter, r *http.Request) {
 	var deleteTableRequest DeleteTableRequest
-	err := common.ReadRequest(r, &deleteTableRequest)
+	err := apiCom.ReadRequest(r, &deleteTableRequest, w)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
@@ -191,11 +189,11 @@ func (handler *SchemaHandler) DeleteTable(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		// TODO: need mapping from metaStore error to api error
 		/// for metaStore error might also be user error
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
-	common.RespondWithJSONObject(w, nil)
+	w.WriteObject(nil)
 }
 
 // AddColumn swagger:route POST /schema/tables/{table}/columns addColumn
@@ -207,11 +205,11 @@ func (handler *SchemaHandler) DeleteTable(w http.ResponseWriter, r *http.Request
 // Responses:
 //    default: errorResponse
 //        200: noContentResponse
-func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) {
+func (handler *SchemaHandler) AddColumn(w *utils.ResponseWriter, r *http.Request) {
 	var addColumnRequest AddColumnRequest
-	err := common.ReadRequest(r, &addColumnRequest)
+	err := apiCom.ReadRequest(r, &addColumnRequest, w)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
@@ -221,11 +219,11 @@ func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		// TODO: need mapping from metaStore error to api error
 		/// for metaStore error might also be user error
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
-	common.RespondWithJSONObject(w, nil)
+	w.WriteObject(nil)
 }
 
 // UpdateColumn swagger:route PUT /schema/tables/{table}/columns/{column} updateColumn
@@ -237,12 +235,11 @@ func (handler *SchemaHandler) AddColumn(w http.ResponseWriter, r *http.Request) 
 // Responses:
 //    default: errorResponse
 //        200: noContentResponse
-func (handler *SchemaHandler) UpdateColumn(w http.ResponseWriter, r *http.Request) {
+func (handler *SchemaHandler) UpdateColumn(w *utils.ResponseWriter, r *http.Request) {
 	var updateColumnRequest UpdateColumnRequest
-
-	err := common.ReadRequest(r, &updateColumnRequest)
+	err := apiCom.ReadRequest(r, &updateColumnRequest, w)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
@@ -250,11 +247,11 @@ func (handler *SchemaHandler) UpdateColumn(w http.ResponseWriter, r *http.Reques
 		updateColumnRequest.ColumnName, updateColumnRequest.Body); err != nil {
 		// TODO: need mapping from metaStore error to api error
 		// for metaStore error might also be user error
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
-	common.RespondWithJSONObject(w, nil)
+	w.WriteObject(nil)
 }
 
 // DeleteColumn swagger:route DELETE /schema/tables/{table}/columns/{column} deleteColumn
@@ -263,12 +260,12 @@ func (handler *SchemaHandler) UpdateColumn(w http.ResponseWriter, r *http.Reques
 // Responses:
 //    default: errorResponse
 //        200: noContentResponse
-func (handler *SchemaHandler) DeleteColumn(w http.ResponseWriter, r *http.Request) {
+func (handler *SchemaHandler) DeleteColumn(w *utils.ResponseWriter, r *http.Request) {
 	var deleteColumnRequest DeleteColumnRequest
 
-	err := common.ReadRequest(r, &deleteColumnRequest)
+	err := apiCom.ReadRequest(r, &deleteColumnRequest, w)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
@@ -278,9 +275,9 @@ func (handler *SchemaHandler) DeleteColumn(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		// TODO: need mapping from metaStore error to api error
 		// for metaStore error might also be user error
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
-	common.RespondWithJSONObject(w, nil)
+	w.WriteObject(nil)
 }

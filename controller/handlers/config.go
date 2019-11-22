@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/uber-go/tally"
+	apiCom "github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/cluster/kvstore"
 	mutatorCom "github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/utils"
@@ -94,7 +95,7 @@ func (h ConfigHandler) getNumShards(namespace string) (int, error) {
 // gets job config by name
 func (h ConfigHandler) GetJob(w *utils.ResponseWriter, r *http.Request) {
 	var req GetJobRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -134,7 +135,7 @@ func (h ConfigHandler) GetJob(w *utils.ResponseWriter, r *http.Request) {
 // returns all jobs config
 func (h ConfigHandler) GetJobs(w *utils.ResponseWriter, r *http.Request) {
 	var req GetJobsRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -181,7 +182,7 @@ func (h ConfigHandler) GetJobs(w *utils.ResponseWriter, r *http.Request) {
 // deletes a job
 func (h ConfigHandler) DeleteJob(w *utils.ResponseWriter, r *http.Request) {
 	var req DeleteJobRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -206,7 +207,7 @@ func (h ConfigHandler) DeleteJob(w *utils.ResponseWriter, r *http.Request) {
 //    - application/json
 func (h ConfigHandler) UpdateJob(w *utils.ResponseWriter, r *http.Request) {
 	var req UpdateJobRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -227,7 +228,7 @@ func (h ConfigHandler) UpdateJob(w *utils.ResponseWriter, r *http.Request) {
 //    - application/json
 func (h ConfigHandler) AddJob(w *utils.ResponseWriter, r *http.Request) {
 	var req AddJobRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -250,7 +251,7 @@ func (h ConfigHandler) AddJob(w *utils.ResponseWriter, r *http.Request) {
 // returns hash that will be different if any job changed
 func (h ConfigHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 	var req GetHashRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

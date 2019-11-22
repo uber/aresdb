@@ -16,6 +16,7 @@ package handlers
 
 import (
 	"fmt"
+	apiCom "github.com/uber/aresdb/api/common"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -55,7 +56,7 @@ func (h AssignmentHandler) Register(router *mux.Router, wrappers ...utils.HTTPHa
 // gets assignment by subscriber name
 func (h AssignmentHandler) GetAssignment(w *utils.ResponseWriter, r *http.Request) {
 	var req GetAssignmentRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -97,7 +98,7 @@ func (h AssignmentHandler) GetAssignment(w *utils.ResponseWriter, r *http.Reques
 // returns all assignments
 func (h AssignmentHandler) GetAssignments(w *utils.ResponseWriter, r *http.Request) {
 	var req GetJobsRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -143,7 +144,7 @@ func (h AssignmentHandler) GetAssignments(w *utils.ResponseWriter, r *http.Reque
 // returns hash that will be different if any thing changed for given assignment
 func (h AssignmentHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 	var req GetAssignmentHashRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

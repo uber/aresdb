@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	apiCom "github.com/uber/aresdb/api/common"
 	mutatorCom "github.com/uber/aresdb/controller/mutators/common"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -59,7 +60,7 @@ func (h NamespaceHandler) Register(router *mux.Router, wrappers ...utils.HTTPHan
 //    - application/json
 func (h NamespaceHandler) CreateNamespace(w *utils.ResponseWriter, r *http.Request) {
 	var req CreateNamespaceRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

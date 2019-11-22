@@ -39,9 +39,9 @@ func NewEnumHandler(memStore memstore.MemStore, metastore metaCom.MetaStore) *En
 }
 
 // Register regists paths
-func (handler *EnumHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
-	router.HandleFunc("/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers(handler.ListEnumCases, wrappers)).Methods(http.MethodGet)
-	router.HandleFunc("/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers(handler.AddEnumCase, wrappers)).Methods(http.MethodPost)
+func (handler *EnumHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
+	router.HandleFunc("/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers2(handler.ListEnumCases, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers2(handler.AddEnumCase, wrappers...)).Methods(http.MethodPost)
 }
 
 // ListEnumCases swagger:route GET /schema/tables/{table}/columns/{column}/enum-cases listEnumCases
@@ -50,11 +50,11 @@ func (handler *EnumHandler) Register(router *mux.Router, wrappers ...utils.HTTPH
 // Responses:
 //    default: errorResponse
 //        200: listEnumCasesResponse
-func (handler *EnumHandler) ListEnumCases(w http.ResponseWriter, r *http.Request) {
+func (handler *EnumHandler) ListEnumCases(w *utils.ResponseWriter, r *http.Request) {
 	var listEnumCasesRequest ListEnumCasesRequest
 	var listEnumCasesResponse ListEnumCasesResponse
 
-	err := common.ReadRequest(r, &listEnumCasesRequest)
+	err := common.ReadRequest(r, &listEnumCasesRequest, w)
 	if err != nil {
 		common.RespondWithError(w, err)
 		return
@@ -87,11 +87,11 @@ func (handler *EnumHandler) ListEnumCases(w http.ResponseWriter, r *http.Request
 // Responses:
 //    default: errorResponse
 //        200: addEnumCaseResponse
-func (handler *EnumHandler) AddEnumCase(w http.ResponseWriter, r *http.Request) {
+func (handler *EnumHandler) AddEnumCase(w *utils.ResponseWriter, r *http.Request) {
 	var addEnumCaseRequest AddEnumCaseRequest
 	var addEnumCaseResponse AddEnumCaseResponse
 
-	err := common.ReadRequest(r, &addEnumCaseRequest)
+	err := common.ReadRequest(r, &addEnumCaseRequest, w)
 	if err != nil {
 		common.RespondWithError(w, err)
 		return

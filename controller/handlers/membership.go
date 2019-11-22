@@ -16,6 +16,7 @@ package handlers
 
 import (
 	"fmt"
+	apiCom "github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 
@@ -68,7 +69,7 @@ func (h MembershipHandler) Join(w *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req JoinRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -94,7 +95,7 @@ func (h MembershipHandler) GetInstance(w *utils.ResponseWriter, r *http.Request)
 	}
 	var req GetInstanceRequest
 
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -123,7 +124,7 @@ func (h MembershipHandler) GetInstances(w *utils.ResponseWriter, r *http.Request
 		return
 	}
 	var req GetInstancesRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -151,7 +152,7 @@ func (h MembershipHandler) Leave(w *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req LeaveRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -178,7 +179,7 @@ func (h MembershipHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 	}
 	var req GetHashRequest
 
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

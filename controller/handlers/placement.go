@@ -24,6 +24,7 @@ import (
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3/src/x/instrument"
 	"github.com/uber-go/tally"
+	apiCom "github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/cluster/kvstore"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
@@ -111,7 +112,7 @@ func (h *PlacementHandler) Init(rw *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req InitPlacementRequest
-	err := ReadRequest(r, &req, rw)
+	err := apiCom.ReadRequest(r, &req, rw)
 	if err != nil {
 		rw.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -149,7 +150,7 @@ func (h *PlacementHandler) Get(rw *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req NamespaceRequest
-	err := ReadRequest(r, &req, rw)
+	err := apiCom.ReadRequest(r, &req, rw)
 	if err != nil {
 		rw.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -174,7 +175,7 @@ func (h *PlacementHandler) Add(rw *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req AddInstancesRequest
-	err := ReadRequest(r, &req, rw)
+	err := apiCom.ReadRequest(r, &req, rw)
 	if err != nil {
 		rw.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -209,7 +210,7 @@ func (h *PlacementHandler) Replace(rw *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ReplaceInstanceRequest
-	err := ReadRequest(r, &req, rw)
+	err := apiCom.ReadRequest(r, &req, rw)
 	if err != nil {
 		rw.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -245,7 +246,7 @@ func (h *PlacementHandler) Remove(rw *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req RemoveInstanceRequest
-	err := ReadRequest(r, &req, rw)
+	err := apiCom.ReadRequest(r, &req, rw)
 	if err != nil {
 		rw.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -275,7 +276,7 @@ func (h *PlacementHandler) Remove(rw *utils.ResponseWriter, r *http.Request) {
 // MarkNamespaceAvailable marks all instance/shards in placement as available
 func (h *PlacementHandler) MarkNamespaceAvailable(rw *utils.ResponseWriter, r *http.Request) {
 	var req NamespaceRequest
-	err := ReadRequest(r, &req, rw)
+	err := apiCom.ReadRequest(r, &req, rw)
 	if err != nil {
 		rw.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -299,7 +300,7 @@ func (h *PlacementHandler) MarkNamespaceAvailable(rw *utils.ResponseWriter, r *h
 // MarkInstanceAvailable marks one instance as available
 func (h *PlacementHandler) MarkInstanceAvailable(rw *utils.ResponseWriter, r *http.Request) {
 	var req MarkAvailableRequest
-	err := ReadRequest(r, &req, rw)
+	err := apiCom.ReadRequest(r, &req, rw)
 	if err != nil {
 		rw.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

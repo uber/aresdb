@@ -308,6 +308,11 @@ func (s *ResponseWriter) Write(bts []byte) (int, error) {
 	return s.ResponseWriter.Write(bts)
 }
 
+// WriteJSONBytes write json bytes with default status ok
+func (s *ResponseWriter) WriteJSONBytes(jsonBytes []byte, marshalErr error) {
+	s.WriteJSONBytesWithCode(http.StatusOK, jsonBytes, marshalErr)
+}
+
 // WriteJSONBytesWithCode write json bytes and marshal error to response
 func (s *ResponseWriter) WriteJSONBytesWithCode(code int, jsonBytes []byte, marshalErr error) {
 	if marshalErr != nil {
