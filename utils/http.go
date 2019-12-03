@@ -15,11 +15,11 @@
 package utils
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/common"
-	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/net/netutil"
@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	HTTPContentTypeHeaderKey     = "content-type"
+	HTTPContentTypeHeaderKey     = "Content-Type"
 	HTTPAcceptTypeHeaderKey      = "accept"
 	HTTPAcceptEncodingHeaderKey  = "Accept-Encoding"
 	HTTPContentEncodingHeaderKey = "Content-Encoding"
@@ -42,10 +42,10 @@ const (
 	// HTTPContentTypeHyperLogLog defines the hyperloglog query result content type.
 	HTTPContentTypeHyperLogLog = "application/hll"
 	HTTPContentEncodingGzip    = "gzip"
-)
 
-// HTTPHandlerWrapper wraps context aware httpHandler
-type HTTPHandlerWrapper func(handler http.HandlerFunc) http.HandlerFunc
+	// CompressionThreshold is the min number of bytes beyond which we will compress json payload
+	CompressionThreshold = 1 << 10
+)
 
 var epoch = time.Unix(0, 0).Format(time.RFC1123)
 
@@ -83,47 +83,6 @@ func NoCache(h http.Handler) http.Handler {
 	return http.HandlerFunc(fn)
 }
 
-// responseWriter is the wrapper over http.ResponseWriter to store status code. Unfortunately from built in
-// http.ResponseWriter we cannot get status code.
-type responseWriter struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-// newResponseWriter returns ResponseWriter with default status code status ok.
-func newResponseWriter(w http.ResponseWriter) *responseWriter {
-	return &responseWriter{w, http.StatusOK}
-}
-
-// WriteHeader stores the status code as well as write the status code to original response writer.
-func (rw *responseWriter) WriteHeader(code int) {
-	rw.statusCode = code
-	rw.ResponseWriter.WriteHeader(code)
-}
-
-// WithMetricsFunc will send stats like latency, rps and returning status code after the http handler finishes.
-// It has to be applied to the actual handler function who serves the http request.
-func WithMetricsFunc(h http.HandlerFunc) http.HandlerFunc {
-	funcName := GetFuncName(h)
-
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		origin := GetOrigin(r)
-		stopWatch := GetRootReporter().GetChildTimer(map[string]string{
-			metricsTagHandler: funcName,
-			metricsTagOrigin:  origin,
-		}, HTTPHandlerLatency).Start()
-		defer stopWatch.Stop()
-		rw := newResponseWriter(w)
-		h.ServeHTTP(rw, r)
-		GetRootReporter().GetChildCounter(map[string]string{
-			metricsTagHandler:    funcName,
-			metricsTagStatusCode: strconv.Itoa(rw.statusCode),
-			metricsTagOrigin:     origin,
-		}, HTTPHandlerCall).Inc(1)
-	}
-	return fn
-}
-
 // GetOrigin returns the caller of the request.
 func GetOrigin(r *http.Request) string {
 	origin := r.Header.Get("RPC-Caller")
@@ -135,20 +94,6 @@ func GetOrigin(r *http.Request) string {
 		origin = "UNKNOWN"
 	}
 	return origin
-}
-
-// NoopHTTPWrapper does nothing; used for testing
-func NoopHTTPWrapper(h http.HandlerFunc) http.HandlerFunc {
-	return h
-}
-
-// ApplyHTTPWrappers apply wrappers according to the order
-func ApplyHTTPWrappers(handler http.HandlerFunc, wrappers []HTTPHandlerWrapper) http.HandlerFunc {
-	h := handler
-	for _, wrapper := range wrappers {
-		h = wrapper(h)
-	}
-	return h
 }
 
 // LimitServe will start a http server on the port with the handler and at most maxConnection concurrent connections.
@@ -189,14 +134,14 @@ func LimitServeAsync(port int, handler http.Handler, httpCfg common.HTTPConfig) 
 	return errChan, server
 }
 
-//TODO: port over from controller part of consolidation
+// HandlerFunc defines http handler function
 type HandlerFunc func(rw *ResponseWriter, r *http.Request)
 
-// HTTPHandlerWrapper2 wraps http handler function
-type HTTPHandlerWrapper2 func(handler HandlerFunc) HandlerFunc
+// HTTPHandlerWrapper wraps http handler function
+type HTTPHandlerWrapper func(handler HandlerFunc) HandlerFunc
 
-// ApplyHTTPWrappers2 apply wrappers according to the order
-func ApplyHTTPWrappers2(handler HandlerFunc, wrappers ...HTTPHandlerWrapper2) http.HandlerFunc {
+// ApplyHTTPWrappers apply wrappers according to the order
+func ApplyHTTPWrappers(handler HandlerFunc, wrappers ...HTTPHandlerWrapper) http.HandlerFunc {
 	h := handler
 	for _, wrapper := range wrappers {
 		h = wrapper(h)
@@ -211,11 +156,11 @@ func ApplyHTTPWrappers2(handler HandlerFunc, wrappers ...HTTPHandlerWrapper2) ht
 // MetricsLoggingMiddleWareProvider provides middleware for metrics and logger for http requests
 type MetricsLoggingMiddleWareProvider struct {
 	scope  tally.Scope
-	logger *zap.SugaredLogger
+	logger common.Logger
 }
 
 // NewMetricsLoggingMiddleWareProvider creates metrics and logging middleware provider
-func NewMetricsLoggingMiddleWareProvider(scope tally.Scope, logger *zap.SugaredLogger) MetricsLoggingMiddleWareProvider {
+func NewMetricsLoggingMiddleWareProvider(scope tally.Scope, logger common.Logger) MetricsLoggingMiddleWareProvider {
 	return MetricsLoggingMiddleWareProvider{
 		scope:  scope,
 		logger: logger,
@@ -257,7 +202,7 @@ func (p *MetricsLoggingMiddleWareProvider) WithLogging(next HandlerFunc) Handler
 			p.logger.With(
 				"request", rw.req,
 				"name", r.URL.Path,
-			).Infof("request succeeded")
+			).Debug("request succeeded")
 		}
 	}
 }
@@ -302,10 +247,16 @@ func (s *ResponseWriter) WriteHeader(code int) {
 	s.ResponseWriter.WriteHeader(code)
 }
 
-// Write implements http.ResponseWriter Write for write bytes
-func (s *ResponseWriter) Write(bts []byte) (int, error) {
+// WriteBytes implements http.ResponseWriter Write for write bytes
+func (s *ResponseWriter) WriteBytes(bts []byte) {
 	setCommonHeaders(s)
-	return s.ResponseWriter.Write(bts)
+	s.ResponseWriter.Write(bts)
+}
+
+// WriteBytesWithCode writes bytes with code
+func (s *ResponseWriter) WriteBytesWithCode(code int, bts []byte) {
+	s.WriteHeader(code)
+	s.WriteBytes(bts)
 }
 
 // WriteJSONBytes write json bytes with default status ok
@@ -316,16 +267,36 @@ func (s *ResponseWriter) WriteJSONBytes(jsonBytes []byte, marshalErr error) {
 // WriteJSONBytesWithCode write json bytes and marshal error to response
 func (s *ResponseWriter) WriteJSONBytesWithCode(code int, jsonBytes []byte, marshalErr error) {
 	if marshalErr != nil {
-		resp := ErrorResponse{}
-		resp.Body.Cause = marshalErr
+		jsonMarshalErrorResponse := ErrorResponse{}
 		code = http.StatusInternalServerError
-		resp.Body.Code = code
-		resp.Body.Message = "failed to marshal object"
+		jsonMarshalErrorResponse.Body.Code = code
+		jsonMarshalErrorResponse.Body.Message = "failed to marshal object"
+		jsonMarshalErrorResponse.Body.Cause = marshalErr
 		// ignore this error since this should not happen
-		jsonBytes, _ = json.Marshal(resp)
+		jsonBytes, _ = json.Marshal(jsonMarshalErrorResponse.Body)
 	}
-	s.Header().Set("Content-Type", "application/json")
+
 	s.WriteHeader(code)
+	setCommonHeaders(s)
+	if jsonBytes == nil {
+		return
+	}
+
+	s.Header().Set(HTTPContentTypeHeaderKey, HTTPContentTypeApplicationJson)
+	// try best effort write with gzip compression
+	willCompress := len(jsonBytes) > CompressionThreshold
+	if willCompress {
+		gw, err := gzip.NewWriterLevel(s, gzip.BestSpeed)
+		if err == nil {
+			defer gw.Close()
+
+			s.Header().Set(HTTPContentEncodingHeaderKey, HTTPContentEncodingGzip)
+			_, _ = gw.Write(jsonBytes)
+			return
+		}
+	}
+
+	// default to normal json response
 	_, _ = s.Write(jsonBytes)
 }
 
@@ -346,17 +317,21 @@ func (s *ResponseWriter) WriteObjectWithCode(code int, obj interface{}) {
 func (s *ResponseWriter) WriteErrorWithCode(code int, err error) {
 	s.err = err
 	var errorResponse ErrorResponse
-	errorResponse.Body.Code = code
 	if e, ok := err.(APIError); ok {
 		errorResponse.Body = e
 	} else {
 		errorResponse.Body.Message = err.Error()
-		errorResponse.Body.Cause = err
 	}
-	s.WriteObjectWithCode(errorResponse.Body.Code, errorResponse)
+	errorResponse.Body.Code = code
+	s.WriteObjectWithCode(errorResponse.Body.Code, errorResponse.Body)
 }
 
 // WriteError write error to response
 func (s *ResponseWriter) WriteError(err error) {
-	s.WriteErrorWithCode(http.StatusInternalServerError, err)
+	if e, ok := err.(APIError); ok && e.Code > 0 {
+		s.WriteErrorWithCode(e.Code, err)
+	} else {
+		s.WriteErrorWithCode(http.StatusInternalServerError, err)
+	}
 }
+

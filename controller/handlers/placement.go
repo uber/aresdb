@@ -47,14 +47,14 @@ func NewPlacementHandler(logger *zap.SugaredLogger, scope tally.Scope, client *k
 }
 
 // Register adds paths to router
-func (h PlacementHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/{namespace}/datanode", utils.ApplyHTTPWrappers2(h.Get, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/datanode/available", utils.ApplyHTTPWrappers2(h.MarkNamespaceAvailable, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/{namespace}/datanode/init", utils.ApplyHTTPWrappers2(h.Init, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/{namespace}/datanode/instances", utils.ApplyHTTPWrappers2(h.Add, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/{namespace}/datanode/instances", utils.ApplyHTTPWrappers2(h.Replace, wrappers...)).Methods(http.MethodPut)
-	router.HandleFunc("/{namespace}/datanode/instances", utils.ApplyHTTPWrappers2(h.Remove, wrappers...)).Methods(http.MethodDelete)
-	router.HandleFunc("/{namespace}/datanode/instances/{instance}/available", utils.ApplyHTTPWrappers2(h.MarkInstanceAvailable, wrappers...)).Methods(http.MethodPost)
+func (h PlacementHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/{namespace}/datanode", utils.ApplyHTTPWrappers(h.Get, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/datanode/available", utils.ApplyHTTPWrappers(h.MarkNamespaceAvailable, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/{namespace}/datanode/init", utils.ApplyHTTPWrappers(h.Init, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/{namespace}/datanode/instances", utils.ApplyHTTPWrappers(h.Add, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/{namespace}/datanode/instances", utils.ApplyHTTPWrappers(h.Replace, wrappers...)).Methods(http.MethodPut)
+	router.HandleFunc("/{namespace}/datanode/instances", utils.ApplyHTTPWrappers(h.Remove, wrappers...)).Methods(http.MethodDelete)
+	router.HandleFunc("/{namespace}/datanode/instances/{instance}/available", utils.ApplyHTTPWrappers(h.MarkInstanceAvailable, wrappers...)).Methods(http.MethodPost)
 }
 
 func (h *PlacementHandler) getServiceID(namespace string) services.ServiceID {

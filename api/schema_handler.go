@@ -40,21 +40,21 @@ func NewSchemaHandler(metaStore metaCom.MetaStore) *SchemaHandler {
 }
 
 // Register registers http handlers.
-func (handler *SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/tables", utils.ApplyHTTPWrappers2(handler.ListTables, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/tables", utils.ApplyHTTPWrappers2(handler.AddTable, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers2(handler.GetTable, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers2(handler.DeleteTable, wrappers...)).Methods(http.MethodDelete)
-	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers2(handler.UpdateTableConfig, wrappers...)).Methods(http.MethodPut)
-	router.HandleFunc("/tables/{table}/columns", utils.ApplyHTTPWrappers2(handler.AddColumn, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/tables/{table}/columns/{column}", utils.ApplyHTTPWrappers2(handler.UpdateColumn, wrappers...)).Methods(http.MethodPut)
-	router.HandleFunc("/tables/{table}/columns/{column}", utils.ApplyHTTPWrappers2(handler.DeleteColumn, wrappers...)).Methods(http.MethodDelete)
+func (handler *SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/tables", utils.ApplyHTTPWrappers(handler.ListTables, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/tables", utils.ApplyHTTPWrappers(handler.AddTable, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers(handler.GetTable, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers(handler.DeleteTable, wrappers...)).Methods(http.MethodDelete)
+	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers(handler.UpdateTableConfig, wrappers...)).Methods(http.MethodPut)
+	router.HandleFunc("/tables/{table}/columns", utils.ApplyHTTPWrappers(handler.AddColumn, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/tables/{table}/columns/{column}", utils.ApplyHTTPWrappers(handler.UpdateColumn, wrappers...)).Methods(http.MethodPut)
+	router.HandleFunc("/tables/{table}/columns/{column}", utils.ApplyHTTPWrappers(handler.DeleteColumn, wrappers...)).Methods(http.MethodDelete)
 }
 
 // RegisterForDebug register handlers for debug port
-func (handler *SchemaHandler) RegisterForDebug(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/tables", utils.ApplyHTTPWrappers2(handler.ListTables, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers2(handler.GetTable, wrappers...)).Methods(http.MethodGet)
+func (handler *SchemaHandler) RegisterForDebug(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/tables", utils.ApplyHTTPWrappers(handler.ListTables, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/tables/{table}", utils.ApplyHTTPWrappers(handler.GetTable, wrappers...)).Methods(http.MethodGet)
 }
 
 // ListTables swagger:route GET /schema/tables listTables

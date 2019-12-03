@@ -58,15 +58,15 @@ func NewSchemaHandler(p SchemaHandlerParams) SchemaHandler {
 }
 
 // Register adds paths to router
-func (h SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/{namespace}/tables", utils.ApplyHTTPWrappers2(h.AddTable, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers2(h.GetTable, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/tables", utils.ApplyHTTPWrappers2(h.GetTables, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers2(h.DeleteTable, wrappers...)).Methods(http.MethodDelete)
-	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers2(h.UpdateTable, wrappers...)).Methods(http.MethodPut)
-	router.HandleFunc("/{namespace}/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers2(h.GetEnumCases, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers2(h.ExtendEnumCases, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/{namespace}/hash", utils.ApplyHTTPWrappers2(h.GetHash, wrappers...)).Methods(http.MethodGet)
+func (h SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/{namespace}/tables", utils.ApplyHTTPWrappers(h.AddTable, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers(h.GetTable, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/tables", utils.ApplyHTTPWrappers(h.GetTables, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers(h.DeleteTable, wrappers...)).Methods(http.MethodDelete)
+	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers(h.UpdateTable, wrappers...)).Methods(http.MethodPut)
+	router.HandleFunc("/{namespace}/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers(h.GetEnumCases, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers(h.ExtendEnumCases, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/{namespace}/hash", utils.ApplyHTTPWrappers(h.GetHash, wrappers...)).Methods(http.MethodGet)
 }
 
 // AddTable  swagger:route POST /schema/{namespace}/tables addTable

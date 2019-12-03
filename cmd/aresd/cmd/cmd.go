@@ -251,8 +251,8 @@ func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, que
 	dataHandler := api.NewDataHandler(memStore, cfg.HTTP.MaxIngestionConnections)
 	router := mux.NewRouter()
 
-	httpWrappers = append([]utils.HTTPHandlerWrapper{utils.WithMetricsFunc}, httpWrappers...)
-
+	metricsLoggingMiddleWareProvider := utils.NewMetricsLoggingMiddleWareProvider(scope, logger)
+	httpWrappers = append([]utils.HTTPHandlerWrapper{metricsLoggingMiddleWareProvider.WithMetrics}, httpWrappers...)
 	schemaRouter := router.PathPrefix("/schema")
 	if cfg.Cluster.Enable {
 		schemaRouter = schemaRouter.Methods(http.MethodGet)
@@ -265,7 +265,7 @@ func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, que
 	swaggerHandler := http.StripPrefix("/swagger/", http.FileServer(http.Dir("./api/ui/swagger/")))
 	router.PathPrefix("/swagger/").Handler(swaggerHandler)
 	router.PathPrefix("/node_modules/").Handler(nodeModulesHandler)
-	router.HandleFunc("/health", utils.WithMetricsFunc(healthCheckHandler.HealthCheck))
+	router.HandleFunc("/health", utils.ApplyHTTPWrappers(healthCheckHandler.HealthCheck, metricsLoggingMiddleWareProvider.WithMetrics))
 	router.HandleFunc("/version", healthCheckHandler.Version)
 
 	// Support CORS calls.

@@ -59,7 +59,7 @@ var _ = ginkgo.Describe("api request", func() {
 		Ω(err).Should(BeNil())
 		r.Header.Set("Accept", "application/hll")
 		aqlR := AQLRequest{}
-		err = ReadRequest(r, &aqlR)
+		err = ReadRequest(r, &aqlR, nil)
 		Ω(err).Should(BeNil())
 		Ω(aqlR.Accept).Should(Equal(utils.HTTPContentTypeHyperLogLog))
 	})

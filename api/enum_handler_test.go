@@ -84,8 +84,9 @@ var _ = ginkgo.Describe("EnumHandler", func() {
 		Ω(resp.StatusCode).Should(Equal(http.StatusOK))
 		respBody, err := ioutil.ReadAll(resp.Body)
 		Ω(err).Should(BeNil())
-		enumCases := []string{}
-		json.Unmarshal(respBody, &enumCases)
+		var enumCases []string
+		err = json.Unmarshal(respBody, &enumCases)
+		Ω(err).Should(BeNil())
 		Ω(enumCases).Should(Equal([]string{"a", "b", "c"}))
 
 		resp, _ = http.Get(fmt.Sprintf("http://%s/schema/tables/%s/columns/%s/enum-cases", hostPort, "unknown", "testColumn"))

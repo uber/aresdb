@@ -16,6 +16,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/uber/aresdb/utils"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -30,7 +31,7 @@ var _ = ginkgo.Describe("HealthCheck", func() {
 	var testServer *httptest.Server
 	ginkgo.BeforeEach(func() {
 		testRouter := mux.NewRouter()
-		testRouter.HandleFunc("/health", healthCheckHandler.HealthCheck)
+		testRouter.HandleFunc("/health", utils.ApplyHTTPWrappers(healthCheckHandler.HealthCheck))
 		testServer = httptest.NewUnstartedServer(WithPanicHandling(testRouter))
 		testServer.Start()
 	})

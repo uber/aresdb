@@ -43,8 +43,8 @@ func NewDataHandler(memStore memstore.MemStore, maxConcurrentRequests int) *Data
 }
 
 // Register registers http handlers.
-func (handler *DataHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/{table}/{shard}", utils.ApplyHTTPWrappers2(handler.PostData, wrappers...)).Methods(http.MethodPost)
+func (handler *DataHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/{table}/{shard}", utils.ApplyHTTPWrappers(handler.PostData, wrappers...)).Methods(http.MethodPost)
 }
 
 // PostData swagger:route POST /data/{table}/{shard} postData

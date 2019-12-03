@@ -63,13 +63,13 @@ func NewConfigHandler(p ConfigHandlerParams) ConfigHandler {
 }
 
 // Register adds paths to router
-func (h ConfigHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/{namespace}/jobs/{job}", utils.ApplyHTTPWrappers2(h.GetJob, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/jobs", utils.ApplyHTTPWrappers2(h.GetJobs, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/jobs/{job}", utils.ApplyHTTPWrappers2(h.DeleteJob, wrappers...)).Methods(http.MethodDelete)
-	router.HandleFunc("/{namespace}/jobs/{job}", utils.ApplyHTTPWrappers2(h.UpdateJob, wrappers...)).Methods(http.MethodPut)
-	router.HandleFunc("/{namespace}/jobs", utils.ApplyHTTPWrappers2(h.AddJob, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/{namespace}/hash", utils.ApplyHTTPWrappers2(h.GetHash, wrappers...)).Methods(http.MethodGet)
+func (h ConfigHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/{namespace}/jobs/{job}", utils.ApplyHTTPWrappers(h.GetJob, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/jobs", utils.ApplyHTTPWrappers(h.GetJobs, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/jobs/{job}", utils.ApplyHTTPWrappers(h.DeleteJob, wrappers...)).Methods(http.MethodDelete)
+	router.HandleFunc("/{namespace}/jobs/{job}", utils.ApplyHTTPWrappers(h.UpdateJob, wrappers...)).Methods(http.MethodPut)
+	router.HandleFunc("/{namespace}/jobs", utils.ApplyHTTPWrappers(h.AddJob, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/{namespace}/hash", utils.ApplyHTTPWrappers(h.GetHash, wrappers...)).Methods(http.MethodGet)
 }
 
 func (h ConfigHandler) getNumShards(namespace string) (int, error) {

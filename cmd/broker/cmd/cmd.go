@@ -157,7 +157,8 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 
 	// start HTTP server
 	router := mux.NewRouter()
-	httpWrappers = append([]utils.HTTPHandlerWrapper{utils.WithMetricsFunc}, httpWrappers...)
+	metricsLoggingMiddlewareProvider := utils.NewMetricsLoggingMiddleWareProvider(scope, logger)
+	httpWrappers = append([]utils.HTTPHandlerWrapper{metricsLoggingMiddlewareProvider.WithMetrics}, httpWrappers...)
 	queryHandler.Register(router.PathPrefix("/query").Subrouter(), httpWrappers...)
 
 	// Support CORS calls.

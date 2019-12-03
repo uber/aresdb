@@ -64,8 +64,8 @@ func (handler *QueryHandler) GetDeviceManager() *query.DeviceManager {
 
 // Register registers http handlers.
 func (handler *QueryHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
-	router.HandleFunc("/aql", utils.ApplyHTTPWrappers(handler.HandleAQL, wrappers)).Methods(http.MethodGet, http.MethodPost)
-	router.HandleFunc("/sql", utils.ApplyHTTPWrappers(handler.HandleSQL, wrappers)).Methods(http.MethodGet, http.MethodPost)
+	router.HandleFunc("/aql", utils.ApplyHTTPWrappers(handler.HandleAQL, wrappers...)).Methods(http.MethodGet, http.MethodPost)
+	router.HandleFunc("/sql", utils.ApplyHTTPWrappers(handler.HandleSQL, wrappers...)).Methods(http.MethodGet, http.MethodPost)
 }
 
 // HandleAQL swagger:route POST /query/aql queryAQL
@@ -82,16 +82,12 @@ func (handler *QueryHandler) Register(router *mux.Router, wrappers ...utils.HTTP
 //    default: errorResponse
 //        200: aqlResponse
 //        400: aqlResponse
-func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
+func (handler *QueryHandler) HandleAQL(w *utils.ResponseWriter, r *http.Request) {
 	// default device to negative value to differentiate 0 from empty
 	aqlRequest := apiCom.AQLRequest{Device: -1}
 
-	if err := apiCom.ReadRequest(r, &aqlRequest); err != nil {
-		apiCom.RespondWithBadRequest(w, err)
-		utils.GetLogger().With(
-			"error", err,
-			"statusCode", http.StatusBadRequest,
-		).Error("failed to parse query")
+	if err := apiCom.ReadRequest(r, &aqlRequest, w); err != nil {
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
@@ -102,13 +98,13 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if !available {
-		apiCom.RespondWithError(w, apiCom.ErrQueryServiceNotAvailable)
+		w.WriteError(apiCom.ErrQueryServiceNotAvailable)
 		return
 	}
 	<-done
 }
 
-func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w http.ResponseWriter, r *http.Request) {
+func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w *utils.ResponseWriter, r *http.Request) {
 	var err error
 	var duration time.Duration
 	var qcs []*query.AQLQueryContext
@@ -142,8 +138,8 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 		err = json.Unmarshal([]byte(aqlRequest.Query), &aqlRequest.Body)
 		if err != nil {
 			statusCode = http.StatusBadRequest
-			apiCom.RespondWithBadRequest(w, utils.APIError{
-				Code:    http.StatusBadRequest,
+			w.WriteError(utils.APIError{
+				Code:    statusCode,
 				Message: ErrMsgFailedToUnmarshalRequest,
 				Cause:   err,
 			})
@@ -153,7 +149,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 
 	if aqlRequest.Body.Queries == nil {
 		statusCode = http.StatusBadRequest
-		apiCom.RespondWithBadRequest(w, utils.APIError{
+		w.WriteError(utils.APIError{
 			Code:    http.StatusBadRequest,
 			Message: ErrMsgMissingParameter,
 		})
@@ -182,7 +178,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 		if qc.Error != nil {
 			err = qc.Error
 			statusCode = http.StatusBadRequest
-			w.WriteHeader(statusCode)
+			w.WriteErrorWithCode(statusCode, err)
 			return
 		}
 		// for logging purpose only
@@ -192,7 +188,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 		if qc.Error != nil {
 			err = qc.Error
 			statusCode = http.StatusServiceUnavailable
-			w.WriteHeader(statusCode)
+			w.WriteErrorWithCode(statusCode, err)
 			return
 		}
 		defer handler.deviceManager.ReleaseReservedMemory(qc.Device, qc.Query)
@@ -324,7 +320,7 @@ type QueryResponseWriter interface {
 	ReportQueryContext(*query.AQLQueryContext)
 	ReportResult(int, *query.AQLQueryContext)
 	// param compress means whether client accepts compressed results
-	Respond(w http.ResponseWriter)
+	Respond(w *utils.ResponseWriter)
 	GetStatusCode() int
 }
 
@@ -375,8 +371,8 @@ func (w *JSONQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQuer
 }
 
 // Respond writes the final response into ResponseWriter.
-func (w *JSONQueryResponseWriter) Respond(rw http.ResponseWriter) {
-	apiCom.RespondJSONObjectWithCode(rw, w.statusCode, w.response)
+func (w *JSONQueryResponseWriter) Respond(rw *utils.ResponseWriter) {
+	rw.WriteObjectWithCode(w.statusCode, w.response)
 }
 
 // GetStatusCode returns the status code written into response.
@@ -419,9 +415,10 @@ func (w *HLLQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQuery
 }
 
 // Respond writes the final response into ResponseWriter.
-func (w *HLLQueryResponseWriter) Respond(rw http.ResponseWriter) {
+func (w *HLLQueryResponseWriter) Respond(rw *utils.ResponseWriter) {
 	rw.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
-	apiCom.RespondBytesWithCode(rw, w.statusCode, w.response.GetBytes())
+	rw.WriteHeader(w.statusCode)
+	rw.Write(w.response.GetBytes())
 }
 
 // GetStatusCode returns the status code written into response.

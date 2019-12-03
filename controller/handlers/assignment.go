@@ -46,10 +46,10 @@ func NewAssignmentHandler(logger *zap.SugaredLogger, assignmentMutator mutatorCo
 }
 
 // Register adds paths to router
-func (h AssignmentHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/{namespace}/assignments/{subscriber}", utils.ApplyHTTPWrappers2(h.GetAssignment, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/assignments", utils.ApplyHTTPWrappers2(h.GetAssignments, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/hash/{subscriber}", utils.ApplyHTTPWrappers2(h.GetHash, wrappers...)).Methods(http.MethodGet)
+func (h AssignmentHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/{namespace}/assignments/{subscriber}", utils.ApplyHTTPWrappers(h.GetAssignment, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/assignments", utils.ApplyHTTPWrappers(h.GetAssignments, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/hash/{subscriber}", utils.ApplyHTTPWrappers(h.GetHash, wrappers...)).Methods(http.MethodGet)
 }
 
 // GetAssignment swagger:route GET /assignment/{namespace}/assignments/{subscriber} getAssignment

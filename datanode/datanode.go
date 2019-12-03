@@ -484,7 +484,8 @@ func (d *dataNode) Serve() {
 
 	// start server
 	router := mux.NewRouter()
-	httpWrappers := append([]utils.HTTPHandlerWrapper{utils.WithMetricsFunc}, d.opts.HTTPWrappers()...)
+	metricsLoggingMiddlewareProvider := utils.NewMetricsLoggingMiddleWareProvider(d.opts.InstrumentOptions().MetricsScope(), d.opts.InstrumentOptions().Logger())
+	httpWrappers := append([]utils.HTTPHandlerWrapper{metricsLoggingMiddlewareProvider.WithMetrics}, d.opts.HTTPWrappers()...)
 	schemaRouter := router.PathPrefix("/schema")
 	if d.opts.ServerConfig().Cluster.Enable {
 		schemaRouter = schemaRouter.Methods(http.MethodGet)
@@ -497,7 +498,7 @@ func (d *dataNode) Serve() {
 
 	router.PathPrefix("/swagger/").Handler(d.handlers.swaggerHandler)
 	router.PathPrefix("/node_modules/").Handler(d.handlers.nodeModuleHandler)
-	router.HandleFunc("/health", utils.WithMetricsFunc(d.handlers.healthCheckHandler.HealthCheck))
+	router.HandleFunc("/health", utils.ApplyHTTPWrappers(d.handlers.healthCheckHandler.HealthCheck, metricsLoggingMiddlewareProvider.WithMetrics))
 	router.HandleFunc("/version", d.handlers.healthCheckHandler.Version)
 
 	// Support CORS calls.

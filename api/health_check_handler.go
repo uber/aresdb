@@ -15,7 +15,6 @@
 package api
 
 import (
-	"github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/utils"
 	"io"
 	"net/http"
@@ -37,12 +36,12 @@ func NewHealthCheckHandler() *HealthCheckHandler {
 }
 
 // HealthCheck is the HealthCheck endpoint.
-func (handler *HealthCheckHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+func (handler *HealthCheckHandler) HealthCheck(w *utils.ResponseWriter, r *http.Request) {
 	handler.RLock()
 	disabled := handler.disable
 	handler.RUnlock()
 	if disabled {
-		common.RespondBytesWithCode(w, http.StatusServiceUnavailable, []byte("Health check disabled"))
+		w.WriteBytesWithCode(http.StatusServiceUnavailable, []byte("Health check disabled"))
 	} else {
 		io.WriteString(w, "OK")
 	}

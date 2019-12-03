@@ -48,9 +48,9 @@ func NewNamespaceHandler(p NamespaceHandlerParams) NamespaceHandler {
 }
 
 // Register adds paths to router
-func (h NamespaceHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/namespaces", utils.ApplyHTTPWrappers2(h.CreateNamespace, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/namespaces", utils.ApplyHTTPWrappers2(h.ListNamespaces, wrappers...)).Methods(http.MethodGet)
+func (h NamespaceHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/namespaces", utils.ApplyHTTPWrappers(h.CreateNamespace, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/namespaces", utils.ApplyHTTPWrappers(h.ListNamespaces, wrappers...)).Methods(http.MethodGet)
 }
 
 // CreateNamespace swagger:route POST /namespaces createNamespace

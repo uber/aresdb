@@ -36,15 +36,11 @@ import (
 //    default: errorResponse
 //        200: aqlResponse
 //        400: aqlResponse
-func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
+func (handler *QueryHandler) HandleSQL(w *utils.ResponseWriter, r *http.Request) {
 	sqlRequest := apiCom.SQLRequest{Device: -1}
 
-	if err := apiCom.ReadRequest(r, &sqlRequest); err != nil {
-		apiCom.RespondWithBadRequest(w, err)
-		utils.GetLogger().With(
-			"error", err,
-			"statusCode", http.StatusBadRequest,
-		).Error("failed to parse query")
+	if err := apiCom.ReadRequest(r, &sqlRequest, w); err != nil {
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
@@ -55,7 +51,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 		for i, sqlQuery := range sqlRequest.Body.Queries {
 			parsedAQLQuery, err := sql.Parse(sqlQuery, utils.GetLogger())
 			if err != nil {
-				apiCom.RespondWithBadRequest(w, err)
+				w.WriteErrorWithCode(http.StatusBadRequest, err)
 				return
 			}
 			aqlQueries[i] = *parsedAQLQuery
@@ -86,7 +82,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if !available {
-		apiCom.RespondWithError(w, apiCom.ErrQueryServiceNotAvailable)
+		w.WriteError(apiCom.ErrQueryServiceNotAvailable)
 		return
 	}
 	<-done

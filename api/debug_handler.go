@@ -70,29 +70,29 @@ func NewDebugHandler(
 
 // Register registers http handlers.
 func (handler *DebugHandler) Register(router *mux.Router) {
-	router.HandleFunc("/health", utils.ApplyHTTPWrappers2(handler.Health)).Methods(http.MethodGet)
-	router.HandleFunc("/health/{onOrOff}", utils.ApplyHTTPWrappers2(handler.HealthSwitch)).Methods(http.MethodPost)
-	router.HandleFunc("/jobs/{jobType}", utils.ApplyHTTPWrappers2(handler.ShowJobStatus)).Methods(http.MethodGet)
-	router.HandleFunc("/devices",utils.ApplyHTTPWrappers2( handler.ShowDeviceStatus)).Methods(http.MethodGet)
-	router.HandleFunc("/host-memory", utils.ApplyHTTPWrappers2(handler.ShowHostMemory)).Methods(http.MethodGet)
-	router.HandleFunc("/shards", utils.ApplyHTTPWrappers2(handler.ShowShardSet)).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}", utils.ApplyHTTPWrappers2(handler.ShowShardMeta)).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/archive", utils.ApplyHTTPWrappers2(handler.Archive)).Methods(http.MethodPost)
-	router.HandleFunc("/{table}/{shard}/backfill", utils.ApplyHTTPWrappers2(handler.Backfill)).Methods(http.MethodPost)
-	router.HandleFunc("/{table}/{shard}/snapshot", utils.ApplyHTTPWrappers2(handler.Snapshot)).Methods(http.MethodPost)
-	router.HandleFunc("/{table}/{shard}/purge", utils.ApplyHTTPWrappers2(handler.Purge)).Methods(http.MethodPost)
-	router.HandleFunc("/{table}/{shard}/batches/{batch}", utils.ApplyHTTPWrappers2(handler.ShowBatch)).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/batches/{batch}/vector-parties/{column}", utils.ApplyHTTPWrappers2(handler.LoadVectorParty)).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/batches/{batch}/vector-parties/{column}", utils.ApplyHTTPWrappers2(handler.EvictVectorParty)).Methods(http.MethodDelete)
-	router.HandleFunc("/{table}/{shard}/primary-keys", utils.ApplyHTTPWrappers2(handler.LookupPrimaryKey)).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/redologs", utils.ApplyHTTPWrappers2(handler.ListRedoLogs)).
+	router.HandleFunc("/health", utils.ApplyHTTPWrappers(handler.Health)).Methods(http.MethodGet)
+	router.HandleFunc("/health/{onOrOff}", utils.ApplyHTTPWrappers(handler.HealthSwitch)).Methods(http.MethodPost)
+	router.HandleFunc("/jobs/{jobType}", utils.ApplyHTTPWrappers(handler.ShowJobStatus)).Methods(http.MethodGet)
+	router.HandleFunc("/devices",utils.ApplyHTTPWrappers( handler.ShowDeviceStatus)).Methods(http.MethodGet)
+	router.HandleFunc("/host-memory", utils.ApplyHTTPWrappers(handler.ShowHostMemory)).Methods(http.MethodGet)
+	router.HandleFunc("/shards", utils.ApplyHTTPWrappers(handler.ShowShardSet)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}", utils.ApplyHTTPWrappers(handler.ShowShardMeta)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}/archive", utils.ApplyHTTPWrappers(handler.Archive)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/backfill", utils.ApplyHTTPWrappers(handler.Backfill)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/snapshot", utils.ApplyHTTPWrappers(handler.Snapshot)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/purge", utils.ApplyHTTPWrappers(handler.Purge)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/batches/{batch}", utils.ApplyHTTPWrappers(handler.ShowBatch)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}/batches/{batch}/vector-parties/{column}", utils.ApplyHTTPWrappers(handler.LoadVectorParty)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}/batches/{batch}/vector-parties/{column}", utils.ApplyHTTPWrappers(handler.EvictVectorParty)).Methods(http.MethodDelete)
+	router.HandleFunc("/{table}/{shard}/primary-keys", utils.ApplyHTTPWrappers(handler.LookupPrimaryKey)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}/redologs", utils.ApplyHTTPWrappers(handler.ListRedoLogs)).
 		Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches", utils.ApplyHTTPWrappers2(handler.ListUpsertBatches)).
+	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches", utils.ApplyHTTPWrappers(handler.ListUpsertBatches)).
 		Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches/{offset}", utils.ApplyHTTPWrappers2(handler.ReadUpsertBatch)).
+	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches/{offset}", utils.ApplyHTTPWrappers(handler.ReadUpsertBatch)).
 		Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/backfill-manager/upsertbatches/{offset}", utils.ApplyHTTPWrappers2(handler.ReadBackfillQueueUpsertBatch)).Methods(http.MethodGet)
-	router.HandleFunc("/bootstrap/retry", utils.ApplyHTTPWrappers2(handler.BootstrapRetry)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/backfill-manager/upsertbatches/{offset}", utils.ApplyHTTPWrappers(handler.ReadBackfillQueueUpsertBatch)).Methods(http.MethodGet)
+	router.HandleFunc("/bootstrap/retry", utils.ApplyHTTPWrappers(handler.BootstrapRetry)).Methods(http.MethodPost)
 }
 
 // ShowShardSet shows the shard set owned by the server
