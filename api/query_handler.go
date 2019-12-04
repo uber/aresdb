@@ -86,7 +86,7 @@ func (handler *QueryHandler) HandleAQL(w *utils.ResponseWriter, r *http.Request)
 	// default device to negative value to differentiate 0 from empty
 	aqlRequest := apiCom.AQLRequest{Device: -1}
 
-	if err := apiCom.ReadRequest(r, &aqlRequest, w); err != nil {
+	if err := apiCom.ReadRequest(r, &aqlRequest); err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
@@ -149,10 +149,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w *
 
 	if aqlRequest.Body.Queries == nil {
 		statusCode = http.StatusBadRequest
-		w.WriteError(utils.APIError{
-			Code:    http.StatusBadRequest,
-			Message: ErrMsgMissingParameter,
-		})
+		w.WriteError(ErrMissingParameter)
 		return
 	}
 
@@ -417,8 +414,7 @@ func (w *HLLQueryResponseWriter) ReportResult(queryIndex int, qc *query.AQLQuery
 // Respond writes the final response into ResponseWriter.
 func (w *HLLQueryResponseWriter) Respond(rw *utils.ResponseWriter) {
 	rw.Header().Set(utils.HTTPContentTypeHeaderKey, utils.HTTPContentTypeHyperLogLog)
-	rw.WriteHeader(w.statusCode)
-	rw.Write(w.response.GetBytes())
+	rw.WriteBytesWithCode(w.statusCode, w.response.GetBytes())
 }
 
 // GetStatusCode returns the status code written into response.

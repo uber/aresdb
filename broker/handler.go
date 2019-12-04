@@ -65,7 +65,7 @@ func (handler *QueryHandler) HandleSQL(w *utils.ResponseWriter, r *http.Request)
 		}
 	}()
 
-	err = apiCom.ReadRequest(r, &queryReqeust, w)
+	err = apiCom.ReadRequest(r, &queryReqeust)
 	if err != nil {
 		w.WriteError(err)
 		return
@@ -108,7 +108,7 @@ func (handler *QueryHandler) HandleAQL(w *utils.ResponseWriter, r *http.Request)
 		}
 	}()
 
-	err = apiCom.ReadRequest(r, &queryReqeust, w)
+	err = apiCom.ReadRequest(r, &queryReqeust)
 	if err != nil {
 		w.WriteError(err)
 		return

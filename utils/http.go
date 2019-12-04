@@ -173,8 +173,8 @@ func (p *MetricsLoggingMiddleWareProvider) WithMetrics(next HandlerFunc) Handler
 	return func(rw *ResponseWriter, r *http.Request) {
 		origin := GetOrigin(r)
 		stopWatch := p.scope.Tagged(map[string]string{
-			metricsTagHandler:   funcName,
-			metricsTagOrigin: origin,
+			metricsTagHandler: funcName,
+			metricsTagOrigin:  origin,
 		}).Timer(scopeNameHTTPHandlerLatency).Start()
 		next(rw, r)
 		stopWatch.Stop()
@@ -236,27 +236,32 @@ func NewResponseWriter(rw http.ResponseWriter) *ResponseWriter {
 	}
 }
 
-// WriteRequest write request
-func (s *ResponseWriter) WriteRequest(req interface{}) {
+// SetRequest set unmarshalled request body to response writer for logging purpose
+func (s *ResponseWriter) SetRequest(req interface{}) {
 	s.req = req
 }
 
 // WriteHeader implements http.ResponseWriter WriteHeader for write status code
 func (s *ResponseWriter) WriteHeader(code int) {
-	s.statusCode = code
-	s.ResponseWriter.WriteHeader(code)
+	if code > 0 {
+		s.statusCode = code
+		s.ResponseWriter.WriteHeader(code)
+	}
 }
 
 // WriteBytes implements http.ResponseWriter Write for write bytes
 func (s *ResponseWriter) WriteBytes(bts []byte) {
 	setCommonHeaders(s)
-	s.ResponseWriter.Write(bts)
+	s.Write(bts)
 }
 
 // WriteBytesWithCode writes bytes with code
 func (s *ResponseWriter) WriteBytesWithCode(code int, bts []byte) {
+	setCommonHeaders(s)
 	s.WriteHeader(code)
-	s.WriteBytes(bts)
+	if bts != nil {
+		s.Write(bts)
+	}
 }
 
 // WriteJSONBytes write json bytes with default status ok
@@ -266,6 +271,8 @@ func (s *ResponseWriter) WriteJSONBytes(jsonBytes []byte, marshalErr error) {
 
 // WriteJSONBytesWithCode write json bytes and marshal error to response
 func (s *ResponseWriter) WriteJSONBytesWithCode(code int, jsonBytes []byte, marshalErr error) {
+	s.Header().Set(HTTPContentTypeHeaderKey, HTTPContentTypeApplicationJson)
+
 	if marshalErr != nil {
 		jsonMarshalErrorResponse := ErrorResponse{}
 		code = http.StatusInternalServerError
@@ -276,13 +283,10 @@ func (s *ResponseWriter) WriteJSONBytesWithCode(code int, jsonBytes []byte, mars
 		jsonBytes, _ = json.Marshal(jsonMarshalErrorResponse.Body)
 	}
 
-	s.WriteHeader(code)
-	setCommonHeaders(s)
 	if jsonBytes == nil {
 		return
 	}
 
-	s.Header().Set(HTTPContentTypeHeaderKey, HTTPContentTypeApplicationJson)
 	// try best effort write with gzip compression
 	willCompress := len(jsonBytes) > CompressionThreshold
 	if willCompress {
@@ -291,13 +295,15 @@ func (s *ResponseWriter) WriteJSONBytesWithCode(code int, jsonBytes []byte, mars
 			defer gw.Close()
 
 			s.Header().Set(HTTPContentEncodingHeaderKey, HTTPContentEncodingGzip)
+			setCommonHeaders(s)
+			s.WriteHeader(code)
 			_, _ = gw.Write(jsonBytes)
 			return
 		}
 	}
 
 	// default to normal json response
-	_, _ = s.Write(jsonBytes)
+	s.WriteBytesWithCode(code, jsonBytes)
 }
 
 // WriteObject write json object to response
@@ -310,6 +316,8 @@ func (s *ResponseWriter) WriteObjectWithCode(code int, obj interface{}) {
 	if obj != nil {
 		jsonBytes, err := json.Marshal(obj)
 		s.WriteJSONBytesWithCode(code, jsonBytes, err)
+	} else {
+		s.WriteBytesWithCode(code, nil)
 	}
 }
 
@@ -328,10 +336,9 @@ func (s *ResponseWriter) WriteErrorWithCode(code int, err error) {
 
 // WriteError write error to response
 func (s *ResponseWriter) WriteError(err error) {
-	if e, ok := err.(APIError); ok && e.Code > 0 {
+	if e, ok := err.(APIError); ok {
 		s.WriteErrorWithCode(e.Code, err)
 	} else {
 		s.WriteErrorWithCode(http.StatusInternalServerError, err)
 	}
 }
-

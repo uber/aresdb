@@ -26,6 +26,9 @@ import (
 	"github.com/uber/aresdb/utils"
 )
 
+// WithRequest defines function callback with parsed request
+type WithRequest func(request interface{})
+
 // ReadRequest reads request.
 // obj passed into this method has to be a pointer to a struct of request object
 // Each request object will have path params tagged as `path:""` if needed
@@ -40,7 +43,7 @@ import (
 //      		EnumCase string `json:"enumCase"`
 //      	} `body:""`
 //      }
-func ReadRequest(r *http.Request, obj interface{}, rw *utils.ResponseWriter) error {
+func ReadRequest(r *http.Request, obj interface{}, withRequests ...WithRequest) error {
 	vValue := reflect.ValueOf(obj)
 	vType := reflect.TypeOf(obj)
 	if vType.Kind() != reflect.Ptr || vType.Elem().Kind() != reflect.Struct {
@@ -59,7 +62,7 @@ func ReadRequest(r *http.Request, obj interface{}, rw *utils.ResponseWriter) err
 		valueField := vValue.Elem().Field(i)
 		// If it's anonymous field, we apply ReadRequest to this struct directly.
 		if field.Type.Kind() == reflect.Struct && field.Anonymous {
-			if err := ReadRequest(r, valueField.Addr().Interface(), nil); err != nil {
+			if err := ReadRequest(r, valueField.Addr().Interface(), withRequests...); err != nil {
 				return err
 			}
 		}
@@ -145,9 +148,9 @@ func ReadRequest(r *http.Request, obj interface{}, rw *utils.ResponseWriter) err
 			}
 		}
 	}
-	// set request to response writer for logging purpose
-	if rw != nil {
-		rw.WriteRequest(vValue.Elem().Interface())
+
+	for _, withRequest := range withRequests {
+		withRequest(vValue.Elem().Interface())
 	}
 	return nil
 }

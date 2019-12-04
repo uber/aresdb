@@ -57,7 +57,7 @@ func (handler *DataHandler) Register(router *mux.Router, wrappers ...utils.HTTPH
 //        200: noContentResponse
 func (handler *DataHandler) PostData(w *utils.ResponseWriter, r *http.Request) {
 	var postDataRequest PostDataRequest
-	err := common.ReadRequest(r, &postDataRequest, w)
+	err := common.ReadRequest(r, &postDataRequest)
 	if err != nil {
 		w.WriteError(err)
 		return

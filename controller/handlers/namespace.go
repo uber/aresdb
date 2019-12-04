@@ -60,7 +60,7 @@ func (h NamespaceHandler) Register(router *mux.Router, wrappers ...utils.HTTPHan
 //    - application/json
 func (h NamespaceHandler) CreateNamespace(w *utils.ResponseWriter, r *http.Request) {
 	var req CreateNamespaceRequest
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

@@ -54,7 +54,7 @@ func (handler *EnumHandler) ListEnumCases(w *utils.ResponseWriter, r *http.Reque
 	var listEnumCasesRequest ListEnumCasesRequest
 	var listEnumCasesResponse ListEnumCasesResponse
 
-	err := common.ReadRequest(r, &listEnumCasesRequest, w)
+	err := common.ReadRequest(r, &listEnumCasesRequest)
 	if err != nil {
 		w.WriteError(err)
 		return
@@ -91,7 +91,7 @@ func (handler *EnumHandler) AddEnumCase(w *utils.ResponseWriter, r *http.Request
 	var addEnumCaseRequest AddEnumCaseRequest
 	var addEnumCaseResponse AddEnumCaseResponse
 
-	err := common.ReadRequest(r, &addEnumCaseRequest, w)
+	err := common.ReadRequest(r, &addEnumCaseRequest)
 	if err != nil {
 		w.WriteError(err)
 		return

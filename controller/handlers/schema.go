@@ -77,7 +77,7 @@ func (h SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandle
 func (h SchemaHandler) AddTable(w *utils.ResponseWriter, r *http.Request) {
 	var req AddTableRequest
 	req.Body.Config = metastore.DefaultTableConfig
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -102,7 +102,7 @@ func (h SchemaHandler) AddTable(w *utils.ResponseWriter, r *http.Request) {
 // returns table schema of given table name
 func (h SchemaHandler) GetTable(w *utils.ResponseWriter, r *http.Request) {
 	var req GetTableRequest
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -125,7 +125,7 @@ func (h SchemaHandler) GetTable(w *utils.ResponseWriter, r *http.Request) {
 // returns schema of all tables
 func (h SchemaHandler) GetTables(w *utils.ResponseWriter, r *http.Request) {
 	var getTablesRequest GetTablesRequest
-	err := apiCom.ReadRequest(r, &getTablesRequest, w)
+	err := apiCom.ReadRequest(r, &getTablesRequest, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -162,7 +162,7 @@ func (h SchemaHandler) GetTables(w *utils.ResponseWriter, r *http.Request) {
 // deletes an existing table
 func (h SchemaHandler) DeleteTable(w *utils.ResponseWriter, r *http.Request) {
 	var deleteTableRequest DeleteTableRequest
-	err := apiCom.ReadRequest(r, &deleteTableRequest, w)
+	err := apiCom.ReadRequest(r, &deleteTableRequest, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -188,7 +188,7 @@ func (h SchemaHandler) DeleteTable(w *utils.ResponseWriter, r *http.Request) {
 func (h SchemaHandler) UpdateTable(w *utils.ResponseWriter, r *http.Request) {
 	var updateTableRequest UpdateTableRequest
 	updateTableRequest.Body.Config = metastore.DefaultTableConfig
-	err := apiCom.ReadRequest(r, &updateTableRequest, w)
+	err := apiCom.ReadRequest(r, &updateTableRequest, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -213,7 +213,7 @@ func (h SchemaHandler) UpdateTable(w *utils.ResponseWriter, r *http.Request) {
 // returns hash of all table schemas in a namespace, hash change means there's a change in any of the schemas
 func (h SchemaHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 	var req GetHashRequest
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -241,7 +241,7 @@ func (h SchemaHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 // returns enum ids for given enum cases
 func (h SchemaHandler) ExtendEnumCases(w *utils.ResponseWriter, r *http.Request) {
 	var req ExtendEnumCaseRequest
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -263,7 +263,7 @@ func (h SchemaHandler) ExtendEnumCases(w *utils.ResponseWriter, r *http.Request)
 // returns all enum cases for given table column
 func (h SchemaHandler) GetEnumCases(w *utils.ResponseWriter, r *http.Request) {
 	var req GetEnumCaseRequest
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

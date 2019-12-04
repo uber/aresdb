@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/cluster/topology"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -73,7 +74,7 @@ func (handler *DebugHandler) Register(router *mux.Router) {
 	router.HandleFunc("/health", utils.ApplyHTTPWrappers(handler.Health)).Methods(http.MethodGet)
 	router.HandleFunc("/health/{onOrOff}", utils.ApplyHTTPWrappers(handler.HealthSwitch)).Methods(http.MethodPost)
 	router.HandleFunc("/jobs/{jobType}", utils.ApplyHTTPWrappers(handler.ShowJobStatus)).Methods(http.MethodGet)
-	router.HandleFunc("/devices",utils.ApplyHTTPWrappers( handler.ShowDeviceStatus)).Methods(http.MethodGet)
+	router.HandleFunc("/devices", utils.ApplyHTTPWrappers(handler.ShowDeviceStatus)).Methods(http.MethodGet)
 	router.HandleFunc("/host-memory", utils.ApplyHTTPWrappers(handler.ShowHostMemory)).Methods(http.MethodGet)
 	router.HandleFunc("/shards", utils.ApplyHTTPWrappers(handler.ShowShardSet)).Methods(http.MethodGet)
 	router.HandleFunc("/{table}/{shard}", utils.ApplyHTTPWrappers(handler.ShowShardMeta)).Methods(http.MethodGet)
@@ -118,7 +119,7 @@ func (handler *DebugHandler) Health(w *utils.ResponseWriter, r *http.Request) {
 func (handler *DebugHandler) HealthSwitch(w *utils.ResponseWriter, r *http.Request) {
 	var request HealthSwitchRequest
 	var err error
-	if err = common.ReadRequest(r, &request, w); err != nil {
+	if err = common.ReadRequest(r, &request); err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
@@ -142,7 +143,7 @@ func (handler *DebugHandler) ShowBatch(w *utils.ResponseWriter, r *http.Request)
 	var response ShowBatchResponse
 	var err error
 
-	err = common.ReadRequest(r, &request, w)
+	err = common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -333,7 +334,7 @@ func tranlateEnumsArray(vector *memCom.SlicedVector, enumCases []string) error {
 // LookupPrimaryKey looks up a key in primary key for given table and shard
 func (handler *DebugHandler) LookupPrimaryKey(w *utils.ResponseWriter, r *http.Request) {
 	var request LookupPrimaryKeyRequest
-	err := common.ReadRequest(r, &request, w)
+	err := common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteError(err)
 		return
@@ -360,7 +361,7 @@ func (handler *DebugHandler) LookupPrimaryKey(w *utils.ResponseWriter, r *http.R
 // Archive starts an archiving process on demand.
 func (handler *DebugHandler) Archive(w *utils.ResponseWriter, r *http.Request) {
 	var request ArchiveRequest
-	err := common.ReadRequest(r, &request, w)
+	err := common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -390,7 +391,7 @@ func (handler *DebugHandler) Archive(w *utils.ResponseWriter, r *http.Request) {
 // Backfill starts an backfill process on demand.
 func (handler *DebugHandler) Backfill(w *utils.ResponseWriter, r *http.Request) {
 	var request BackfillRequest
-	err := common.ReadRequest(r, &request, w)
+	err := common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -418,7 +419,7 @@ func (handler *DebugHandler) Backfill(w *utils.ResponseWriter, r *http.Request) 
 // Snapshot starts an snapshot process on demand.
 func (handler *DebugHandler) Snapshot(w *utils.ResponseWriter, r *http.Request) {
 	var request SnapshotRequest
-	err := common.ReadRequest(r, &request, w)
+	err := common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -446,7 +447,7 @@ func (handler *DebugHandler) Snapshot(w *utils.ResponseWriter, r *http.Request) 
 // Purge starts an purge process on demand.
 func (handler *DebugHandler) Purge(w *utils.ResponseWriter, r *http.Request) {
 	var request PurgeRequest
-	err := common.ReadRequest(r, &request, w)
+	err := common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -492,7 +493,7 @@ func (handler *DebugHandler) Purge(w *utils.ResponseWriter, r *http.Request) {
 // ShowShardMeta shows the metadata for a table shard. It won't show the underlying data.
 func (handler *DebugHandler) ShowShardMeta(w *utils.ResponseWriter, r *http.Request) {
 	var request ShowShardMetaRequest
-	err := common.ReadRequest(r, &request, w)
+	err := common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -509,7 +510,7 @@ func (handler *DebugHandler) ShowShardMeta(w *utils.ResponseWriter, r *http.Requ
 // ListRedoLogs lists all the redo log files for a given shard.
 func (handler *DebugHandler) ListRedoLogs(w *utils.ResponseWriter, r *http.Request) {
 	var request ListRedoLogsRequest
-	err := common.ReadRequest(r, &request, w)
+	err := common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -540,7 +541,7 @@ func (handler *DebugHandler) ListRedoLogs(w *utils.ResponseWriter, r *http.Reque
 // ListUpsertBatches returns offsets of upsert batches in the redo log file.
 func (handler *DebugHandler) ListUpsertBatches(w *utils.ResponseWriter, r *http.Request) {
 	var request ListUpsertBatchesRequest
-	err := common.ReadRequest(r, &request, w)
+	err := common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -555,6 +556,9 @@ func (handler *DebugHandler) ListUpsertBatches(w *utils.ResponseWriter, r *http.
 	offsets, err := shard.NewRedoLogBrowser().ListUpsertBatch(request.CreationTime)
 	if err != nil {
 		w.WriteError(err)
+		fmt.Println("marker1 start")
+		w.ResponseWriter.Header().Write(os.Stdout)
+		fmt.Println("marker1 end")
 		return
 	}
 	w.WriteObject(&offsets)
@@ -565,7 +569,7 @@ func (handler *DebugHandler) ListUpsertBatches(w *utils.ResponseWriter, r *http.
 // upsert batch index within the file.
 func (handler *DebugHandler) ReadUpsertBatch(w *utils.ResponseWriter, r *http.Request) {
 	var request ReadRedologUpsertBatchRequest
-	if err := common.ReadRequest(r, &request, w); err != nil {
+	if err := common.ReadRequest(r, &request); err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
@@ -596,7 +600,7 @@ func (handler *DebugHandler) ReadUpsertBatch(w *utils.ResponseWriter, r *http.Re
 // LoadVectorParty requests a vector party from disk if it is not already in memory
 func (handler *DebugHandler) LoadVectorParty(w *utils.ResponseWriter, r *http.Request) {
 	var request LoadVectorPartyRequest
-	if err := common.ReadRequest(r, &request, w); err != nil {
+	if err := common.ReadRequest(r, &request); err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
@@ -647,7 +651,7 @@ func (handler *DebugHandler) LoadVectorParty(w *utils.ResponseWriter, r *http.Re
 // EvictVectorParty evict a vector party from memory.
 func (handler *DebugHandler) EvictVectorParty(w *utils.ResponseWriter, r *http.Request) {
 	var request EvictVectorPartyRequest
-	if err := common.ReadRequest(r, &request, w); err != nil {
+	if err := common.ReadRequest(r, &request); err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
@@ -685,7 +689,7 @@ func (handler *DebugHandler) EvictVectorParty(w *utils.ResponseWriter, r *http.R
 // ShowJobStatus shows the current archive job status.
 func (handler *DebugHandler) ShowJobStatus(w *utils.ResponseWriter, r *http.Request) {
 	var request ShowJobStatusRequest
-	if err := common.ReadRequest(r, &request, w); err != nil {
+	if err := common.ReadRequest(r, &request); err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
@@ -722,7 +726,7 @@ func (handler *DebugHandler) ShowHostMemory(w *utils.ResponseWriter, r *http.Req
 // ReadBackfillQueueUpsertBatch reads upsert batch inside backfill manager backfill queue
 func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w *utils.ResponseWriter, r *http.Request) {
 	var request ReadBackfillQueueUpsertBatchRequest
-	err := common.ReadRequest(r, &request, w)
+	err := common.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

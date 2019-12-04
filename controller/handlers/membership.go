@@ -69,7 +69,7 @@ func (h MembershipHandler) Join(w *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req JoinRequest
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -95,7 +95,7 @@ func (h MembershipHandler) GetInstance(w *utils.ResponseWriter, r *http.Request)
 	}
 	var req GetInstanceRequest
 
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -124,7 +124,7 @@ func (h MembershipHandler) GetInstances(w *utils.ResponseWriter, r *http.Request
 		return
 	}
 	var req GetInstancesRequest
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -152,7 +152,7 @@ func (h MembershipHandler) Leave(w *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req LeaveRequest
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -179,7 +179,7 @@ func (h MembershipHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 	}
 	var req GetHashRequest
 
-	err := apiCom.ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

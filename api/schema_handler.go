@@ -100,7 +100,7 @@ func (handler *SchemaHandler) GetTable(w *utils.ResponseWriter, r *http.Request)
 	var getTableRequest GetTableRequest
 	var getTableResponse GetTableResponse
 
-	err := apiCom.ReadRequest(r, &getTableRequest, w)
+	err := apiCom.ReadRequest(r, &getTableRequest)
 	if err != nil {
 		w.WriteError(err)
 		return
@@ -131,7 +131,7 @@ func (handler *SchemaHandler) AddTable(w *utils.ResponseWriter, r *http.Request)
 	var addTableRequest AddTableRequest
 	// add default table configs first
 	addTableRequest.Body.Config = metastore.DefaultTableConfig
-	err := apiCom.ReadRequest(r, &addTableRequest, w)
+	err := apiCom.ReadRequest(r, &addTableRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -157,7 +157,7 @@ func (handler *SchemaHandler) AddTable(w *utils.ResponseWriter, r *http.Request)
 //        200: noContentResponse
 func (handler *SchemaHandler) UpdateTableConfig(w *utils.ResponseWriter, r *http.Request) {
 	var request UpdateTableConfigRequest
-	err := apiCom.ReadRequest(r, &request, w)
+	err := apiCom.ReadRequest(r, &request)
 	if err != nil {
 		w.WriteError(err)
 		return
@@ -179,7 +179,7 @@ func (handler *SchemaHandler) UpdateTableConfig(w *utils.ResponseWriter, r *http
 //        200: noContentResponse
 func (handler *SchemaHandler) DeleteTable(w *utils.ResponseWriter, r *http.Request) {
 	var deleteTableRequest DeleteTableRequest
-	err := apiCom.ReadRequest(r, &deleteTableRequest, w)
+	err := apiCom.ReadRequest(r, &deleteTableRequest)
 	if err != nil {
 		w.WriteError(err)
 		return
@@ -207,7 +207,7 @@ func (handler *SchemaHandler) DeleteTable(w *utils.ResponseWriter, r *http.Reque
 //        200: noContentResponse
 func (handler *SchemaHandler) AddColumn(w *utils.ResponseWriter, r *http.Request) {
 	var addColumnRequest AddColumnRequest
-	err := apiCom.ReadRequest(r, &addColumnRequest, w)
+	err := apiCom.ReadRequest(r, &addColumnRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -237,7 +237,7 @@ func (handler *SchemaHandler) AddColumn(w *utils.ResponseWriter, r *http.Request
 //        200: noContentResponse
 func (handler *SchemaHandler) UpdateColumn(w *utils.ResponseWriter, r *http.Request) {
 	var updateColumnRequest UpdateColumnRequest
-	err := apiCom.ReadRequest(r, &updateColumnRequest, w)
+	err := apiCom.ReadRequest(r, &updateColumnRequest)
 	if err != nil {
 		w.WriteError(err)
 		return
@@ -263,7 +263,7 @@ func (handler *SchemaHandler) UpdateColumn(w *utils.ResponseWriter, r *http.Requ
 func (handler *SchemaHandler) DeleteColumn(w *utils.ResponseWriter, r *http.Request) {
 	var deleteColumnRequest DeleteColumnRequest
 
-	err := apiCom.ReadRequest(r, &deleteColumnRequest, w)
+	err := apiCom.ReadRequest(r, &deleteColumnRequest)
 	if err != nil {
 		w.WriteError(err)
 		return

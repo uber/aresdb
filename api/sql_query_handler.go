@@ -39,7 +39,7 @@ import (
 func (handler *QueryHandler) HandleSQL(w *utils.ResponseWriter, r *http.Request) {
 	sqlRequest := apiCom.SQLRequest{Device: -1}
 
-	if err := apiCom.ReadRequest(r, &sqlRequest, w); err != nil {
+	if err := apiCom.ReadRequest(r, &sqlRequest); err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
@@ -59,7 +59,6 @@ func (handler *QueryHandler) HandleSQL(w *utils.ResponseWriter, r *http.Request)
 		sqlParseTimer := utils.GetRootReporter().GetTimer(utils.QuerySQLParsingLatency)
 		duration := utils.Now().Sub(startTs)
 		sqlParseTimer.Record(duration)
-
 	}
 
 	aqlRequest := apiCom.AQLRequest{
