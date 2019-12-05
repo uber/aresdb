@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 	"unsafe"
+	"github.com/uber/aresdb/query/context"
 )
 
 type boundaryType int
@@ -412,6 +413,9 @@ type AQLQueryContext struct {
 
 	// for eager flush query result
 	ResponseWriter http.ResponseWriter
+
+	// helper used to share common codes
+	QCHelper *context.QueryContextHelper
 }
 
 // IsHLL return if the aggregation function is HLL
@@ -427,4 +431,32 @@ func isAtomicAggType(aggType C.enum_AggregateFunction) bool {
 func (ctx *OOPKContext) UseHashReduction() bool {
 	return utils.GetConfig().Query.EnableHashReduction &&
 		cgoutils.SupportHashReduction() && isAtomicAggType(ctx.AggregateType)
+}
+
+// Initialize qcHelper, TODO: move to specialized constructor
+func (qc *AQLQueryContext) InitQCHelper() {
+	qc.QCHelper = &context.QueryContextHelper{
+		QCOptions: qc,
+	}
+}
+
+func (qc *AQLQueryContext) GetSchema(tableID int) *memCom.TableSchema {
+	return qc.TableScanners[tableID].Schema
+}
+
+func (qc *AQLQueryContext) GetTableID(alias string) (int, bool) {
+	id, exists := qc.TableIDByAlias[alias]
+	return id, exists
+}
+
+func (qc *AQLQueryContext) GetQuery() *queryCom.AQLQuery {
+	return qc.Query
+}
+
+func (qc *AQLQueryContext) SetError(err error) {
+	qc.Error = err
+}
+
+func (qc *AQLQueryContext) IsDataOnly() bool {
+	return qc.DataOnly
 }
