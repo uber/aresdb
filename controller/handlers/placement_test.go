@@ -247,6 +247,7 @@ func TestPlacementHandler(t *testing.T) {
 		instance0, _ = p.Instance("0")
 		instance2, _ = p.Instance("2")
 		shard0, _ := instance0.Shards().Shard(0)
+		fmt.Println("shard0 is ... ", shard0)
 		assert.Equal(t, shard0.State(), shard.Initializing)
 		shard0, _ = instance2.Shards().Shard(0)
 		assert.Equal(t, shard0.State(), shard.Leaving)

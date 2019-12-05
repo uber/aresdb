@@ -50,10 +50,10 @@ type Params struct {
 type Result struct {
 	fx.Out
 
-	ConfigProvider cfgfx.Provider
-	ZapLogger      *zap.SugaredLogger
-	Scope          tally.Scope
-	EtcdClient     *kvstore.EtcdClient
+	ConfigProvider         cfgfx.Provider
+	ZapLogger              *zap.SugaredLogger
+	Scope                  tally.Scope
+	EtcdClient             *kvstore.EtcdClient
 	MetricsLoggingProvider utils.MetricsLoggingMiddleWareProvider
 }
 
@@ -113,10 +113,10 @@ func Init() Result {
 	}
 
 	return Result{
-		ConfigProvider: cfgProvider,
-		ZapLogger: zapLogger,
-		Scope:  scope,
-		EtcdClient: kvstore.NewEtcdClient(zapLogger, etcdConfig),
+		ConfigProvider:         cfgProvider,
+		ZapLogger:              zapLogger,
+		Scope:                  scope,
+		EtcdClient:             kvstore.NewEtcdClient(zapLogger, etcdConfig),
 		MetricsLoggingProvider: utils.NewMetricsLoggingMiddleWareProvider(scope, logger),
 	}
 }
