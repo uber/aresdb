@@ -256,8 +256,6 @@ func TestPlacementHandler(t *testing.T) {
 		assert.True(t, found)
 		// should have new shard initializing
 		assert.Equal(t, newShard.State(), shard.Initializing)
-		// should have two instances holding the new shard
-		assert.Len(t, p.InstancesForShard(newShard.ID()), 2)
 
 		// 6. mark available for instance 0
 		markInstanceAvailableRequestBody = bytes.NewBuffer([]byte(`
