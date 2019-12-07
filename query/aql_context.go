@@ -415,7 +415,7 @@ type AQLQueryContext struct {
 	ResponseWriter http.ResponseWriter
 
 	// helper used to share common codes
-	QCHelper *context.QueryContextHelper
+	QCHelper *context.QueryContextHelper `json:"-"`
 }
 
 // IsHLL return if the aggregation function is HLL

@@ -560,24 +560,21 @@ var _ = ginkgo.Describe("query compiler", func() {
 			Op:       expr.EQ,
 			ExprType: expr.Boolean,
 		}))
-		/* todo davidw
 		// rhs geopoint
 		pointStr := "POINT (30 10)"
 		val, _ := memCom.GeoPointFromString(pointStr)
 		Ω(qc.Rewrite(&expr.BinaryExpr{
 			Op:       expr.EQ,
 			ExprType: expr.Signed,
-			LHS:      &expr.VarRef{Val: "f", DataType: memCom.GeoPoint},
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.GeoPoint},
 			RHS:      &expr.StringLiteral{Val: "POINT (30 10)"},
 		})).Should(Equal(&expr.BinaryExpr{
-			LHS:      &expr.VarRef{Val: "f", DataType: memCom.GeoPoint},
+			LHS:      &expr.VarRef{Val: "f", ExprType: expr.GeoPoint},
 			RHS:      &expr.GeopointLiteral{Val: val},
 			Op:       expr.EQ,
 			ExprType: expr.Boolean,
 		}))
-*/
 		// call
-/* todo davidw
 		// array functions
 		Ω(qc.Rewrite(&expr.Call{
 			Name: "length",
@@ -586,13 +583,11 @@ var _ = ginkgo.Describe("query compiler", func() {
 					Val: "array_field1",
 				},
 			},
-		})).Should(Equal(&expr.Call{
-			Name:     "length",
+		})).Should(Equal(&expr.UnaryExpr{
+			Op:       expr.ARRAY_LENGTH,
 			ExprType: expr.Unsigned,
-			Args: []expr.Expr{
-				&expr.VarRef{
-					Val: "array_field1",
-				},
+			Expr: &expr.VarRef{
+				Val: "array_field1",
 			},
 		}))
 		Ω(qc.Rewrite(&expr.Call{
@@ -607,20 +602,14 @@ var _ = ginkgo.Describe("query compiler", func() {
 					Int:  1,
 				},
 			},
-		})).Should(Equal(&expr.Call{
-			Name:     "contains",
+		})).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.ARRAY_CONTAINS,
 			ExprType: expr.Boolean,
-			Args: []expr.Expr{
-				&expr.VarRef{
-					Val: "array_field1",
-				},
-				&expr.NumberLiteral{
-					Expr: "1",
-					Val:  1,
-					Int:  1,
-				},
+			LHS: &expr.VarRef{
+				Val: "array_field1",
 			},
-		}))
+		},
+		))
 		Ω(qc.Rewrite(&expr.Call{
 			Name: "element_at",
 			Args: []expr.Expr{
@@ -634,22 +623,19 @@ var _ = ginkgo.Describe("query compiler", func() {
 					Int:  1,
 				},
 			},
-		})).Should(Equal(&expr.Call{
-			Name:     "element_at",
-			ExprType: expr.Signed,
-			Args: []expr.Expr{
-				&expr.VarRef{
-					Val:      "array_field1",
-					ExprType: expr.Signed,
-				},
-				&expr.NumberLiteral{
-					Expr: "1",
-					Val:  1,
-					Int:  1,
-				},
+		})).Should(Equal(&expr.BinaryExpr{
+			Op:       expr.ARRAY_ELEMENT_AT,
+			ExprType: expr.UnknownType,
+			LHS: &expr.VarRef{
+				Val:      "array_field1",
+				ExprType: expr.Signed,
+			},
+			RHS: &expr.NumberLiteral{
+				Expr: "1",
+				Val:  1,
+				Int:  1,
 			},
 		}))
-*/
 	})
 
 	ginkgo.It("rewrite should fail", func() {
