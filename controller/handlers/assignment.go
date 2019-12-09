@@ -16,6 +16,7 @@ package handlers
 
 import (
 	"fmt"
+	apiCom "github.com/uber/aresdb/api/common"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -45,17 +46,17 @@ func NewAssignmentHandler(logger *zap.SugaredLogger, assignmentMutator mutatorCo
 }
 
 // Register adds paths to router
-func (h AssignmentHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/{namespace}/assignments/{subscriber}", utils.ApplyHTTPWrappers2(h.GetAssignment, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/assignments", utils.ApplyHTTPWrappers2(h.GetAssignments, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/hash/{subscriber}", utils.ApplyHTTPWrappers2(h.GetHash, wrappers...)).Methods(http.MethodGet)
+func (h AssignmentHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/{namespace}/assignments/{subscriber}", utils.ApplyHTTPWrappers(h.GetAssignment, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/assignments", utils.ApplyHTTPWrappers(h.GetAssignments, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/hash/{subscriber}", utils.ApplyHTTPWrappers(h.GetHash, wrappers...)).Methods(http.MethodGet)
 }
 
 // GetAssignment swagger:route GET /assignment/{namespace}/assignments/{subscriber} getAssignment
 // gets assignment by subscriber name
 func (h AssignmentHandler) GetAssignment(w *utils.ResponseWriter, r *http.Request) {
 	var req GetAssignmentRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -97,7 +98,7 @@ func (h AssignmentHandler) GetAssignment(w *utils.ResponseWriter, r *http.Reques
 // returns all assignments
 func (h AssignmentHandler) GetAssignments(w *utils.ResponseWriter, r *http.Request) {
 	var req GetJobsRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -143,7 +144,7 @@ func (h AssignmentHandler) GetAssignments(w *utils.ResponseWriter, r *http.Reque
 // returns hash that will be different if any thing changed for given assignment
 func (h AssignmentHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 	var req GetAssignmentHashRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

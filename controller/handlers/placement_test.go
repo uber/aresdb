@@ -245,16 +245,22 @@ func TestPlacementHandler(t *testing.T) {
 		p, _ = placement.NewPlacementFromProto(&pb4)
 		assert.Equal(t, p.NumInstances(), 3)
 		instance0, _ = p.Instance("0")
+		instance1, _ = p.Instance("1")
 		instance2, _ = p.Instance("2")
-		shard0, _ := instance0.Shards().Shard(0)
-		assert.Equal(t, shard0.State(), shard.Initializing)
-		shard0, _ = instance2.Shards().Shard(0)
-		assert.Equal(t, shard0.State(), shard.Leaving)
+		var newShard shard.Shard
+		var found bool
+		// should have either shard0 or shard1 assigned to newly added instance
+		if newShard, found = instance0.Shards().Shard(0); !found {
+			newShard, found = instance0.Shards().Shard(1)
+		}
+		assert.True(t, found)
+		// should have new shard initializing
+		assert.Equal(t, newShard.State(), shard.Initializing)
 
-		// 6. mark instance 0 shard 0 as available
+		// 6. mark available for instance 0
 		markInstanceAvailableRequestBody = bytes.NewBuffer([]byte(`
 		{
-		  "shards": [0]
+		  "all": true
 		}`))
 		resp, err = http.Post(fmt.Sprintf("http://%s/%s/datanode/instances/0/available", hostPort, testNamespace), "application/json", markInstanceAvailableRequestBody)
 		assert.NoError(t, err)
@@ -264,12 +270,11 @@ func TestPlacementHandler(t *testing.T) {
 		p, _ = placement.NewPlacementFromProto(&pb5)
 		assert.Equal(t, p.NumInstances(), 3)
 		instance0, _ = p.Instance("0")
+		instance1, _ = p.Instance("1")
 		instance2, _ = p.Instance("2")
-		shard0, exist = instance0.Shards().Shard(0)
-		assert.True(t, exist)
-		assert.Equal(t, shard0.State(), shard.Available)
-		_, exist = instance2.Shards().Shard(0)
-		assert.False(t, exist)
+		assert.True(t, instance0.IsAvailable())
+		assert.True(t, instance1.IsAvailable())
+		assert.True(t, instance2.IsAvailable())
 
 		// 7. remove instance 0 from the placement
 		removeInstanceRequestBody := bytes.NewBuffer([]byte(`

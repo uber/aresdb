@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/cluster/topology"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,7 +32,6 @@ import (
 	memCom "github.com/uber/aresdb/memstore/common"
 	metaCom "github.com/uber/aresdb/metastore/common"
 	"github.com/uber/aresdb/utils"
-	"io"
 )
 
 // DebugHandler handles debug operations.
@@ -71,40 +71,40 @@ func NewDebugHandler(
 
 // Register registers http handlers.
 func (handler *DebugHandler) Register(router *mux.Router) {
-	router.HandleFunc("/health", handler.Health).Methods(http.MethodGet)
-	router.HandleFunc("/health/{onOrOff}", handler.HealthSwitch).Methods(http.MethodPost)
-	router.HandleFunc("/jobs/{jobType}", handler.ShowJobStatus).Methods(http.MethodGet)
-	router.HandleFunc("/devices", handler.ShowDeviceStatus).Methods(http.MethodGet)
-	router.HandleFunc("/host-memory", handler.ShowHostMemory).Methods(http.MethodGet)
-	router.HandleFunc("/shards", handler.ShowShardSet).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}", handler.ShowShardMeta).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/archive", handler.Archive).Methods(http.MethodPost)
-	router.HandleFunc("/{table}/{shard}/backfill", handler.Backfill).Methods(http.MethodPost)
-	router.HandleFunc("/{table}/{shard}/snapshot", handler.Snapshot).Methods(http.MethodPost)
-	router.HandleFunc("/{table}/{shard}/purge", handler.Purge).Methods(http.MethodPost)
-	router.HandleFunc("/{table}/{shard}/batches/{batch}", handler.ShowBatch).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/batches/{batch}/vector-parties/{column}", handler.LoadVectorParty).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/batches/{batch}/vector-parties/{column}", handler.EvictVectorParty).Methods(http.MethodDelete)
-	router.HandleFunc("/{table}/{shard}/primary-keys", handler.LookupPrimaryKey).Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/redologs", handler.ListRedoLogs).
+	router.HandleFunc("/health", utils.ApplyHTTPWrappers(handler.Health)).Methods(http.MethodGet)
+	router.HandleFunc("/health/{onOrOff}", utils.ApplyHTTPWrappers(handler.HealthSwitch)).Methods(http.MethodPost)
+	router.HandleFunc("/jobs/{jobType}", utils.ApplyHTTPWrappers(handler.ShowJobStatus)).Methods(http.MethodGet)
+	router.HandleFunc("/devices", utils.ApplyHTTPWrappers(handler.ShowDeviceStatus)).Methods(http.MethodGet)
+	router.HandleFunc("/host-memory", utils.ApplyHTTPWrappers(handler.ShowHostMemory)).Methods(http.MethodGet)
+	router.HandleFunc("/shards", utils.ApplyHTTPWrappers(handler.ShowShardSet)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}", utils.ApplyHTTPWrappers(handler.ShowShardMeta)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}/archive", utils.ApplyHTTPWrappers(handler.Archive)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/backfill", utils.ApplyHTTPWrappers(handler.Backfill)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/snapshot", utils.ApplyHTTPWrappers(handler.Snapshot)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/purge", utils.ApplyHTTPWrappers(handler.Purge)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/batches/{batch}", utils.ApplyHTTPWrappers(handler.ShowBatch)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}/batches/{batch}/vector-parties/{column}", utils.ApplyHTTPWrappers(handler.LoadVectorParty)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}/batches/{batch}/vector-parties/{column}", utils.ApplyHTTPWrappers(handler.EvictVectorParty)).Methods(http.MethodDelete)
+	router.HandleFunc("/{table}/{shard}/primary-keys", utils.ApplyHTTPWrappers(handler.LookupPrimaryKey)).Methods(http.MethodGet)
+	router.HandleFunc("/{table}/{shard}/redologs", utils.ApplyHTTPWrappers(handler.ListRedoLogs)).
 		Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches", handler.ListUpsertBatches).
+	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches", utils.ApplyHTTPWrappers(handler.ListUpsertBatches)).
 		Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches/{offset}", handler.ReadUpsertBatch).
+	router.HandleFunc("/{table}/{shard}/redologs/{creationTime}/upsertbatches/{offset}", utils.ApplyHTTPWrappers(handler.ReadUpsertBatch)).
 		Methods(http.MethodGet)
-	router.HandleFunc("/{table}/{shard}/backfill-manager/upsertbatches/{offset}", handler.ReadBackfillQueueUpsertBatch).Methods(http.MethodGet)
-	router.HandleFunc("/bootstrap/retry", handler.BootstrapRetry).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}/backfill-manager/upsertbatches/{offset}", utils.ApplyHTTPWrappers(handler.ReadBackfillQueueUpsertBatch)).Methods(http.MethodGet)
+	router.HandleFunc("/bootstrap/retry", utils.ApplyHTTPWrappers(handler.BootstrapRetry)).Methods(http.MethodPost)
 }
 
 // ShowShardSet shows the shard set owned by the server
-func (handler *DebugHandler) ShowShardSet(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ShowShardSet(w *utils.ResponseWriter, r *http.Request) {
 	shards := handler.shardOwner.GetOwnedShards()
 	sort.Ints(shards)
-	common.Respond(w, shards)
+	w.WriteObject(shards)
 }
 
 // Health returns whether the health check is on or off
-func (handler *DebugHandler) Health(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) Health(w *utils.ResponseWriter, r *http.Request) {
 	handler.healthCheckHandler.RLock()
 	disabled := handler.healthCheckHandler.disable
 	handler.healthCheckHandler.RUnlock()
@@ -112,32 +112,32 @@ func (handler *DebugHandler) Health(w http.ResponseWriter, r *http.Request) {
 	if disabled {
 		status = "off"
 	}
-	io.WriteString(w, status)
+	w.Write([]byte(status))
 }
 
 // HealthSwitch will turn on health check based on the request.
-func (handler *DebugHandler) HealthSwitch(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) HealthSwitch(w *utils.ResponseWriter, r *http.Request) {
 	var request HealthSwitchRequest
 	var err error
 	if err = common.ReadRequest(r, &request); err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	if request.OnOrOff != "on" && request.OnOrOff != "off" {
-		common.RespondWithBadRequest(w, errors.New("must specify on or off in the url"))
+		w.WriteErrorWithCode(http.StatusBadRequest, errors.New("must specify on or off in the url"))
 		return
 	}
 
 	handler.healthCheckHandler.Lock()
 	handler.healthCheckHandler.disable = request.OnOrOff == "off"
 	handler.healthCheckHandler.Unlock()
-	io.WriteString(w, "OK")
+	w.Write([]byte("OK"))
 }
 
 // ShowBatch will only show batches that is present in memory, it will not request batch
 // from DiskStore.
-func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ShowBatch(w *utils.ResponseWriter, r *http.Request) {
 
 	var request ShowBatchRequest
 	var response ShowBatchResponse
@@ -145,7 +145,7 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 
 	err = common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
@@ -161,7 +161,7 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 
 	schema, err := handler.memStore.GetSchema(request.TableName)
 	if err != nil {
-		common.RespondWithBadRequest(w, ErrTableDoesNotExist)
+		w.WriteError(ErrTableDoesNotExist)
 		return
 	}
 
@@ -180,16 +180,16 @@ func (handler *DebugHandler) ShowBatch(w http.ResponseWriter, r *http.Request) {
 	var shard *memstore.TableShard
 	shard, err = handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	defer func() {
 		shard.Users.Done()
 		if err != nil {
-			common.RespondWithError(w, err)
+			w.WriteError(err)
 		} else {
-			common.RespondWithJSONObject(w, response.Body)
+			w.WriteObject(response.Body)
 		}
 	}()
 
@@ -332,21 +332,18 @@ func tranlateEnumsArray(vector *memCom.SlicedVector, enumCases []string) error {
 }
 
 // LookupPrimaryKey looks up a key in primary key for given table and shard
-func (handler *DebugHandler) LookupPrimaryKey(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) LookupPrimaryKey(w *utils.ResponseWriter, r *http.Request) {
 	var request LookupPrimaryKeyRequest
 	err := common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithError(w, utils.APIError{
-			Code:    http.StatusBadRequest,
-			Message: err.Error(),
-			Cause:   err,
-		})
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
+		return
 	}
 	defer shard.Users.Done()
 
@@ -355,28 +352,25 @@ func (handler *DebugHandler) LookupPrimaryKey(w http.ResponseWriter, r *http.Req
 	var recordID memCom.RecordID
 	recordID, found = shard.LiveStore.LookupKey(keyStrs)
 	if !found {
-		common.RespondWithError(w, utils.APIError{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key '%s' does not exist or expired", request.Key),
-		})
+		w.WriteErrorWithCode(http.StatusNotFound, fmt.Errorf("key '%s' does not exist or expired", request.Key))
 		return
 	}
-	common.RespondWithJSONObject(w, recordID)
+	w.WriteObject(recordID)
 }
 
 // Archive starts an archiving process on demand.
-func (handler *DebugHandler) Archive(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) Archive(w *utils.ResponseWriter, r *http.Request) {
 	var request ArchiveRequest
 	err := common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	// Just check table and shard existence.
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	shard.Users.Done()
@@ -388,26 +382,25 @@ func (handler *DebugHandler) Archive(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			<-errChan
 		}()
-		common.RespondJSONObjectWithCode(w, http.StatusOK, "Archiving job submitted")
+		w.Write([]byte("Archiving job submitted"))
 	} else {
-		common.RespondJSONObjectWithCode(w, http.StatusMethodNotAllowed, err)
+		w.WriteErrorWithCode(http.StatusMethodNotAllowed, err)
 	}
-
 }
 
 // Backfill starts an backfill process on demand.
-func (handler *DebugHandler) Backfill(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) Backfill(w *utils.ResponseWriter, r *http.Request) {
 	var request BackfillRequest
 	err := common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	// Just check table and shard existence.
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	shard.Users.Done()
@@ -419,24 +412,23 @@ func (handler *DebugHandler) Backfill(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			<-errChan
 		}()
-
-		common.RespondJSONObjectWithCode(w, http.StatusOK, "Backfill job submitted")
+		w.Write([]byte("Backfill job submitted"))
 	}
 }
 
 // Snapshot starts an snapshot process on demand.
-func (handler *DebugHandler) Snapshot(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) Snapshot(w *utils.ResponseWriter, r *http.Request) {
 	var request SnapshotRequest
 	err := common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	// Just check table and shard existence.
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	defer shard.Users.Done()
@@ -448,29 +440,28 @@ func (handler *DebugHandler) Snapshot(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			<-errChan
 		}()
-
-		common.RespondJSONObjectWithCode(w, http.StatusOK, "Snapshot job submitted")
+		w.Write([]byte("Snapshot job submitted"))
 	}
 }
 
 // Purge starts an purge process on demand.
-func (handler *DebugHandler) Purge(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) Purge(w *utils.ResponseWriter, r *http.Request) {
 	var request PurgeRequest
 	err := common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	if !request.Body.SafePurge && (request.Body.BatchIDStart < 0 || request.Body.BatchIDEnd < 0 || request.Body.BatchIDStart > request.Body.BatchIDEnd) {
-		common.RespondWithBadRequest(w, fmt.Errorf("invalid batch range, expects both to be > 0, got [%d, %d)",
+		w.WriteErrorWithCode(http.StatusBadRequest, fmt.Errorf("invalid batch range, expects both to be > 0, got [%d, %d)",
 			request.Body.BatchIDStart, request.Body.BatchIDEnd))
 		return
 	}
 
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	defer shard.Users.Done()
@@ -482,7 +473,7 @@ func (handler *DebugHandler) Purge(w http.ResponseWriter, r *http.Request) {
 			request.Body.BatchIDStart = 0
 			request.Body.BatchIDEnd = nowInDay - retentionDays
 		} else {
-			common.RespondWithBadRequest(w, utils.APIError{Message: "safe purge attempted on table with infinite retention"})
+			w.WriteErrorWithCode(http.StatusBadRequest, errors.New("safe purge attempted on table with infinite retention"))
 			return
 		}
 	}
@@ -495,47 +486,46 @@ func (handler *DebugHandler) Purge(w http.ResponseWriter, r *http.Request) {
 			<-errChan
 		}()
 
-		common.RespondJSONObjectWithCode(w, http.StatusOK, "Purge job submitted")
+		w.Write([]byte("Purge job submitted"))
 	}
 }
 
 // ShowShardMeta shows the metadata for a table shard. It won't show the underlying data.
-func (handler *DebugHandler) ShowShardMeta(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ShowShardMeta(w *utils.ResponseWriter, r *http.Request) {
 	var request ShowShardMetaRequest
 	err := common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	defer shard.Users.Done()
-	common.RespondWithJSONObject(w, shard)
-	return
+	w.WriteObject(shard)
 }
 
 // ListRedoLogs lists all the redo log files for a given shard.
-func (handler *DebugHandler) ListRedoLogs(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ListRedoLogs(w *utils.ResponseWriter, r *http.Request) {
 	var request ListRedoLogsRequest
 	err := common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	defer shard.Users.Done()
 	redoLogFiles, err := shard.NewRedoLogBrowser().ListLogFiles()
 
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
@@ -545,45 +535,47 @@ func (handler *DebugHandler) ListRedoLogs(w http.ResponseWriter, r *http.Request
 		response[i] = strconv.FormatInt(redoLogFile, 10)
 	}
 
-	common.RespondWithJSONObject(w, response)
-	return
+	w.WriteObject(response)
 }
 
 // ListUpsertBatches returns offsets of upsert batches in the redo log file.
-func (handler *DebugHandler) ListUpsertBatches(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ListUpsertBatches(w *utils.ResponseWriter, r *http.Request) {
 	var request ListUpsertBatchesRequest
 	err := common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	defer shard.Users.Done()
 	offsets, err := shard.NewRedoLogBrowser().ListUpsertBatch(request.CreationTime)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
+		fmt.Println("marker1 start")
+		w.ResponseWriter.Header().Write(os.Stdout)
+		fmt.Println("marker1 end")
 		return
 	}
-	common.RespondWithJSONObject(w, &offsets)
+	w.WriteObject(&offsets)
 	return
 }
 
 // ReadUpsertBatch shows the records of an upsert batch given a redolog file creation time and
 // upsert batch index within the file.
-func (handler *DebugHandler) ReadUpsertBatch(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ReadUpsertBatch(w *utils.ResponseWriter, r *http.Request) {
 	var request ReadRedologUpsertBatchRequest
 	if err := common.ReadRequest(r, &request); err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	defer shard.Users.Done()
@@ -591,7 +583,7 @@ func (handler *DebugHandler) ReadUpsertBatch(w http.ResponseWriter, r *http.Requ
 	rows, columnNames, numTotalRows, err := shard.NewRedoLogBrowser().ReadData(request.CreationTime,
 		request.Offset, request.Start, request.Length)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 	response := ReadUpsertBatchResponse{
@@ -601,26 +593,26 @@ func (handler *DebugHandler) ReadUpsertBatch(w http.ResponseWriter, r *http.Requ
 		RecordsTotal:    numTotalRows,
 		RecordsFiltered: numTotalRows,
 	}
-	common.RespondWithJSONObject(w, &response)
+	w.WriteObject(&response)
 	return
 }
 
 // LoadVectorParty requests a vector party from disk if it is not already in memory
-func (handler *DebugHandler) LoadVectorParty(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) LoadVectorParty(w *utils.ResponseWriter, r *http.Request) {
 	var request LoadVectorPartyRequest
 	if err := common.ReadRequest(r, &request); err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	if request.BatchID < 0 {
-		common.RespondWithBadRequest(w, errors.New("Live batch vector party cannot be loaded"))
+		w.WriteErrorWithCode(http.StatusBadRequest, errors.New("live batch vector party cannot be loaded"))
 		return
 	}
 
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	defer shard.Users.Done()
@@ -635,12 +627,12 @@ func (handler *DebugHandler) LoadVectorParty(w http.ResponseWriter, r *http.Requ
 	shard.Schema.RUnlock()
 
 	if !exist {
-		common.RespondWithBadRequest(w, ErrColumnDoesNotExist)
+		w.WriteError(ErrColumnDoesNotExist)
 		return
 	}
 
 	if isDeleted {
-		common.RespondWithBadRequest(w, ErrColumnDeleted)
+		w.WriteError(ErrColumnDeleted)
 		return
 	}
 
@@ -653,25 +645,25 @@ func (handler *DebugHandler) LoadVectorParty(w http.ResponseWriter, r *http.Requ
 		vp.WaitForDiskLoad()
 		vp.Release()
 	}
-	common.RespondWithJSONObject(w, nil)
+	w.WriteObject(nil)
 }
 
 // EvictVectorParty evict a vector party from memory.
-func (handler *DebugHandler) EvictVectorParty(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) EvictVectorParty(w *utils.ResponseWriter, r *http.Request) {
 	var request EvictVectorPartyRequest
 	if err := common.ReadRequest(r, &request); err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	if request.BatchID < 0 {
-		common.RespondWithBadRequest(w, errors.New("live batch vector party cannot be evicted"))
+		w.WriteErrorWithCode(http.StatusBadRequest, errors.New("live batch vector party cannot be evicted"))
 		return
 	}
 
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	defer shard.Users.Done()
@@ -681,7 +673,7 @@ func (handler *DebugHandler) EvictVectorParty(w http.ResponseWriter, r *http.Req
 	shard.Schema.RUnlock()
 
 	if !exist {
-		common.RespondWithError(w, ErrColumnDoesNotExist)
+		w.WriteError(ErrColumnDoesNotExist)
 		return
 	}
 
@@ -691,14 +683,14 @@ func (handler *DebugHandler) EvictVectorParty(w http.ResponseWriter, r *http.Req
 	batch := version.RequestBatch(int32(request.BatchID))
 	// this operation is blocking and needs the user to wait
 	batch.BlockingDelete(columnID)
-	common.RespondWithJSONObject(w, nil)
+	w.WriteObject(nil)
 }
 
 // ShowJobStatus shows the current archive job status.
-func (handler *DebugHandler) ShowJobStatus(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ShowJobStatus(w *utils.ResponseWriter, r *http.Request) {
 	var request ShowJobStatusRequest
 	if err := common.ReadRequest(r, &request); err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
@@ -706,50 +698,50 @@ func (handler *DebugHandler) ShowJobStatus(w http.ResponseWriter, r *http.Reques
 	scheduler.RLock()
 	jsonBuffer, err := json.Marshal(scheduler.GetJobDetails(memCom.JobType(request.JobType)))
 	scheduler.RUnlock()
-	common.RespondWithJSONBytes(w, jsonBuffer, err)
+	w.WriteJSONBytes(jsonBuffer, err)
 	return
 }
 
 // ShowDeviceStatus shows the current scheduler status.
-func (handler *DebugHandler) ShowDeviceStatus(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ShowDeviceStatus(w *utils.ResponseWriter, r *http.Request) {
 	deviceManager := handler.queryHandler.GetDeviceManager()
 	deviceManager.RLock()
 	jsonBuffer, err := json.Marshal(*deviceManager)
 	deviceManager.RUnlock()
 
-	common.RespondWithJSONBytes(w, jsonBuffer, err)
+	w.WriteJSONBytes(jsonBuffer, err)
 	return
 }
 
 // ShowHostMemory shows the current host memory usage
-func (handler *DebugHandler) ShowHostMemory(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ShowHostMemory(w *utils.ResponseWriter, r *http.Request) {
 	memoryUsageByTableShard, err := handler.memStore.GetMemoryUsageDetails()
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
-	common.RespondWithJSONObject(w, memoryUsageByTableShard)
+	w.WriteObject(memoryUsageByTableShard)
 }
 
 // ReadBackfillQueueUpsertBatch reads upsert batch inside backfill manager backfill queue
-func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w *utils.ResponseWriter, r *http.Request) {
 	var request ReadBackfillQueueUpsertBatchRequest
 	err := common.ReadRequest(r, &request)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
 	shard, err := handler.memStore.GetTableShard(request.TableName, request.ShardID)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 	data, columnNames, err := shard.LiveStore.BackfillManager.ReadUpsertBatch(int(request.Offset), request.Start, request.Length, shard.Schema)
 	shard.Users.Done()
 
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
@@ -761,15 +753,15 @@ func (handler *DebugHandler) ReadBackfillQueueUpsertBatch(w http.ResponseWriter,
 		Draw:            request.Draw,
 	}
 
-	common.RespondWithJSONObject(w, response)
+	w.WriteObject(response)
 	return
 }
 
 // Bootstrap will turn on bootstrap based on the request.
-func (handler *DebugHandler) BootstrapRetry(w http.ResponseWriter, r *http.Request) {
+func (handler *DebugHandler) BootstrapRetry(w *utils.ResponseWriter, r *http.Request) {
 	handler.bootstrapRetryChan <- true
 
-	common.RespondJSONObjectWithCode(w, http.StatusOK, "Bootstrap retry submitted")
+	w.Write([]byte("Bootstrap retry submitted"))
 }
 
 // GetBootstrapRetryChan returns bootstrapRetryChan

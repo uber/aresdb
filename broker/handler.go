@@ -41,11 +41,11 @@ func NewQueryHandler(executor common.QueryExecutor, instanceID string) QueryHand
 }
 
 func (handler *QueryHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
-	router.HandleFunc("/sql", utils.ApplyHTTPWrappers(handler.HandleSQL, wrappers)).Methods(http.MethodPost)
-	router.HandleFunc("/aql", utils.ApplyHTTPWrappers(handler.HandleAQL, wrappers)).Methods(http.MethodPost)
+	router.HandleFunc("/sql", utils.ApplyHTTPWrappers(handler.HandleSQL, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/aql", utils.ApplyHTTPWrappers(handler.HandleAQL, wrappers...)).Methods(http.MethodPost)
 }
 
-func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
+func (handler *QueryHandler) HandleSQL(w *utils.ResponseWriter, r *http.Request) {
 	utils.GetRootReporter().GetCounter(utils.SQLQueryReceivedBroker).Inc(1)
 	var queryReqeust BrokerSQLRequest
 
@@ -67,7 +67,7 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 
 	err = apiCom.ReadRequest(r, &queryReqeust)
 	if err != nil {
-		apiCom.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
@@ -76,19 +76,19 @@ func (handler *QueryHandler) HandleSQL(w http.ResponseWriter, r *http.Request) {
 	aql, err = sql.Parse(queryReqeust.Body.Query, utils.GetLogger())
 	utils.GetRootReporter().GetTimer(utils.SQLParsingLatencyBroker).Record(utils.Now().Sub(sqlParseStart))
 	if err != nil {
-		apiCom.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
 	err = handler.exec.Execute(context.Background(), handler.getReqestID(), aql, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
 	if err != nil {
-		apiCom.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 	return
 }
 
-func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
+func (handler *QueryHandler) HandleAQL(w *utils.ResponseWriter, r *http.Request) {
 	var queryReqeust BrokerAQLRequest
 	utils.GetRootReporter().GetCounter(utils.AQLQueryReceivedBroker).Inc(1)
 
@@ -110,13 +110,13 @@ func (handler *QueryHandler) HandleAQL(w http.ResponseWriter, r *http.Request) {
 
 	err = apiCom.ReadRequest(r, &queryReqeust)
 	if err != nil {
-		apiCom.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
 	err = handler.exec.Execute(context.TODO(), handler.getReqestID(), &queryReqeust.Body.Query, queryReqeust.Accept == utils.HTTPContentTypeHyperLogLog, w)
 	if err != nil {
-		apiCom.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 	return

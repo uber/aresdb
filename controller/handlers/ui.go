@@ -36,9 +36,9 @@ type UIHandlerParams struct {
 
 // UIHandler handles health check requests
 type UIHandler struct {
-	path string
-	mapper    utils.ResourceMapper
-	logger    *zap.SugaredLogger
+	path   string
+	mapper utils.ResourceMapper
+	logger *zap.SugaredLogger
 }
 
 type uiHandlerConfig struct {
@@ -54,15 +54,15 @@ func NewUIHandler(p UIHandlerParams) UIHandler {
 	p.Logger.Infof("ui config %v", cfg)
 	mapper := utils.NewResourceMapper(path.Join(cfg.Path, "build"))
 	return UIHandler{
-		logger:    p.Logger,
-		path: 	   cfg.Path,
-		mapper:    mapper,
+		logger: p.Logger,
+		path:   cfg.Path,
+		mapper: mapper,
 	}
 }
 
 // Register adds paths to router
 func (h UIHandler) Register(router *mux.Router) {
-	router.HandleFunc("/", utils.ApplyHTTPWrappers2(h.Index))
+	router.HandleFunc("/", utils.ApplyHTTPWrappers(h.Index))
 
 	swaggerHandler := http.StripPrefix("/swagger/", http.FileServer(http.Dir(path.Join(h.path, "swagger"))))
 	nodeModulesHandler := http.StripPrefix("/node_modules/", http.FileServer(http.Dir(path.Join(h.path, "node_modules"))))

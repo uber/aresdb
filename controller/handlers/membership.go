@@ -16,6 +16,7 @@ package handlers
 
 import (
 	"fmt"
+	apiCom "github.com/uber/aresdb/api/common"
 	"github.com/uber/aresdb/utils"
 	"net/http"
 
@@ -53,12 +54,12 @@ func NewMembershipHandler(p MembershipHandlerParams) MembershipHandler {
 }
 
 // Register adds paths to router
-func (h MembershipHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/{namespace}/instances", utils.ApplyHTTPWrappers2(h.Join, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/{namespace}/instances/{instance}", utils.ApplyHTTPWrappers2(h.GetInstance, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/instances", utils.ApplyHTTPWrappers2(h.GetInstances, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/instances/{instance}", utils.ApplyHTTPWrappers2(h.Leave, wrappers...)).Methods(http.MethodDelete)
-	router.HandleFunc("/{namespace}/hash", utils.ApplyHTTPWrappers2(h.GetHash, wrappers...)).Methods(http.MethodGet)
+func (h MembershipHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/{namespace}/instances", utils.ApplyHTTPWrappers(h.Join, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/{namespace}/instances/{instance}", utils.ApplyHTTPWrappers(h.GetInstance, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/instances", utils.ApplyHTTPWrappers(h.GetInstances, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/instances/{instance}", utils.ApplyHTTPWrappers(h.Leave, wrappers...)).Methods(http.MethodDelete)
+	router.HandleFunc("/{namespace}/hash", utils.ApplyHTTPWrappers(h.GetHash, wrappers...)).Methods(http.MethodGet)
 }
 
 // Join adds a instance
@@ -68,7 +69,7 @@ func (h MembershipHandler) Join(w *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req JoinRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -94,7 +95,7 @@ func (h MembershipHandler) GetInstance(w *utils.ResponseWriter, r *http.Request)
 	}
 	var req GetInstanceRequest
 
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -123,7 +124,7 @@ func (h MembershipHandler) GetInstances(w *utils.ResponseWriter, r *http.Request
 		return
 	}
 	var req GetInstancesRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -151,7 +152,7 @@ func (h MembershipHandler) Leave(w *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req LeaveRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -178,7 +179,7 @@ func (h MembershipHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 	}
 	var req GetHashRequest
 
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

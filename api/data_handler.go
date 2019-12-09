@@ -44,7 +44,7 @@ func NewDataHandler(memStore memstore.MemStore, maxConcurrentRequests int) *Data
 
 // Register registers http handlers.
 func (handler *DataHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
-	router.HandleFunc("/{table}/{shard}", utils.ApplyHTTPWrappers(handler.PostData, wrappers)).Methods(http.MethodPost)
+	router.HandleFunc("/{table}/{shard}", utils.ApplyHTTPWrappers(handler.PostData, wrappers...)).Methods(http.MethodPost)
 }
 
 // PostData swagger:route POST /data/{table}/{shard} postData
@@ -55,17 +55,17 @@ func (handler *DataHandler) Register(router *mux.Router, wrappers ...utils.HTTPH
 // Responses:
 //    default: errorResponse
 //        200: noContentResponse
-func (handler *DataHandler) PostData(w http.ResponseWriter, r *http.Request) {
+func (handler *DataHandler) PostData(w *utils.ResponseWriter, r *http.Request) {
 	var postDataRequest PostDataRequest
 	err := common.ReadRequest(r, &postDataRequest)
 	if err != nil {
-		common.RespondWithError(w, err)
+		w.WriteError(err)
 		return
 	}
 
 	upsertBatch, err := memCom.NewUpsertBatch(postDataRequest.Body)
 	if err != nil {
-		common.RespondWithBadRequest(w, err)
+		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
 
@@ -74,14 +74,14 @@ func (handler *DataHandler) PostData(w http.ResponseWriter, r *http.Request) {
 		defer close(done)
 		err = handler.memStore.HandleIngestion(postDataRequest.TableName, postDataRequest.Shard, upsertBatch)
 		if err != nil {
-			common.RespondWithError(w, err)
+			w.WriteError(err)
 			return
 		}
-		common.RespondWithJSONObject(w, nil)
+		w.WriteObject(nil)
 	})
 
 	if !available {
-		common.RespondWithError(w, common.ErrIngestionServiceNotAvailable)
+		w.WriteError(common.ErrIngestionServiceNotAvailable)
 		return
 	}
 	<-done

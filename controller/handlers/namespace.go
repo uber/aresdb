@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	apiCom "github.com/uber/aresdb/api/common"
 	mutatorCom "github.com/uber/aresdb/controller/mutators/common"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -47,9 +48,9 @@ func NewNamespaceHandler(p NamespaceHandlerParams) NamespaceHandler {
 }
 
 // Register adds paths to router
-func (h NamespaceHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/namespaces", utils.ApplyHTTPWrappers2(h.CreateNamespace, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/namespaces", utils.ApplyHTTPWrappers2(h.ListNamespaces, wrappers...)).Methods(http.MethodGet)
+func (h NamespaceHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/namespaces", utils.ApplyHTTPWrappers(h.CreateNamespace, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/namespaces", utils.ApplyHTTPWrappers(h.ListNamespaces, wrappers...)).Methods(http.MethodGet)
 }
 
 // CreateNamespace swagger:route POST /namespaces createNamespace
@@ -59,7 +60,7 @@ func (h NamespaceHandler) Register(router *mux.Router, wrappers ...utils.HTTPHan
 //    - application/json
 func (h NamespaceHandler) CreateNamespace(w *utils.ResponseWriter, r *http.Request) {
 	var req CreateNamespaceRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return

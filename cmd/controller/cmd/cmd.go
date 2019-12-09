@@ -50,10 +50,10 @@ type Params struct {
 type Result struct {
 	fx.Out
 
-	ConfigProvider cfgfx.Provider
-	Logger         *zap.SugaredLogger
-	Scope          tally.Scope
-	EtcdClient     *kvstore.EtcdClient
+	ConfigProvider         cfgfx.Provider
+	ZapLogger              *zap.SugaredLogger
+	Scope                  tally.Scope
+	EtcdClient             *kvstore.EtcdClient
 	MetricsLoggingProvider utils.MetricsLoggingMiddleWareProvider
 }
 
@@ -96,7 +96,8 @@ func Execute(setters ...cmd.Option) {
 
 func Init() Result {
 	var result Result
-	logger := zap.NewExample().Sugar()
+	zapLogger := zap.NewExample().Sugar()
+	logger := common.NewZapLoggerFactory(zapLogger).GetDefaultLogger()
 	scope := tally.NewTestScope("test", nil)
 
 	cfgProvider, err := cfgfx.NewYAML(cfgfx.Permissive(), cfgfx.File(cfgFile))
@@ -112,10 +113,10 @@ func Init() Result {
 	}
 
 	return Result{
-		ConfigProvider: cfgProvider,
-		Logger: logger,
-		Scope:  scope,
-		EtcdClient: kvstore.NewEtcdClient(logger, etcdConfig),
+		ConfigProvider:         cfgProvider,
+		ZapLogger:              zapLogger,
+		Scope:                  scope,
+		EtcdClient:             kvstore.NewEtcdClient(zapLogger, etcdConfig),
 		MetricsLoggingProvider: utils.NewMetricsLoggingMiddleWareProvider(scope, logger),
 	}
 }

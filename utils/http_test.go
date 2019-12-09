@@ -21,7 +21,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/common"
 )
 
@@ -48,20 +47,6 @@ var _ = ginkgo.Describe("http", func() {
 		}
 
 		NoCache(http.HandlerFunc(httpHandlerFunc)).ServeHTTP(w, r)
-	})
-
-	ginkgo.It("WithMetricsFunc should work", func() {
-		r := httptest.NewRequest(http.MethodGet, "https://localhost/test", nil)
-		w := httptest.NewRecorder()
-		for _, k := range etagHeaders {
-			r.Header.Add(k, "1")
-		}
-		WithMetricsFunc(testHTTPHandlerFunc).ServeHTTP(w, r)
-		testScope := GetRootReporter().GetRootScope().(tally.TestScope)
-		Ω(testScope.Snapshot().Counters()).
-			Should(HaveKey("test.http.call+component=api,handler=testHTTPHandlerFunc,origin=UNKNOWN,status_code=200"))
-		Ω(testScope.Snapshot().Timers()).
-			Should(HaveKey("test.http.latency+component=api,handler=testHTTPHandlerFunc,origin=UNKNOWN"))
 	})
 
 	ginkgo.It("GetOrigin should work", func() {

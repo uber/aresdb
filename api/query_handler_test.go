@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/query"
+	"github.com/uber/aresdb/utils"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -75,7 +76,7 @@ var _ = ginkgo.Describe("QueryHandler", func() {
 			},
 			10)
 		testRouter := mux.NewRouter()
-		testRouter.HandleFunc("/aql", queryHandler.HandleAQL).Methods(http.MethodGet, http.MethodPost)
+		testRouter.HandleFunc("/aql", utils.ApplyHTTPWrappers(queryHandler.HandleAQL)).Methods(http.MethodGet, http.MethodPost)
 		testServer = httptest.NewUnstartedServer(WithPanicHandling(testRouter))
 		testServer.Start()
 	})

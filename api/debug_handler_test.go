@@ -424,8 +424,8 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		Ω(resp.StatusCode).Should(Equal(http.StatusBadRequest))
 		Ω(string(bs)).Should(ContainSubstring("Failed to get shard"))
 
-		// Redo log file does not exist.
-		resp, err = http.Get(
+		//Redo log file does not exist.
+		resp, err = http.DefaultClient.Get(
 			fmt.Sprintf("http://%s/debug/%s/%d/redologs/%d/upsertbatches", hostPort, redoLogTableName,
 				redoLogShardID, 1))
 		Ω(err).Should(BeNil())

@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	apiCom "github.com/uber/aresdb/api/common"
 	mutatorCom "github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/metastore"
 	metaCom "github.com/uber/aresdb/metastore/common"
@@ -57,15 +58,15 @@ func NewSchemaHandler(p SchemaHandlerParams) SchemaHandler {
 }
 
 // Register adds paths to router
-func (h SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper2) {
-	router.HandleFunc("/{namespace}/tables", utils.ApplyHTTPWrappers2(h.AddTable, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers2(h.GetTable, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/tables", utils.ApplyHTTPWrappers2(h.GetTables, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers2(h.DeleteTable, wrappers...)).Methods(http.MethodDelete)
-	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers2(h.UpdateTable, wrappers...)).Methods(http.MethodPut)
-	router.HandleFunc("/{namespace}/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers2(h.GetEnumCases, wrappers...)).Methods(http.MethodGet)
-	router.HandleFunc("/{namespace}/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers2(h.ExtendEnumCases, wrappers...)).Methods(http.MethodPost)
-	router.HandleFunc("/{namespace}/hash", utils.ApplyHTTPWrappers2(h.GetHash, wrappers...)).Methods(http.MethodGet)
+func (h SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandlerWrapper) {
+	router.HandleFunc("/{namespace}/tables", utils.ApplyHTTPWrappers(h.AddTable, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers(h.GetTable, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/tables", utils.ApplyHTTPWrappers(h.GetTables, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers(h.DeleteTable, wrappers...)).Methods(http.MethodDelete)
+	router.HandleFunc("/{namespace}/tables/{table}", utils.ApplyHTTPWrappers(h.UpdateTable, wrappers...)).Methods(http.MethodPut)
+	router.HandleFunc("/{namespace}/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers(h.GetEnumCases, wrappers...)).Methods(http.MethodGet)
+	router.HandleFunc("/{namespace}/tables/{table}/columns/{column}/enum-cases", utils.ApplyHTTPWrappers(h.ExtendEnumCases, wrappers...)).Methods(http.MethodPost)
+	router.HandleFunc("/{namespace}/hash", utils.ApplyHTTPWrappers(h.GetHash, wrappers...)).Methods(http.MethodGet)
 }
 
 // AddTable  swagger:route POST /schema/{namespace}/tables addTable
@@ -76,7 +77,7 @@ func (h SchemaHandler) Register(router *mux.Router, wrappers ...utils.HTTPHandle
 func (h SchemaHandler) AddTable(w *utils.ResponseWriter, r *http.Request) {
 	var req AddTableRequest
 	req.Body.Config = metastore.DefaultTableConfig
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -101,7 +102,7 @@ func (h SchemaHandler) AddTable(w *utils.ResponseWriter, r *http.Request) {
 // returns table schema of given table name
 func (h SchemaHandler) GetTable(w *utils.ResponseWriter, r *http.Request) {
 	var req GetTableRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -124,7 +125,7 @@ func (h SchemaHandler) GetTable(w *utils.ResponseWriter, r *http.Request) {
 // returns schema of all tables
 func (h SchemaHandler) GetTables(w *utils.ResponseWriter, r *http.Request) {
 	var getTablesRequest GetTablesRequest
-	err := ReadRequest(r, &getTablesRequest, w)
+	err := apiCom.ReadRequest(r, &getTablesRequest, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -161,7 +162,7 @@ func (h SchemaHandler) GetTables(w *utils.ResponseWriter, r *http.Request) {
 // deletes an existing table
 func (h SchemaHandler) DeleteTable(w *utils.ResponseWriter, r *http.Request) {
 	var deleteTableRequest DeleteTableRequest
-	err := ReadRequest(r, &deleteTableRequest, w)
+	err := apiCom.ReadRequest(r, &deleteTableRequest, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -187,7 +188,7 @@ func (h SchemaHandler) DeleteTable(w *utils.ResponseWriter, r *http.Request) {
 func (h SchemaHandler) UpdateTable(w *utils.ResponseWriter, r *http.Request) {
 	var updateTableRequest UpdateTableRequest
 	updateTableRequest.Body.Config = metastore.DefaultTableConfig
-	err := ReadRequest(r, &updateTableRequest, w)
+	err := apiCom.ReadRequest(r, &updateTableRequest, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -212,7 +213,7 @@ func (h SchemaHandler) UpdateTable(w *utils.ResponseWriter, r *http.Request) {
 // returns hash of all table schemas in a namespace, hash change means there's a change in any of the schemas
 func (h SchemaHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 	var req GetHashRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -240,7 +241,7 @@ func (h SchemaHandler) GetHash(w *utils.ResponseWriter, r *http.Request) {
 // returns enum ids for given enum cases
 func (h SchemaHandler) ExtendEnumCases(w *utils.ResponseWriter, r *http.Request) {
 	var req ExtendEnumCaseRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
@@ -262,7 +263,7 @@ func (h SchemaHandler) ExtendEnumCases(w *utils.ResponseWriter, r *http.Request)
 // returns all enum cases for given table column
 func (h SchemaHandler) GetEnumCases(w *utils.ResponseWriter, r *http.Request) {
 	var req GetEnumCaseRequest
-	err := ReadRequest(r, &req, w)
+	err := apiCom.ReadRequest(r, &req, w.SetRequest)
 	if err != nil {
 		w.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
