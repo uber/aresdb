@@ -177,6 +177,7 @@ func (handler *QueryHandler) handleAQLInternal(aqlRequest apiCom.AQLRequest, w h
 			ReturnHLLData: false,
 			DataOnly:      aqlRequest.DataOnly != 0,
 		}
+		qc.InitQCHelper()
 		qc.Compile(handler.memStore, handler.shardOwner)
 		qc.ResponseWriter = w
 		if qc.Error != nil {
@@ -262,6 +263,7 @@ func handleQuery(memStore memstore.MemStore, shardOwner topology.ShardOwner, dev
 		ReturnHLLData: aqlRequest.Accept == utils.HTTPContentTypeHyperLogLog,
 		DataOnly:      aqlRequest.DataOnly != 0,
 	}
+	qc.InitQCHelper()
 	qc.Compile(memStore, shardOwner)
 
 	for tableName := range qc.TableSchemaByName {

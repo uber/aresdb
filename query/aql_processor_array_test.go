@@ -191,6 +191,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 			},
 			Filters: []string{"element_at(c3, -1)=143"},
 		}
+		qc.InitQCHelper()
 		qc.Query = q
 
 		qc.Compile(memStore, topology.NewStaticShardOwner([]int{0}))
@@ -217,6 +218,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 
 	var _ = ginkgo.It("array element_at should work for uuid", func() {
 		qc := &AQLQueryContext{}
+		qc.InitQCHelper()
 		q := &queryCom.AQLQuery{
 			Table: table,
 			Dimensions: []queryCom.Dimension{
@@ -258,6 +260,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 
 	var _ = ginkgo.It("array contains should work", func() {
 		qc := &AQLQueryContext{}
+		qc.InitQCHelper()
 		q := &queryCom.AQLQuery{
 			Table: table,
 			Dimensions: []queryCom.Dimension{
@@ -298,6 +301,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 
 	var _ = ginkgo.It("array length should work", func() {
 		qc := &AQLQueryContext{}
+		qc.InitQCHelper()
 		q := &queryCom.AQLQuery{
 			Table: table,
 			Dimensions: []queryCom.Dimension{
@@ -339,6 +343,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 
 	var _ = ginkgo.It("array length should work for UUID", func() {
 		qc := &AQLQueryContext{}
+		qc.InitQCHelper()
 		q := &queryCom.AQLQuery{
 			Table: table,
 			Dimensions: []queryCom.Dimension{
@@ -380,6 +385,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 
 	var _ = ginkgo.It("array query for non-aggregation query should work", func() {
 		qc := &AQLQueryContext{}
+		qc.InitQCHelper()
 		q := &queryCom.AQLQuery{
 			Table: table,
 			Dimensions: []queryCom.Dimension{

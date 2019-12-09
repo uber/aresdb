@@ -247,6 +247,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				},
 			},
 		}
+		qc1.InitQCHelper()
 
 		lowerBound, upperBound, vpSlice1 := qc1.prefilterSlice(vp1, 0, 0, 20)
 		Ω(vpSlice1.ValueStartIndex).Should(Equal(0))
@@ -285,6 +286,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				},
 			},
 		}
+		qc2.InitQCHelper()
 
 		lowerBound, upperBound, vpSlice1 = qc2.prefilterSlice(vp1, 0, 0, 20)
 		Ω(vpSlice1.ValueStartIndex).Should(Equal(0))
@@ -322,6 +324,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				},
 			},
 		}
+		qc3.InitQCHelper()
 
 		lowerBound, upperBound, vpSlice1 = qc3.prefilterSlice(vp1, 0, 0, 20)
 		Ω(vpSlice1.ValueStartIndex).Should(Equal(0))
@@ -1033,6 +1036,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		qc := &AQLQueryContext{
 			timezoneTable: timezoneTableContext{tableColumn: "timezone"},
 		}
+		qc.InitQCHelper()
 		qc.prepareTimezoneTable(memStore)
 		Ω(qc.Error).Should(BeNil())
 		Ω(da.(*memoryTrackingDeviceAllocatorImpl).memoryUsage[0]).Should(BeEquivalentTo(2))
@@ -1042,6 +1046,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 
 	ginkgo.It("ProcessQuery should work", func() {
 		qc := &AQLQueryContext{}
+		qc.InitQCHelper()
 		q := &queryCom.AQLQuery{
 			Table: table,
 			Dimensions: []queryCom.Dimension{
@@ -1249,6 +1254,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 		}}}, common.NewLoggerFactory().GetDefaultLogger(), common.NewLoggerFactory().GetDefaultLogger(), tally.NewTestScope("test", nil))
 
 		qc := &AQLQueryContext{}
+		qc.InitQCHelper()
 		q := &queryCom.AQLQuery{
 			Table: table,
 			Dimensions: []queryCom.Dimension{
@@ -1585,7 +1591,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
 			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
 		}
-
+		qc.InitQCHelper()
 		qc.ProcessQuery(mockMemStore)
 		Ω(qc.Error).Should(BeNil())
 		qc.Postprocess()
@@ -1859,7 +1865,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
 			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
 		}
-
+		qc.InitQCHelper()
 		qc.ProcessQuery(mockMemStore)
 		Ω(qc.Error).Should(BeNil())
 		qc.Postprocess()
@@ -2112,7 +2118,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			fromTime: &queryCom.AlignedTime{Time: time.Unix(0, 0), Unit: "s"},
 			toTime:   &queryCom.AlignedTime{Time: time.Unix(86400, 0), Unit: "s"},
 		}
-
+		qc.InitQCHelper()
 		qc.ProcessQuery(mockMemStore)
 		Ω(qc.Error).Should(BeNil())
 		qc.Postprocess()
@@ -2147,6 +2153,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 			Limit: 20,
 		}
+		qc.InitQCHelper()
 		qc.Query = q
 
 		qc.Compile(memStore, topology.NewStaticShardOwner([]int{0}))
@@ -2239,6 +2246,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			},
 			Limit: 20,
 		}
+		qc.InitQCHelper()
 		qc.Query = q
 		w := httptest.NewRecorder()
 		qc.ResponseWriter = w
@@ -2331,6 +2339,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				To:     "1970-01-02",
 			},
 		}
+		qc.InitQCHelper()
 		qc.Query = q
 		qc.Compile(memStore, topology.NewStaticShardOwner([]int{0}))
 		Ω(qc.Error).Should(BeNil())
@@ -2355,6 +2364,7 @@ var _ = ginkgo.Describe("aql_processor", func() {
 				},
 			},
 		}
+		qc.InitQCHelper()
 		qc.IsNonAggregationQuery = true
 
 		w := httptest.NewRecorder()
