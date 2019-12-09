@@ -31,7 +31,7 @@ import (
 
 const (
 	HTTPContentTypeHeaderKey     = "Content-Type"
-	HTTPAcceptTypeHeaderKey      = "accept"
+	HTTPAcceptTypeHeaderKey      = "Accept"
 	HTTPAcceptEncodingHeaderKey  = "Accept-Encoding"
 	HTTPContentEncodingHeaderKey = "Content-Encoding"
 
