@@ -182,7 +182,7 @@ func (p *MetricsLoggingMiddleWareProvider) WithMetrics(next HandlerFunc) Handler
 			metricsTagHandler:    funcName,
 			metricsTagOrigin:     origin,
 			metricsTagStatusCode: strconv.Itoa(rw.statusCode),
-		}).Counter(scopeNameHTTPHandlerLatency).Inc(1)
+		}).Counter(scopeNameHTTPHandlerCall).Inc(1)
 	}
 }
 
