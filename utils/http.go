@@ -113,7 +113,7 @@ func LimitServe(port int, handler http.Handler, httpCfg common.HTTPConfig) {
 	GetLogger().Fatal(server.Serve(listener))
 }
 
-// LimitServe will start a http server on the port with the handler and at most maxConnection concurrent connections.
+// LimitServeAsync will start a http server on the port with the handler and at most maxConnection concurrent connections.
 func LimitServeAsync(port int, handler http.Handler, httpCfg common.HTTPConfig) (chan error, *http.Server) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
@@ -167,7 +167,7 @@ func NewMetricsLoggingMiddleWareProvider(scope tally.Scope, logger common.Logger
 	}
 }
 
-// WithLogging plug in metrics middleware
+// WithMetrics plug in metrics middleware
 func (p *MetricsLoggingMiddleWareProvider) WithMetrics(next HandlerFunc) HandlerFunc {
 	funcName := GetFuncName(next)
 	return func(rw *ResponseWriter, r *http.Request) {
