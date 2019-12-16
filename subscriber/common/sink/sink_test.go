@@ -127,7 +127,8 @@ var _ = Describe("Sink", func() {
 			Ω(val.ConvertToHumanReadable(memCom.UUID).(string)).Should(Equal(keyVal))
 			primaryKeyValues[0] = val
 			keyLen := memCom.DataTypeBits(val.DataType) / 8
-			pk, err := memCom.GetPrimaryKeyBytes(primaryKeyValues, keyLen)
+			key := make([]byte, 0, keyLen)
+			pk, err := memCom.AppendPrimaryKeyBytes(key, memCom.NewSliceDataValueIterator(primaryKeyValues))
 			Ω(err).Should(BeNil())
 			shardID1 := utils.Murmur3Sum32(unsafe.Pointer(&pk[0]), len(pk), 0) / (math.MaxUint32 / numShards)
 			shardID2 := utils.Murmur3Sum32(unsafe.Pointer(&pk[0]), len(pk), 0) % numShards

@@ -305,7 +305,7 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 		return nil
 	}
 
-	var key []byte
+	key := make([]byte, b.Shard.Schema.PrimaryKeyBytes)
 	var err error
 	primaryKeyValues := make([]common.DataValue, len(primaryKeyColumns))
 
@@ -341,7 +341,9 @@ func (b *ArchiveBatch) BuildIndex(sortColumns []int, primaryKeyColumns []int, pk
 		}
 
 		// Get primary key for each record.
-		if key, err = common.GetPrimaryKeyBytes(primaryKeyValues, b.Shard.Schema.PrimaryKeyBytes); err != nil {
+		// truncate key
+		key = key[:0]
+		if key, err = common.AppendPrimaryKeyBytes(key, common.NewSliceDataValueIterator(primaryKeyValues)); err != nil {
 			return err
 		}
 

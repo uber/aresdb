@@ -16,6 +16,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"unsafe"
 
 	"github.com/uber/aresdb/utils"
@@ -93,11 +94,12 @@ func MarshalPrimaryKey(pk PrimaryKey) ([]byte, error) {
 	})
 }
 
-// GetPrimaryKeyBytes returns primary key bytes for a given row.
-func GetPrimaryKeyBytes(primaryKeyValues []DataValue, keyLength int) ([]byte, error) {
-	key := make([]byte, 0, keyLength)
-	for _, value := range primaryKeyValues {
+// AppendPrimaryKeyBytes writes primary keys bytes into key buffer
+func AppendPrimaryKeyBytes(key []byte, primaryKeyValues DataValueIterator) ([]byte, error) {
+	for !primaryKeyValues.done() {
+		value := primaryKeyValues.read()
 		if !value.Valid {
+			fmt.Println("hello world")
 			return key, utils.StackError(nil, "Primary key cannot be null")
 		}
 
@@ -112,6 +114,7 @@ func GetPrimaryKeyBytes(primaryKeyValues []DataValue, keyLength int) ([]byte, er
 				key = append(key, *(*byte)(utils.MemAccess(value.OtherVal, i)))
 			}
 		}
+		primaryKeyValues.next()
 	}
 	return key, nil
 }
