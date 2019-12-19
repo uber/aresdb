@@ -441,7 +441,7 @@ func (ctx *backfillContext) backfill(reporter BackfillJobDetailReporter, jobKey 
 	}
 
 	// reuse the space for primary primaryKeyValues of each row.
-	var primaryKeyValues []byte
+	primaryKeyValues := make([]byte, ctx.base.Shard.Schema.PrimaryKeyBytes)
 	tableName := ctx.base.Shard.Schema.Schema.Name
 	shardID := ctx.base.Shard.ShardID
 
@@ -462,9 +462,11 @@ func (ctx *backfillContext) backfill(reporter BackfillJobDetailReporter, jobKey 
 			return err
 		}
 
-		if primaryKeyValues, err = upsertBatch.GetPrimaryKeyBytes(int(patchRecordID.Index),
-			primaryKeyCols, ctx.base.Shard.Schema.PrimaryKeyBytes); err != nil {
-			return err
+		// truncate key
+		primaryKeyValues = primaryKeyValues[:0]
+		if primaryKeyValues, err = memCom.AppendPrimaryKeyBytes(primaryKeyValues,
+			memCom.NewPrimaryKeyDataValueIterator(upsertBatch, int(patchRecordID.Index), primaryKeyCols)); err != nil {
+				return err
 		}
 
 		exists, recordID, err := ctx.backfillStore.PrimaryKey.FindOrInsert(primaryKeyValues, nextWriteRecord, 0)
@@ -569,6 +571,10 @@ func (ctx *backfillContext) merge(reporter BackfillJobDetailReporter, jobKey str
 // base row. Note an upsert batch row may not have values for all columns so some of the data value may be nil.
 func (ctx *backfillContext) getChangedPatchRow(patchRecordID memCom.RecordID, upsertBatch *memCom.UpsertBatch) ([]*memCom.DataValue, error) {
 	changedRow := make([]*memCom.DataValue, len(ctx.new.Columns))
+	if int(patchRecordID.Index) >= upsertBatch.NumRows {
+		return nil, utils.StackError(nil, "patch index out of bound, row %d, number of rows: %d", patchRecordID.Index, upsertBatch.NumRows)
+	}
+
 	for col := 0; col < upsertBatch.NumColumns; col++ {
 		columnID, err := upsertBatch.GetColumnID(col)
 		if err != nil {
@@ -579,16 +585,13 @@ func (ctx *backfillContext) getChangedPatchRow(patchRecordID memCom.RecordID, up
 			continue
 		}
 
-		value, err := upsertBatch.GetDataValue(int(patchRecordID.Index), col)
-		if err != nil {
-			return nil, utils.StackError(err, "Failed to get value at row %d, col %d",
-				patchRecordID.Index, col)
-		}
+		value := upsertBatch.GetDataValue(int(patchRecordID.Index), col)
 
 		if value.Valid {
 			changedRow[columnID] = &value
 		}
 	}
+
 	return changedRow, nil
 }
 

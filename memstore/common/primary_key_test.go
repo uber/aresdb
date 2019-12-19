@@ -22,7 +22,7 @@ import (
 )
 
 var _ = ginkgo.Describe("primary key", func() {
-	ginkgo.It("GetPrimaryKeyBytes should work", func() {
+	ginkgo.It("AppendPrimaryKeyBytes should work", func() {
 		var v1 uint16 = 0xA0B0
 		var v2 uint32 = 0xC0D0E0F0
 		dataValues := []DataValue{
@@ -44,7 +44,8 @@ var _ = ginkgo.Describe("primary key", func() {
 			},
 		}
 
-		key, err := GetPrimaryKeyBytes(dataValues, 7)
+		key := make([]byte, 0, 7)
+		key, err := AppendPrimaryKeyBytes(key, NewSliceDataValueIterator(dataValues))
 		Ω(err).Should(BeNil())
 		Ω(key).Should(BeEquivalentTo([]byte{1, 0xB0, 0XA0, 0xF0, 0xE0, 0xD0, 0xC0}))
 	})

@@ -1460,7 +1460,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			uuidValue, _ := memCom.ValueFromString(shapeUUIDs[i], memCom.UUID)
 			shapeUUIDLiveVP.SetDataValue(i, uuidValue, memCom.IgnoreCount)
 			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, memCom.IgnoreCount)
-			key, err := memCom.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
+			key := make([]byte, 0, 16)
+			key, err := memCom.AppendPrimaryKeyBytes(key, memCom.NewSliceDataValueIterator([]memCom.DataValue{uuidValue}))
 			Ω(err).Should(BeNil())
 			geoFenceLiveStore.PrimaryKey.FindOrInsert(
 				key,
@@ -1726,7 +1727,8 @@ var _ = ginkgo.Describe("aql_processor", func() {
 			uuidValue, _ := memCom.ValueFromString(shapeUUIDs[i], memCom.UUID)
 			shapeUUIDLiveVP.SetDataValue(i, uuidValue, memCom.IgnoreCount)
 			shapeLiveVP.SetDataValue(i, memCom.DataValue{Valid: true, GoVal: &shapes[i]}, memCom.IgnoreCount)
-			key, err := memCom.GetPrimaryKeyBytes([]memCom.DataValue{uuidValue}, 16)
+			key := make([]byte, 0, 16)
+			key, err := memCom.AppendPrimaryKeyBytes(key, memCom.NewSliceDataValueIterator([]memCom.DataValue{uuidValue}))
 			Ω(err).Should(BeNil())
 			geoFenceLiveStore.PrimaryKey.FindOrInsert(
 				key,

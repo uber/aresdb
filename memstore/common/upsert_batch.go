@@ -258,13 +258,16 @@ func (u *UpsertBatch) GetBool(row int, col int) (bool, bool, error) {
 // It first check validity of the value, then it check whether it's a
 // boolean column to decide whether to load bool value or other value
 // type.
-func (u *UpsertBatch) GetDataValue(row, col int) (DataValue, error) {
-	val := DataValue{}
-	if col >= len(u.columns) {
-		return val, utils.StackError(nil, "Column index %d out of range %d", col, len(u.columns))
-	}
-	if row >= u.NumRows {
-		return val, utils.StackError(nil, "Row index %d out of range %d", row, u.NumRows)
+// user of GetDataValue should check row, col using NumRows and NumColumns
+func (u *UpsertBatch) GetDataValue(row, col int) DataValue {
+	return u.GetDataValueWithDefault(row, col, NullDataValue)
+}
+
+// GetDataValueWithDefault get the data value at with row and col and return defaultVal when row, col is out of bound
+func (u *UpsertBatch) GetDataValueWithDefault(row, col int, defaultVal DataValue) DataValue {
+	val := defaultVal
+	if col >= u.NumColumns || row >= u.NumRows {
+		return val
 	}
 
 	dataType := u.columns[col].dataType
@@ -274,18 +277,18 @@ func (u *UpsertBatch) GetDataValue(row, col int) (DataValue, error) {
 	if dataType == Bool {
 		val.IsBool = true
 		val.BoolVal, val.Valid = u.columns[col].ReadBool(row)
-		return val, nil
+		return val
 	}
 
 	if IsGoType(dataType) {
 		val.GoVal = u.columns[col].ReadGoValue(row)
 		val.Valid = val.GoVal != nil
-		return val, nil
+		return val
 	}
 
 	val.OtherVal, val.Valid = u.columns[col].ReadValue(row)
 	val.CmpFunc = GetCompareFunc(dataType)
-	return val, nil
+	return val
 }
 
 // GetEventColumnIndex returns the column index of event time
@@ -313,23 +316,6 @@ func (u *UpsertBatch) GetPrimaryKeyCols(primaryKeyColumnIDs []int) ([]int, error
 		primaryKeyCols[i] = col
 	}
 	return primaryKeyCols, nil
-}
-
-// GetPrimaryKeyBytes returns primary key bytes for a given row. Note primaryKeyCol is not list of primary key
-// columnIDs.
-func (u *UpsertBatch) GetPrimaryKeyBytes(row int, primaryKeyCols []int, keyLength int) ([]byte, error) {
-	var key []byte
-	var err error
-	primaryKeyValues := make([]DataValue, len(primaryKeyCols))
-	for i, col := range primaryKeyCols {
-		primaryKeyValues[i], err = u.GetDataValue(row, col)
-		if err != nil {
-			return key, utils.StackError(err, "Failed to read primary key at row %d, col %d",
-				row, col)
-		}
-	}
-
-	return GetPrimaryKeyBytes(primaryKeyValues, keyLength)
 }
 
 // ExtractBackfillBatch extracts given rows and stores in a new UpsertBatch
@@ -436,11 +422,7 @@ func (u *UpsertBatch) ReadData(start int, length int) ([][]interface{}, error) {
 		idx := row - start
 		rows[idx] = make([]interface{}, u.NumColumns)
 		for col := 0; col < u.NumColumns; col++ {
-			val, err := u.GetDataValue(row, col)
-			if err != nil {
-				return nil, err
-			}
-
+			val := u.GetDataValue(row, col)
 			dataType, err := u.GetColumnType(col)
 			if err != nil {
 				return nil, err
@@ -570,3 +552,4 @@ func NewUpsertBatch(buffer []byte) (*UpsertBatch, error) {
 	}
 	return nil, utils.StackError(nil, "Unsupported upsert batch version %x", version)
 }
+

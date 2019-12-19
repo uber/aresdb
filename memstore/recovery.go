@@ -443,16 +443,14 @@ func (shard *TableShard) rebuildIndexForLiveStore(batchID int32, lastRecord uint
 	batch := shard.LiveStore.Batches[batchID]
 	primaryKeyBytes := shard.Schema.PrimaryKeyBytes
 	primaryKeyColumns := shard.Schema.GetPrimaryKeyColumns()
-	var key []byte
+	key := make([]byte, primaryKeyBytes)
 	var err error
-	primaryKeyValues := make([]memcom.DataValue, len(primaryKeyColumns))
 
 	var row uint32
 	for row = 0; row <= lastRecord; row++ {
-		for i, col := range primaryKeyColumns {
-			primaryKeyValues[i] = batch.Columns[col].GetDataValue(int(row))
-		}
-		if key, err = memcom.GetPrimaryKeyBytes(primaryKeyValues, primaryKeyBytes); err != nil {
+		// truncate key before every read
+		key = key[:0]
+		if key, err = memcom.AppendPrimaryKeyBytes(key, memcom.NewPrimaryKeyDataValueIterator(batch, int(row), primaryKeyColumns)); err != nil {
 			return err
 		}
 		recordID := memcom.RecordID{

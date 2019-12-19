@@ -166,7 +166,7 @@ func (j *JobConfig) SetPrimaryKeyBytes(primaryKeyBytes int) {
 	j.primaryKeyBytes = primaryKeyBytes
 }
 
-// GetPrimaryKeyBytes returns the number of bytes needed by primaryKey
+// AppendPrimaryKeyBytes returns the number of bytes needed by primaryKey
 func (j *JobConfig) GetPrimaryKeyBytes() int {
 	return j.primaryKeyBytes
 }

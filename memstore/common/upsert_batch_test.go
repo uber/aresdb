@@ -458,7 +458,7 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		upsertBatchBytes, _ := builder.ToByteArray()
 		upsertBatch, _ := NewUpsertBatch(upsertBatchBytes)
 
-		dv, _ := upsertBatch.GetDataValue(0, 3)
+		dv := upsertBatch.GetDataValue(0, 3)
 		Ω(dv.ConvertToHumanReadable(UUID)).Should(Equal(uuidStr))
 	})
 
@@ -490,11 +490,11 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		newBatch := upsertBatch.ExtractBackfillBatch([]int{1})
 
 		Ω(newBatch.NumRows).Should(Equal(1))
-		dv, _ := newBatch.GetDataValue(0, 2)
+		dv := newBatch.GetDataValue(0, 2)
 		Ω(dv.ConvertToHumanReadable(UUID)).Should(Equal(uuidStr))
-		dv, _ = newBatch.GetDataValue(0, 0)
+		dv = newBatch.GetDataValue(0, 0)
 		Ω(dv.ConvertToHumanReadable(Float32)).Should(Equal(float32(1.2)))
-		dv, _ = newBatch.GetDataValue(0, 1)
+		dv = newBatch.GetDataValue(0, 1)
 		Ω(dv.ConvertToHumanReadable(Bool)).Should(Equal(false))
 	})
 
@@ -531,11 +531,11 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		newBatch := upsertBatch.ExtractBackfillBatch([]int{1})
 
 		Ω(newBatch.NumRows).Should(Equal(1))
-		dv, _ := newBatch.GetDataValue(0, 0)
+		dv := newBatch.GetDataValue(0, 0)
 		Ω(dv.ConvertToHumanReadable(Float32)).Should(Equal(float32(1.2)))
-		dv, _ = newBatch.GetDataValue(0, 1)
+		dv = newBatch.GetDataValue(0, 1)
 		Ω(dv.ConvertToHumanReadable(Bool)).Should(Equal(false))
-		dv, _ = newBatch.GetDataValue(0, 2)
+		dv = newBatch.GetDataValue(0, 2)
 		Ω(dv.ConvertToHumanReadable(UUID)).Should(Equal(uuidStr))
 		Ω(upsertBatch.NumColumns).Should(Equal(4))
 		Ω(newBatch.NumColumns).Should(Equal(3))
@@ -561,14 +561,12 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		upsertBatch, _ := NewUpsertBatch(upsertBatchBytes)
 
 		// first row should have value
-		value, err := upsertBatch.GetDataValue(0, 0)
-		Ω(err).Should(BeNil())
+		value := upsertBatch.GetDataValue(0, 0)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeTrue())
 		Ω(*(*uint32)(value.OtherVal)).Should(Equal(uint32(2)))
 
-		value, err = upsertBatch.GetDataValue(0, 1)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(0, 1)
 		Ω(value).ShouldNot(BeNil())
 		expectedShape := &GeoShapeGo{
 			Polygons: [][]GeoPointGo{
@@ -587,25 +585,21 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(value.Valid).Should(BeTrue())
 		Ω(value.GoVal).Should(Equal(expectedShape))
 
-		value, err = upsertBatch.GetDataValue(0, 2)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(0, 2)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeTrue())
 		Ω(value.BoolVal).Should(BeTrue())
 
 		// second row should be all nil
-		value, err = upsertBatch.GetDataValue(1, 0)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(1, 0)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeFalse())
 
-		value, err = upsertBatch.GetDataValue(1, 1)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(1, 1)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeFalse())
 
-		value, err = upsertBatch.GetDataValue(1, 2)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(1, 2)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeFalse())
 	})
@@ -643,20 +637,17 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		upsertBatch, _ := NewUpsertBatch(upsertBatchBytes)
 
 		// first row should have value
-		value, err := upsertBatch.GetDataValue(0, 0)
-		Ω(err).Should(BeNil())
+		value := upsertBatch.GetDataValue(0, 0)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeTrue())
 		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(1)))
 
-		value, err = upsertBatch.GetDataValue(0, 2)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(0, 2)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeTrue())
 		Ω(*(*int32)(value.OtherVal)).Should(Equal(int32(101)))
 
-		value, err = upsertBatch.GetDataValue(0, 1)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(0, 1)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeTrue())
 		reader := NewArrayValueReader(value.DataType, value.OtherVal)
@@ -674,20 +665,17 @@ var _ = ginkgo.Describe("upsert batch", func() {
 		Ω(*(*int32)(reader.Get(2))).Should(Equal(int32(13)))
 
 		// second row
-		value, err = upsertBatch.GetDataValue(1, 0)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(1, 0)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeTrue())
 		Ω(*(*uint16)(value.OtherVal)).Should(Equal(uint16(2)))
 
-		value, err = upsertBatch.GetDataValue(1, 2)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(1, 2)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeTrue())
 		Ω(*(*int32)(value.OtherVal)).Should(Equal(int32(102)))
 
-		value, err = upsertBatch.GetDataValue(1, 1)
-		Ω(err).Should(BeNil())
+		value = upsertBatch.GetDataValue(1, 1)
 		Ω(value).ShouldNot(BeNil())
 		Ω(value.Valid).Should(BeTrue())
 

@@ -87,7 +87,9 @@ func shardFn(key []byte, numShards uint32) uint32 {
 func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rules.JobConfig, keyLength int) ([]byte, error) {
 	primaryKeyValues := make([]memCom.DataValue, len(destination.PrimaryKeys))
 	var err error
-	var key, strBytes []byte
+	// create empty key with keyLength capacity
+	key := make([]byte, 0, keyLength)
+	var strBytes []byte
 	i := 0
 	for columnName, columnID := range destination.PrimaryKeys {
 		columnIDInSchema := destination.PrimaryKeysInSchema[columnName]
@@ -112,7 +114,7 @@ func getPrimaryKeyBytes(row client.Row, destination Destination, jobConfig *rule
 		}
 	}
 
-	if key, err = memCom.GetPrimaryKeyBytes(primaryKeyValues, keyLength); err != nil {
+	if key, err = memCom.AppendPrimaryKeyBytes(key, memCom.NewSliceDataValueIterator(primaryKeyValues)); err != nil {
 		return key, err
 	}
 	if strBytes != nil {

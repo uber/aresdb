@@ -120,31 +120,31 @@ var _ = ginkgo.Describe("test factory", func() {
 		Ω(ub.GetColumnType(1)).Should(Equal(common.Bool))
 		Ω(ub.GetColumnID(1)).Should(Equal(1))
 
-		val, err := ub.GetDataValue(0, 0)
+		val := ub.GetDataValue(0, 0)
 		Ω(err).Should(BeNil())
 		Ω(val.Valid).Should(BeTrue())
 		Ω(*(*uint16)(val.OtherVal)).Should(BeEquivalentTo(16))
 
-		val, err = ub.GetDataValue(0, 1)
+		val = ub.GetDataValue(0, 1)
 		Ω(err).Should(BeNil())
 		Ω(val.Valid).Should(BeTrue())
 		Ω(val.BoolVal).Should(Equal(true))
 
-		val, err = ub.GetDataValue(1, 0)
+		val = ub.GetDataValue(1, 0)
 		Ω(err).Should(BeNil())
 		Ω(val.Valid).Should(BeFalse())
 
-		val, err = ub.GetDataValue(1, 1)
+		val = ub.GetDataValue(1, 1)
 		Ω(err).Should(BeNil())
 		Ω(val.Valid).Should(BeTrue())
 		Ω(val.BoolVal).Should(Equal(false))
 
-		val, err = ub.GetDataValue(2, 0)
+		val = ub.GetDataValue(2, 0)
 		Ω(err).Should(BeNil())
 		Ω(val.Valid).Should(BeTrue())
 		Ω(*(*uint16)(val.OtherVal)).Should(BeEquivalentTo(0))
 
-		val, err = ub.GetDataValue(2, 1)
+		val = ub.GetDataValue(2, 1)
 		Ω(err).Should(BeNil())
 		Ω(val.Valid).Should(BeTrue())
 		Ω(val.BoolVal).Should(Equal(true))

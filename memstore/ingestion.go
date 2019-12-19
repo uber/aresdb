@@ -184,7 +184,7 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 	isFactTable := shard.Schema.Schema.IsFactTable
 	shard.Schema.RUnlock()
 
-	var key []byte
+	key := make([]byte, primaryKeyBytes)
 	updateRecords := make(map[int32][]recordInfo)
 	insertRecords := make(map[int32][]recordInfo)
 
@@ -202,7 +202,9 @@ func (shard *TableShard) insertPrimaryKeys(primaryKeyColumns []int, eventTimeCol
 	var maxUpsertBatchEventTime uint32
 	for row := 0; row < upsertBatch.NumRows; row++ {
 		// Get primary key bytes for each record.
-		if key, err = upsertBatch.GetPrimaryKeyBytes(row, primaryKeyCols, primaryKeyBytes); err != nil {
+		// truncate key
+		key = key[:0]
+		if key, err = common.AppendPrimaryKeyBytes(key, common.NewPrimaryKeyDataValueIterator(upsertBatch, row, primaryKeyCols)); err != nil {
 			return nil, nil, nil, utils.StackError(err, "Failed to create primary key at row %d", row)
 		}
 
