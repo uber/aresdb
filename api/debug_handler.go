@@ -18,12 +18,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/aresdb/cluster/topology"
 	"net/http"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/uber/aresdb/cluster/topology"
 
 	"github.com/gorilla/mux"
 	"github.com/uber/aresdb/api/common"
@@ -556,9 +557,7 @@ func (handler *DebugHandler) ListUpsertBatches(w *utils.ResponseWriter, r *http.
 	offsets, err := shard.NewRedoLogBrowser().ListUpsertBatch(request.CreationTime)
 	if err != nil {
 		w.WriteError(err)
-		fmt.Println("marker1 start")
 		w.ResponseWriter.Header().Write(os.Stdout)
-		fmt.Println("marker1 end")
 		return
 	}
 	w.WriteObject(&offsets)

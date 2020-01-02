@@ -16,7 +16,6 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"unsafe"
 
 	"github.com/uber/aresdb/utils"
@@ -99,7 +98,6 @@ func AppendPrimaryKeyBytes(key []byte, primaryKeyValues DataValueIterator) ([]by
 	for !primaryKeyValues.done() {
 		value := primaryKeyValues.read()
 		if !value.Valid {
-			fmt.Println("hello world")
 			return key, utils.StackError(nil, "Primary key cannot be null")
 		}
 
