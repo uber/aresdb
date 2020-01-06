@@ -776,7 +776,10 @@ func (bc *oopkBatchContext) reallocateResultBuffers(
 
 	// copy previous pointers first
 	input := [2]devicePointer{buffers[0], buffers[1]}
-	// always deallocate original buffer
+	// set buffers to null device pointer
+	buffers[0], buffers[1] = nullDevicePointer, nullDevicePointer
+
+	// make sure input pointers are cleaned up
 	defer func() {
 		deviceFreeAndSetNil(&input[0])
 		deviceFreeAndSetNil(&input[1])
@@ -789,6 +792,7 @@ func (bc *oopkBatchContext) reallocateResultBuffers(
 	if copyFunc != nil {
 		copyFunc(buffers[0].getPointer(), input[0].getPointer())
 	}
+
 	return
 }
 
