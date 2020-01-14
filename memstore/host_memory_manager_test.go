@@ -439,8 +439,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 			testSchema.SetDefaultValue(columnID)
 		}
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
-		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0, options)
+		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore, testDiskStore, testHostMemoryManager, 0, 1, options)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
 		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
@@ -600,10 +599,8 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		testMetaStore.CreateTable(testTable)
 		testSchema := memCom.NewTableSchema(testTable)
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
-		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0, options)
-		testMemStore.TableShards[testTableName][1] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 1, options)
+		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore, testDiskStore, testHostMemoryManager, 0, 1, options)
+		testMemStore.TableShards[testTableName][1] = NewTableShard(testSchema, testMetaStore, testDiskStore, testHostMemoryManager, 1, 1, options)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
 		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
@@ -748,8 +745,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		testMetaStore.CreateTable(testTable)
 		testSchema := memCom.NewTableSchema(testTable)
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
-		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0, options)
+		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore, testDiskStore, testHostMemoryManager, 0, 1, options)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
 		testMemStore.TableShards[testTableName][0].ArchiveStore = &ArchiveStore{
@@ -855,10 +851,8 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 		testMetaStore.CreateTable(testTable)
 		testSchema := memCom.NewTableSchema(testTable)
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
-		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0, options)
-		testMemStore.TableShards[testTableName][1] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 1, options)
+		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore, testDiskStore, testHostMemoryManager, 0, 1, options)
+		testMemStore.TableShards[testTableName][1] = NewTableShard(testSchema, testMetaStore, testDiskStore, testHostMemoryManager, 1, 1, options)
 		testMemStore.TableSchemas[testTableName] = testSchema
 
 		testBatchID1 := int32(15739)
@@ -929,8 +923,7 @@ var _ = ginkgo.Describe("HostMemoryManager", func() {
 
 		testSchema := memCom.NewTableSchema(testTable)
 		testMemStore.TableShards[testTableName] = make(map[int]*TableShard)
-		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore,
-			testDiskStore, testHostMemoryManager, 0, options)
+		testMemStore.TableShards[testTableName][0] = NewTableShard(testSchema, testMetaStore, testDiskStore, testHostMemoryManager, 0, 1, options)
 
 		for i := 0; i < 10; i++ {
 			liveBatch := &LiveBatch{

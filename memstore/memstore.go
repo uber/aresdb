@@ -45,7 +45,7 @@ type MemStore interface {
 	// GetHostMemoryManager returns the host memory manager
 	GetHostMemoryManager() common.HostMemoryManager
 	// AddTableShard add a table shard to the memstore
-	AddTableShard(table string, shardID int, needPeerCopy bool, needPurge bool)
+	AddTableShard(table string, shardID int, totalShards int, needPeerCopy bool, needPurge bool)
 	// GetTableShard gets the data for a pinned table Shard. Caller needs to unpin after use.
 	GetTableShard(table string, shardID int) (*TableShard, error)
 	// RemoveTableShard removes table shard from memstore
@@ -261,7 +261,7 @@ func (m *memStoreImpl) TryEvictBatchColumn(table string, shardID int, batchID in
 	return true, nil
 }
 
-func (m *memStoreImpl) AddTableShard(table string, shardID int, needPeerCopy bool, needPurge bool) {
+func (m *memStoreImpl) AddTableShard(table string, shardID int, totalShards int, needPeerCopy bool, needPurge bool) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -277,7 +277,7 @@ func (m *memStoreImpl) AddTableShard(table string, shardID int, needPeerCopy boo
 	}
 	if _, exist := shardMap[shardID]; !exist {
 		// create new shard
-		tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shardID, m.options)
+		tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shardID, totalShards, m.options)
 		if needPeerCopy {
 			tableShard.needPeerCopy = 1
 		}

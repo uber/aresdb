@@ -170,7 +170,8 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			}
 			memStore.TableSchemas[table] = tableSchema
 
-			memStore.AddTableShard(table, shardID, true, true)
+			totalShards := len(staticTopology.Get().ShardSet().AllIDs())
+			memStore.AddTableShard(table, shardID, totalShards, true, true)
 			defer memStore.RemoveTableShard(table, shardID)
 			shard, err := memStore.GetTableShard(table, shardID)
 			Ω(err).Should(BeNil())
@@ -332,7 +333,8 @@ var _ = ginkgo.Describe("table shard bootstrap", func() {
 			}
 			memStore.TableSchemas[table] = tableSchema
 
-			memStore.AddTableShard(table, shardID, true, true)
+			totalShards := len(staticTopology.Get().ShardSet().AllIDs())
+			memStore.AddTableShard(table, shardID, totalShards, true, true)
 			defer memStore.RemoveTableShard(table, shardID)
 
 			shard, err := memStore.GetTableShard(table, shardID)

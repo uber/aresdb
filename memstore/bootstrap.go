@@ -141,38 +141,53 @@ func (shard *TableShard) Bootstrap(
 	if atomic.LoadUint32(&shard.needPeerCopy) == 1 {
 		shard.BootstrapDetails.SetBootstrapStage(bootstrap.PeerCopy)
 		// find peer node for copy metadata and raw data
-		peerNodes := shard.findBootstrapSource(origin, topo, topoState)
+		peerNodes, err := shard.findBootstrapSource(origin, topo, topoState)
+		if err != nil {
+			utils.GetLogger().
+				With("table", shard.Schema.Schema.Name).
+				With("shardID", shard.ShardID).
+				With("origin", origin).
+				With("error", err.Error()).
+				Error("failed to find peers for shard bootstrap")
+			return err
+		}
+
+		// Note: skip peer copy step when we found no peers. this is correct based on the assumption that
+		// if a shard replica does not find any peer in available/leaving state
+		// then the cluster should be in the initial phase of new placement created
+		// when we do replace/remove/add, the total number of shard replica remains the same
+		// so the number of initializing replica should match the number of leaving replica
+		// when we increase the number of replicas, we should always find existing available replica
 		if len(peerNodes) == 0 {
 			utils.GetLogger().
 				With("table", shard.Schema.Schema.Name).
 				With("shardID", shard.ShardID).
 				With("origin", origin).
-				With("source", "").
-				Info("no available bootstrap source")
-			return utils.StackError(nil, "no peer node available")
-		}
-		utils.GetLogger().
-			With("table", shard.Schema.Schema.Name).
-			With("shardID", shard.ShardID).
-			With("peers", peerNodes).
-			Info("found peer to bootstrap from")
+				Info("no available/leaving source, new placement")
+		} else {
+			utils.GetLogger().
+				With("table", shard.Schema.Schema.Name).
+				With("shardID", shard.ShardID).
+				With("peers", peerNodes).
+				Info("found peer to bootstrap from")
 
-		// shuffle peer nodes randomly
-		rand.New(rand.NewSource(utils.Now().Unix())).Shuffle(len(peerNodes), func(i, j int) {
-			peerNodes[i], peerNodes[j] = peerNodes[j], peerNodes[i]
-		})
+			// shuffle peer nodes randomly
+			rand.New(rand.NewSource(utils.Now().Unix())).Shuffle(len(peerNodes), func(i, j int) {
+				peerNodes[i], peerNodes[j] = peerNodes[j], peerNodes[i]
+			})
 
-		var dataStreamErr error
-		borrowErr := peerSource.BorrowConnection(peerNodes, func(peerID string, nodeClient rpc.PeerDataNodeClient) {
-			shard.BootstrapDetails.SetSource(peerID)
-			dataStreamErr = shard.fetchDataFromPeer(peerID, nodeClient, origin, options)
-		})
+			var dataStreamErr error
+			borrowErr := peerSource.BorrowConnection(peerNodes, func(peerID string, nodeClient rpc.PeerDataNodeClient) {
+				shard.BootstrapDetails.SetSource(peerID)
+				dataStreamErr = shard.fetchDataFromPeer(peerID, nodeClient, origin, options)
+			})
 
-		if borrowErr != nil {
-			return borrowErr
-		}
-		if dataStreamErr != nil {
-			return dataStreamErr
+			if borrowErr != nil {
+				return borrowErr
+			}
+			if dataStreamErr != nil {
+				return dataStreamErr
+			}
 		}
 		atomic.StoreUint32(&shard.needPeerCopy, 0)
 	}
@@ -594,16 +609,16 @@ func (shard *TableShard) startStreamSession(peerID string, client rpc.PeerDataNo
 }
 
 func (shard *TableShard) findBootstrapSource(
-	origin string, topo topology.Topology, topoState *topology.StateSnapshot) []string {
+	origin string, topo topology.Topology, topoState *topology.StateSnapshot) ([]string, error) {
 
-	peers := make([]string, 0, topo.Get().HostsLen())
 	hostShardStates, ok := topoState.ShardStates[topology.ShardID(shard.ShardID)]
 	if !ok {
 		// This shard was not part of the topology when the bootstrapping
 		// process began.
-		return nil
+		return nil, utils.StackError(nil, "shard does not exist in topology")
 	}
 
+	peers := make([]string, 0, topo.Get().HostsLen())
 	for _, hostShardState := range hostShardStates {
 		if hostShardState.Host.ID() == origin {
 			// Don't take self into account
@@ -625,5 +640,6 @@ func (shard *TableShard) findBootstrapSource(
 		default:
 		}
 	}
-	return peers
+
+	return peers, nil
 }

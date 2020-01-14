@@ -34,7 +34,7 @@ var _ = ginkgo.Describe("live store", func() {
 			HostMemoryManager: hostMemoryManager,
 			options:           m.options,
 		}
-		vs := NewLiveStore(0, shard)
+		vs := NewLiveStore(0, 1, shard)
 
 		Ω(vs.LastReadRecord.BatchID).Should(Equal(BaseBatchID))
 		Ω(vs.LastReadRecord.Index).Should(Equal(uint32(0)))
@@ -65,7 +65,7 @@ var _ = ginkgo.Describe("live store", func() {
 			options:           m.options,
 		}
 		m.options.redoLogMaster.Stop()
-		vs := NewLiveStore(16, shard)
+		vs := NewLiveStore(16, 1, shard)
 
 		vs.appendBatch(BaseBatchID)
 		b := vs.GetBatchForRead(BaseBatchID)
@@ -112,7 +112,7 @@ var _ = ginkgo.Describe("live store", func() {
 			options:           m.options,
 		}
 		m.options.redoLogMaster.Stop()
-		vs := NewLiveStore(0, shard)
+		vs := NewLiveStore(0, 1, shard)
 
 		vs.appendBatch(BaseBatchID)
 		b := vs.GetBatchForRead(BaseBatchID)
@@ -156,7 +156,7 @@ var _ = ginkgo.Describe("live store", func() {
 			options:           m.options,
 		}
 		m.options.redoLogMaster.Stop()
-		vs := NewLiveStore(16, shard)
+		vs := NewLiveStore(16, 1, shard)
 
 		vs.appendBatch(BaseBatchID)
 		vs.appendBatch(BaseBatchID + 1)
@@ -193,7 +193,7 @@ var _ = ginkgo.Describe("live store", func() {
 			options:           m.options,
 		}
 		m.options.redoLogMaster.Stop()
-		vs := NewLiveStore(0, shard)
+		vs := NewLiveStore(0, 1, shard)
 		vs.PrimaryKey = pk
 
 		key := []byte{1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1}
@@ -218,7 +218,7 @@ var _ = ginkgo.Describe("live store", func() {
 			options:           m.options,
 		}
 		m.options.redoLogMaster.Stop()
-		vs := NewLiveStore(0, shard)
+		vs := NewLiveStore(0, 1, shard)
 		liveBatch1 := vs.getOrCreateBatch(-1)
 		Ω(liveBatch1).ShouldNot(BeNil())
 		liveBatch1.Unlock()

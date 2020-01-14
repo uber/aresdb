@@ -36,13 +36,13 @@ var _ = ginkgo.Describe("datanode", func() {
 			}).SetShardSet(aresShard.NewShardSet([]m3Shard.Shard{
 			m3Shard.NewShard(0),
 		}))
-		staticTopology, _ := topology.NewStaticInitializer(staticMapOption).Init()
+		staticTopologyInitializer := topology.NewStaticInitializer(staticMapOption)
 
 		enumReader := &mocks.EnumReader{}
 
 		dataNode, err := NewDataNode(
 			"instance0",
-			staticTopology,
+			staticTopologyInitializer,
 			enumReader,
 			NewOptions().
 				SetServerConfig(common.AresServerConfig{

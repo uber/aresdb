@@ -214,6 +214,7 @@ func (m *memStoreImpl) playRedoLogs() {
 
 // InitShards loads/recovers data for shards initially owned by the current instance.
 // It also watches Shard ownership change events and handles them in a separate goroutine.
+// InitShards is only used in non sharded version which assume totalShardsInCluster to be one
 func (m *memStoreImpl) InitShards(schedulerOff bool, shardOwner topology.ShardOwner) {
 	for _, schema := range m.TableSchemas {
 		shards := shardOwner.GetOwnedShards()
@@ -302,8 +303,9 @@ func (m *memStoreImpl) InitShards(schedulerOff bool, shardOwner topology.ShardOw
 
 // LoadShard loads/recovers the specified Shard and attaches it to memStoreImpl for serving. If will load the metadata
 // first and then replay redologs only if replayRedologs is true.
+// LoadShard is only used in non sharded version, whihch assume totalShardsInCluster to be 1
 func (m *memStoreImpl) LoadShard(schema *memcom.TableSchema, shard int, replayRedologs bool) error {
-	tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shard, m.options)
+	tableShard := NewTableShard(schema, m.metaStore, m.diskStore, m.HostMemManager, shard, 1, m.options)
 	err := tableShard.LoadMetaData()
 	if err != nil {
 		utils.GetLogger().Panic(err)
