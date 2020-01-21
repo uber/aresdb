@@ -197,5 +197,31 @@ func TestPlacementMutator(t *testing.T) {
 		assert.True(t, instance1.Shards().Contains(1))
 		assert.True(t, instance2.Shards().Contains(0))
 		assert.True(t, instance2.Shards().Contains(1))
+
+		// 8. mark shards as available
+		instance1, exist = plmt.Instance("1")
+		assert.True(t, exist)
+		instance2, exist = plmt.Instance("2")
+		assert.True(t, exist)
+
+		initShards := instance1.Shards().ShardsForState(shard.Initializing)
+		ids := make([]uint32, 0)
+		for _, shard := range initShards {
+			ids = append(ids, shard.ID())
+		}
+		plmt, err = placementMutator.MarkShardsAvailable(testNamespace, instance1.ID(), ids)
+		assert.NoError(t, err)
+
+		initShards = instance2.Shards().ShardsForState(shard.Initializing)
+		ids = make([]uint32, 0)
+		for _, shard := range initShards {
+			ids = append(ids, shard.ID())
+		}
+		plmt, err = placementMutator.MarkShardsAvailable(testNamespace, instance2.ID(), ids)
+		assert.NoError(t, err)
+
+		for _, instance := range plmt.Instances() {
+			assert.True(t, instance.IsAvailable())
+		}
 	})
 }
