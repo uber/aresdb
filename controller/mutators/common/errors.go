@@ -15,6 +15,8 @@ package common
 
 import (
 	"errors"
+	"github.com/uber/aresdb/utils"
+	"net/http"
 
 	"github.com/m3db/m3/src/cluster/kv"
 )
@@ -50,6 +52,29 @@ var (
 	ErrInstanceDoesNotExist = NotExist("Instance does not exist")
 	// ErrSubscriberDoesNotExist indicates an subscriber does not exist
 	ErrSubscriberDoesNotExist = NotExist("Subscriber does not exist")
+
+	// ErrMsgFailedToBuildInitialPlacement represents error message for initial placement failure
+	ErrMsgFailedToBuildInitialPlacement = "failed build initial placement"
+	// ErrMsgFailedToGetPlacementService represents error message for failure in getting placement service
+	ErrMsgFailedToGetPlacementService = "failed to get placement service"
+	// ErrMsgFailedToGetCurrentPlacement represents error message for failure in getting current placement
+	ErrMsgFailedToGetCurrentPlacement = "failed to get current placement"
+	// ErrMsgFailedToAddInstance represents error message for failure in adding instance
+	ErrMsgFailedToAddInstance = "failed to add instance to placement"
+	// ErrMsgFailedToReplaceInstance represents error message for failure in replacing instance
+	ErrMsgFailedToReplaceInstance = "failed to replace instance to placement"
+	// ErrMsgFailedToMarkAvailable represents error message for failure in marking instance or shard available
+	ErrMsgFailedToMarkAvailable = "failed to mark instance/shards available"
+	// ErrMsgFailedToMarshalPlacement represents error message for failure to marshal placement
+	ErrMsgFailedToMarshalPlacement = "failed to marshal placement"
+	// ErrMsgFailedToRemoveInstance represents error message for failure to remove instance from a placement
+	ErrMsgFailedToRemoveInstance = "failed to remove instance from placement"
+
+	// ErrInvalidNumShards represents invalid number of shards
+	ErrInvalidNumShards = utils.APIError{
+		Code:    http.StatusBadRequest,
+		Message: "invalid number of shards, should be exponential of 2",
+	}
 )
 
 // IsNonExist check whether error is non exist error

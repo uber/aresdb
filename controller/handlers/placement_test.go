@@ -21,6 +21,7 @@ import (
 	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/m3db/m3/src/cluster/kv/mem"
 	"github.com/m3db/m3/src/cluster/services"
+	mutators "github.com/uber/aresdb/controller/mutators/etcd"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,9 +31,7 @@ import (
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/shard"
 	"github.com/stretchr/testify/assert"
-	"github.com/uber-go/tally"
 	"github.com/uber/aresdb/cluster/kvstore"
-	"go.uber.org/zap"
 )
 
 // m3ClientMock mocks m3client
@@ -62,9 +61,6 @@ func (c *m3ClientMock) TxnStore(opts kv.OverrideOptions) (kv.TxnStore, error) {
 }
 
 func TestPlacementHandler(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	sugaredLogger := logger.Sugar()
-
 	t.Run("Should work for placement handler", func(t *testing.T) {
 		txnStore := mem.NewStore()
 		clusterServices, err := services.NewServices(
@@ -115,7 +111,7 @@ func TestPlacementHandler(t *testing.T) {
 		  ]
 		}`))
 
-		placementHandler := NewPlacementHandler(sugaredLogger, tally.NoopScope, &client)
+		placementHandler := NewPlacementHandler(mutators.NewPlacementMutator(&client))
 		testRouter := mux.NewRouter()
 		placementHandler.Register(testRouter)
 		testServer := httptest.NewUnstartedServer(testRouter)
