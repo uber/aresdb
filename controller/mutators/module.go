@@ -18,6 +18,7 @@ type Result struct {
 	SchemaMutator              common.TableSchemaMutator
 	IngestionAssignmentMutator common.IngestionAssignmentMutator
 	MembershipMutator          common.MembershipMutator
+	PlacementMutator		   common.PlacementMutator
 	EnumMutator                common.EnumMutator
 }
 
@@ -42,6 +43,7 @@ func InitMutators(param Params) Result {
 		IngestionAssignmentMutator: etcd.NewIngestionAssignmentMutator(param.EtcdClient.TxnStore),
 		NamespaceMutator: etcd.NewNamespaceMutator(param.EtcdClient.TxnStore),
 		MembershipMutator: etcd.NewMembershipMutator(param.EtcdClient),
+		PlacementMutator: etcd.NewPlacementMutator(param.EtcdClient),
 	}
 	result.EnumMutator = etcd.NewEnumMutator(param.EtcdClient.TxnStore, result.SchemaMutator)
 	return result
