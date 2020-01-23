@@ -61,11 +61,13 @@ type dataNode struct {
 	shardSet        shard.ShardSet
 	clusterServices services.Services
 
-	topo       topology.Topology
-	enumReader mutatorsCom.EnumReader
-	metaStore  metaCom.MetaStore
-	memStore   memstore.MemStore
-	diskStore  diskstore.DiskStore
+	topoInitializer    topology.Initializer
+	topology           topology.Topology
+	numShardsInCluster int
+	enumReader         mutatorsCom.EnumReader
+	metaStore          metaCom.MetaStore
+	memStore           memstore.MemStore
+	diskStore          diskstore.DiskStore
 
 	opts     Options
 	logger   common.Logger
@@ -101,7 +103,7 @@ type datanodeMetrics struct {
 // NewDataNode creates a new data node
 func NewDataNode(
 	hostID string,
-	topo topology.Topology,
+	topoInitializer topology.Initializer,
 	enumReader mutatorsCom.EnumReader,
 	opts Options) (DataNode, error) {
 
@@ -128,9 +130,8 @@ func NewDataNode(
 		return nil, utils.StackError(err, "failed to initialize redolog manager master")
 	}
 
-	numShards := len(topo.Get().ShardSet().AllIDs())
 	memStore := memstore.NewMemStore(metaStore, diskStore,
-		memstore.NewOptions(bootstrapToken, redoLogManagerMaster, memstore.WithNumShards(numShards)))
+		memstore.NewOptions(bootstrapToken, redoLogManagerMaster))
 
 	grpcServer := grpc.NewServer()
 	rpc.RegisterPeerDataNodeServer(grpcServer, bootstrapServer)
@@ -138,7 +139,7 @@ func NewDataNode(
 
 	d := &dataNode{
 		hostID:               hostID,
-		topo:                 topo,
+		topoInitializer:      topoInitializer,
 		enumReader:           enumReader,
 		metaStore:            metaStore,
 		memStore:             memStore,
@@ -152,8 +153,8 @@ func NewDataNode(
 		close:                make(chan struct{}),
 		readyCh:              make(chan struct{}),
 	}
+
 	d.handlers = d.newHandlers()
-	d.bootstrapManager = NewBootstrapManager(d.hostID, memStore, opts.BootstrapOptions(), topo)
 	clusterClient, err := d.opts.ServerConfig().Cluster.Etcd.NewClient(instrument.NewOptions())
 	if err != nil {
 		return nil, utils.StackError(err, "failed to create etcd client")
@@ -181,15 +182,24 @@ func (d *dataNode) Open() error {
 	// 2. start debug server
 	go d.startDebugServer()
 
+	// initialize topology, block wait for first topology in etcd
+	d.topology, err = d.topoInitializer.Init()
+	if err != nil {
+		return utils.StackError(err, "failed to initialize topology")
+	}
+	d.bootstrapManager = NewBootstrapManager(d.hostID, d.memStore, d.opts.BootstrapOptions(), d.topology)
+
 	// 3. first shard assignment
-	d.mapWatch, err = d.topo.Watch()
+	d.mapWatch, err = d.topology.Watch()
 	if err != nil {
 		return utils.StackError(err, "failed to watch topology")
 	}
 
 	select {
 	case <-d.mapWatch.C():
-		hostShardSet, ok := d.mapWatch.Get().LookupHostShardSet(d.hostID)
+		topoMap := d.mapWatch.Get()
+		d.numShardsInCluster = len(topoMap.ShardSet().AllIDs())
+		hostShardSet, ok := topoMap.LookupHostShardSet(d.hostID)
 		if ok {
 			d.assignShardSet(hostShardSet.ShardSet())
 		}
@@ -438,7 +448,7 @@ func (d *dataNode) startAnalyzingShardAvailability() {
 			}
 			d.memStore.RUnlock()
 
-			dynamicTopo, ok := d.topo.(topology.DynamicTopology)
+			dynamicTopo, ok := d.topology.(topology.DynamicTopology)
 			if !ok {
 				d.logger.Error("cannot mark shard available, topology is not dynamic")
 				return
@@ -560,12 +570,12 @@ func (d *dataNode) addTable(table string) {
 		d.logger.With("table", table, "shard", 0).Info("adding table shard on schema addition")
 		// dimension table defaults shard to zero
 		// new table does not need to copy data from peer, but need to purge old data
-		d.memStore.AddTableShard(table, 0, false, true)
+		d.memStore.AddTableShard(table, 0, 1, false, true)
 	} else {
 		for _, shardID := range d.shardSet.AllIDs() {
 			d.logger.With("table", table, "shard", shardID).Info("adding table shard on schema addition")
 			// new table does not need to copy data from peer, but need to purge old data
-			d.memStore.AddTableShard(table, int(shardID), false, true)
+			d.memStore.AddTableShard(table, int(shardID), d.numShardsInCluster, false, true)
 		}
 	}
 
@@ -647,7 +657,7 @@ func (d *dataNode) assignShardSet(shardSet shard.ShardSet) {
 		for _, table := range factTables {
 			d.logger.With("table", table, "shard", shard.ID(), "state", shard.State()).Info("adding fact table shard on placement change")
 			// when needPeerCopy is true, we also need to purge old data before adding new shard
-			d.memStore.AddTableShard(table, int(shard.ID()), needPeerCopy, needPeerCopy)
+			d.memStore.AddTableShard(table, int(shard.ID()), d.numShardsInCluster, needPeerCopy, needPeerCopy)
 		}
 	}
 
@@ -664,7 +674,7 @@ func (d *dataNode) assignShardSet(shardSet shard.ShardSet) {
 			// only copy data from peer for dimension table
 			// when from zero shards to all initialing shards
 			// when needPeerCopy is true, we also need to purge old data before adding new shard
-			d.memStore.AddTableShard(table, 0, needPeerCopy, needPeerCopy)
+			d.memStore.AddTableShard(table, 0, 1, needPeerCopy, needPeerCopy)
 		}
 	}
 

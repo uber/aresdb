@@ -62,7 +62,7 @@ func CreateMemStore(schema *memCom.TableSchema, shardID int, metaStore metaCom.M
 	diskStore diskstore.DiskStore) *memMocks.MemStore {
 	redoManagerFactory, _ := redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, diskStore, metaStore)
 	options := memstore.NewOptions(new(memComMocks.BootStrapToken), redoManagerFactory)
-	shard := memstore.NewTableShard(schema, metaStore, diskStore, CreateMockHostMemoryManger(), shardID, options)
+	shard := memstore.NewTableShard(schema, metaStore, diskStore, CreateMockHostMemoryManger(), shardID, 1, options)
 
 	memStore := new(memMocks.MemStore)
 	memStore.On("GetTableShard", schema.Schema.Name, shardID).Return(shard, nil).

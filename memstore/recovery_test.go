@@ -223,7 +223,7 @@ var _ = ginkgo.Describe("recovery", func() {
 		consumer, _ := testing.MockKafkaConsumerFunc(nil)
 		m.options.redoLogMaster, _ = redolog.NewKafkaRedoLogManagerMaster(namespace, c, diskStore, metaStore, consumer)
 		schema, _ := m.GetSchema(tableName)
-		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, m.options)
+		shard := NewTableShard(schema, metaStore, diskStore, m.HostMemManager, 1, 1, m.options)
 
 		upsertBatch, _ := memCom.NewUpsertBatch(buffer)
 		for i := 0; i < 10; i++ {

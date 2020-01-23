@@ -70,7 +70,7 @@ func createMemStore(tableName string, shardID int, columnTypes []memCom.DataType
 	memStore := NewMemStore(metaStore, diskStore, options).(*memStoreImpl)
 	// Create shards.
 	shards := map[int]*TableShard{
-		shardID: NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(memStore, 1<<32), shardID, options),
+		shardID: NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(memStore, 1<<32), shardID, 1, options),
 	}
 	memStore.TableShards[tableName] = shards
 	memStore.TableSchemas[tableName] = schema

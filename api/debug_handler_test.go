@@ -180,7 +180,7 @@ var _ = ginkgo.Describe("DebugHandler", func() {
 		redoManagerFactory, _ := redolog.NewRedoLogManagerMaster("", &common.RedoLogConfig{}, mockDiskStore, mockMetaStore)
 
 		options := memstore.NewOptions(new(memComMocks.BootStrapToken), redoManagerFactory)
-		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID, options)
+		redoLogShard := memstore.NewTableShard(redoLogTableSchema, mockMetaStore, testDiskStore, CreateMockHostMemoryManger(), redoLogShardID, 1, options)
 
 		mockShardNotExistErr := convertToAPIError(errors.New("Failed to get shard"))
 		memStore.On("GetTableShard", redoLogTableName, redoLogShardID).Return(redoLogShard, nil).

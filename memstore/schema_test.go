@@ -165,8 +165,7 @@ var _ = ginkgo.Describe("memStoreImpl schema", func() {
 		tableSchema.CreateEnumDict(testColumn3.Name, testColumn3EnumCases)
 		testMemstore.TableSchemas[testTable.Name] = tableSchema
 
-		testTableShard := NewTableShard(tableSchema, mockMetastore, mockDiskstore,
-			NewHostMemoryManager(&testMemstore, 1<<32), 0, options)
+		testTableShard := NewTableShard(tableSchema, mockMetastore, mockDiskstore, NewHostMemoryManager(&testMemstore, 1<<32), 0, 1, options)
 
 		testMemstore.TableShards[testTable.Name] = map[int]*TableShard{
 			0: testTableShard,

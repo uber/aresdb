@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/m3db/m3/src/cluster/client/etcd"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3/src/x/instrument"
 	"github.com/spf13/cobra"
@@ -27,7 +28,7 @@ import (
 	"github.com/uber/aresdb/cluster/topology"
 	"github.com/uber/aresdb/common"
 	controllerCli "github.com/uber/aresdb/controller/client"
-	"github.com/uber/aresdb/controller/mutators/etcd"
+	mutators "github.com/uber/aresdb/controller/mutators/etcd"
 	"github.com/uber/aresdb/datanode"
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/diskstore"
@@ -293,10 +294,12 @@ func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, que
 func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tally.Scope, httpWrappers ...utils.HTTPHandlerWrapper) {
 	opts := datanode.NewOptions().SetServerConfig(cfg).SetInstrumentOptions(utils.NewOptions()).SetBootstrapOptions(bootstrap.NewOptions()).SetHTTPWrappers(httpWrappers)
 
-	var topo topology.Topology
-	etcdCfg := cfg.Cluster.Etcd
-	etcdCfg.Service = utils.DataNodeServiceName(cfg.Cluster.Namespace)
-	configServiceCli, err := etcdCfg.NewClient(instrument.NewOptions())
+	etcdCfg := cfg.Cluster.Etcd.NewOptions().
+		SetService(utils.DataNodeServiceName(cfg.Cluster.Namespace)).
+		SetInstrumentOptions(instrument.NewOptions()).
+		SetServicesOptions(services.NewOptions().SetInitTimeout(0))
+
+	configServiceCli, err := etcd.NewConfigServiceClient(etcdCfg)
 	if err != nil {
 		logger.With("error", err.Error()).Fatal("failed to create etcd client", err)
 	}
@@ -306,21 +309,18 @@ func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tall
 		logger.With("error", err.Error()).Fatal("failed to create txn store")
 	}
 
-	enumReader := etcd.NewEnumMutator(txnStore, etcd.NewTableSchemaMutator(txnStore, zap.NewExample().Sugar()))
+	enumReader := mutators.NewEnumMutator(txnStore, mutators.NewTableSchemaMutator(txnStore, zap.NewExample().Sugar()))
 
 	dynamicOptions := topology.NewDynamicOptions().
 		SetConfigServiceClient(configServiceCli).
 		SetQueryOptions(services.NewQueryOptions().SetIncludeUnhealthy(true)).
 		SetServiceID(services.NewServiceID().
-			SetZone(etcdCfg.Zone).
-			SetName(etcdCfg.Service).
-			SetEnvironment(etcdCfg.Env))
-	topo, err = topology.NewDynamicInitializer(dynamicOptions).Init()
-	if err != nil {
-		logger.Fatal("Failed to initialize dynamic topology,", err)
-	}
+			SetZone(etcdCfg.Zone()).
+			SetName(etcdCfg.Service()).
+			SetEnvironment(etcdCfg.Env()))
 
-	dataNode, err := datanode.NewDataNode(cfg.Cluster.InstanceID, topo, enumReader, opts)
+	topologyInitializer := topology.NewDynamicInitializer(dynamicOptions)
+	dataNode, err := datanode.NewDataNode(cfg.Cluster.InstanceID, topologyInitializer, enumReader, opts)
 	if err != nil {
 		logger.Fatal("Failed to create datanode,", err)
 	}

@@ -36,7 +36,7 @@ var _ = ginkgo.Describe("redo_log_browser", func() {
 	m := GetFactory().NewMockMemStore()
 	schema := common.NewTableSchema(t)
 
-	shard := NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(m, 1<<32), shardID, m.options)
+	shard := NewTableShard(schema, metaStore, diskStore, NewHostMemoryManager(m, 1<<32), shardID, 1, m.options)
 
 	var rb *redoLogBrowser
 

@@ -54,7 +54,7 @@ func NewBootstrapManager(origin string,
 ) BootstrapManager {
 	peerSource, err := NewPeerSource(topo, nil)
 	if err != nil {
-		utils.GetLogger().With("error", err.Error()).Fatal("failed to initalize peer source")
+		utils.GetLogger().With("error", err.Error()).Fatal("failed to initialize peer source")
 	}
 
 	return &bootstrapManagerImpl{

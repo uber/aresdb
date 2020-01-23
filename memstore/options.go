@@ -23,7 +23,6 @@ type Option func(o *Options)
 
 // class to hold all necessary context objects used in memstore
 type Options struct {
-	numShards      int
 	bootstrapToken common.BootStrapToken
 	redoLogMaster  *redolog.RedoLogManagerMaster
 }
@@ -31,7 +30,6 @@ type Options struct {
 // NewOptions create new options instance
 func NewOptions(bootstrapToken common.BootStrapToken, redoLogMaster *redolog.RedoLogManagerMaster, setters ...Option) Options {
 	opts := Options{
-		numShards:      1,
 		bootstrapToken: bootstrapToken,
 		redoLogMaster:  redoLogMaster,
 	}
@@ -39,11 +37,4 @@ func NewOptions(bootstrapToken common.BootStrapToken, redoLogMaster *redolog.Red
 		setter(&opts)
 	}
 	return opts
-}
-
-// WithNumShards set numShards to memstore options
-func WithNumShards(numShards int) Option {
-	return func(o *Options) {
-		o.numShards = numShards
-	}
 }

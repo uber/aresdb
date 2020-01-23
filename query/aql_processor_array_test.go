@@ -92,7 +92,7 @@ var _ = ginkgo.Describe("aql_processor for array", func() {
 			},
 			ValueTypeByColumn: []memCom.DataType{memCom.Uint32, memCom.Bool, memCom.Float32, memCom.ArrayInt16, memCom.ArrayUUID},
 			DefaultValues:     []*memCom.DataValue{&memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue, &memCom.NullDataValue},
-		}, metaStore, diskStore, hostMemoryManager, shardID, options)
+		}, metaStore, diskStore, hostMemoryManager, shardID, 1, options)
 
 		archiveBatch0 = &memstore.ArchiveBatch{
 			Version: 0,

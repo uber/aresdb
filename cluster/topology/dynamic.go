@@ -22,6 +22,7 @@ package topology
 
 import (
 	"errors"
+	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3/src/cluster/shard"
@@ -70,6 +71,20 @@ func (i *dynamicInitializer) Init() (Topology, error) {
 }
 
 func (i *dynamicInitializer) TopologyIsSet() (bool, error) {
+	services, err := i.opts.ConfigServiceClient().Services(i.opts.ServicesOverrideOptions())
+	if err != nil {
+		return false, err
+	}
+
+	_, err = services.Query(i.opts.ServiceID(), i.opts.QueryOptions())
+	if err != nil {
+		if err == kv.ErrNotFound {
+			// Valid, just means topology is not set
+			return false, nil
+		}
+
+		return false, err
+	}
 	return true, nil
 }
 

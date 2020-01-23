@@ -64,8 +64,14 @@ type TableShard struct {
 }
 
 // NewTableShard creates and initiates a table shard based on the schema.
-func NewTableShard(schema *common.TableSchema, metaStore metaCom.MetaStore,
-	diskStore diskstore.DiskStore, hostMemoryManager common.HostMemoryManager, shard int, options Options) *TableShard {
+func NewTableShard(schema *common.TableSchema,
+	metaStore metaCom.MetaStore,
+	diskStore diskstore.DiskStore,
+	hostMemoryManager common.HostMemoryManager,
+	shard int,
+	totalShardsInCluster int,
+	options Options,
+) *TableShard {
 	tableShard := &TableShard{
 		ShardID:           shard,
 		Schema:            schema,
@@ -78,7 +84,7 @@ func NewTableShard(schema *common.TableSchema, metaStore metaCom.MetaStore,
 
 	archiveStore := NewArchiveStore(tableShard)
 	tableShard.ArchiveStore = archiveStore
-	tableShard.LiveStore = NewLiveStore(schema.Schema.Config.BatchSize, tableShard)
+	tableShard.LiveStore = NewLiveStore(schema.Schema.Config.BatchSize, totalShardsInCluster, tableShard)
 	return tableShard
 }
 
