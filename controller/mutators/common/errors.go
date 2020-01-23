@@ -59,6 +59,8 @@ var (
 	ErrMsgFailedToGetPlacementService = "failed to get placement service"
 	// ErrMsgFailedToGetCurrentPlacement represents error message for failure in getting current placement
 	ErrMsgFailedToGetCurrentPlacement = "failed to get current placement"
+	// ErrMsgPlacementNotExist represents error message for placement does not exist
+	ErrMsgPlacementNotExist = "placement does not exist"
 	// ErrMsgFailedToAddInstance represents error message for failure in adding instance
 	ErrMsgFailedToAddInstance = "failed to add instance to placement"
 	// ErrMsgFailedToReplaceInstance represents error message for failure in replacing instance
@@ -75,6 +77,7 @@ var (
 		Code:    http.StatusBadRequest,
 		Message: "invalid number of shards, should be exponential of 2",
 	}
+
 )
 
 // IsNonExist check whether error is non exist error

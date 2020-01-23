@@ -77,6 +77,9 @@ func (p *placementMutator) GetCurrentPlacement(namespace string) (placement.Plac
 	}
 	plm, err := placementSvc.Placement()
 	if err != nil {
+		if common.IsNonExist(err) {
+			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToGetCurrentPlacement)
 	}
 	return plm, nil
@@ -91,6 +94,9 @@ func (p *placementMutator) AddInstance(namespace string, instances []placement.I
 	}
 	plm, _, err := placementSvc.AddInstances(instances)
 	if err != nil {
+		if common.IsNonExist(err) {
+			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToAddInstance)
 	}
 	return plm, nil
@@ -105,6 +111,9 @@ func (p *placementMutator) ReplaceInstance(namespace string, leavingInstances []
 	}
 	plm, _, err := placementSvc.ReplaceInstances(leavingInstances, newInstances)
 	if err != nil {
+		if common.IsNonExist(err) {
+			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToReplaceInstance)
 	}
 	return plm, nil
@@ -119,6 +128,9 @@ func (p *placementMutator) RemoveInstance(namespace string, leavingInstances []s
 	}
 	plm, err := placementSvc.RemoveInstances(leavingInstances)
 	if err != nil {
+		if common.IsNonExist(err) {
+			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToRemoveInstance)
 	}
 	return plm, nil
@@ -132,6 +144,9 @@ func (p *placementMutator) MarkNamespaceAvailable(namespace string) (placement.P
 	}
 	plm, err := placementSvc.MarkAllShardsAvailable()
 	if err != nil {
+		if common.IsNonExist(err) {
+			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToMarkAvailable)
 	}
 	return plm, nil
@@ -145,6 +160,9 @@ func (p *placementMutator) MarkInstanceAvailable(namespace string, instance stri
 	}
 	plm, err := placementSvc.MarkInstanceAvailable(instance)
 	if err != nil {
+		if common.IsNonExist(err) {
+			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToMarkAvailable)
 	}
 	return plm, nil
@@ -158,6 +176,9 @@ func (p *placementMutator) MarkShardsAvailable(namespace string, instance string
 	}
 	plm, err := placementSvc.MarkShardsAvailable(instance, shards...)
 	if err != nil {
+		if common.IsNonExist(err) {
+			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToMarkAvailable)
 	}
 	return plm, nil
