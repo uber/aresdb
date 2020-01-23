@@ -15,34 +15,25 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/m3db/m3/src/cluster/generated/proto/placementpb"
 	"github.com/m3db/m3/src/cluster/placement"
-	"github.com/m3db/m3/src/cluster/services"
-	"github.com/m3db/m3/src/x/instrument"
-	"github.com/uber-go/tally"
 	apiCom "github.com/uber/aresdb/api/common"
-	"github.com/uber/aresdb/cluster/kvstore"
+	mutatorCom "github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/utils"
-	"go.uber.org/zap"
 )
 
 // PlacementHandler handles placement requests
 type PlacementHandler struct {
-	client *kvstore.EtcdClient
-	logger *zap.SugaredLogger
-	scope  tally.Scope
+	placementMutator mutatorCom.PlacementMutator
 }
 
 // NewPlacementHandler creates placement handler
-func NewPlacementHandler(logger *zap.SugaredLogger, scope tally.Scope, client *kvstore.EtcdClient) PlacementHandler {
+func NewPlacementHandler(mutator mutatorCom.PlacementMutator) PlacementHandler {
 	return PlacementHandler{
-		client: client,
-		logger: logger,
-		scope:  scope,
+		placementMutator: mutator,
 	}
 }
 
@@ -57,13 +48,6 @@ func (h PlacementHandler) Register(router *mux.Router, wrappers ...utils.HTTPHan
 	router.HandleFunc("/{namespace}/datanode/instances/{instance}/available", utils.ApplyHTTPWrappers(h.MarkInstanceAvailable, wrappers...)).Methods(http.MethodPost)
 }
 
-func (h *PlacementHandler) getServiceID(namespace string) services.ServiceID {
-	return services.NewServiceID().
-		SetEnvironment(h.client.Environment).
-		SetZone(h.client.Zone).
-		SetName(utils.DataNodeServiceName(namespace))
-}
-
 func newInstancesFromProto(instancepbs []placementpb.Instance) ([]placement.Instance, error) {
 	instances := make([]placement.Instance, 0, len(instancepbs))
 	for _, instancepb := range instancepbs {
@@ -76,50 +60,12 @@ func newInstancesFromProto(instancepbs []placementpb.Instance) ([]placement.Inst
 	return instances, nil
 }
 
-func (h *PlacementHandler) placementOptions() placement.Options {
-	return placement.NewOptions().
-		SetInstrumentOptions(instrument.NewOptions().
-			SetLogger(h.logger.Desugar()).SetMetricsScope(h.scope)).
-		SetValidZone(h.client.Zone).
-		// if we specify more than one new instance, we want to add them all
-		SetAddAllCandidates(true).
-		// for now we want to make sure replacement does not affect existing instances not being replaced
-		SetAllowPartialReplace(false)
-}
-
-func validateAllAvailable(p placement.Placement) error {
-	for _, instance := range p.Instances() {
-		if !instance.IsAvailable() {
-			return utils.APIError{Code: http.StatusBadRequest, Message: fmt.Sprintf("instance %s is not available", instance.ID())}
-		}
-	}
-	return nil
-}
-
-func validateInitPlacementReq(req InitPlacementRequest) error {
-	// check number of shards
-	numShards := req.Body.NumShards
-	if (numShards & (^(-numShards))) != 0 {
-		return ErrInvalidNumShards
-	}
-	return nil
-}
-
 // Init initialize new placement
 func (h *PlacementHandler) Init(rw *utils.ResponseWriter, r *http.Request) {
-	if h.client == nil {
-		rw.WriteError(ErrEtcdNotAvailable)
-		return
-	}
 	var req InitPlacementRequest
 	err := apiCom.ReadRequest(r, &req, rw.SetRequest)
 	if err != nil {
 		rw.WriteErrorWithCode(http.StatusBadRequest, err)
-		return
-	}
-
-	if err := validateInitPlacementReq(req); err != nil {
-		rw.WriteError(err)
 		return
 	}
 
@@ -129,51 +75,32 @@ func (h *PlacementHandler) Init(rw *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	placementSvc, err := h.client.Services.PlacementService(h.getServiceID(req.Namespace), h.placementOptions())
+	plm, err := h.placementMutator.BuildInitialPlacement(req.Namespace, req.Body.NumShards, req.Body.NumReplica, newInstances)
 	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToGetPlacementService))
+		rw.WriteError(err)
 		return
 	}
-
-	p, err := placementSvc.BuildInitialPlacement(newInstances, req.Body.NumShards, req.Body.NumReplica)
-	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToBuildInitialPlacement))
-		return
-	}
-	respondWithPlacement(p, rw)
+	respondWithPlacement(plm, rw)
 }
 
 // Get get the current placement
 func (h *PlacementHandler) Get(rw *utils.ResponseWriter, r *http.Request) {
-	if h.client == nil {
-		rw.WriteError(ErrEtcdNotAvailable)
-		return
-	}
 	var req NamespaceRequest
 	err := apiCom.ReadRequest(r, &req, rw.SetRequest)
 	if err != nil {
 		rw.WriteErrorWithCode(http.StatusBadRequest, err)
 		return
 	}
-	placementSvc, err := h.client.Services.PlacementService(h.getServiceID(req.Namespace), h.placementOptions())
+	plm, err := h.placementMutator.GetCurrentPlacement(req.Namespace)
 	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToGetPlacementService))
+		rw.WriteError(err)
 		return
 	}
-	p, err := placementSvc.Placement()
-	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToGetCurrentPlacement))
-		return
-	}
-	respondWithPlacement(p, rw)
+	respondWithPlacement(plm, rw)
 }
 
 // Add adds new instances
 func (h *PlacementHandler) Add(rw *utils.ResponseWriter, r *http.Request) {
-	if h.client == nil {
-		rw.WriteError(ErrEtcdNotAvailable)
-		return
-	}
 	var req AddInstancesRequest
 	err := apiCom.ReadRequest(r, &req, rw.SetRequest)
 	if err != nil {
@@ -188,27 +115,16 @@ func (h *PlacementHandler) Add(rw *utils.ResponseWriter, r *http.Request) {
 	}
 
 	// validate all shards available in placement before adding instance
-	placementSvc, err := h.client.Services.PlacementService(h.getServiceID(req.Namespace),
-		h.placementOptions().SetValidateFnBeforeUpdate(validateAllAvailable))
+	plm, err := h.placementMutator.AddInstance(req.Namespace, instances)
 	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToGetPlacementService))
+		rw.WriteError(err)
 		return
 	}
-
-	p, _, err := placementSvc.AddInstances(instances)
-	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToAddInstance))
-		return
-	}
-	respondWithPlacement(p, rw)
+	respondWithPlacement(plm, rw)
 }
 
 // Replace replace existing instances within placement with new instances
 func (h *PlacementHandler) Replace(rw *utils.ResponseWriter, r *http.Request) {
-	if h.client == nil {
-		rw.WriteError(ErrEtcdNotAvailable)
-		return
-	}
 	var req ReplaceInstanceRequest
 	err := apiCom.ReadRequest(r, &req, rw.SetRequest)
 	if err != nil {
@@ -223,28 +139,16 @@ func (h *PlacementHandler) Replace(rw *utils.ResponseWriter, r *http.Request) {
 	}
 
 	// validate all shards are available before replace instance
-	placementSvc, err := h.client.Services.PlacementService(h.getServiceID(req.Namespace),
-		h.placementOptions().SetValidateFnBeforeUpdate(validateAllAvailable))
+	plm, err := h.placementMutator.ReplaceInstance(req.Namespace, req.Body.LeavingInstances, newInstances)
 	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToGetPlacementService))
+		rw.WriteError(err)
 		return
 	}
-
-	p, _, err := placementSvc.ReplaceInstances(req.Body.LeavingInstances, newInstances)
-	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToReplaceInstance))
-		return
-	}
-
-	respondWithPlacement(p, rw)
+	respondWithPlacement(plm, rw)
 }
 
 // Remove remove instance from placement
 func (h *PlacementHandler) Remove(rw *utils.ResponseWriter, r *http.Request) {
-	if h.client == nil {
-		rw.WriteError(ErrEtcdNotAvailable)
-		return
-	}
 	var req RemoveInstanceRequest
 	err := apiCom.ReadRequest(r, &req, rw.SetRequest)
 	if err != nil {
@@ -258,19 +162,12 @@ func (h *PlacementHandler) Remove(rw *utils.ResponseWriter, r *http.Request) {
 	}
 
 	// validate all shards are available before replace instance
-	placementSvc, err := h.client.Services.PlacementService(h.getServiceID(req.Namespace),
-		h.placementOptions().SetValidateFnBeforeUpdate(validateAllAvailable))
+	plm, err := h.placementMutator.RemoveInstance(req.Namespace, req.Body.LeavingInstances)
 	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToGetPlacementService))
+		rw.WriteError(err)
 		return
 	}
-
-	p, err := placementSvc.RemoveInstances(req.Body.LeavingInstances)
-	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToRemoveInstance))
-		return
-	}
-	respondWithPlacement(p, rw)
+	respondWithPlacement(plm, rw)
 }
 
 // MarkNamespaceAvailable marks all instance/shards in placement as available
@@ -282,19 +179,12 @@ func (h *PlacementHandler) MarkNamespaceAvailable(rw *utils.ResponseWriter, r *h
 		return
 	}
 
-	placementSvc, err := h.client.Services.PlacementService(h.getServiceID(req.Namespace), h.placementOptions())
+	plm, err := h.placementMutator.MarkNamespaceAvailable(req.Namespace)
 	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToGetPlacementService))
+		rw.WriteError(err)
 		return
 	}
-
-	p, err := placementSvc.MarkAllShardsAvailable()
-	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToMarkAvailable))
-		return
-	}
-
-	respondWithPlacement(p, rw)
+	respondWithPlacement(plm, rw)
 }
 
 // MarkInstanceAvailable marks one instance as available
@@ -306,21 +196,14 @@ func (h *PlacementHandler) MarkInstanceAvailable(rw *utils.ResponseWriter, r *ht
 		return
 	}
 
-	placementSvc, err := h.client.Services.PlacementService(h.getServiceID(req.Namespace), h.placementOptions())
-	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToGetPlacementService))
-		return
-	}
-
 	var p placement.Placement
 	if req.Body.AllShards {
-		p, err = placementSvc.MarkInstanceAvailable(req.Instance)
+		p, err = h.placementMutator.MarkInstanceAvailable(req.Namespace, req.Instance)
 	} else {
-		p, err = placementSvc.MarkShardsAvailable(req.Instance, req.Body.Shards...)
+		p, err = h.placementMutator.MarkShardsAvailable(req.Namespace, req.Instance, req.Body.Shards)
 	}
-
 	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToMarkAvailable))
+		rw.WriteError(err)
 		return
 	}
 	respondWithPlacement(p, rw)
@@ -329,7 +212,7 @@ func (h *PlacementHandler) MarkInstanceAvailable(rw *utils.ResponseWriter, r *ht
 func respondWithPlacement(p placement.Placement, rw *utils.ResponseWriter) {
 	pb, err := p.Proto()
 	if err != nil {
-		rw.WriteError(utils.StackError(err, ErrMsgFailedToMarshalPlacement))
+		rw.WriteError(utils.StackError(err, "failed to marshal placement"))
 		return
 	}
 	rw.WriteObject(pb)

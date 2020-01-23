@@ -38,33 +38,11 @@ var (
 	ErrMsgDeletedColumn = "Bad request: column is already deleted"
 	// ErrMsgNotImplemented represents error message for method not implemented.
 	ErrMsgNotImplemented = "Not implemented"
-	// ErrMsgFailedToBuildInitialPlacement represents error message for initial placement failure
-	ErrMsgFailedToBuildInitialPlacement = "failed build initial placement"
-	// ErrMsgFailedToGetPlacementService represents error message for failure in getting placement service
-	ErrMsgFailedToGetPlacementService = "failed to get placement service"
-	// ErrMsgFailedToGetCurrentPlacement represents error message for failure in getting current placement
-	ErrMsgFailedToGetCurrentPlacement = "failed to get current placement"
-	// ErrMsgFailedToAddInstance represents error message for failure in adding instance
-	ErrMsgFailedToAddInstance = "failed to add instance to placement"
-	// ErrMsgFailedToReplaceInstance represents error message for failure in replacing instance
-	ErrMsgFailedToReplaceInstance = "failed to replace instance to placement"
-	// ErrMsgFailedToMarkAvailable represents error message for failure in marking instance or shard available
-	ErrMsgFailedToMarkAvailable = "failed to mark instance/shards available"
-	// ErrMsgFailedToMarshalPlacement represents error message for failure to marshal placement
-	ErrMsgFailedToMarshalPlacement = "failed to marshal placement"
-	// ErrMsgFailedToRemoveInstance represents error message for failure to remove instance from a placement
-	ErrMsgFailedToRemoveInstance = "failed to remove instance from placement"
 
 	// ErrRemoveOneInstance represents error message for not removing one instance at a time
 	ErrRemoveOneInstance = utils.APIError{
 		Code:    http.StatusBadRequest,
 		Message: "expected to remove one instance at a time",
-	}
-
-	// ErrInvalidNumShards represents invalid number of shards
-	ErrInvalidNumShards = utils.APIError{
-		Code:    http.StatusBadRequest,
-		Message: "invalid number of shards, should be exponential of 2",
 	}
 
 	// ErrMissingParameter represents error for missing parameter

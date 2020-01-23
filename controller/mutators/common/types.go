@@ -14,6 +14,7 @@
 package common
 
 import (
+	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/uber/aresdb/controller/models"
 	"github.com/uber/aresdb/metastore/common"
 )
@@ -90,4 +91,16 @@ type MembershipMutator interface {
 	Leave(namespace, instanceName string) error
 	// GetHash returns hash of all instances
 	GetHash(namespace string) (string, error)
+}
+
+// PlacementServiceBuilder defines mutator interface for placement objects
+type PlacementMutator interface {
+	BuildInitialPlacement(namespace string, numShards int, numReplica int, instances []placement.Instance) (placement.Placement, error)
+	GetCurrentPlacement(namespace string) (placement.Placement, error)
+	AddInstance(namespace string, instances []placement.Instance) (placement.Placement, error)
+	ReplaceInstance(namespace string, leavingInstances []string, newInstances []placement.Instance) (placement.Placement, error)
+	RemoveInstance(namespace string, leavingInstances []string) (placement.Placement, error)
+	MarkNamespaceAvailable(namespace string) (placement.Placement, error)
+	MarkInstanceAvailable(namespace string, instance string) (placement.Placement, error)
+	MarkShardsAvailable(namespace string, instance string, shards []uint32) (placement.Placement, error)
 }
