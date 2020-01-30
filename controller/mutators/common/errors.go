@@ -52,6 +52,8 @@ var (
 	ErrInstanceDoesNotExist = NotExist("Instance does not exist")
 	// ErrSubscriberDoesNotExist indicates an subscriber does not exist
 	ErrSubscriberDoesNotExist = NotExist("Subscriber does not exist")
+	// ErrPlacementDoesNotExist indicates that placement does not exist
+	ErrPlacementDoesNotExist = NotExist("placement does not exist")
 
 	// ErrMsgFailedToBuildInitialPlacement represents error message for initial placement failure
 	ErrMsgFailedToBuildInitialPlacement = "failed build initial placement"
@@ -59,8 +61,6 @@ var (
 	ErrMsgFailedToGetPlacementService = "failed to get placement service"
 	// ErrMsgFailedToGetCurrentPlacement represents error message for failure in getting current placement
 	ErrMsgFailedToGetCurrentPlacement = "failed to get current placement"
-	// ErrMsgPlacementNotExist represents error message for placement does not exist
-	ErrMsgPlacementNotExist = "placement does not exist"
 	// ErrMsgFailedToAddInstance represents error message for failure in adding instance
 	ErrMsgFailedToAddInstance = "failed to add instance to placement"
 	// ErrMsgFailedToReplaceInstance represents error message for failure in replacing instance
@@ -77,7 +77,6 @@ var (
 		Code:    http.StatusBadRequest,
 		Message: "invalid number of shards, should be exponential of 2",
 	}
-
 )
 
 // IsNonExist check whether error is non exist error

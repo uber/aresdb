@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"fmt"
+	"github.com/m3db/m3/src/cluster/kv"
 	"github.com/m3db/m3/src/cluster/placement"
 	"github.com/m3db/m3/src/cluster/services"
 	"github.com/m3db/m3/src/x/instrument"
@@ -77,8 +78,8 @@ func (p *placementMutator) GetCurrentPlacement(namespace string) (placement.Plac
 	}
 	plm, err := placementSvc.Placement()
 	if err != nil {
-		if common.IsNonExist(err) {
-			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		if err == kv.ErrNotFound {
+			return nil, common.ErrPlacementDoesNotExist
 		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToGetCurrentPlacement)
 	}
@@ -94,8 +95,8 @@ func (p *placementMutator) AddInstance(namespace string, instances []placement.I
 	}
 	plm, _, err := placementSvc.AddInstances(instances)
 	if err != nil {
-		if common.IsNonExist(err) {
-			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		if err == kv.ErrNotFound {
+			return nil, common.ErrPlacementDoesNotExist
 		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToAddInstance)
 	}
@@ -111,8 +112,8 @@ func (p *placementMutator) ReplaceInstance(namespace string, leavingInstances []
 	}
 	plm, _, err := placementSvc.ReplaceInstances(leavingInstances, newInstances)
 	if err != nil {
-		if common.IsNonExist(err) {
-			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		if err == kv.ErrNotFound {
+			return nil, common.ErrPlacementDoesNotExist
 		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToReplaceInstance)
 	}
@@ -128,8 +129,8 @@ func (p *placementMutator) RemoveInstance(namespace string, leavingInstances []s
 	}
 	plm, err := placementSvc.RemoveInstances(leavingInstances)
 	if err != nil {
-		if common.IsNonExist(err) {
-			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		if err == kv.ErrNotFound {
+			return nil, common.ErrPlacementDoesNotExist
 		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToRemoveInstance)
 	}
@@ -144,8 +145,8 @@ func (p *placementMutator) MarkNamespaceAvailable(namespace string) (placement.P
 	}
 	plm, err := placementSvc.MarkAllShardsAvailable()
 	if err != nil {
-		if common.IsNonExist(err) {
-			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		if err == kv.ErrNotFound {
+			return nil, common.ErrPlacementDoesNotExist
 		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToMarkAvailable)
 	}
@@ -160,8 +161,8 @@ func (p *placementMutator) MarkInstanceAvailable(namespace string, instance stri
 	}
 	plm, err := placementSvc.MarkInstanceAvailable(instance)
 	if err != nil {
-		if common.IsNonExist(err) {
-			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		if err == kv.ErrNotFound {
+			return nil, common.ErrPlacementDoesNotExist
 		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToMarkAvailable)
 	}
@@ -176,8 +177,8 @@ func (p *placementMutator) MarkShardsAvailable(namespace string, instance string
 	}
 	plm, err := placementSvc.MarkShardsAvailable(instance, shards...)
 	if err != nil {
-		if common.IsNonExist(err) {
-			return nil, utils.APIError{Code: http.StatusNotFound, Message: common.ErrMsgPlacementNotExist}
+		if err == kv.ErrNotFound {
+			return nil, common.ErrPlacementDoesNotExist
 		}
 		return nil, utils.StackError(err, common.ErrMsgFailedToMarkAvailable)
 	}
