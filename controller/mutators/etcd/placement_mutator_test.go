@@ -9,6 +9,7 @@ import (
 	"github.com/m3db/m3/src/cluster/shard"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/aresdb/cluster/kvstore"
+	"github.com/uber/aresdb/controller/mutators/common"
 	"testing"
 )
 
@@ -101,8 +102,28 @@ func TestPlacementMutator(t *testing.T) {
 		initInstances[0], _ = placement.NewInstanceFromProto(&instancepb0)
 		initInstances[1], _ = placement.NewInstanceFromProto(&instancepb1)
 
+		// 0. all procedure should fail with non exist placement before initialization
+		plmt, err := placementMutator.GetCurrentPlacement(testNamespace)
+		assert.EqualError(t, err, common.ErrPlacementDoesNotExist.Error())
+		assert.Nil(t, plmt)
+		plmt, err = placementMutator.MarkNamespaceAvailable(testNamespace)
+		assert.Nil(t, plmt)
+		assert.EqualError(t, err, common.ErrPlacementDoesNotExist.Error())
+		plmt, err = placementMutator.ReplaceInstance(testNamespace, []string{}, []placement.Instance{})
+		assert.Nil(t, plmt)
+		assert.EqualError(t, err, common.ErrPlacementDoesNotExist.Error())
+		plmt, err = placementMutator.MarkInstanceAvailable(testNamespace, "0")
+		assert.Nil(t, plmt)
+		assert.EqualError(t, err, common.ErrPlacementDoesNotExist.Error())
+		plmt, err = placementMutator.AddInstance(testNamespace, []placement.Instance{})
+		assert.Nil(t, plmt)
+		assert.EqualError(t, err, common.ErrPlacementDoesNotExist.Error())
+		plmt, err = placementMutator.RemoveInstance(testNamespace, []string{"0"})
+		assert.Nil(t, plmt)
+		assert.EqualError(t, err, common.ErrPlacementDoesNotExist.Error())
+
 		// 1. initialize placement
-		plmt, err := placementMutator.BuildInitialPlacement(testNamespace, 2, 2, initInstances)
+		plmt, err = placementMutator.BuildInitialPlacement(testNamespace, 2, 2, initInstances)
 		assert.NoError(t, err)
 		initPlacement, _ := plmt.Proto()
 
