@@ -64,6 +64,8 @@ const (
 	IngestedRecoveryBatches
 	IngestedUpsertBatches
 	IngestionLagPerColumn
+	IngestionWritelockAquireTime
+	IngestionPrimaryKeyLookupTime
 	JobFailuresCount
 	ManagedMemorySize
 	MemoryOverflow
@@ -83,6 +85,7 @@ const (
 	QueryLiveBatchProcessed
 	QueryLiveBytesTransferred
 	QueryLiveRecordsProcessed
+	QueryReadLockAcquireTime
 	QueryReceived
 	QueryRowsReturned
 	QuerySQLParsingLatency
@@ -245,6 +248,9 @@ const (
 	scopeNameSchemaDeletionCount             = "schema_deletions"
 	scopeNameSchemaCreationCount             = "schema_creations"
 	scopeNameJobFailuresCount                = "job_failures_count"
+	scopeNameWriteLockAcquireTime   		 = "writelock_acquire_time"
+	scopeNameReadLockAcquireTime   		 	 = "readlock_acquire_time"
+	scopeNamePrimaryKeyLookupTime			 = "pk_lookup_time"
 
 	// broker metrics
 	scopeNameAQLQueryReceivedBroker    = "aql_query_received_broker"
@@ -638,6 +644,22 @@ var metricDefs = map[MetricName]metricDefinition{
 			metricsTagComponent: metricsComponentMemStore,
 		},
 	},
+	IngestionWritelockAquireTime: {
+		name: scopeNameWriteLockAcquireTime,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationIngestion,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	IngestionPrimaryKeyLookupTime: {
+		name: scopeNamePrimaryKeyLookupTime,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationIngestion,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
 	CurrentRedologCreationTime: {
 		name:       scopeNameCurrentRedologCreationTime,
 		metricType: Gauge,
@@ -710,6 +732,13 @@ var metricDefs = map[MetricName]metricDefinition{
 	},
 	QueryWaitForMemoryDuration: {
 		name:       scopeNameQueryWaitForMemoryDuration,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
+	QueryReadLockAcquireTime: {
+		name: scopeNameReadLockAcquireTime,
 		metricType: Timer,
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentQuery,

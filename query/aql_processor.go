@@ -185,7 +185,9 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 			if qc.OOPK.done {
 				break
 			}
+			start := utils.Now()
 			batch := shard.LiveStore.GetBatchForRead(batchID)
+			utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetTimer(utils.QueryReadLockAcquireTime).Record(utils.Now().Sub(start))
 			if batch == nil {
 				continue
 			}
