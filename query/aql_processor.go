@@ -207,7 +207,10 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 				size = numRecordsInLastBatch
 			}
 			liveRecordsProcessed += size
-			previousBatchExecutor = qc.processBatch(&batch.Batch,
+			previousBatchExecutor = qc.processBatch(
+				shard.Schema.Schema.Name,
+				shard.ShardID,
+				&batch.Batch,
 				batchID,
 				size,
 				qc.transferLiveBatch(batch, size),
@@ -231,6 +234,8 @@ func (qc *AQLQueryContext) processShard(memStore memstore.MemStore, shardID int,
 			}
 			isFirstOrLast := batchID == scanner.ArchiveBatchIDStart || batchID == scanner.ArchiveBatchIDEnd-1
 			previousBatchExecutor = qc.processBatch(
+				shard.Schema.Schema.Name,
+				shard.ShardID,
 				&archiveBatch.Batch,
 				int32(batchID),
 				archiveBatch.Size,
@@ -822,7 +827,7 @@ func (qc *AQLQueryContext) doProfile(action func(), profileName string, stream u
 // finish, it prepares for the current batch execution and returns it as
 // a function closure to be invoked later. customFilterExecutor is the executor
 // to apply custom filters for live batch and archive batch.
-func (qc *AQLQueryContext) processBatch(
+func (qc *AQLQueryContext) processBatch(table string, shardID int,
 	batch *memCom.Batch, batchID int32, batchSize int, transferFunc batchTransferExecutor,
 	customFilterFunc customFilterExecutor, previousBatchExecutor BatchExecutor, needToUnlockBatch bool) BatchExecutor {
 	defer func() {
@@ -842,14 +847,12 @@ func (qc *AQLQueryContext) processBatch(
 		batchID: batchID,
 		timings: make(map[stageName]float64),
 	}
-	start := utils.Now()
-
 	// Async transfer.
+	start := utils.Now()
 	stream := qc.cudaStreams[0]
 	deviceSlices, hostVPs, firstColumn, startRow, totalBytes, numTransfers, sizeAfterPreFilter := transferFunc(stream)
 	qc.OOPK.currentBatch.stats.bytesTransferred += totalBytes
 	qc.OOPK.currentBatch.stats.numTransferCalls += numTransfers
-
 	qc.reportTimingForCurrentBatch(stream, &start, transferTiming)
 
 	// Async execute the previous batch.
@@ -876,6 +879,7 @@ func (qc *AQLQueryContext) processBatch(
 
 	// Wait for data transfer of the current batch.
 	cgoutils.WaitForCudaStream(stream, qc.Device)
+	utils.GetReporter(table, shardID).GetTimer(utils.QueryBatchTransferTime).Record(utils.Now().Sub(start))
 
 	for _, vp := range hostVPs {
 		if vp != nil {

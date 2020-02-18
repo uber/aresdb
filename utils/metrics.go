@@ -79,6 +79,7 @@ const (
 	QueryArchiveBatchProcessed
 	QueryArchiveBytesTransferred
 	QueryArchiveRecordsProcessed
+	QueryBatchTransferTime
 	QueryDimReadLatency
 	QueryFailed
 	QueryLatency
@@ -223,6 +224,7 @@ const (
 	scopeNameQueryWaitForMemoryDuration      = "query_wait_for_memory_duration"
 	scopeNameQueryReceived                   = "query_received"
 	scopeNameQueryRecordsProcessed           = "records_processed"
+	scopeNameBatchTransferTime				 = "batch_transfer_time"
 	scopeNameQueryBatchProcessed             = "batch_processed"
 	scopeNameQueryBytesTransferred           = "bytes_transferred"
 	scopeNameQueryRowsReturned               = "rows_returned"
@@ -765,6 +767,13 @@ var metricDefs = map[MetricName]metricDefinition{
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentQuery,
 			metricsTagStore:     metricsStoreArchive,
+		},
+	},
+	QueryBatchTransferTime: {
+		name:       scopeNameBatchTransferTime,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
 		},
 	},
 	QueryLiveBatchProcessed: {
