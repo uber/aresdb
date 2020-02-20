@@ -35,7 +35,7 @@ import (
 
 const (
 	// default request time out in seconds
-	defaultRequestTimeout = 5
+	defaultRequestTimeout = 120
 	// default schema refresh interval in seconds
 	defaultSchemaRefreshInterval = 600
 	dataIngestionHeader          = "application/upsert-data"
