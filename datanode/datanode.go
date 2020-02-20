@@ -276,6 +276,7 @@ func (d *dataNode) startDebugServer() {
 	debugRouter.PathPrefix("/debug/pprof/").Handler(http.HandlerFunc(pprof.Index))
 
 	d.handlers.debugHandler.Register(debugRouter.PathPrefix("/dbg").Subrouter())
+	debugRouter.HandleFunc("/health", utils.ApplyHTTPWrappers(d.handlers.healthCheckHandler.HealthCheck))
 	d.handlers.schemaHandler.RegisterForDebug(debugRouter.PathPrefix("/schema").Subrouter())
 
 	d.opts.InstrumentOptions().Logger().Infof("Starting HTTP server on dbg-port %d", d.opts.ServerConfig().DebugPort)
