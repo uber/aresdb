@@ -113,8 +113,10 @@ func (shard *TableShard) ApplyUpsertBatch(upsertBatch *common.UpsertBatch, redoL
 		return false, utils.StackError(nil, "Fact table's event time column (first column) is missing")
 	}
 
+	start := utils.Now()
 	updateRecords, insertRecords, backfillUpsertBatch, err := shard.insertPrimaryKeys(primaryKeyColumns, eventTimeColumnIndex,
 		redoLogFile, upsertBatch, skipBackfillRows)
+	utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetTimer(utils.IngestionPrimaryKeyLookupTime).Record(utils.Now().Sub(start))
 
 	if err != nil {
 		return false, err
@@ -364,11 +366,15 @@ func (shard *TableShard) writeBatchRecords(columnDeletions []bool,
 	var batch *LiveBatch
 	if forUpdate {
 		// We need to lock the batch for update to achieve row level consistency.
+		start := utils.Now()
 		batch = shard.LiveStore.GetBatchForWrite(batchID)
+		utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetTimer(utils.IngestionWritelockAquireTime).Record(utils.Now().Sub(start))
 		defer batch.Unlock()
 	} else {
 		// Make sure all columns are created.
+		start := utils.Now()
 		batch = shard.LiveStore.GetBatchForWrite(batchID)
+		utils.GetReporter(shard.Schema.Schema.Name, shard.ShardID).GetTimer(utils.IngestionWritelockAquireTime).Record(utils.Now().Sub(start))
 		for i := 0; i < upsertBatch.NumColumns; i++ {
 			columnID, _ := upsertBatch.GetColumnID(i)
 			if columnDeletions[columnID] {

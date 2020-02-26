@@ -64,6 +64,8 @@ const (
 	IngestedRecoveryBatches
 	IngestedUpsertBatches
 	IngestionLagPerColumn
+	IngestionWritelockAquireTime
+	IngestionPrimaryKeyLookupTime
 	JobFailuresCount
 	ManagedMemorySize
 	MemoryOverflow
@@ -77,12 +79,14 @@ const (
 	QueryArchiveBatchProcessed
 	QueryArchiveBytesTransferred
 	QueryArchiveRecordsProcessed
+	QueryBatchTransferTime
 	QueryDimReadLatency
 	QueryFailed
 	QueryLatency
 	QueryLiveBatchProcessed
 	QueryLiveBytesTransferred
 	QueryLiveRecordsProcessed
+	QueryReadLockAcquireTime
 	QueryReceived
 	QueryRowsReturned
 	QuerySQLParsingLatency
@@ -220,6 +224,7 @@ const (
 	scopeNameQueryWaitForMemoryDuration      = "query_wait_for_memory_duration"
 	scopeNameQueryReceived                   = "query_received"
 	scopeNameQueryRecordsProcessed           = "records_processed"
+	scopeNameBatchTransferTime				 = "batch_transfer_time"
 	scopeNameQueryBatchProcessed             = "batch_processed"
 	scopeNameQueryBytesTransferred           = "bytes_transferred"
 	scopeNameQueryRowsReturned               = "rows_returned"
@@ -245,6 +250,9 @@ const (
 	scopeNameSchemaDeletionCount             = "schema_deletions"
 	scopeNameSchemaCreationCount             = "schema_creations"
 	scopeNameJobFailuresCount                = "job_failures_count"
+	scopeNameWriteLockAcquireTime   		 = "writelock_acquire_time"
+	scopeNameReadLockAcquireTime   		 	 = "readlock_acquire_time"
+	scopeNamePrimaryKeyLookupTime			 = "pk_lookup_time"
 
 	// broker metrics
 	scopeNameAQLQueryReceivedBroker    = "aql_query_received_broker"
@@ -638,6 +646,22 @@ var metricDefs = map[MetricName]metricDefinition{
 			metricsTagComponent: metricsComponentMemStore,
 		},
 	},
+	IngestionWritelockAquireTime: {
+		name: scopeNameWriteLockAcquireTime,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationIngestion,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
+	IngestionPrimaryKeyLookupTime: {
+		name: scopeNamePrimaryKeyLookupTime,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagOperation: metricsOperationIngestion,
+			metricsTagComponent: metricsComponentMemStore,
+		},
+	},
 	CurrentRedologCreationTime: {
 		name:       scopeNameCurrentRedologCreationTime,
 		metricType: Gauge,
@@ -715,6 +739,13 @@ var metricDefs = map[MetricName]metricDefinition{
 			metricsTagComponent: metricsComponentQuery,
 		},
 	},
+	QueryReadLockAcquireTime: {
+		name: scopeNameReadLockAcquireTime,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
+		},
+	},
 	QueryReceived: {
 		name:       scopeNameQueryReceived,
 		metricType: Counter,
@@ -736,6 +767,13 @@ var metricDefs = map[MetricName]metricDefinition{
 		tags: map[string]string{
 			metricsTagComponent: metricsComponentQuery,
 			metricsTagStore:     metricsStoreArchive,
+		},
+	},
+	QueryBatchTransferTime: {
+		name:       scopeNameBatchTransferTime,
+		metricType: Timer,
+		tags: map[string]string{
+			metricsTagComponent: metricsComponentQuery,
 		},
 	},
 	QueryLiveBatchProcessed: {
