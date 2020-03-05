@@ -721,7 +721,7 @@ func newDatanodeMetrics(scope tally.Scope) datanodeMetrics {
 func (d *dataNode) newHandlers() datanodeHandlers {
 	healthCheckHandler := api.NewHealthCheckHandler()
 	return datanodeHandlers{
-		schemaHandler:      api.NewSchemaHandler(d.metaStore),
+		schemaHandler:      api.NewSchemaHandler(d.metaStore, d.memStore),
 		enumHandler:        api.NewEnumHandler(d.memStore, d.metaStore),
 		queryHandler:       api.NewQueryHandler(d.memStore, d, d.opts.ServerConfig().Query, d.opts.ServerConfig().HTTP.MaxQueryConnections),
 		dataHandler:        api.NewDataHandler(d.memStore, d.opts.ServerConfig().HTTP.MaxIngestionConnections),

@@ -16,6 +16,7 @@ package api
 
 import (
 	"encoding/json"
+	memCom "github.com/uber/aresdb/memstore/common"
 	"github.com/uber/aresdb/metastore"
 	"net/http"
 
@@ -30,12 +31,14 @@ import (
 type SchemaHandler struct {
 	// all write requests will go to metaStore.
 	metaStore metaCom.MetaStore
+	schemaReader memCom.TableSchemaReader
 }
 
 // NewSchemaHandler will create a new SchemaHandler with memStore and metaStore.
-func NewSchemaHandler(metaStore metaCom.MetaStore) *SchemaHandler {
+func NewSchemaHandler(metaStore metaCom.MetaStore, schemaReader memCom.TableSchemaReader) *SchemaHandler {
 	return &SchemaHandler{
 		metaStore: metaStore,
+		schemaReader: schemaReader,
 	}
 }
 
@@ -72,12 +75,8 @@ func (handler *SchemaHandler) ListTables(w *utils.ResponseWriter, r *http.Reques
 
 	response := apiCom.NewStringArrayResponse()
 
-	tables, err := handler.metaStore.ListTables()
-	if err != nil {
-		w.WriteError(err)
-		return
-	}
-	for _, tableName := range tables {
+	allTables := handler.schemaReader.GetSchemas()
+	for tableName := range allTables {
 		response.Body = append(response.Body, tableName)
 	}
 
@@ -106,14 +105,12 @@ func (handler *SchemaHandler) GetTable(w *utils.ResponseWriter, r *http.Request)
 		return
 	}
 
-	table, err := handler.metaStore.GetTable(getTableRequest.TableName)
+	schema, err := handler.schemaReader.GetSchema(getTableRequest.TableName)
 	if err != nil {
-		if err.Error() == metaCom.ErrTableDoesNotExist.Error() {
-			w.WriteErrorWithCode(http.StatusNotFound, err)
-			return
-		}
+		w.WriteErrorWithCode(http.StatusNotFound, ErrTableDoesNotExist)
+		return
 	}
-	getTableResponse.JSONBuffer, err = json.Marshal(table)
+	getTableResponse.JSONBuffer, err = json.Marshal(schema.Schema)
 	w.WriteJSONBytes(getTableResponse.JSONBuffer, err)
 }
 
