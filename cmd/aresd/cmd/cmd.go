@@ -203,7 +203,7 @@ func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, que
 	}
 
 	// create schema handler
-	schemaHandler := api.NewSchemaHandler(metaStore)
+	schemaHandler := api.NewSchemaHandler(metaStore, memStore)
 
 	// create enum handler
 	enumHandler := api.NewEnumHandler(memStore, metaStore)
