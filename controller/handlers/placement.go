@@ -93,6 +93,10 @@ func (h *PlacementHandler) Get(rw *utils.ResponseWriter, r *http.Request) {
 	}
 	plm, err := h.placementMutator.GetCurrentPlacement(req.Namespace)
 	if err != nil {
+		if mutatorCom.IsNonExist(err) {
+			rw.WriteErrorWithCode(http.StatusNotFound, err)
+			return
+		}
 		rw.WriteError(err)
 		return
 	}
@@ -117,6 +121,10 @@ func (h *PlacementHandler) Add(rw *utils.ResponseWriter, r *http.Request) {
 	// validate all shards available in placement before adding instance
 	plm, err := h.placementMutator.AddInstance(req.Namespace, instances)
 	if err != nil {
+		if mutatorCom.IsNonExist(err) {
+			rw.WriteErrorWithCode(http.StatusNotFound, err)
+			return
+		}
 		rw.WriteError(err)
 		return
 	}
@@ -141,6 +149,10 @@ func (h *PlacementHandler) Replace(rw *utils.ResponseWriter, r *http.Request) {
 	// validate all shards are available before replace instance
 	plm, err := h.placementMutator.ReplaceInstance(req.Namespace, req.Body.LeavingInstances, newInstances)
 	if err != nil {
+		if mutatorCom.IsNonExist(err) {
+			rw.WriteErrorWithCode(http.StatusNotFound, err)
+			return
+		}
 		rw.WriteError(err)
 		return
 	}
@@ -164,6 +176,10 @@ func (h *PlacementHandler) Remove(rw *utils.ResponseWriter, r *http.Request) {
 	// validate all shards are available before replace instance
 	plm, err := h.placementMutator.RemoveInstance(req.Namespace, req.Body.LeavingInstances)
 	if err != nil {
+		if mutatorCom.IsNonExist(err) {
+			rw.WriteErrorWithCode(http.StatusNotFound, err)
+			return
+		}
 		rw.WriteError(err)
 		return
 	}
@@ -181,6 +197,10 @@ func (h *PlacementHandler) MarkNamespaceAvailable(rw *utils.ResponseWriter, r *h
 
 	plm, err := h.placementMutator.MarkNamespaceAvailable(req.Namespace)
 	if err != nil {
+		if mutatorCom.IsNonExist(err) {
+			rw.WriteErrorWithCode(http.StatusNotFound, err)
+			return
+		}
 		rw.WriteError(err)
 		return
 	}
@@ -203,6 +223,10 @@ func (h *PlacementHandler) MarkInstanceAvailable(rw *utils.ResponseWriter, r *ht
 		p, err = h.placementMutator.MarkShardsAvailable(req.Namespace, req.Instance, req.Body.Shards)
 	}
 	if err != nil {
+		if mutatorCom.IsNonExist(err) {
+			rw.WriteErrorWithCode(http.StatusNotFound, err)
+			return
+		}
 		rw.WriteError(err)
 		return
 	}

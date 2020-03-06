@@ -52,6 +52,8 @@ var (
 	ErrInstanceDoesNotExist = NotExist("Instance does not exist")
 	// ErrSubscriberDoesNotExist indicates an subscriber does not exist
 	ErrSubscriberDoesNotExist = NotExist("Subscriber does not exist")
+	// ErrPlacementDoesNotExist indicates that placement does not exist
+	ErrPlacementDoesNotExist = NotExist("placement does not exist")
 
 	// ErrMsgFailedToBuildInitialPlacement represents error message for initial placement failure
 	ErrMsgFailedToBuildInitialPlacement = "failed build initial placement"

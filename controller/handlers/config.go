@@ -114,12 +114,15 @@ func (h ConfigHandler) GetJob(w *utils.ResponseWriter, r *http.Request) {
 
 	table, err := h.schemaMutator.GetTable(req.Namespace, job.AresTableConfig.Name)
 	if err != nil {
-		w.WriteErrorWithCode(
-			http.StatusInternalServerError,
-			ErrFailedToFetchTableSchemaForJobConfig)
-		return
+		if !mutatorCom.IsNonExist(err) {
+			w.WriteErrorWithCode(
+				http.StatusInternalServerError,
+				ErrFailedToFetchTableSchemaForJobConfig)
+			return
+		}
+	} else {
+		job.AresTableConfig.Table = table
 	}
-	job.AresTableConfig.Table = table
 
 	numShards, err := h.getNumShards(req.Namespace)
 	if err != nil {
@@ -158,24 +161,20 @@ func (h ConfigHandler) GetJobs(w *utils.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	numValidJobs := 0
-	for _, job := range jobs {
+	for idx, job := range jobs {
+		jobs[idx].NumShards = numShards
 		table, err := h.schemaMutator.GetTable(req.Namespace, job.AresTableConfig.Name)
 		if err != nil {
-			// ignore job with table not found
-			if mutatorCom.IsNonExist(err) {
-				continue
+			// only return system error when error is not NonExist
+			if !mutatorCom.IsNonExist(err) {
+				w.WriteErrorWithCode(http.StatusInternalServerError, ErrFailedToFetchTableSchemaForJobConfig)
+				return
 			}
-			err = ErrFailedToFetchTableSchemaForJobConfig
-			w.WriteErrorWithCode(http.StatusInternalServerError, err)
-			return
+		} else {
+			jobs[idx].AresTableConfig.Table = table
 		}
-		jobs[numValidJobs] = job
-		jobs[numValidJobs].AresTableConfig.Table = table
-		jobs[numValidJobs].NumShards = numShards
-		numValidJobs++
 	}
-	w.WriteObject(jobs[:numValidJobs])
+	w.WriteObject(jobs)
 }
 
 // DeleteJob swagger:route DELETE /config/{namespace}/jobs/{job} deleteJob
