@@ -2,7 +2,7 @@ language: go
 dist: xenial
 sudo: required
 go:
-  - "1.12.17"
+  - "1.13.9"
 
 env:
   global:
