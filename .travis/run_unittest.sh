@@ -26,10 +26,10 @@ else
 fi
 
 # run test-cuda in host mode
-make test-cuda -j
+make test-cuda -j 2
 
 # build binary
-make aresd -j
+make aresd -j 2
 
 # run test
 function run_skipped_package(){
