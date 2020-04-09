@@ -51,7 +51,8 @@ type Options struct {
 	ServerLogger common.Logger
 	QueryLogger  common.Logger
 	Metrics      common.Metrics
-	HTTPWrappers []utils.HTTPHandlerWrapper
+	HTTPWrapper  utils.HTTPHandlerWrapper
+	Middleware   func(http.Handler) http.Handler
 }
 
 // Option is for setting option
@@ -79,7 +80,7 @@ func NewAresD(cfg common.AresServerConfig, options *Options) *AresD {
 
 // Start start aresd server
 func (aresd *AresD) Start() {
-	aresd.start(aresd.cfg, aresd.options.ServerLogger, aresd.options.QueryLogger, aresd.options.Metrics, aresd.options.HTTPWrappers...)
+	aresd.start(aresd.cfg, aresd.options.ServerLogger, aresd.options.QueryLogger, aresd.options.Metrics, aresd.options.HTTPWrapper, aresd.options.Middleware)
 }
 
 // Shutdown stop aresd server
@@ -125,7 +126,14 @@ func Execute(setters ...Option) {
 }
 
 // start is the entry point of starting ares.
-func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, queryLogger common.Logger, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
+func (aresd *AresD) start(
+	cfg common.AresServerConfig,
+	logger common.Logger,
+	queryLogger common.Logger,
+	metricsCfg common.Metrics,
+	httpWrapper utils.HTTPHandlerWrapper,
+	middleware func(http.Handler) http.Handler,
+) {
 	logger.With("config", cfg).Info("Bootstrapping service")
 
 	// Check whether we have a correct device running environment
@@ -146,7 +154,7 @@ func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, que
 	scope.Counter("restart").Inc(1)
 
 	if cfg.Cluster.Distributed {
-		startDataNode(cfg, logger, scope, httpWrappers...)
+		startDataNode(cfg, logger, scope, httpWrapper, middleware)
 		return
 	}
 
@@ -253,7 +261,12 @@ func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, que
 	router := mux.NewRouter()
 
 	metricsLoggingMiddleWareProvider := utils.NewMetricsLoggingMiddleWareProvider(scope, logger)
-	httpWrappers = append([]utils.HTTPHandlerWrapper{metricsLoggingMiddleWareProvider.WithMetrics}, httpWrappers...)
+
+	httpWrappers := []utils.HTTPHandlerWrapper{metricsLoggingMiddleWareProvider.WithMetrics}
+	if httpWrapper != nil {
+		httpWrappers = append(httpWrappers, httpWrapper)
+	}
+
 	schemaRouter := router.PathPrefix("/schema")
 	if cfg.Cluster.Enable {
 		schemaRouter = schemaRouter.Methods(http.MethodGet)
@@ -280,7 +293,12 @@ func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, que
 	go batchStatsReporter.Run()
 
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
-	doneChan, server := utils.LimitServeAsync(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
+
+	handler := handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router)
+	if middleware != nil {
+		handler = middleware(handler)
+	}
+	doneChan, server := utils.LimitServeAsync(cfg.Port, handler, cfg.HTTP)
 	aresd.server = server
 	// notify other routes that the server is up
 	aresd.StartedChan <- struct{}{}
@@ -291,8 +309,25 @@ func (aresd *AresD) start(cfg common.AresServerConfig, logger common.Logger, que
 }
 
 // start datanode in distributed mode
-func startDataNode(cfg common.AresServerConfig, logger common.Logger, scope tally.Scope, httpWrappers ...utils.HTTPHandlerWrapper) {
-	opts := datanode.NewOptions().SetServerConfig(cfg).SetInstrumentOptions(utils.NewOptions()).SetBootstrapOptions(bootstrap.NewOptions()).SetHTTPWrappers(httpWrappers)
+func startDataNode(
+	cfg common.AresServerConfig,
+	logger common.Logger,
+	scope tally.Scope,
+	httpWrapper utils.HTTPHandlerWrapper,
+	middleware func(http.Handler) http.Handler,
+) {
+	opts := datanode.NewOptions().
+		SetServerConfig(cfg).
+		SetInstrumentOptions(utils.NewOptions()).
+		SetBootstrapOptions(bootstrap.NewOptions())
+
+	if httpWrapper != nil {
+		opts = opts.SetHTTPWrapper(httpWrapper)
+	}
+
+	if middleware != nil {
+		opts = opts.SetMiddleware(middleware)
+	}
 
 	etcdCfg := cfg.Cluster.Etcd.NewOptions().
 		SetService(utils.DataNodeServiceName(cfg.Cluster.Namespace)).

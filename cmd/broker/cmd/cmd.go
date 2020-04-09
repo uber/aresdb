@@ -36,6 +36,7 @@ import (
 	"github.com/uber/aresdb/metastore"
 	"github.com/uber/aresdb/utils"
 	"go.uber.org/zap"
+	"net/http"
 	"time"
 )
 
@@ -68,7 +69,8 @@ func Execute(setters ...cmd.Option) {
 				options.ServerLogger,
 				options.QueryLogger,
 				options.Metrics,
-				options.HTTPWrappers...,
+				options.HTTPWrapper,
+				options.Middleware,
 			)
 		},
 	}
@@ -76,7 +78,14 @@ func Execute(setters ...cmd.Option) {
 	cmd.Execute()
 }
 
-func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Logger, metricsCfg common.Metrics, httpWrappers ...utils.HTTPHandlerWrapper) {
+func start(
+	cfg config.BrokerConfig,
+	logger common.Logger,
+	queryLogger common.Logger,
+	metricsCfg common.Metrics,
+	httpWrapper utils.HTTPHandlerWrapper,
+	middleware func(http.Handler) http.Handler,
+) {
 	logger.With("config", cfg).Info("Starting aresdb broker service")
 
 	scope, closer, err := metricsCfg.NewRootScope()
@@ -158,7 +167,10 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	// start HTTP server
 	router := mux.NewRouter()
 	metricsLoggingMiddlewareProvider := utils.NewMetricsLoggingMiddleWareProvider(scope, logger)
-	httpWrappers = append([]utils.HTTPHandlerWrapper{metricsLoggingMiddlewareProvider.WithMetrics}, httpWrappers...)
+	httpWrappers := []utils.HTTPHandlerWrapper{metricsLoggingMiddlewareProvider.WithMetrics}
+	if httpWrapper != nil {
+		httpWrappers = append(httpWrappers, httpWrapper)
+	}
 	queryHandler.Register(router.PathPrefix("/query").Subrouter(), httpWrappers...)
 
 	// Support CORS calls.
@@ -167,7 +179,11 @@ func start(cfg config.BrokerConfig, logger common.Logger, queryLogger common.Log
 	allowMethods := handlers.AllowedMethods([]string{"GET", "PUT", "POST", "DELETE", "OPTIONS"})
 
 	utils.GetLogger().Infof("Starting HTTP server on port %d with max connection %d", cfg.Port, cfg.HTTP.MaxConnections)
-	utils.LimitServe(cfg.Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router), cfg.HTTP)
+	handler := handlers.CORS(allowOrigins, allowHeaders, allowMethods)(router)
+	if middleware != nil {
+		handler = middleware(handler)
+	}
+	utils.LimitServe(cfg.Port, handler, cfg.HTTP)
 }
 
 // AddFlags adds flags to command

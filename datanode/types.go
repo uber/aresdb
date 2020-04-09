@@ -19,6 +19,7 @@ import (
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/utils"
+	"net/http"
 	"time"
 )
 
@@ -75,9 +76,15 @@ type Options interface {
 	// SetServerConfig returns server config
 	ServerConfig() common.AresServerConfig
 
-	// HTTPWrappers returns http handler wrappers
-	HTTPWrappers() []utils.HTTPHandlerWrapper
+	// HTTPWrapper returns http handler wrappers
+	HTTPWrapper() utils.HTTPHandlerWrapper
 
-	// SetHTTPWrappers returns http handler wrappers
-	SetHTTPWrappers([]utils.HTTPHandlerWrapper) Options
+	// SetHTTPWrapper returns http handler wrappers
+	SetHTTPWrapper(utils.HTTPHandlerWrapper) Options
+
+	// Middleware returns http middleware
+	Middleware() func(http.Handler) http.Handler
+
+	// SetMiddleware returns http middleware
+	SetMiddleware(middleware func(http.Handler) http.Handler) Options
 }

@@ -496,7 +496,10 @@ func (d *dataNode) Serve() {
 	// start server
 	router := mux.NewRouter()
 	metricsLoggingMiddlewareProvider := utils.NewMetricsLoggingMiddleWareProvider(d.opts.InstrumentOptions().MetricsScope(), d.opts.InstrumentOptions().Logger())
-	httpWrappers := append([]utils.HTTPHandlerWrapper{metricsLoggingMiddlewareProvider.WithMetrics}, d.opts.HTTPWrappers()...)
+	httpWrappers := []utils.HTTPHandlerWrapper{metricsLoggingMiddlewareProvider.WithMetrics}
+	if d.opts.HTTPWrapper() != nil {
+		httpWrappers = append(httpWrappers, d.opts.HTTPWrapper())
+	}
 	schemaRouter := router.PathPrefix("/schema")
 	if d.opts.ServerConfig().Cluster.Enable {
 		schemaRouter = schemaRouter.Methods(http.MethodGet)
@@ -525,7 +528,11 @@ func (d *dataNode) Serve() {
 	go batchStatsReporter.Run()
 
 	d.opts.InstrumentOptions().Logger().Infof("Starting HTTP server on port %d with max connection %d", d.opts.ServerConfig().Port, d.opts.ServerConfig().HTTP.MaxConnections)
-	utils.LimitServe(d.opts.ServerConfig().Port, handlers.CORS(allowOrigins, allowHeaders, allowMethods)(mixedHandler(d.grpcServer, router)), d.opts.ServerConfig().HTTP)
+	handler := handlers.CORS(allowOrigins, allowHeaders, allowMethods)(mixedHandler(d.grpcServer, router))
+	if d.opts.Middleware() != nil {
+		handler = d.opts.Middleware()(handler)
+	}
+	utils.LimitServe(d.opts.ServerConfig().Port, handler, d.opts.ServerConfig().HTTP)
 }
 
 func (d *dataNode) advertise() {
