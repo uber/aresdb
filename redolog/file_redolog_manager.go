@@ -162,9 +162,11 @@ func (r *FileRedoLogManager) AppendToRedoLog(upsertBatch *common.UpsertBatch) (i
 	}
 
 	// update current redo log size
+	r.Lock()
 	r.CurrentRedoLogSize += uint32(len(upsertBatch.GetBuffer())) + 4
 	r.SizePerFile[r.CurrentFileCreationTime] += uint32(len(upsertBatch.GetBuffer())) + 4
 	r.TotalRedoLogSize += uint(len(upsertBatch.GetBuffer())) + 4
+	r.Unlock()
 
 	utils.GetReporter(r.tableName, r.shard).GetGauge(utils.CurrentRedologSize).Update(float64(r.CurrentRedoLogSize))
 	utils.GetReporter(r.tableName, r.shard).GetGauge(utils.SizeOfRedologs).Update(float64(r.TotalRedoLogSize))
