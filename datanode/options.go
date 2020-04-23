@@ -18,13 +18,15 @@ import (
 	"github.com/uber/aresdb/common"
 	"github.com/uber/aresdb/datanode/bootstrap"
 	"github.com/uber/aresdb/utils"
+	"net/http"
 )
 
 // options is the implementation of the interface Options
 type options struct {
 	instrumentOpts utils.Options
 	bootstrapOpts  bootstrap.Options
-	httpWrappers   []utils.HTTPHandlerWrapper
+	httpWrappers   utils.HTTPHandlerWrapper
+	middleware   func(http.Handler) http.Handler
 	cfg            common.AresServerConfig
 }
 
@@ -63,12 +65,25 @@ func (o *options) ServerConfig() common.AresServerConfig {
 	return o.cfg
 }
 
-// HttpWrappers return HttpWrappers
-func (o *options) HTTPWrappers() []utils.HTTPHandlerWrapper {
+// HttpWrappers return HttpWrapper
+func (o *options) HTTPWrapper() utils.HTTPHandlerWrapper {
 	return o.httpWrappers
 }
 
-func (o *options) SetHTTPWrappers(wrappers []utils.HTTPHandlerWrapper) Options {
+// SetHTTPWrapper return HttpWrapper
+func (o *options) SetHTTPWrapper(wrappers utils.HTTPHandlerWrapper) Options {
 	o.httpWrappers = wrappers
 	return o
 }
+
+// Middleware return middleware
+func (o *options) Middleware() func(http.Handler) http.Handler {
+	return o.middleware
+}
+
+// SetMiddleware set middleware
+func (o *options) SetMiddleware(middleware func(http.Handler) http.Handler) Options {
+	o.middleware = middleware
+	return o
+}
+
