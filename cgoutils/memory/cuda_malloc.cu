@@ -72,7 +72,7 @@ CGoCallResHandle CreateCudaStream(int device) {
   CGoCallResHandle resHandle = {NULL, NULL};
   cudaSetDevice(device);
   cudaStream_t s = NULL;
-  cudaStreamCreate(&s);
+  cudaStreamCreateWithFlags(&s, cudaStreamNonBlocking);
   resHandle.res = reinterpret_cast<void *>(s);
   resHandle.pStrErr = checkCUDAError("CreateCudaStream");
   return resHandle;
