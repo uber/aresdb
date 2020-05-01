@@ -1363,7 +1363,7 @@ func (qc *AQLQueryContext) sortDimensionColumns() {
 	if !qc.IsNonAggregationQuery {
 		// no dimension size checking for non-aggregation query
 		if qc.OOPK.DimRowBytes > C.MAX_DIMENSION_BYTES {
-			qc.Error = utils.StackError(nil, "maximum dimension bytes: %d, got: %d", C.MAX_DIMENSION_BYTES, qc.OOPK.DimRowBytes)
+			qc.Error = utils.StackError(nil, "combined bytes of group by dimensions exceeds maximum limit: %d, got: %d", C.MAX_DIMENSION_BYTES, qc.OOPK.DimRowBytes)
 			return
 		}
 	}
