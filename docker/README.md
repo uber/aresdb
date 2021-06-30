@@ -6,7 +6,7 @@ you can get AresDB running in a docker container.
 
 * [nvidia-driver](https://github.com/NVIDIA/nvidia-docker/wiki/Frequently-Asked-Questions#how-do-i-install-the-nvidia-driver)
 * A [supported version](https://github.com/NVIDIA/nvidia-docker/wiki/Frequently-Asked-Questions#which-docker-packages-are-supported) of [Docker]
-* [nvida-docker](https://github.com/NVIDIA/nvidia-docker)
+* [nvidia-docker](https://github.com/NVIDIA/nvidia-docker)
 
 
 ### Build
