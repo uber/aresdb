@@ -24,7 +24,6 @@ import (
 	"github.com/uber/aresdb/cluster/kvstore"
 	mutatorCom "github.com/uber/aresdb/controller/mutators/common"
 	"github.com/uber/aresdb/utils"
-	aresUtils "github.com/uber/aresdb/utils"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -77,7 +76,7 @@ func (h ConfigHandler) getNumShards(namespace string) (int, error) {
 		serviceID := services.NewServiceID().
 			SetEnvironment(h.etcdClient.Environment).
 			SetZone(h.etcdClient.Zone).
-			SetName(aresUtils.DataNodeServiceName(namespace))
+			SetName(utils.DataNodeServiceName(namespace))
 		placementSvc, err := h.etcdClient.Services.PlacementService(serviceID, nil)
 		if err != nil {
 			return 0, ErrFailedToFetchPlacement
