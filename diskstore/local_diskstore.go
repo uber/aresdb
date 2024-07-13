@@ -164,10 +164,10 @@ func (l LocalDiskStore) ListSnapshotVectorPartyFiles(table string, shard int,
 	redoLogFile int64, offset uint32, batchID int) (columnIDs []int, err error) {
 	snapshotBatchDir := GetPathForTableSnapshotBatchDir(l.rootPath, table, shard,
 		redoLogFile, offset, batchID)
-	return l.readVectoryPartyFiles(snapshotBatchDir)
+	return l.readVectorPartyFiles(snapshotBatchDir)
 }
 
-func (l LocalDiskStore) readVectoryPartyFiles(dir string) (columnIDs []int, err error) {
+func (l LocalDiskStore) readVectorPartyFiles(dir string) (columnIDs []int, err error) {
 	vpFiles, err := ioutil.ReadDir(dir)
 
 	if os.IsNotExist(err) {
@@ -289,7 +289,7 @@ func (l LocalDiskStore) ListArchiveBatchVectorPartyFiles(table string, shard, ba
 	batchVersion uint32, seqNum uint32) ([]int, error) {
 	batchIDTimeStr := daysSinceEpochToTimeStr(batchID)
 	tableArchiveBatchDir := GetPathForTableArchiveBatchDir(l.rootPath, table, shard, batchIDTimeStr, batchVersion, seqNum)
-	return l.readVectoryPartyFiles(tableArchiveBatchDir)
+	return l.readVectorPartyFiles(tableArchiveBatchDir)
 }
 
 // OpenVectorPartyFileForRead : Opens the vector party file at the specified batchVersion for read.
