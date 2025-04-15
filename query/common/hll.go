@@ -718,6 +718,10 @@ func (hll *HLL) encodeSparse(padding bool) []byte {
 	if padding {
 		recordValueBytes = 4
 	}
+	if len(hll.SparseData) > math.MaxInt32/recordValueBytes {
+		// Handle the error appropriately, e.g., return an empty slice or log an error
+		return []byte{}
+	}
 	data := make([]byte, (recordValueBytes)*len(hll.SparseData))
 	for i, register := range hll.SparseData {
 		if padding {
